@@ -127,7 +127,7 @@ if __name__ == "__main__":
                 )
             else:
                 raise ValueError(
-                    f"Unknown heat source {heat_source}. Must be one of [ground, air] or {snakemake.params.heat_sources.keys()}."
+                    f"Unknown heat source {heat_source}. Must be one of [ground, air] or {snakemake.params.heat_pump_sources.keys()}."
                 )
 
             cop_da = get_cop(

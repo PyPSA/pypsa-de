@@ -68,7 +68,7 @@ if __name__ == "__main__":
 
     regions_onshore = gpd.read_file(snakemake.input.regions_onshore)
     heat_source_utilisation_potential = gpd.read_file(
-        snakemake.input.utilisation_potential
+        snakemake.input.utilisation_potential, use_arrow=True
     )
 
     unit_conversion_factor = get_unit_conversion_factor(

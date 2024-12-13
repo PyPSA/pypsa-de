@@ -1976,7 +1976,7 @@ def add_EVs(
     # temperature corrected efficiency
     efficiency = get_temp_efficency(
         car_efficiency,
-        temperature,
+        temperature[spatial.nodes],
         options["transport_heating_deadband_lower"],
         options["transport_heating_deadband_upper"],
         options["EV_lower_degree_factor"],
@@ -2056,7 +2056,7 @@ def add_fuel_cell_cars(n, p_set, fuel_cell_share, temperature):
     # temperature corrected efficiency
     efficiency = get_temp_efficency(
         car_efficiency,
-        temperature,
+        temperature[spatial.nodes],
         options["transport_heating_deadband_lower"],
         options["transport_heating_deadband_upper"],
         options["ICE_lower_degree_factor"],
@@ -2083,7 +2083,7 @@ def add_ice_cars(n, p_set, ice_share, temperature):
     # temperature corrected efficiency
     efficiency = get_temp_efficency(
         car_efficiency,
-        temperature,
+        temperature[spatial.nodes],
         options["transport_heating_deadband_lower"],
         options["transport_heating_deadband_upper"],
         options["ICE_lower_degree_factor"],
