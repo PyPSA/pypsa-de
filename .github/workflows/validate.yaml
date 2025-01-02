@@ -19,7 +19,7 @@ jobs:
     - uses: lkstrp/pypsa-validator@v0.2.4
       with:
         step: run-self-hosted-validation
-        env_file: environment.yaml
+        env_file: envs/environment.yaml
         snakemake_config: config/config.yaml
         pre_command: "build_scenarios -f"
         main_command: "ariadne_all"
