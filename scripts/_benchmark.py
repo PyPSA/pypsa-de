@@ -2,9 +2,7 @@
 # SPDX-FileCopyrightText: : 2020-2024 The PyPSA-Eur Authors
 #
 # SPDX-License-Identifier: MIT
-"""
-
-"""
+""" """
 
 from __future__ import absolute_import, print_function
 

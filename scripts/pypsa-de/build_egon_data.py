@@ -16,27 +16,19 @@ Outputs:
     - resources/heating_technologies_nuts3.geojson: Path to the GeoJSON file where the processed heating technologies data will be saved.
 """
 
-import logging
-
-logger = logging.getLogger(__name__)
 import json
+import logging
 import re
 
 import geopandas as gpd
 import pandas as pd
-from _helpers import configure_logging
+
+from scripts._helpers import configure_logging, mock_snakemake
+
+logger = logging.getLogger(__name__)
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
-        import os
-        import sys
-
-        os.chdir(os.path.dirname(os.path.abspath(__file__)))
-
-        path = "../submodules/pypsa-eur/scripts"
-        sys.path.insert(0, os.path.abspath(path))
-        from _helpers import mock_snakemake
-
         snakemake = mock_snakemake(
             "build_egon_data",
             run="KN2045_Bal_v4",

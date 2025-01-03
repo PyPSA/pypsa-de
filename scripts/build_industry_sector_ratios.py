@@ -52,7 +52,8 @@ import logging
 
 import country_converter as coco
 import pandas as pd
-from _helpers import mute_print, set_scenario_config
+
+from scripts._helpers import mute_print, set_scenario_config
 
 logger = logging.getLogger(__name__)
 cc = coco.CountryConverter()
@@ -1574,7 +1575,6 @@ def wood_and_wood_products():
 
 
 def other_industrial_sectors():
-
     sector = "Other industrial sectors"
     idees = load_idees_data(sector)
 
@@ -1646,7 +1646,7 @@ def other_industrial_sectors():
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
-        from _helpers import mock_snakemake
+        from scripts._helpers import mock_snakemake
 
         snakemake = mock_snakemake("build_industry_sector_ratios")
     set_scenario_config(snakemake)

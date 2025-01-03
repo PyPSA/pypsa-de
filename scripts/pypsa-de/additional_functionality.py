@@ -3,14 +3,14 @@
 import logging
 
 import pandas as pd
-from prepare_sector_network import determine_emission_sectors
 from xarray import DataArray
+
+from scripts.prepare_sector_network import determine_emission_sectors
 
 logger = logging.getLogger(__name__)
 
 
 def add_capacity_limits(n, investment_year, limits_capacity, sense="maximum"):
-
     for c in n.iterate_components(limits_capacity):
         logger.info(f"Adding {sense} constraints for {c.list_name}")
 
@@ -18,7 +18,6 @@ def add_capacity_limits(n, investment_year, limits_capacity, sense="maximum"):
         units = "MWh or tCO2" if c.name == "Store" else "MW"
 
         for carrier in limits_capacity[c.name]:
-
             for ct in limits_capacity[c.name][carrier]:
                 if investment_year not in limits_capacity[c.name][carrier][ct].keys():
                     continue
@@ -161,7 +160,6 @@ def add_power_limits(n, investment_year, limits_power_max):
 
 
 def h2_import_limits(n, investment_year, limits_volume_max):
-
     for ct in limits_volume_max["h2_import"]:
         limit = limits_volume_max["h2_import"][ct][investment_year] * 1e6
 
@@ -212,7 +210,6 @@ def h2_import_limits(n, investment_year, limits_volume_max):
 
 
 def h2_production_limits(n, investment_year, limits_volume_min, limits_volume_max):
-
     for ct in limits_volume_max["electrolysis"]:
         if ct not in limits_volume_min["electrolysis"]:
             logger.warning(
@@ -271,7 +268,6 @@ def h2_production_limits(n, investment_year, limits_volume_min, limits_volume_ma
 
 
 def electricity_import_limits(n, investment_year, limits_volume_max):
-
     for ct in limits_volume_max["electricity_import"]:
         limit = limits_volume_max["electricity_import"][ct][investment_year] * 1e6
 
@@ -369,7 +365,6 @@ def add_co2limit_country(n, limit_countries, snakemake, debug=False):
         lhs = []
 
         for port in [col[3:] for col in n.links if col.startswith("bus")]:
-
             links = n.links.index[
                 (n.links.index.str[:2] == ct)
                 & (n.links[f"bus{port}"] == "co2 atmosphere")
@@ -589,9 +584,12 @@ def force_boiler_profiles_existing_per_boiler(n):
     # will be per unit
     n.model.add_variables(coords=[decentral_boilers], name="Link-fixed_profile_scaling")
 
-    lhs = (1, n.model["Link-p"].loc[:, decentral_boilers]), (
-        -boiler_profiles,
-        n.model["Link-fixed_profile_scaling"],
+    lhs = (
+        (1, n.model["Link-p"].loc[:, decentral_boilers]),
+        (
+            -boiler_profiles,
+            n.model["Link-fixed_profile_scaling"],
+        ),
     )
 
     n.model.add_constraints(lhs, "=", 0, "Link-fixed_profile_scaling")
@@ -601,7 +599,6 @@ def force_boiler_profiles_existing_per_boiler(n):
 
 
 def add_h2_derivate_limit(n, investment_year, limits_volume_max):
-
     for ct in limits_volume_max["h2_derivate_import"]:
         limit = limits_volume_max["h2_derivate_import"][ct][investment_year] * 1e6
 
@@ -652,7 +649,6 @@ def add_h2_derivate_limit(n, investment_year, limits_volume_max):
 
 
 def adapt_nuclear_output(n):
-
     logger.info(
         f"limiting german electricity generation from nuclear to 2020 value of 61 TWh"
     )
@@ -691,7 +687,6 @@ def adapt_nuclear_output(n):
 
 
 def additional_functionality(n, snapshots, snakemake):
-
     logger.info("Adding Ariadne-specific functionality")
 
     investment_year = int(snakemake.wildcards.planning_horizons[-4:])

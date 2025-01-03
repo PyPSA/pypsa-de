@@ -37,11 +37,12 @@ which can later be used as values for the industry load.
 """
 
 import pandas as pd
-from _helpers import set_scenario_config
+
+from scripts._helpers import set_scenario_config
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
-        from _helpers import mock_snakemake
+        from scripts._helpers import mock_snakemake
 
         snakemake = mock_snakemake(
             "build_industrial_energy_demand_per_node",

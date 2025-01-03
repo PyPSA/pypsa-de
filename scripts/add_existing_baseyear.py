@@ -18,16 +18,21 @@ import pandas as pd
 import powerplantmatching as pm
 import pypsa
 import xarray as xr
-from _helpers import (
+
+from scripts._helpers import (
     configure_logging,
     set_scenario_config,
     update_config_from_wildcards,
 )
-from add_electricity import sanitize_carriers
-from definitions.heat_sector import HeatSector
-from definitions.heat_system import HeatSystem
-from definitions.heat_system_type import HeatSystemType
-from prepare_sector_network import cluster_heat_buses, define_spatial, prepare_costs
+from scripts.add_electricity import sanitize_carriers
+from scripts.definitions.heat_sector import HeatSector
+from scripts.definitions.heat_system import HeatSystem
+from scripts.definitions.heat_system_type import HeatSystemType
+from scripts.prepare_sector_network import (
+    cluster_heat_buses,
+    define_spatial,
+    prepare_costs,
+)
 
 logger = logging.getLogger(__name__)
 cc = coco.CountryConverter()
@@ -1063,7 +1068,7 @@ def set_defaults(n):
 # %%
 if __name__ == "__main__":
     if "snakemake" not in globals():
-        from _helpers import mock_snakemake
+        from scripts._helpers import mock_snakemake
 
         snakemake = mock_snakemake(
             "add_existing_baseyear",

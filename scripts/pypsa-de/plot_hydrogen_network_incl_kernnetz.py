@@ -8,20 +8,16 @@ selected other infrastructure.
 """
 
 import logging
-import os
-import sys
 
 import geopandas as gpd
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pypsa
-
-path = "../submodules/pypsa-eur/scripts"
-sys.path.insert(0, os.path.abspath(path))
-from _helpers import configure_logging, set_scenario_config
-from plot_power_network import assign_location, load_projection
 from pypsa.plot import add_legend_circles, add_legend_lines, add_legend_patches
+
+from scripts._helpers import configure_logging, mock_snakemake, set_scenario_config
+from scripts.plot_power_network import assign_location, load_projection
 
 logger = logging.getLogger(__name__)
 
@@ -331,11 +327,6 @@ def plot_h2_map(n, regions):
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
-        import os
-        import sys
-
-        from _helpers import mock_snakemake
-
         snakemake = mock_snakemake(
             "plot_hydrogen_network_incl_kernnetz",
             simpl="",

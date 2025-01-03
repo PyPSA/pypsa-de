@@ -8,8 +8,9 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import pypsa
 import seaborn as sns
-from _helpers import configure_logging, set_scenario_config
 from pypsa.statistics import get_bus_and_carrier
+
+from scripts._helpers import configure_logging, set_scenario_config
 
 sns.set_theme("paper", style="whitegrid")
 
@@ -25,7 +26,7 @@ carrier_groups = {
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
-        from _helpers import mock_snakemake
+        from scripts._helpers import mock_snakemake
 
         snakemake = mock_snakemake(
             "plot_validation_electricity_production",

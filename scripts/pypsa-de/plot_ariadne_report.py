@@ -18,14 +18,12 @@ import pypsa
 from matplotlib.lines import Line2D
 from pypsa.plot import add_legend_lines
 
-path = "../submodules/pypsa-eur/scripts"
-sys.path.insert(1, os.path.abspath(path))
-from _helpers import configure_logging, set_scenario_config
-from export_ariadne_variables import get_discretized_value, process_postnetworks
-from plot_power_network import load_projection
-from plot_summary import preferred_order, rename_techs
-from prepare_sector_network import prepare_costs
-from pypsa.plot import add_legend_circles, add_legend_lines, add_legend_patches
+from scripts._helpers import configure_logging, mock_snakemake, set_scenario_config
+from scripts.export_ariadne_variables import get_discretized_value, process_postnetworks
+from scripts.plot_power_network import load_projection
+from scripts.plot_summary import preferred_order, rename_techs
+from scripts.prepare_sector_network import prepare_costs
+from scripts.pypsa.plot import add_legend_circles, add_legend_lines, add_legend_patches
 
 logger = logging.getLogger(__name__)
 
@@ -215,7 +213,6 @@ def plot_nodal_balance(
     ylabel="total electricity balance [GW]",
     title="Electricity balance",
 ):
-
     carriers = carriers
     loads = loads
     start_date = start_date
@@ -259,9 +256,10 @@ def plot_nodal_balance(
     df_pos = df_pos[df_pos.sum().sort_values(ascending=False).index]
     df_neg = df_neg[df_neg.sum().sort_values().index]
     # get colors
-    c_neg, c_pos = [tech_colors[col] for col in df_neg.columns], [
-        tech_colors[col] for col in df_pos.columns
-    ]
+    c_neg, c_pos = (
+        [tech_colors[col] for col in df_neg.columns],
+        [tech_colors[col] for col in df_pos.columns],
+    )
 
     fig, ax = plt.subplots(figsize=(14, 8))
 
@@ -470,7 +468,6 @@ def plot_storage(
     end_date="2019-12-31 00",
     regions=["DE"],
 ):
-
     # State of charge [per unit of max] (all stores and storage units)
     # Ratio of total generation of max state of charge
 
@@ -599,7 +596,6 @@ def plot_price_duration_curve(
     y_lim_values=[-50, 300],
     language="english",
 ):
-
     fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(8, 6))
 
     for i, n in enumerate(networks.values()):
@@ -660,7 +656,6 @@ def plot_price_duration_hist(
     regions=["DE"],
     x_lim_values=[-50, 300],
 ):
-
     fig, axes = plt.subplots(ncols=1, nrows=len(years), figsize=(8, 3 * len(years)))
     axes = axes.flatten()
 
@@ -950,7 +945,6 @@ def plot_h2_map(n, regions, savepath, only_de=False):
 
 
 def plot_h2_map_de(n, regions, tech_colors, savepath, specify_buses=None):
-
     assign_location(n)
 
     h2_storage = n.stores[n.stores.carrier.isin(["H2", "H2 Store"])]
@@ -1286,7 +1280,6 @@ def plot_elec_map_de(
     savepath,
     expansion_case="total-expansion",
 ):
-
     m = network.copy()
     m.mremove("Bus", m.buses[m.buses.x == 0].index)
     m.buses.drop(m.buses.index[m.buses.carrier != "AC"], inplace=True)
@@ -1462,13 +1455,6 @@ def plot_elec_map_de(
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
-        import os
-        import sys
-
-        path = "../submodules/pypsa-eur/scripts"
-        sys.path.insert(0, os.path.abspath(path))
-        from _helpers import mock_snakemake
-
         snakemake = mock_snakemake(
             "plot_ariadne_report",
             simpl="",

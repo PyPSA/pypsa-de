@@ -8,16 +8,17 @@ import logging
 
 import pandas as pd
 import pypsa
-from _helpers import configure_logging, set_scenario_config
 from entsoe import EntsoePandasClient
 from entsoe.exceptions import InvalidBusinessParameterError, NoMatchingDataError
 from requests import HTTPError
+
+from scripts._helpers import configure_logging, set_scenario_config
 
 logger = logging.getLogger(__name__)
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
-        from _helpers import mock_snakemake
+        from scripts._helpers import mock_snakemake
 
         snakemake = mock_snakemake("build_cross_border_flows")
     configure_logging(snakemake)

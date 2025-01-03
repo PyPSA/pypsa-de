@@ -48,12 +48,13 @@ import atlite
 import geopandas as gpd
 import numpy as np
 import xarray as xr
-from _helpers import get_snapshots, set_scenario_config
 from dask.distributed import Client, LocalCluster
+
+from scripts._helpers import get_snapshots, set_scenario_config
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
-        from _helpers import mock_snakemake
+        from scripts._helpers import mock_snakemake
 
         snakemake = mock_snakemake(
             "build_daily_heat_demands",

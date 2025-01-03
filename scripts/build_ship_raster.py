@@ -47,7 +47,8 @@ from pathlib import Path
 
 import atlite
 import rioxarray
-from _helpers import configure_logging, set_scenario_config
+
+from scripts._helpers import configure_logging, set_scenario_config
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +80,7 @@ def determine_cutout_xXyY(cutout_name):
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
-        from _helpers import mock_snakemake
+        from scripts._helpers import mock_snakemake
 
         snakemake = mock_snakemake("build_ship_raster")
     configure_logging(snakemake)

@@ -46,10 +46,10 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 import xarray as xr
-from _helpers import set_scenario_config
 from CentralHeatingCopApproximator import CentralHeatingCopApproximator
 from DecentralHeatingCopApproximator import DecentralHeatingCopApproximator
 
+from scripts._helpers import set_scenario_config
 from scripts.definitions.heat_system_type import HeatSystemType
 
 
@@ -100,7 +100,7 @@ def get_country_from_node_name(node_name: str) -> str:
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
-        from _helpers import mock_snakemake
+        from scripts._helpers import mock_snakemake
 
         snakemake = mock_snakemake(
             "build_cop_profiles",

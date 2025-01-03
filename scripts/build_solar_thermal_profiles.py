@@ -39,12 +39,13 @@ import atlite
 import geopandas as gpd
 import numpy as np
 import xarray as xr
-from _helpers import get_snapshots, set_scenario_config
 from dask.distributed import Client, LocalCluster
+
+from scripts._helpers import get_snapshots, set_scenario_config
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
-        from _helpers import mock_snakemake
+        from scripts._helpers import mock_snakemake
 
         snakemake = mock_snakemake("build_solar_thermal_profiles", clusters=48)
     set_scenario_config(snakemake)
@@ -80,7 +81,7 @@ if __name__ == "__main__":
         matrix=M_tilde.T,
         index=clustered_regions.index,
         dask_kwargs=dict(scheduler=client),
-        show_progress=False
+        show_progress=False,
     )
 
     solar_thermal.to_netcdf(snakemake.output.solar_thermal)

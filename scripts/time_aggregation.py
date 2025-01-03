@@ -40,7 +40,6 @@ rule only computes said aggregation scheme; aggregation of time-varying network
 data is done in ``prepare_sector_network.py``.
 """
 
-
 import logging
 
 import numpy as np
@@ -48,7 +47,8 @@ import pandas as pd
 import pypsa
 import tsam.timeseriesaggregation as tsam
 import xarray as xr
-from _helpers import (
+
+from scripts._helpers import (
     configure_logging,
     set_scenario_config,
     update_config_from_wildcards,
@@ -58,7 +58,7 @@ logger = logging.getLogger(__name__)
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
-        from _helpers import mock_snakemake
+        from scripts._helpers import mock_snakemake
 
         snakemake = mock_snakemake(
             "time_aggregation",

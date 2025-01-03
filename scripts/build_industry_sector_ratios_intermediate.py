@@ -81,11 +81,11 @@ Unit of the output file is MWh/t.
 
 import numpy as np
 import pandas as pd
-from prepare_sector_network import get
+
+from scripts.prepare_sector_network import get
 
 
 def build_industry_sector_ratios_intermediate():
-
     # in TWh/a
     demand = pd.read_csv(
         snakemake.input.industrial_energy_demand_per_country_today,
@@ -143,7 +143,7 @@ def build_industry_sector_ratios_intermediate():
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
-        from _helpers import mock_snakemake
+        from scripts._helpers import mock_snakemake
 
         snakemake = mock_snakemake(
             "build_industry_sector_ratios_intermediate",

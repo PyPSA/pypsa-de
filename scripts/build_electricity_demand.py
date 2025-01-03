@@ -39,8 +39,9 @@ import logging
 
 import numpy as np
 import pandas as pd
-from _helpers import configure_logging, get_snapshots, set_scenario_config
 from pandas import Timedelta as Delta
+
+from scripts._helpers import configure_logging, get_snapshots, set_scenario_config
 
 logger = logging.getLogger(__name__)
 
@@ -256,7 +257,7 @@ def manual_adjustment(load, fn_load, countries):
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
-        from _helpers import mock_snakemake
+        from scripts._helpers import mock_snakemake
 
         snakemake = mock_snakemake("build_electricity_demand")
 

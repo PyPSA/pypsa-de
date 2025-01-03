@@ -101,7 +101,7 @@ def approximate_heat_demand(energy_totals: pd.DataFrame, hdd: pd.DataFrame):
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
-        from _helpers import mock_snakemake
+        from scripts._helpers import mock_snakemake
 
         snakemake = mock_snakemake("build_heat_totals")
 

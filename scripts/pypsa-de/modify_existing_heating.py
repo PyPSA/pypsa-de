@@ -2,22 +2,14 @@
 import logging
 
 import pandas as pd
-from _helpers import configure_logging
+
+from scripts._helpers import configure_logging, mock_snakemake
 
 logger = logging.getLogger(__name__)
 
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
-        import os
-        import sys
-
-        os.chdir(os.path.dirname(os.path.abspath(__file__)))
-
-        path = "../submodules/pypsa-eur/scripts"
-        sys.path.insert(0, os.path.abspath(path))
-        from _helpers import mock_snakemake
-
         snakemake = mock_snakemake(
             "modify_existing_heating",
             run="KN2045_Bal_v4",

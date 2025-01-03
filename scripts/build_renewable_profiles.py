@@ -118,22 +118,24 @@ the weather data cutout from ``atlite``.
 The maximal installable potential for the node (`p_nom_max`) is computed by
 adding up the installable potentials of the individual grid cells.
 """
+
 import logging
 import time
 
 import atlite
 import geopandas as gpd
 import xarray as xr
-from _helpers import configure_logging, get_snapshots, set_scenario_config
 from build_shapes import _simplify_polys
 from dask.distributed import Client
+
+from scripts._helpers import configure_logging, get_snapshots, set_scenario_config
 
 logger = logging.getLogger(__name__)
 
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
-        from _helpers import mock_snakemake
+        from scripts._helpers import mock_snakemake
 
         snakemake = mock_snakemake(
             "build_renewable_profiles", clusters=38, technology="offwind-ac"
@@ -214,7 +216,6 @@ if __name__ == "__main__":
 
     profiles = []
     for year, model in models.items():
-
         logger.info(
             f"Calculate weighted capacity factor time series for model {model} for technology {technology}..."
         )

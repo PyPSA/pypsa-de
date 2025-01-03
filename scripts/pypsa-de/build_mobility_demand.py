@@ -3,8 +3,9 @@ import logging
 
 import pandas as pd
 
+from scripts._helpers import configure_logging, mock_snakemake
+
 logger = logging.getLogger(__name__)
-from _helpers import configure_logging
 
 
 def get_transport_data(db):
@@ -45,13 +46,6 @@ def get_transport_data(db):
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
-        import os
-        import sys
-
-        path = "../submodules/pypsa-eur/scripts"
-        sys.path.insert(0, os.path.abspath(path))
-        from _helpers import mock_snakemake
-
         snakemake = mock_snakemake(
             "build_mobility_demand",
             simpl="",

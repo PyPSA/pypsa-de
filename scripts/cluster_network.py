@@ -104,7 +104,6 @@ import numpy as np
 import pandas as pd
 import pypsa
 import xarray as xr
-from _helpers import configure_logging, set_scenario_config
 from base_network import append_bus_shapes
 from packaging.version import Version, parse
 from pypsa.clustering.spatial import (
@@ -114,6 +113,8 @@ from pypsa.clustering.spatial import (
     get_clustering_from_busmap,
 )
 from scipy.sparse.csgraph import connected_components
+
+from scripts._helpers import configure_logging, set_scenario_config
 
 PD_GE_2_2 = parse(pd.__version__) >= Version("2.2")
 
@@ -141,7 +142,6 @@ def get_feature_data_for_hac(fn: str) -> pd.DataFrame:
 
 
 def fix_country_assignment_for_hac(n: pypsa.Network) -> None:
-
     # overwrite country of nodes that are disconnected from their country-topology
     for country in n.buses.country.unique():
         m = n[n.buses.country == country].copy()
@@ -293,7 +293,6 @@ def clustering_for_n_clusters(
     line_length_factor: float = 1.25,
     aggregation_strategies: dict | None = None,
 ) -> pypsa.clustering.spatial.Clustering:
-
     if aggregation_strategies is None:
         aggregation_strategies = dict()
 
@@ -340,7 +339,7 @@ def cluster_regions(
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
-        from _helpers import mock_snakemake
+        from scripts._helpers import mock_snakemake
 
         snakemake = mock_snakemake("cluster_network", clusters=60)
     configure_logging(snakemake)

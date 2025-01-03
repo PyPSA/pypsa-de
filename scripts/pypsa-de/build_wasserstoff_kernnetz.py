@@ -23,10 +23,8 @@ from shapely import wkt
 from shapely.geometry import LineString, Point, Polygon
 from shapely.ops import nearest_points
 
-sys.path.insert(0, os.path.abspath("../"))
-
-from _helpers import configure_logging
-from build_gas_network import diameter_to_capacity
+from scripts._helpers import configure_logging, mock_snakemake
+from scripts.build_gas_network import diameter_to_capacity
 
 MANUAL_ADDRESSES = {
     "Oude Statenzijl": (7.205108658430258, 53.20183834422634),
@@ -554,7 +552,7 @@ if __name__ == "__main__":
 
         path = "../submodules/pypsa-eur/scripts"
         sys.path.insert(0, os.path.abspath(path))
-        from _helpers import mock_snakemake
+        from scripts._helpers import mock_snakemake
 
         snakemake = mock_snakemake("build_wasserstoff_kernnetz")
 

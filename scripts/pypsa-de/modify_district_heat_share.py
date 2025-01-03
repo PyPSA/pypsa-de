@@ -22,10 +22,13 @@ Parameters:
 
 import logging
 
-logger = logging.getLogger(__name__)
 import geopandas as gpd
 import pandas as pd
 from shapely.geometry import Point
+
+from scripts._helpers import mock_snakemake
+
+logger = logging.getLogger(__name__)
 
 
 def cluster_egon(heat_techs, regions_onshore):
@@ -96,15 +99,6 @@ def update_district_heat_share(heat_techs_clustered, dh_shares):
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
-        import os
-        import sys
-
-        os.chdir(os.path.dirname(os.path.abspath(__file__)))
-
-        path = "../submodules/pypsa-eur/scripts"
-        sys.path.insert(0, os.path.abspath(path))
-        from _helpers import mock_snakemake
-
         snakemake = mock_snakemake(
             "modify_district_heat_share",
             simpl="",

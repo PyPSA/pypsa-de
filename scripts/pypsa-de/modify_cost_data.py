@@ -3,10 +3,12 @@
 import logging
 import os
 import re
+import sys
 
 import numpy as np
 import pandas as pd
-from _helpers import configure_logging
+
+from scripts._helpers import configure_logging, mock_snakemake
 
 logger = logging.getLogger(__name__)
 
@@ -41,12 +43,6 @@ def carbon_component_fossils(costs, co2_price):
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
-        import sys
-
-        path = "../submodules/pypsa-eur/scripts"
-        sys.path.insert(0, os.path.abspath(path))
-        from _helpers import mock_snakemake
-
         snakemake = mock_snakemake(
             "modify_cost_data",
             planning_horizons="2020",

@@ -21,11 +21,8 @@ from shapely import wkt
 from shapely.geometry import LineString, Point
 from shapely.ops import transform
 
-paths = ["workflow/submodules/pypsa-eur/scripts", "../submodules/pypsa-eur/scripts"]
-for path in paths:
-    sys.path.insert(0, os.path.abspath(path))
-from _helpers import configure_logging
-from cluster_gas_network import load_bus_regions, reindex_pipes
+from scripts._helpers import configure_logging, mock_snakemake
+from scripts.cluster_gas_network import load_bus_regions, reindex_pipes
 
 # Define a function for projecting points to meters
 project_to_meters = pyproj.Transformer.from_proj(
@@ -189,13 +186,6 @@ def aggregate_parallel_pipes(df, aggregate_build_years="mean"):
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
-        import os
-        import sys
-
-        path = "../submodules/pypsa-eur/scripts"
-        sys.path.insert(0, os.path.abspath(path))
-        from _helpers import mock_snakemake
-
         snakemake = mock_snakemake(
             "cluster_wasserstoff_kernnetz",
             simpl="",
@@ -261,7 +251,6 @@ if __name__ == "__main__":
         wasserstoff_kernnetz["p_nom_diameter"] = 0
 
         if kernnetz_cf["aggregate_parallel_pipes"]:
-
             reindex_pipes(wasserstoff_kernnetz, prefix="H2 pipeline")
             wasserstoff_kernnetz = aggregate_parallel_pipes(
                 wasserstoff_kernnetz, kernnetz_cf["aggregate_build_years"]

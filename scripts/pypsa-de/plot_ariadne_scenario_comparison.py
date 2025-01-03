@@ -5,6 +5,8 @@ import os
 import matplotlib.pyplot as plt
 import pandas as pd
 
+from scripts._helpers import mock_snakemake
+
 
 def scenario_plot(df, var):
     unit = df._get_label_or_level_values("Unit")[0]
@@ -20,12 +22,6 @@ def scenario_plot(df, var):
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
-        import sys
-
-        path = "../submodules/pypsa-eur/scripts"
-        sys.path.insert(0, os.path.abspath(path))
-        from _helpers import mock_snakemake
-
         snakemake = mock_snakemake(
             "ariadne_all",
             # simpl="",

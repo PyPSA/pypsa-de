@@ -9,16 +9,11 @@ import pandas as pd
 import pypsa
 from shapely.geometry import Point
 
+from scripts._helpers import configure_logging, mock_snakemake
+from scripts.add_electricity import load_costs
+from scripts.prepare_sector_network import lossy_bidirectional_links, prepare_costs
+
 logger = logging.getLogger(__name__)
-
-sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/..")
-
-paths = ["workflow/submodules/pypsa-eur/scripts", "../submodules/pypsa-eur/scripts"]
-for path in paths:
-    sys.path.insert(0, os.path.abspath(path))
-from _helpers import configure_logging
-from add_electricity import load_costs
-from prepare_sector_network import lossy_bidirectional_links, prepare_costs
 
 
 def first_technology_occurrence(n):
@@ -1262,13 +1257,6 @@ def scale_capacity(n, scaling):
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
-        import os
-        import sys
-
-        path = "../submodules/pypsa-eur/scripts"
-        sys.path.insert(0, os.path.abspath(path))
-        from _helpers import mock_snakemake
-
         snakemake = mock_snakemake(
             "modify_prenetwork",
             simpl="",

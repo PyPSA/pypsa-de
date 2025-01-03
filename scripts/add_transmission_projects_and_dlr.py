@@ -13,7 +13,8 @@ import numpy as np
 import pandas as pd
 import pypsa
 import xarray as xr
-from _helpers import configure_logging, set_scenario_config
+
+from scripts._helpers import configure_logging, set_scenario_config
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +72,7 @@ def attach_line_rating(
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
-        from _helpers import mock_snakemake
+        from scripts._helpers import mock_snakemake
 
         snakemake = mock_snakemake("add_transmission_projects_and_dlr")
     configure_logging(snakemake)
@@ -82,11 +83,9 @@ if __name__ == "__main__":
     n = pypsa.Network(snakemake.input.network)
 
     if params["transmission_projects"]["enable"]:
-
         attach_transmission_projects(n, snakemake.input.transmission_projects)
 
     if params["dlr"]["activate"]:
-
         rating = xr.open_dataarray(snakemake.input.dlr).to_pandas().transpose()
 
         s_max_pu = params["s_max_pu"]

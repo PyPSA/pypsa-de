@@ -26,6 +26,7 @@ Additionally, some extra constraints specified in :mod:`solve_network` are added
     the workflow for all scenarios in the configuration file (``scenario:``)
     based on the rule :mod:`solve_network`.
 """
+
 import importlib
 import logging
 import os
@@ -39,14 +40,15 @@ import pypsa
 import xarray as xr
 import yaml
 from _benchmark import memory_logger
-from _helpers import (
+from pypsa.descriptors import get_activity_mask
+from pypsa.descriptors import get_switchable_as_dense as get_as_dense
+
+from scripts._helpers import (
     configure_logging,
     set_scenario_config,
     update_config_from_wildcards,
 )
-from prepare_sector_network import get
-from pypsa.descriptors import get_activity_mask
-from pypsa.descriptors import get_switchable_as_dense as get_as_dense
+from scripts.prepare_sector_network import get
 
 logger = logging.getLogger(__name__)
 pypsa.pf.logger.setLevel(logging.WARNING)
@@ -1056,7 +1058,7 @@ def solve_network(n, config, params, solving, **kwargs):
 # %%
 if __name__ == "__main__":
     if "snakemake" not in globals():
-        from _helpers import mock_snakemake
+        from scripts._helpers import mock_snakemake
 
         snakemake = mock_snakemake(
             "solve_sector_network_perfect",

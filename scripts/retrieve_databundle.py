@@ -27,7 +27,7 @@ import logging
 import tarfile
 from pathlib import Path
 
-from _helpers import (
+from scripts._helpers import (
     configure_logging,
     progress_retrieve,
     set_scenario_config,
@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
-        from _helpers import mock_snakemake
+        from scripts._helpers import mock_snakemake
 
         snakemake = mock_snakemake("retrieve_databundle")
         rootpath = ".."

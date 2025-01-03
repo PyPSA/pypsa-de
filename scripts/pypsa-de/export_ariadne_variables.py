@@ -12,19 +12,10 @@ import pandas as pd
 import pypsa
 from numpy import isclose
 
+from scripts._helpers import configure_logging, mock_snakemake
+from scripts.prepare_sector_network import prepare_costs
+
 logger = logging.getLogger(__name__)
-
-paths = [
-    "workflow/submodules/pypsa-eur/scripts",
-    "../submodules/pypsa-eur/scripts",
-    "../submodules/pypsa-eur/",
-]
-for path in paths:
-    sys.path.insert(0, os.path.abspath(path))
-
-from _helpers import configure_logging, mute_print
-from prepare_sector_network import prepare_costs
-
 # Defining global variables
 
 TWh2PJ = 3.6
@@ -443,7 +434,6 @@ def get_system_cost_opex(n, region):
 
 
 def _get_capacities(n, region, cap_func, cap_string="Capacity|"):
-
     kwargs = {
         "groupby": n.statistics.groupers.get_bus_and_carrier,
         "at_port": True,
@@ -1800,7 +1790,6 @@ def get_secondary_energy(n, region, _industry_demand):
 def get_final_energy(
     n, region, _industry_demand, _energy_totals, _sector_ratios, _industry_production
 ):
-
     var = pd.Series()
 
     kwargs = {
@@ -3161,7 +3150,6 @@ def get_weighted_costs_links(carriers, n, region):
 
 
 def get_weighted_costs(costs, flows):
-
     cleaned_costs = []
     cleaned_flows = []
 
@@ -3758,7 +3746,6 @@ def get_prices(n, region):
 
 
 def get_discretized_value(value, disc_int, build_threshold=0.3):
-
     if value == 0.0:
         return value
 
@@ -4166,7 +4153,6 @@ def get_policy(n, investment_year):
 
 
 def get_economy(n, region):
-
     var = pd.Series()
 
     s = n.statistics
@@ -4441,7 +4427,6 @@ def get_trade(n, region):
 
 
 def get_production(region, year):
-
     var = pd.Series()
     # read in the industrial production data
     years = [
@@ -4695,7 +4680,6 @@ def get_operational_and_capital_costs(year):
 
 
 def get_grid_capacity(n, region, year):
-
     var = pd.Series()
     ### Total Capacity
     ## Transmission Grid
@@ -4908,7 +4892,6 @@ def get_grid_capacity(n, region, year):
 
 
 def hack_DC_projects(n, p_nom_start, p_nom_planned, model_year, snakemake, costs):
-
     logger.info(f"Hacking DC projects for year {model_year}")
 
     logger.info(f"Assuming all indices of DC projects start with 'DC' or 'TYNDP'")
@@ -5065,7 +5048,6 @@ def get_ariadne_var(
     region,
     year,
 ):
-
     var = pd.concat(
         [
             get_capacities(n, region),
@@ -5113,7 +5095,6 @@ def get_data(
     version="0.10",
     scenario="test",
 ):
-
     var = get_ariadne_var(
         n,
         industry_demand,
@@ -5186,13 +5167,6 @@ def get_data(
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
-        import os
-        import sys
-
-        path = "../submodules/pypsa-eur/scripts"
-        sys.path.insert(0, os.path.abspath(path))
-        from _helpers import mock_snakemake
-
         snakemake = mock_snakemake(
             "export_ariadne_variables",
             simpl="",

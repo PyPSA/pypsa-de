@@ -62,14 +62,15 @@ import logging
 import numpy as np
 import pandas as pd
 import pypsa
-from _helpers import (
+from pypsa.descriptors import expand_series
+
+from scripts._helpers import (
     configure_logging,
     get,
     set_scenario_config,
     update_config_from_wildcards,
 )
-from add_electricity import load_costs, set_transmission_costs
-from pypsa.descriptors import expand_series
+from scripts.add_electricity import load_costs, set_transmission_costs
 
 idx = pd.IndexSlice
 
@@ -321,7 +322,7 @@ def set_line_nom_max(
 # %%
 if __name__ == "__main__":
     if "snakemake" not in globals():
-        from _helpers import mock_snakemake
+        from scripts._helpers import mock_snakemake
 
         snakemake = mock_snakemake(
             "prepare_network",

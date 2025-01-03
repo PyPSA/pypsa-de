@@ -77,8 +77,9 @@ import country_converter as coco
 import geopandas as gpd
 import numpy as np
 import pandas as pd
-from _helpers import configure_logging, set_scenario_config
 from shapely.geometry import MultiPolygon, Polygon
+
+from scripts._helpers import configure_logging, set_scenario_config
 
 logger = logging.getLogger(__name__)
 
@@ -106,7 +107,6 @@ def _simplify_polys(polys, minarea=0.1, tolerance=None, filterremote=True):
 
 
 def countries(naturalearth, country_list):
-
     df = gpd.read_file(naturalearth)
 
     # Names are a hassle in naturalearth, try several fields
@@ -242,7 +242,7 @@ def nuts3(country_shapes, nuts3, nuts3pop, nuts3gdp, ch_cantons, ch_popgdp):
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
-        from _helpers import mock_snakemake
+        from scripts._helpers import mock_snakemake
 
         snakemake = mock_snakemake("build_shapes")
     configure_logging(snakemake)

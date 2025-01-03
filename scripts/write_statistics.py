@@ -10,8 +10,9 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import pypsa
 import seaborn as sns
-from _helpers import configure_logging
 from pypsa.statistics import get_carrier, get_country_and_carrier
+
+from scripts._helpers import configure_logging
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +29,7 @@ def call_with_handle(func, **kwargs):
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
-        from _helpers import mock_snakemake
+        from scripts._helpers import mock_snakemake
 
         snakemake = mock_snakemake(
             "write_statistics",

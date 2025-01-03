@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+from scripts._helpers import mock_snakemake
+
 
 def plot_Kernnetz(df, savepath=None, currency_year=2020):
     key = "Investment|Energy Supply|Hydrogen|Transmission and Distribution|"
@@ -102,7 +104,6 @@ def plot_Kernnetz(df, savepath=None, currency_year=2020):
 
 
 def plot_NEP_Trassen(df, savepath=None, gleichschaltung=True):
-
     NEP_Trassen = {
         "NEP-DC": {
             # Zu-/Umbeseilung + Ersatz-/Parallelneubau + Neubau
@@ -203,7 +204,6 @@ def plot_NEP_Trassen(df, savepath=None, gleichschaltung=True):
 
 
 def plot_NEP(df, savepath=None, gleichschaltung=True, currency_year=2020):
-
     key = "Investment|Energy Supply|Electricity|Transmission|"
 
     data = {
@@ -427,7 +427,6 @@ def ariadne_subplot(
 
 
 def side_by_side_plot(df, dfhybrid, title, savepath, rshift=1.25, **kwargs):
-
     idx = df.index.union(dfhybrid.index, sort=False)
 
     df = df.reindex(idx)
@@ -441,7 +440,9 @@ def side_by_side_plot(df, dfhybrid, title, savepath, rshift=1.25, **kwargs):
     labels2 = ax2.get_legend_handles_labels()[1]
     assert labels == labels2
 
-    fig.legend(reversed(handles), reversed(labels), bbox_to_anchor=(rshift, 0.9))
+    fig.legend(
+        list(reversed(handles)), list(reversed(labels)), bbox_to_anchor=(rshift, 0.9)
+    )
     fig.suptitle(title)
     title = title.replace(" ", "_")
     fig.savefig(savepath, bbox_inches="tight")
@@ -459,7 +460,6 @@ def within_plot(
     unit="EUR_2020/GJ",
     **kwargs,
 ):
-
     df = df.T.copy()
     if select_regex:
         df = df.filter(
@@ -487,7 +487,6 @@ def within_plot(
     axes = axes.flatten()
 
     for i, var in enumerate(df.columns.get_level_values("Variable")):
-
         axes[i].plot(df.xs(var, axis=1, level=0), label="PyPSA-Eur")
         if var in df2.index.get_level_values("Variable"):
             axes[i].plot(df2.T.xs(var, axis=1, level=0), label="REMIND-EU")
@@ -668,13 +667,6 @@ def elec_val_plot(df, savepath):
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
-        import os
-        import sys
-
-        path = "../submodules/pypsa-eur/scripts"
-        sys.path.insert(0, os.path.abspath(path))
-        from _helpers import mock_snakemake
-
         snakemake = mock_snakemake(
             "plot_ariadne_variables",
             simpl="",

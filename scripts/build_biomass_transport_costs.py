@@ -16,6 +16,7 @@ assuming as an approximation energy content of wood pellets
 
 @author: bw0928
 """
+
 import pandas as pd
 
 ENERGY_CONTENT = 4.8  # unit MWh/t (wood pellets)
@@ -114,7 +115,7 @@ def build_biomass_transport_costs():
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
-        from _helpers import mock_snakemake
+        from scripts._helpers import mock_snakemake
 
         snakemake = mock_snakemake("build_biomass_transport_costs")
 

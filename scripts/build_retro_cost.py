@@ -66,9 +66,11 @@ The script has the following structure:
     (4) get cost savings per retrofitting measures for each sector by weighting
         with heated floor area
 """
+
 import pandas as pd
 import xarray as xr
-from _helpers import set_scenario_config
+
+from scripts._helpers import set_scenario_config
 
 # (i) --- FIXED PARAMETER / STANDARD VALUES -----------------------------------
 
@@ -1046,7 +1048,7 @@ def sample_dE_costs_area(
 # %% --- MAIN --------------------------------------------------------------
 if __name__ == "__main__":
     if "snakemake" not in globals():
-        from _helpers import mock_snakemake
+        from scripts._helpers import mock_snakemake
 
         snakemake = mock_snakemake(
             "build_retro_cost",

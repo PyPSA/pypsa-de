@@ -28,7 +28,8 @@ The unit of the production is kt/a.
 from itertools import product
 
 import pandas as pd
-from _helpers import set_scenario_config
+
+from scripts._helpers import set_scenario_config
 
 # map JRC/our sectors to hotmaps sector, where mapping exist
 sector_mapping = {
@@ -85,7 +86,7 @@ def build_nodal_industrial_production():
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
-        from _helpers import mock_snakemake
+        from scripts._helpers import mock_snakemake
 
         snakemake = mock_snakemake("build_industrial_production_per_node", clusters=48)
     set_scenario_config(snakemake)

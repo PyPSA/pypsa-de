@@ -10,8 +10,9 @@ import re
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
-from _helpers import configure_logging
-from plot_summary import rename_techs
+
+from scripts._helpers import configure_logging
+from scripts.plot_summary import rename_techs
 
 logger = logging.getLogger(__name__)
 sns.set_theme("paper", style="whitegrid")
@@ -88,7 +89,7 @@ def read_csv(input, output):
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
-        from _helpers import mock_snakemake
+        from scripts._helpers import mock_snakemake
 
         snakemake = mock_snakemake(
             "plot_statistics_comparison",

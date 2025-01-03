@@ -8,7 +8,8 @@ import os
 
 import pandas as pd
 import pypsa
-from _helpers import configure_logging, set_scenario_config
+
+from scripts._helpers import configure_logging, set_scenario_config
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +97,7 @@ def export_clean_csv(df, columns, output_file):
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
-        from _helpers import mock_snakemake
+        from scripts._helpers import mock_snakemake
 
         snakemake = mock_snakemake("prepare_osm_network_release")
 

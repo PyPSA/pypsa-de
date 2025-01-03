@@ -12,14 +12,15 @@ import numpy as np
 import pandas as pd
 import pypsa
 import xarray as xr
-from _helpers import (
+from add_existing_baseyear import add_build_year_to_new_assets
+from pypsa.clustering.spatial import normed_or_uniform
+
+from scripts._helpers import (
     configure_logging,
     get_snapshots,
     set_scenario_config,
     update_config_from_wildcards,
 )
-from add_existing_baseyear import add_build_year_to_new_assets
-from pypsa.clustering.spatial import normed_or_uniform
 
 logger = logging.getLogger(__name__)
 idx = pd.IndexSlice
@@ -258,7 +259,7 @@ def update_heat_pump_efficiency(n: pypsa.Network, n_p: pypsa.Network, year: int)
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
-        from _helpers import mock_snakemake
+        from scripts._helpers import mock_snakemake
 
         snakemake = mock_snakemake(
             "add_brownfield",

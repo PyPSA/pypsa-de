@@ -60,12 +60,13 @@ The unit of the production is kt/a.
 """
 
 import pandas as pd
-from _helpers import set_scenario_config
-from prepare_sector_network import get
+
+from scripts._helpers import set_scenario_config
+from scripts.prepare_sector_network import get
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
-        from _helpers import mock_snakemake
+        from scripts._helpers import mock_snakemake
 
         snakemake = mock_snakemake("build_industrial_production_per_country_tomorrow")
     set_scenario_config(snakemake)

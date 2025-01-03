@@ -10,7 +10,8 @@ database_en>`_.
 
 import geopandas as gpd
 import pandas as pd
-from _helpers import set_scenario_config
+
+from scripts._helpers import set_scenario_config
 
 
 def area(gdf):
@@ -36,7 +37,7 @@ def allocate_sequestration_potential(
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
-        from _helpers import mock_snakemake
+        from scripts._helpers import mock_snakemake
 
         snakemake = mock_snakemake("build_sequestration_potentials", clusters="128")
 

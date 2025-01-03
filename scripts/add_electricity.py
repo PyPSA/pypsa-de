@@ -119,14 +119,15 @@ import pandas as pd
 import powerplantmatching as pm
 import pypsa
 import xarray as xr
-from _helpers import (
+from powerplantmatching.export import map_country_bus
+from pypsa.clustering.spatial import DEFAULT_ONE_PORT_STRATEGIES, normed_or_uniform
+
+from scripts._helpers import (
     configure_logging,
     get_snapshots,
     set_scenario_config,
     update_p_nom_max,
 )
-from powerplantmatching.export import map_country_bus
-from pypsa.clustering.spatial import DEFAULT_ONE_PORT_STRATEGIES, normed_or_uniform
 
 idx = pd.IndexSlice
 
@@ -308,7 +309,6 @@ def load_and_aggregate_powerplants(
     aggregation_strategies: dict = None,
     exclude_carriers: list = None,
 ) -> pd.DataFrame:
-
     if not aggregation_strategies:
         aggregation_strategies = {}
 
@@ -410,7 +410,6 @@ def attach_load(
     busmap_fn: str,
     scaling: float = 1.0,
 ) -> None:
-
     load = (
         xr.open_dataarray(load_fn).to_dataframe().squeeze(axis=1).unstack(level="time")
     )
@@ -431,7 +430,6 @@ def set_transmission_costs(
     line_length_factor: float = 1.0,
     link_length_factor: float = 1.0,
 ) -> None:
-
     n.lines["capital_cost"] = (
         n.lines["length"]
         * line_length_factor
@@ -1014,7 +1012,7 @@ def attach_stores(n, costs, extendable_carriers):
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
-        from _helpers import mock_snakemake
+        from scripts._helpers import mock_snakemake
 
         snakemake = mock_snakemake("add_electricity", clusters=100)
     configure_logging(snakemake)

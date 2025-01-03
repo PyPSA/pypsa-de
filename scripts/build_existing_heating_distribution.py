@@ -38,10 +38,12 @@ References:
 -----------
 - "Mapping and analyses of the current and future (2020 - 2030) heating/cooling fuel deployment (fossil/renewables)" (https://energy.ec.europa.eu/publications/mapping-and-analyses-current-and-future-2020-2030-heatingcooling-fuel-deployment-fossilrenewables-1_en)
 """
+
 import country_converter as coco
 import numpy as np
 import pandas as pd
-from _helpers import set_scenario_config
+
+from scripts._helpers import set_scenario_config
 
 cc = coco.CountryConverter()
 
@@ -156,7 +158,7 @@ def build_existing_heating():
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
-        from _helpers import mock_snakemake
+        from scripts._helpers import mock_snakemake
 
         snakemake = mock_snakemake(
             "build_existing_heating_distribution",

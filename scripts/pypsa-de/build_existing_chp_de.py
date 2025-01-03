@@ -18,8 +18,9 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 import pypsa
-from _helpers import configure_logging
 from powerplantmatching.export import map_country_bus
+
+from scripts._helpers import configure_logging, mock_snakemake
 
 
 def clean_data(combustion, biomass, geodata):
@@ -213,10 +214,6 @@ def calculate_efficiency(CHP_de):
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
-        path = "../submodules/pypsa-eur/scripts"
-        sys.path.insert(0, os.path.abspath(path))
-        from _helpers import mock_snakemake
-
         snakemake = mock_snakemake(
             "build_existing_chp_de",
             clusters=27,

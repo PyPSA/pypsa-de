@@ -65,7 +65,7 @@ class BaseCopApproximator(ABC):
 
     @staticmethod
     def celsius_to_kelvin(
-        t_celsius: Union[float, xr.DataArray, np.array]
+        t_celsius: Union[float, xr.DataArray, np.array],
     ) -> Union[float, xr.DataArray, np.array]:
         """
         Convert temperature from Celsius to Kelvin.

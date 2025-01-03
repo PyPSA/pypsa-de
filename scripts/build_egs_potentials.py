@@ -107,11 +107,9 @@ def prepare_capex(prepared_data):
     capex_df = pd.DataFrame(columns=prepared_data.keys())
 
     for year in capex_df.columns:
-
         year_data = prepared_data[year].groupby("geometry").mean().reset_index()
 
         for g in year_data.geometry:
-
             if not g in year_data.geometry.tolist():
                 # weird but apparently necessary
                 continue
@@ -124,7 +122,6 @@ def prepare_capex(prepared_data):
 
     # fill up missing values assuming cost reduction factors similar to existing values
     for sooner, later in zip(capex_df.columns[::-1][1:], capex_df.columns[::-1]):
-
         missing_mask = capex_df[sooner].isna()
         cr_factor = (
             capex_df.loc[~missing_mask, later] / capex_df.loc[~missing_mask, sooner]
@@ -197,7 +194,7 @@ def get_capacity_factors(network_regions_file, air_temperatures_file):
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
-        from _helpers import mock_snakemake
+        from scripts._helpers import mock_snakemake
 
         snakemake = mock_snakemake(
             "build_egs_potentials",

@@ -47,8 +47,9 @@ import country_converter as coco
 import geopandas as gpd
 import numpy as np
 import pandas as pd
-from _helpers import configure_logging, mute_print, set_scenario_config
 from tqdm import tqdm
+
+from scripts._helpers import configure_logging, mute_print, set_scenario_config
 
 cc = coco.CountryConverter()
 logger = logging.getLogger(__name__)
@@ -1394,7 +1395,6 @@ def rescale_idees_from_eurostat(
         filling_years = [(2015, slice(2016, 2021)), (2000, slice(1990, 1999))]
 
         for source_year, target_years in filling_years:
-
             slicer_source = idx[country, source_year, :, :]
             slicer_target = idx[country, target_years, :, :]
 
@@ -1493,7 +1493,6 @@ def update_residential_from_eurostat(energy: pd.DataFrame) -> pd.DataFrame:
     }
 
     for nrg_name, (code, siec) in nrg_type.items():
-
         # Select energy balance type, rename columns and countries to match IDEES data,
         # convert TJ to TWh
         col_to_rename = {"geo": "country", "TIME_PERIOD": "year", "OBS_VALUE": nrg_name}
@@ -1597,7 +1596,7 @@ def build_heating_efficiencies(
 # %%
 if __name__ == "__main__":
     if "snakemake" not in globals():
-        from _helpers import mock_snakemake
+        from scripts._helpers import mock_snakemake
 
         snakemake = mock_snakemake("build_energy_totals")
 

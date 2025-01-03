@@ -10,10 +10,11 @@ import string
 import geopandas as gpd
 import numpy as np
 import pandas as pd
-from _helpers import configure_logging, set_scenario_config
 from shapely.geometry import LineString, Point
 from shapely.ops import linemerge, nearest_points, split
 from tqdm import tqdm
+
+from scripts._helpers import configure_logging, set_scenario_config
 
 logger = logging.getLogger(__name__)
 
@@ -761,7 +762,6 @@ def fix_overpassing_lines(lines, buses, distance_crs, tol=1):
 
 
 def build_network(inputs, outputs):
-
     logger.info("Reading input data.")
     buses = gpd.read_file(inputs["substations"])
     lines = gpd.read_file(inputs["lines"])
@@ -851,7 +851,7 @@ def build_network(inputs, outputs):
 if __name__ == "__main__":
     # Detect running outside of snakemake and mock snakemake for testing
     if "snakemake" not in globals():
-        from _helpers import mock_snakemake
+        from scripts._helpers import mock_snakemake
 
         snakemake = mock_snakemake("build_osm_network")
 

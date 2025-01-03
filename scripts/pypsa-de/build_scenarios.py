@@ -5,16 +5,15 @@
 
 # This script reads in data from the IIASA database to create the scenario.yaml file
 import logging
-
-from _helpers import configure_logging
-
-logger = logging.getLogger(__name__)
-
 import os
 from pathlib import Path
 
 import pandas as pd
 import ruamel.yaml
+
+from scripts._helpers import configure_logging, mock_snakemake
+
+logger = logging.getLogger(__name__)
 
 
 def get_transport_growth(df, planning_horizons):
@@ -225,13 +224,6 @@ def write_to_scenario_yaml(input, output, scenarios, df):
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
-        import os
-        import sys
-
-        path = "../submodules/pypsa-eur/scripts"
-        sys.path.insert(0, os.path.abspath(path))
-        from _helpers import mock_snakemake
-
         snakemake = mock_snakemake("build_scenarios")
 
     configure_logging(snakemake)
