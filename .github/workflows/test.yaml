@@ -7,10 +7,10 @@ name: Test workflows
 on:
   push:
     branches:
-    - master
+    - main
   pull_request:
     branches:
-    - master
+    - main
   schedule:
   - cron: "0 5 * * *"
 

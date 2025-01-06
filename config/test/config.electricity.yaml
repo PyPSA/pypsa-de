@@ -6,7 +6,7 @@ tutorial: true
 
 
 run:
-  name: "test-elec" # use this to keep track of runs with different settings
+  name: "KN2045_Bal_v4" # use this to keep track of runs with different settings
   disable_progressbar: true
   shared_resources:
     policy: "test"

@@ -3,7 +3,7 @@ name: Fixed-Version Environment Checker
 on:
   push:
     branches:
-    - master
+    - main
     paths:
     - 'envs/environment.yaml'
 
