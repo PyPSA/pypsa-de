@@ -114,9 +114,6 @@ rule solve_sector_network_myopic:
             "sector", "co2_sequestration_potential", default=200
         ),
         custom_extra_functionality=input_custom_extra_functionality,
-        # custom_extra_functionality=os.path.join(
-        #     os.path.dirname(workflow.snakefile), "scripts/pypsa-de/additional_functionality.py"
-        # ),
         energy_year=config_provider("energy", "energy_totals_year"),
     input:
         network=RESULTS
