@@ -30,9 +30,9 @@ dependencies:
 - aws-c-io=0.15.3
 - aws-c-mqtt=0.11.0
 - aws-c-s3=0.7.7
-- aws-c-sdkutils=0.2.1
+- aws-c-sdkutils=0.2.2
 - aws-checksums=0.2.2
-- aws-crt-cpp=0.29.7
+- aws-crt-cpp=0.29.8
 - aws-sdk-cpp=1.11.458
 - azure-core-cpp=1.14.0
 - azure-identity-cpp=1.10.0
@@ -66,7 +66,7 @@ dependencies:
 - click=8.1.8
 - click-plugins=1.1.1
 - cligj=0.7.2
-- cloudpickle=3.1.0
+- cloudpickle=3.1.1
 - coin-or-cbc=2.10.12
 - coin-or-cgl=0.60.9
 - coin-or-clp=1.17.10
@@ -88,7 +88,7 @@ dependencies:
 - dask=2024.12.1
 - dask-core=2024.12.1
 - dask-expr=1.1.21
-- datapi=0.1.1
+- datapi=0.1.2
 - datrie=0.8.2
 - dbus=1.13.6
 - decorator=5.1.1
@@ -152,7 +152,7 @@ dependencies:
 - gts=0.7.6
 - h11=0.14.0
 - h2=4.1.0
-- harfbuzz=10.1.0
+- harfbuzz=10.2.0
 - hdf4=4.2.15
 - hdf5=1.14.3
 - hpack=4.0.0
@@ -173,7 +173,7 @@ dependencies:
 - intervals=0.9.2
 - ipopt=3.14.16
 - ipython=8.31.0
-- ixmp4=0.9.2
+- ixmp4=0.9.8
 - jedi=0.19.2
 - jinja2=3.1.5
 - joblib=1.4.2
@@ -184,7 +184,7 @@ dependencies:
 - jupyter_core=5.7.2
 - kealib=1.6.1
 - keyutils=1.6.1
-- kiwisolver=1.4.7
+- kiwisolver=1.4.8
 - krb5=1.21.3
 - lcms2=2.16
 - ld_impl_linux-64=2.43
@@ -201,8 +201,8 @@ dependencies:
 - libbrotlidec=1.1.0
 - libbrotlienc=1.1.0
 - libcblas=3.9.0
-- libclang-cpp19.1=19.1.6
-- libclang13=19.1.6
+- libclang-cpp19.1=19.1.7
+- libclang13=19.1.7
 - libcrc32c=1.1.2
 - libcups=2.3.3
 - libcurl=8.11.1
@@ -248,7 +248,7 @@ dependencies:
 - libkml=1.3.0
 - liblapack=3.9.0
 - liblapacke=3.9.0
-- libllvm19=19.1.6
+- libllvm19=19.1.7
 - liblzma=5.6.3
 - liblzma-devel=5.6.3
 - libnetcdf=4.9.2
@@ -259,7 +259,7 @@ dependencies:
 - libopengl=1.7.0
 - libparquet=18.1.0
 - libpciaccess=0.18
-- libpng=1.6.44
+- libpng=1.6.45
 - libpq=17.2
 - libprotobuf=5.28.3
 - libre2-11=2024.07.02
@@ -304,7 +304,6 @@ dependencies:
 - minizip=4.0.7
 - mpfr=4.2.1
 - msgpack-python=1.1.0
-- multimethod=1.9.1
 - multiurl=0.3.3
 - mumps-include=5.7.3
 - mumps-seq=5.7.3
@@ -333,7 +332,7 @@ dependencies:
 - pandas=2.2.3
 - pandera=0.22.1
 - pandera-base=0.22.1
-- pango=1.54.0
+- pango=1.56.0
 - parso=0.8.4
 - partd=1.4.2
 - passlib=1.7.4
@@ -368,12 +367,12 @@ dependencies:
 - pulp=2.8.0
 - pure_eval=0.2.3
 - py-cpuinfo=9.0.0
-- pyam=2.3.0
+- pyam=3.0.0
 - pyarrow=18.1.0
 - pyarrow-core=18.1.0
 - pycountry=24.6.1
 - pycparser=2.22
-- pydantic=2.10.4
+- pydantic=2.10.5
 - pydantic-core=2.27.2
 - pydantic-settings=2.7.1
 - pygments=2.19.1
@@ -414,12 +413,12 @@ dependencies:
 - ruamel.yaml=0.18.10
 - ruamel.yaml.clib=0.2.8
 - s2n=1.5.10
-- scikit-learn=1.6.0
+- scikit-learn=1.6.1
 - scip=9.1.1
-- scipy=1.15.0
+- scipy=1.15.1
 - seaborn=0.13.2
 - seaborn-base=0.13.2
-- setuptools=75.6.0
+- setuptools=75.8.0
 - setuptools-scm=8.1.0
 - setuptools_scm=8.1.0
 - shapely=2.0.6
@@ -438,7 +437,7 @@ dependencies:
 - sortedcontainers=2.4.0
 - soupsieve=2.5
 - spdlog=1.15.0
-- sqlalchemy=2.0.36
+- sqlalchemy=2.0.37
 - sqlalchemy-utils=0.41.2
 - sqlalchemy-utils-arrow=0.41.2
 - sqlalchemy-utils-babel=0.41.2
@@ -481,7 +480,7 @@ dependencies:
 - tzcode=2024b
 - tzdata=2024b
 - ukkonen=1.0.1
-- unicodedata2=15.1.0
+- unicodedata2=16.0.0
 - unidecode=1.3.8
 - uriparser=0.9.8
 - urllib3=2.3.0
@@ -489,15 +488,15 @@ dependencies:
 - uvicorn-standard=0.34.0
 - uvloop=0.21.0
 - validators=0.34.0
-- virtualenv=20.28.1
-- watchfiles=1.0.3
+- virtualenv=20.29.0
+- watchfiles=1.0.4
 - wayland=1.23.1
 - wcwidth=0.2.13
 - websockets=14.1
 - wheel=0.45.1
 - wquantiles=0.6
-- wrapt=1.17.0
-- xarray=2025.1.0
+- wrapt=1.17.2
+- xarray=2025.1.1
 - xcb-util=0.4.1
 - xcb-util-cursor=0.1.5
 - xcb-util-image=0.4.0
@@ -544,7 +543,7 @@ dependencies:
   - pyomo==6.8.2
   - requests-oauthlib==1.3.1
   - snakemake-executor-plugin-cluster-generic==1.0.9
-  - snakemake-executor-plugin-slurm==0.11.2
+  - snakemake-executor-plugin-slurm==0.12.1
   - snakemake-executor-plugin-slurm-jobstep==0.2.1
   - snakemake-storage-plugin-http==0.2.3
   - tsam==2.3.6
