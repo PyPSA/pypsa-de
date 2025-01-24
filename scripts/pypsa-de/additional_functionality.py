@@ -208,6 +208,27 @@ def h2_import_limits(n, investment_year, limits_volume_max):
             carrier_attribute="",
         )
 
+        logger.info("Adding H2 export ban")
+
+        cname = f"H2_export_ban-{ct}"
+
+        n.model.add_constraints(lhs >= 0, name=f"GlobalConstraint-{cname}")
+
+        if cname in n.global_constraints.index:
+            logger.warning(
+                f"Global constraint {cname} already exists. Dropping and adding it again."
+            )
+            n.global_constraints.drop(cname, inplace=True)
+
+        n.add(
+            "GlobalConstraint",
+            cname,
+            constant=0,
+            sense=">=",
+            type="",
+            carrier_attribute="",
+        )
+
 
 def h2_production_limits(n, investment_year, limits_volume_min, limits_volume_max):
     for ct in limits_volume_max["electrolysis"]:
@@ -643,6 +664,45 @@ def add_h2_derivate_limit(n, investment_year, limits_volume_max):
             cname,
             constant=limit,
             sense="<=",
+            type="",
+            carrier_attribute="",
+        )
+
+    # The following export bans  for DE are added unconditionally, independent of config
+    ct = "DE"
+    logger.info("Adding net export bans for H2 derivatives in DE")
+
+    for incarrier, outcarrier in [
+        ("EU methanol -> DE methanol", "DE methanol -> EU methanol"),
+        ("EU renewable gas -> DE gas", "DE renewable gas -> EU gas"),
+        ("EU renewable oil -> DE oil", "DE renewable oil -> EU oil"),
+    ]:
+        incoming = n.links.index[n.links.index == incarrier]
+        outgoing = n.links.index[n.links.index == outcarrier]
+        incoming_p = (
+            n.model["Link-p"].loc[:, incoming] * n.snapshot_weightings.generators
+        ).sum()
+        outgoing_p = (
+            n.model["Link-p"].loc[:, outgoing] * n.snapshot_weightings.generators
+        ).sum()
+
+        lhs = incoming_p - outgoing_p
+
+        cname = f"renewable{incarrier.split()[-1]}_export_ban-{ct}"
+
+        n.model.add_constraints(lhs >= 0, name=f"GlobalConstraint-{cname}")
+
+        if cname in n.global_constraints.index:
+            logger.warning(
+                f"Global constraint {cname} already exists. Dropping and adding it again."
+            )
+            n.global_constraints.drop(cname, inplace=True)
+
+        n.add(
+            "GlobalConstraint",
+            cname,
+            constant=0,
+            sense=">=",
             type="",
             carrier_attribute="",
         )

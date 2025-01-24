@@ -6,13 +6,14 @@ import numpy as np
 import pandas as pd
 
 from scripts._helpers import mock_snakemake
+
 TWh2PJ = 3.6
 
 
 def plot_trade(
     df,
     savepath,
-):  
+):
     # WARNING CODE DUPLICATION
     # WARNING i just asked COPILOT to reformat the two plots below
     # load data and convert to TWh

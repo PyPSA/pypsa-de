@@ -57,9 +57,7 @@ CurrentPolicies:
               2020: 7.8
               2025: 11.3
               2030: 17.3 # 12 less than NEP, because of 1 year delay
-              2035: 35 # 29.3 + a little extra
-              2040: 70
-              2045: 70
+              2035: 40 # 29.3 + half of extra projects
           onwind:
             DE:
               2030: 94.5 # uba Projektionsbericht
@@ -590,9 +588,7 @@ KN2045minus_WorstCase:
               2020: 7.8
               2025: 11.3
               2030: 17.3 # 12 less than NEP, because of 1 year delay
-              2035: 35 # 29.3 + a little extra
-              2040: 70
-              2045: 70
+              2035: 40 # 29.3 + half of extra projects
           onwind:
             DE:
               2030: 94.5 # uba Projektionsbericht

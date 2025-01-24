@@ -38,7 +38,7 @@ ICE_lower_degree_factor,--,float,Share increase in energy demand in internal com
 ICE_upper_degree_factor,--,float,Share increase in energy demand in internal combustion engine (ICE) for each degree difference between the hot environment and the maximum temperature.
 EV_lower_degree_factor,--,float,Share increase in energy demand in electric vehicles (EV) for each degree difference between the cold environment and the minimum temperature.
 EV_upper_degree_factor,--,float,Share increase in energy demand in electric vehicles (EV) for each degree difference between the hot environment and the maximum temperature.
-bev_dsm,--,"{true, false}",Add the option for battery electric vehicles (BEV) to participate in demand-side management (DSM)
+bev_dsm,--,"{true, false} or startyear as int",Add the option for battery electric vehicles (BEV) to participate in demand-side management (DSM). If an int is passed it is interpreted as the year from which on BEV DSM is available.
 ,,,
 bev_availability,--,float,The share for battery electric vehicles (BEV) that are able to do demand side management (DSM)
 bev_energy,--,float,The average size of battery electric vehicles (BEV) in MWh

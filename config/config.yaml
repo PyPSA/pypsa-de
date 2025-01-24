@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20241203-force-onwind-south
+  prefix: 20250123-restrict_res_buildout
   name:
   # - CurrentPolicies
   - KN2045_Bal_v4
@@ -436,8 +436,8 @@ solving:
           DE:
             2020: 54.5
             2025: 69
-            2030: 157 # EEG2023 Ziel für 2035
-            2035: 250
+            2030: 115 # EEG2023 Ziel für 2030
+            2035: 160 # EEG2023 Ziel für 2040
             2040: 250
             2045: 250
         offwind:
@@ -445,16 +445,16 @@ solving:
             2020: 7.8
             2025: 11.3
             2030: 29.3 # uba Projektionsbericht and NEP without delayed BalWin 3
-            2035: 70
-            2040: 70
+            2035: 50 # Planned projects until 2035 (offshore_connection_points.csv) -1.3 GW for potential delays
+            2040: 65   # Planned projects until 2040 -1.5 GW for potential retirments
             2045: 70
         solar:
           DE:
             2020: 53.7
             2025: 110 # EEG2023; assumes for 2026: 128 GW, assuming a fair share reached by end of 2025
-            2030: 309 # EEG2023 Ziel für 2035
-            2035: 1000
-            2040: 1000
+            2030: 235 # PV Ziel 2030 + 20 GW
+            2035: 400
+            2040: 800
             2045: 1000
       Store:
         co2 sequestered:

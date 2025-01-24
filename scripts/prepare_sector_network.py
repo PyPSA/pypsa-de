@@ -2029,7 +2029,7 @@ def add_EVs(
             efficiency=options["bev_charge_efficiency"],
         )
 
-    if options["bev_dsm"]:
+    if options["bev_dsm"] and options["bev_dsm"] <= investment_year:
         e_nom = (
             number_cars
             * options["bev_energy"]

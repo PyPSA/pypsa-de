@@ -5,6 +5,9 @@ import math
 import os
 import re
 import sys
+
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__) + "/../.."))
+
 from functools import reduce
 
 import numpy as np
@@ -248,7 +251,9 @@ def _get_h2_fossil_fraction(n):
         .sum()
     )
 
-    h2_fossil_fraction = total_h2_supply.get("SMR") / total_h2_supply.sum()
+    h2_fossil_fraction = (
+        total_h2_supply.filter(like="SMR").sum() / total_h2_supply.sum()
+    )
 
     return h2_fossil_fraction
 

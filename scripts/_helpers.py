@@ -471,7 +471,7 @@ def mock_snakemake(
     else:
         root_dir = Path(root_dir).resolve()
 
-    user_in_script_dir = Path.cwd().resolve() == script_dir
+    user_in_script_dir = Path.cwd().resolve().is_relative_to(Path(script_dir))
     if str(submodule_dir) in __file__:
         # the submodule_dir path is only need to locate the project dir
         os.chdir(Path(__file__[: __file__.find(str(submodule_dir))]))

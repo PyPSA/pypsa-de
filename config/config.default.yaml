@@ -498,7 +498,7 @@ sector:
   ICE_upper_degree_factor: 1.6
   EV_lower_degree_factor: 0.98
   EV_upper_degree_factor: 0.63
-  bev_dsm: true
+  bev_dsm: 2030
   bev_availability: 0.5
   bev_energy: 0.05
   bev_charge_efficiency: 0.9
