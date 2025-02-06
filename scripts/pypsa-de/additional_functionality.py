@@ -624,7 +624,11 @@ def add_h2_derivate_limit(n, investment_year, limits_volume_max):
         limit = limits_volume_max["h2_derivate_import"][ct][investment_year] * 1e6
 
         logger.info(f"limiting H2 derivate imports in {ct} to {limit / 1e6} TWh/a")
-
+        if not n.links.loc["EU renewable oil -> DE oil", "active"]:
+            logger.warning(
+                "EU renewable oil -> DE oil link not active. Cannot limit H2 derivate imports."
+            )
+            return
         incoming = n.links.loc[
             [
                 "EU renewable oil -> DE oil",

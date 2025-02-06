@@ -281,6 +281,7 @@ rule modify_district_heat_share:
 
 rule modify_prenetwork:
     params:
+        solving=config_provider("solving"),
         efuel_export_ban=config_provider("solving", "constraints", "efuel_export_ban"),
         enable_kernnetz=config_provider("wasserstoff_kernnetz", "enable"),
         costs=config_provider("costs"),
