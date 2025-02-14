@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20250130-morefinalfixes
+  prefix: 20242008_dh_subnodes_off
   name:
   # - CurrentPolicies
   - KN2045_Bal_v4
@@ -293,6 +293,7 @@ sector:
       2040: 0.6
       2045: 0.8
       2050: 1.0
+    add_subnodes: false
   central_heat_vent: true
   co2_spatial: true
   biomass_spatial: true

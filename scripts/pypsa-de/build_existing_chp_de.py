@@ -212,6 +212,43 @@ def calculate_efficiency(CHP_de):
     return CHP_de
 
 
+def assign_subnode(CHP_de: pd.DataFrame, subnodes: gpd.GeoDataFrame) -> pd.DataFrame:
+    """
+    Assign subnodes to the CHP plants based on their location.
+
+    Parameters
+    ----------
+    CHP_de : pd.DataFrame
+        DataFrame containing CHP plant data with latitude and longitude.
+    subnodes : gpd.GeoDataFrame
+        GeoDataFrame containing subnode data with geometries.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with assigned subnodes.
+    """
+
+    # Make a geodataframe from CHP_de using the lat and lon columns
+    CHP_de = gpd.GeoDataFrame(
+        CHP_de, geometry=gpd.points_from_xy(CHP_de.lon, CHP_de.lat)
+    )
+    CHP_de.crs = subnodes.crs
+    # Set nuts_3 shape wkt column as geometry
+    subnodes["geometry"] = gpd.GeoSeries.from_wkt(subnodes["lau_shape"])
+    subnodes.drop("lau_shape", axis=1, inplace=True)
+    subnodes.index.rename("city", inplace=True)
+
+    # Assign subnode to CHP plants based on the nuts3 region
+    CHP_de = CHP_de.sjoin(subnodes, how="left", predicate="within")
+    # Insert leading whitespace for citynames where not nan
+    CHP_de["city"] = CHP_de["city"].apply(lambda x: " " + x if pd.notna(x) else "")
+    CHP_de["bus"] = CHP_de["bus"] + CHP_de["city"]
+    CHP_de.drop("city", axis=1, inplace=True)
+
+    return CHP_de
+
+
 if __name__ == "__main__":
     if "snakemake" not in globals():
         snakemake = mock_snakemake(
@@ -250,5 +287,12 @@ if __name__ == "__main__":
     geometry = gpd.points_from_xy(CHP_de["lon"], CHP_de["lat"])
     gdf = gpd.GeoDataFrame(geometry=geometry, crs=4326)
     CHP_de["bus"] = gpd.sjoin_nearest(gdf, regions, how="left")["name"]
+
+    if snakemake.params.add_district_heating_subnodes:
+        subnodes = gpd.read_file(
+            snakemake.input.district_heating_subnodes,
+            columns=["Stadt", "lau_shape"],
+        ).set_index("Stadt")
+        CHP_de = assign_subnode(CHP_de, subnodes)
 
     CHP_de.to_csv(snakemake.output.german_chp, index=False)

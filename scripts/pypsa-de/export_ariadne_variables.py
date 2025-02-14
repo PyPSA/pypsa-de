@@ -3576,7 +3576,6 @@ def get_prices(n, region):
     # Price|Final Energy|Transportation|Liquids|Petroleum|Transport and Distribution
     # Price|Final Energy|Transportation|Liquids|Petroleum|Carbon Price Component
     # Price|Final Energy|Transportation|Liquids|Petroleum|Other Taxes
-
     # Price|Final Energy|Transportation|Liquids|Diesel
     # Price|Final Energy|Transportation|Liquids|Diesel|Sales Margin
     # Price|Final Energy|Transportation|Liquids|Diesel|Transport and Distribution
