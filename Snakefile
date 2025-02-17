@@ -254,7 +254,7 @@ rule build_egon_data:
     script:
         "scripts/pypsa-de/build_egon_data.py"
 
-aseyear_value = config["scenario"]["planning_horizons"][0]
+baseyear_value = config["scenario"]["planning_horizons"][0]
 
 
 rule add_district_heating_subnodes:
@@ -298,7 +298,7 @@ rule add_district_heating_subnodes:
     resources:
         mem_mb=1000,
     script:
-        "scripts/add_district_heating_subnodes.py"
+        "scripts/pypsa-de/add_district_heating_subnodes.py"
 
 
 ruleorder: modify_district_heat_share > build_district_heat_share
@@ -457,9 +457,11 @@ rule build_existing_chp_de:
             else []
         ),
     output:
-        german_chp=resources("german_chp_{clusters}.csv"),
+        german_chp=resources(
+            "german_chp_base_s_{clusters}_l{ll}_{opts}_{sector_opts}_{planning_horizons}.csv"
+        ),
     log:
-        logs("build_existing_chp_de_{clusters}.log"),
+        logs("build_existing_chp_de_{clusters}_l{ll}_{opts}_{sector_opts}_{planning_horizons}.log"),
     script:
         "scripts/pypsa-de/build_existing_chp_de.py"
 
