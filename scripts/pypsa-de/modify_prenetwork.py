@@ -307,7 +307,7 @@ def add_wasserstoff_kernnetz(n, wkn, costs):
     # from 2030 onwards all pipes are extendable (except from the ones the model build up before and the kernnetz lines)
 
 
-def unravel_carbonaceous_fuels(n):
+def unravel_carbonaceous_fuels(n, current_year):
     """
     Unravel European carbonaceous buses and if necessary their loads to enable
     energy balances for import and export of carbonaceous fuels.
@@ -406,11 +406,19 @@ def unravel_carbonaceous_fuels(n):
     )
 
     if snakemake.params.efuel_export_ban:
-        logger.info(
-            "Efuel export ban: Setting p_max_pu to 0 for DE renewable oil -> EU oil"
-        )
-        n.links.loc["DE renewable oil -> EU oil", "p_max_pu"] = 0
+        logger.info("Efuel export ban: Deactivating link DE renewable oil -> EU oil")
+        n.links.loc["DE renewable oil -> EU oil", "active"] = False
 
+        if (
+            snakemake.params.solving["constraints"]["limits_volume_max"][
+                "h2_derivate_import"
+            ]["DE"][current_year]
+            == 0
+        ):
+            logger.info(
+                "Efuel export ban and H2 derivate import == 0: Deactivating link DE renewable oil -> EU oil"
+            )
+            n.links.loc["EU renewable oil -> DE oil", "active"] = False
     n.add(
         "Link",
         [
@@ -489,10 +497,18 @@ def unravel_carbonaceous_fuels(n):
     )
 
     if snakemake.params.efuel_export_ban:
-        logger.info(
-            "Efuel export ban: Setting p_max_pu to 0 for DE methanol -> EU methanol"
-        )
-        n.links.loc["DE methanol -> EU methanol", "p_max_pu"] = 0
+        logger.info("Efuel export ban: Deactivating link DE methanol -> EU methanol")
+        n.links.loc["DE methanol -> EU methanol", "active"] = False
+        if (
+            snakemake.params.solving["constraints"]["limits_volume_max"][
+                "h2_derivate_import"
+            ]["DE"][current_year]
+            == 0
+        ):
+            logger.info(
+                "Efuel export ban and H2 derivate import == 0: Deactivating link EU methanol -> DE methanol"
+            )
+            n.links.loc["EU methanol -> DE methanol", "active"] = False
 
     # add stores
     EU_meoh_store = n.stores.loc["EU methanol Store"].copy()
@@ -609,7 +625,7 @@ def unravel_carbonaceous_fuels(n):
         )
 
 
-def unravel_gasbus(n, costs):
+def unravel_gasbus(n, costs, current_year):
     """
     Unravel European gas bus to enable energy balances for import of gas
     products.
@@ -715,10 +731,18 @@ def unravel_gasbus(n, costs):
     )
 
     if snakemake.params.efuel_export_ban:
-        logger.info(
-            "Efuel export ban: Setting p_max_pu to 0 for DE renewable gas -> EU gas"
-        )
-        n.links.loc["DE renewable gas -> EU gas", "p_max_pu"] = 0
+        logger.info("Efuel export ban: Deactivating link DE renewable gas -> EU gas")
+        n.links.loc["DE renewable gas -> EU gas", "active"] = False
+        if (
+            snakemake.params.solving["constraints"]["limits_volume_max"][
+                "h2_derivate_import"
+            ]["DE"][current_year]
+            == 0
+        ):
+            logger.info(
+                "Efuel export ban and H2 derivate import == 0: Deactivating link EU renewable gas -> DE gas"
+            )
+            n.links.loc["EU renewable gas -> DE gas", "active"] = False
 
     ### add links between renewable and fossil gas buses
     n.add(
@@ -1305,6 +1329,7 @@ if __name__ == "__main__":
     n = pypsa.Network(snakemake.input.network)
     nhours = n.snapshot_weightings.generators.sum()
     nyears = nhours / 8760
+    current_year = int(snakemake.wildcards.planning_horizons)
 
     costs = prepare_costs(
         snakemake.input.costs,
@@ -1327,10 +1352,10 @@ if __name__ == "__main__":
     first_technology_occurrence(n)
 
     if not snakemake.config["run"]["debug_unravel_oilbus"]:
-        unravel_carbonaceous_fuels(n)
+        unravel_carbonaceous_fuels(n, current_year)
 
     if not snakemake.config["run"]["debug_unravel_gasbus"]:
-        unravel_gasbus(n, costs)
+        unravel_gasbus(n, costs, current_year)
 
     if snakemake.params.enable_kernnetz:
         fn = snakemake.input.wkn
@@ -1364,8 +1389,6 @@ if __name__ == "__main__":
             snakemake.wildcards.planning_horizons
         ):
             force_retrofit(n, snakemake.params.H2_plants)
-
-    current_year = int(snakemake.wildcards.planning_horizons)
 
     enforce_transmission_project_build_years(n, current_year)
 
