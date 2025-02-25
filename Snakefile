@@ -167,8 +167,9 @@ rule retrieve_egon_data:
         mapping="data/egon/mapping_technologies.json",
     shell:
         """
-        wget -O {output.spatial} "https://api.opendata.ffe.de/demandregio/demandregio_spatial?id_spatial=5&year=2018"
-        wget -O {output.mapping} "https://api.opendata.ffe.de/demandregio/demandregio_spatial_description?id_spatial=5"
+        mkdir -p data/egon
+        curl -o {output.spatial} "https://api.opendata.ffe.de/demandregio/demandregio_spatial?id_spatial=5&year=2018"
+        curl -o {output.mapping} "https://api.opendata.ffe.de/demandregio/demandregio_spatial_description?id_spatial=5"
         """
 
 
