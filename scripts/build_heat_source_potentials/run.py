@@ -29,7 +29,7 @@ Outputs
 """
 
 import geopandas as gpd
-from _helpers import set_scenario_config
+from scripts._helpers import set_scenario_config
 
 from scripts.build_heat_source_potentials.onshore_region_data import OnshoreRegionData
 

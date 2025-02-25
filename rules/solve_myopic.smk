@@ -31,13 +31,7 @@ rule add_existing_baseyear:
                 config_provider("scenario", "planning_horizons", 0)(w)
             )
         ),
-        cop_profiles=(
-            resources(
-                "cop_profiles_base-extended_s_{clusters}_l{ll}_{opts}_{sector_opts}_{planning_horizons}.nc"
-            )
-            if config["sector"]["district_heating"].get("add_subnodes", True)
-            else resources("cop_profiles_base_s_{clusters}_{planning_horizons}.nc")
-        ),
+        cop_profiles=resources("cop_profiles_base_s_{clusters}_{planning_horizons}.nc"),
         existing_heating_distribution=(
             resources(
                 "existing_heating_distribution_base-extended_s_{clusters}_l{ll}_{opts}_{sector_opts}_{planning_horizons}.csv"

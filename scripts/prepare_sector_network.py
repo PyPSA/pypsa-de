@@ -22,6 +22,10 @@ from networkx.algorithms.connectivity.edge_augmentation import k_edge_augmentati
 from pypsa.geo import haversine_pts
 from scipy.stats import beta
 
+import sys
+
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+
 from scripts._helpers import (
     configure_logging,
     get,
@@ -2470,11 +2474,17 @@ def add_heat(
                 nodes + f" {heat_system} water tanks",
                 bus=nodes + f" {heat_system} heat",
                 carrier=f"{heat_system} water tanks",
-                efficiency_store=costs.at["water tank charger", "efficiency"],
+                efficiency_store=costs.at[
+                    f"{heat_system.central_or_decentral} water tank charger",
+                    "efficiency",
+                ],
                 max_hours=costs.at[
                     "central water tank storage", "energy to power ratio"
                 ],
-                efficiency_dispatch=costs.at["water tank discharger", "efficiency"],
+                efficiency_dispatch=costs.at[
+                    f"{heat_system.central_or_decentral} water tank discharger",
+                    "efficiency",
+                ],
                 p_nom_extendable=True,
                 standing_loss=1 - np.exp(-1 / 24 / tes_time_constant_days),
                 capital_cost=costs.at[
@@ -2496,11 +2506,18 @@ def add_heat(
                     nodes + f" {heat_system} water pits",
                     bus=nodes + f" {heat_system} heat",
                     carrier=f"{heat_system} water pits",
-                    efficiency_store=costs.at["water pit charger", "efficiency"],
-                    max_hours=costs.at[
-                        "central water pit storage", "energy to power ratio"
+                    efficiency_store=costs.at[
+                        "central water pit charger",
+                        "efficiency",
                     ],
-                    efficiency_dispatch=costs.at["water pit discharger", "efficiency"],
+                    max_hours=costs.at[
+                        "central water pit storage",
+                        "energy to power ratio",
+                    ],
+                    efficiency_dispatch=costs.at[
+                        "central water pit discharger",
+                        "efficiency",
+                    ],
                     p_nom_extendable=True,
                     standing_loss=1 - np.exp(-1 / 24 / tes_time_constant_days),
                     capital_cost=costs.at["central water pit storage", "fixed"],
@@ -4898,13 +4915,17 @@ if __name__ == "__main__":
     if "snakemake" not in globals():
         from scripts._helpers import mock_snakemake
 
+        # Change directory to this script
+        os.chdir(os.path.dirname(os.path.realpath(__file__)))
+
         snakemake = mock_snakemake(
             "prepare_sector_network",
             opts="",
-            clusters="38",
+            clusters="27",
             ll="vopt",
-            sector_opts="",
+            sector_opts="none",
             planning_horizons="2030",
+            run="KN2045_Bal_v4",
         )
 
     configure_logging(snakemake)

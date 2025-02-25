@@ -494,6 +494,7 @@ sector:
     - geothermal
   heat_pump_sources:
     urban central:
+    - geothermal
     - air
     urban decentral:
     - air

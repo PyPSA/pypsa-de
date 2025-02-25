@@ -194,7 +194,9 @@ rule build_temperature_profiles:
         drop_leap_day=config_provider("enable", "drop_leap_day"),
     input:
         pop_layout=resources("pop_layout_total.nc"),
-        regions_onshore=resources("regions_onshore_base_s_{clusters}.geojson"),
+        regions_onshore=resources("regions_onshore_base-extended_s_{clusters}.geojson") if  config["sector"][
+    "district_heating"
+].get("add_subnodes", True) else resources("regions_onshore_base_s_{clusters}.geojson"),
         cutout=heat_demand_cutout,
     output:
         temp_soil=resources("temp_soil_total_base_s_{clusters}.nc"),
@@ -260,7 +262,9 @@ rule build_central_heating_temperature_profiles:
         energy_totals_year=config_provider("energy", "energy_totals_year"),
     input:
         temp_air_total=resources("temp_air_total_base_s_{clusters}.nc"),
-        regions_onshore=resources("regions_onshore_base_s_{clusters}.geojson"),
+        regions_onshore=resources("regions_onshore_base-extended_s_{clusters}.geojson") if  config["sector"][
+    "district_heating"
+].get("add_subnodes", True) else resources("regions_onshore_base_s_{clusters}.geojson"),
     output:
         central_heating_forward_temperature_profiles=resources(
             "central_heating_forward_temperature_profiles_base_s_{clusters}_{planning_horizons}.nc"
@@ -291,7 +295,9 @@ rule build_heat_source_potentials:
         ),
     input:
         utilisation_potential="data/heat_source_utilisation_potentials/{heat_source}.gpkg",
-        regions_onshore=resources("regions_onshore_base_s_{clusters}.geojson"),
+        regions_onshore=resources("regions_onshore_base-restricted_s_{clusters}.geojson") if  config["sector"][
+    "district_heating"
+].get("add_subnodes", True) else resources("regions_onshore_base_s_{clusters}.geojson"),
     output:
         resources("heat_source_potential_{heat_source}_base_s_{clusters}.csv"),
     resources:
@@ -331,7 +337,9 @@ rule build_cop_profiles:
         ),
         temp_soil_total=resources("temp_soil_total_base_s_{clusters}.nc"),
         temp_air_total=resources("temp_air_total_base_s_{clusters}.nc"),
-        regions_onshore=resources("regions_onshore_base_s_{clusters}.geojson"),
+        regions_onshore=resources("regions_onshore_base_s_{clusters}.geojson") if  config["sector"][
+    "district_heating"
+].get("add_subnodes", True) else resources("regions_onshore_base_s_{clusters}.geojson"),
     output:
         cop_profiles=resources("cop_profiles_base_s_{clusters}_{planning_horizons}.nc"),
     resources:

@@ -215,14 +215,12 @@ def calculate_efficiency(CHP_de):
 def assign_subnode(CHP_de: pd.DataFrame, subnodes: gpd.GeoDataFrame) -> pd.DataFrame:
     """
     Assign subnodes to the CHP plants based on their location.
-
     Parameters
     ----------
     CHP_de : pd.DataFrame
         DataFrame containing CHP plant data with latitude and longitude.
     subnodes : gpd.GeoDataFrame
         GeoDataFrame containing subnode data with geometries.
-
     Returns
     -------
     pd.DataFrame
@@ -234,7 +232,7 @@ def assign_subnode(CHP_de: pd.DataFrame, subnodes: gpd.GeoDataFrame) -> pd.DataF
         CHP_de, geometry=gpd.points_from_xy(CHP_de.lon, CHP_de.lat)
     )
     CHP_de.crs = subnodes.crs
-    # Set nuts_3 shape wkt column as geometry
+    # Set LAU shape column as geometry
     subnodes["geometry"] = gpd.GeoSeries.from_wkt(subnodes["lau_shape"])
     subnodes.drop("lau_shape", axis=1, inplace=True)
     subnodes.index.rename("city", inplace=True)

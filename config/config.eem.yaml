@@ -1,0 +1,84 @@
+# SPDX-FileCopyrightText: : 2017-2024 The PyPSA-Eur Authors
+#
+# SPDX-License-Identifier: CC0-1.0
+
+run:
+  prefix: 20250225_eem_config
+  name:
+  - Baseline
+  - No_PTES
+  - LowPTESCAPEX
+  - HighPTESCAPEX
+  - LowStandingLosses
+  - HighStandingLosses
+  - LowGroundWaterDepth
+  - HighGroundWaterDepth
+  - LowEtPRatio
+  - HighEtPRatio
+  # - 8Gt_Elec_v3
+  # - 8Gt_H2_v3
+  scenarios:
+    enable: true
+    manual_file: config/scenarios.eem.yaml
+    file: config/scenarios.automated.yaml
+  shared_resources:
+    policy: base #stops recalculating
+    exclude:
+    - existing_heating.csv   # specify files which should not be shared between scenarios
+    - costs
+    - retrieve_cost   # This is necessary to save retrieve_cost_data_{year}.log in the correct folder
+    - industry_sector_ratios
+    - build_industry_sector_ratios   # This is necessary to save build_industry_sector_ratios_data.log in the correct folder
+    - modify_existing_heating
+
+iiasa_database:
+  db_name: ariadne
+  leitmodelle:
+    general: REMIND-EU v1.1
+    buildings: REMod v1.0
+    transport: REMIND-EU v1.1
+    transport_stock: DLR-VECTOR21
+    industry: FORECAST v1.0
+  scenarios:
+  - 8Gt_Bal_v3
+  - 8Gt_Elec_v3
+  - 8Gt_H2_v3
+  reference_scenario: 8Gt_Bal_v3
+  region: Deutschland
+
+foresight: myopic
+
+scenario:
+  ll:
+  - vopt
+  clusters:
+  - 27 #current options: 27, 49
+  opts:
+  - ''
+  sector_opts:
+  - none
+  planning_horizons:
+  # - 2020
+  # - 2025
+  # - 2030
+  # - 2035
+  # - 2040
+  - 2045
+
+adjustments:
+    electricity: false
+    sector:
+      absolute:
+        StorageUnit:
+          urban central water pits:
+            standing_loss: 0.00012121
+          urban central water tanks:
+            standing_loss: 0.00015476
+
+wasserstoff_kernnetz:
+  enable: false
+
+sector:
+  district_heating:
+    potential: 0.5
+    add_subnodes: true

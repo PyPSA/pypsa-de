@@ -210,6 +210,11 @@ def write_to_scenario_yaml(input, output, scenarios, df):
                     dri_fraction.loc["DRI_Steel_Share", year].item(), 4
                 )
 
+        if "solving" not in config[scenario]:
+            config[scenario]["solving"] = {}
+        if "constraints" not in config[scenario]["solving"]:
+            config[scenario]["solving"]["constraints"] = {}
+
         config[scenario]["solving"]["constraints"]["co2_budget_national"] = {}
         for year, target in co2_budget_fractions.items():
             config[scenario]["solving"]["constraints"]["co2_budget_national"][year] = {}

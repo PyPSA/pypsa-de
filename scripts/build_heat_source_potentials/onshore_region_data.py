@@ -76,15 +76,11 @@ class OnshoreRegionData:
         data_in_regions = gpd.sjoin(self.data, self.onshore_regions, how="right")
 
         # Initialize an empty list to store the merged GeoDataFrames
-        ret_val = self.onshore_regions.copy()
-        ret_val[self._column_name] = (
-            data_in_regions.groupby("name")[self._column_name]
-            .sum()
-            .reset_index(drop=True)
-        )
-        ret_val = ret_val.set_index("name", drop=True).rename_axis("name")[
+        ret_val = self.onshore_regions.copy().set_index("name", drop=True)
+        ret_val[self._column_name] = data_in_regions.groupby("name")[
             self._column_name
-        ]
+        ].sum()
+        ret_val = ret_val.rename_axis("name")[self._column_name]
 
         return ret_val
 
