@@ -318,7 +318,10 @@ if config["sector"]["district_heating"]["add_subnodes"] and config["sector"][
             ),
             fernwaermeatlas="data/fernwaermeatlas/fernwaermeatlas.xlsx",
             cities="data/fernwaermeatlas/cities_geolocations.geojson",
-            corine=ancient("data/bundle/corine/g100_06.tif"),
+            osm_land_cover=storage(
+                "https://heidata.uni-heidelberg.de/api/access/datafile/23053?format=original&gbrecs=true",
+                keep_local=True,
+            ),
             natura=ancient("data/bundle/natura/natura.tiff"),
             groundwater_depth=storage(
                 "http://thredds-gfnl.usc.es/thredds/fileServer/GLOBALWTDFTP/annualmeans/EURASIA_WTD_annualmean.nc",
@@ -349,7 +352,7 @@ if config["sector"]["district_heating"]["add_subnodes"] and config["sector"][
                 else []
             ),
         resources:
-            mem_mb=10000,
+            mem_mb=60000,
         script:
             "scripts/pypsa-de/add_district_heating_subnodes.py"
 

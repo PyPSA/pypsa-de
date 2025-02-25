@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20250218_ptes_potential
+  prefix: 20242008_dh_subnodes_off
   name:
   # - CurrentPolicies
   - KN2045_Bal_v4
@@ -294,7 +294,7 @@ sector:
       2045: 0.8
       2050: 1.0
     add_subnodes: false
-    ptes_codes_corine: [12, 13, 14, 16, 18, 19, 20, 21, 22, 26, 27, 28, 29, 31, 32]
+    osm_landcover_codes: [21, 23, 32, 33]
     max_groundwater_depth: -10
     ptes_potential_scalar: 1
   central_heat_vent: true

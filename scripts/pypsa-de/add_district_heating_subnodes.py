@@ -30,7 +30,7 @@ from atlite.gis import shape_availability
 
 def add_ptes_limit(
     subnodes: gpd.GeoDataFrame,
-    corine: rasterio.io.DatasetReader,
+    osm_land_cover: rasterio.io.DatasetReader,
     natura: rasterio.io.DatasetReader,
     groundwater: xr.Dataset,
     codes: list,
@@ -44,8 +44,8 @@ def add_ptes_limit(
     ----------
     subnodes : gpd.GeoDataFrame
         GeoDataFrame containing information about district heating subnodes.
-    corine : rasterio.io.DatasetReader
-        CORINE land cover raster dataset.
+    osm_land_cover : rasterio.io.DatasetReader
+        OSM land cover raster dataset.
     natura : rasterio.io.DatasetReader
         NATURA 2000 protected areas raster dataset.
     groundwater : xr.Dataset
@@ -68,10 +68,10 @@ def add_ptes_limit(
     dh_systems.crs = "EPSG:4326"
     dh_systems = dh_systems.to_crs(3035)
 
-    excluder = ExclusionContainer(crs=3035, res=100)
+    excluder = ExclusionContainer(crs=3035, res=50)
 
     # Exclusion of unsuitable areas
-    excluder.add_raster(corine, codes=codes, invert=True, crs=3035)
+    excluder.add_raster(osm_land_cover, codes=codes, invert=True, crs=3035)
 
     # Exclusion of NATURA protected areas
     excluder.add_raster(natura, codes=[1], invert=True, crs=3035)
@@ -79,7 +79,7 @@ def add_ptes_limit(
     # Calculation of shape availability and transformation of raster data to geodataframe
     band, transform = shape_availability(dh_systems.lau_shape, excluder)
     masked_data = band
-    row_indices, col_indices = np.where(masked_data != corine.nodata)
+    row_indices, col_indices = np.where(masked_data != osm_land_cover.nodata)
     values = masked_data[row_indices, col_indices]
 
     x_coords, y_coords = rasterio.transform.xy(transform, row_indices, col_indices)
@@ -87,7 +87,7 @@ def add_ptes_limit(
     eligible_areas = gpd.GeoDataFrame(
         eligible_areas,
         geometry=gpd.points_from_xy(eligible_areas.x, eligible_areas.y),
-        crs=corine.crs,
+        crs=osm_land_cover.crs,
     )
 
     # Area calculation with buffer to match raster resolution of 100mx100m
@@ -541,7 +541,7 @@ if __name__ == "__main__":
     subnodes = gpd.read_file(snakemake.input.subnodes)
 
     # Add PTES limit to subnodes according to land availability within city regions
-    corine = rasterio.open(snakemake.input.corine)
+    osm_land_cover = rasterio.open(snakemake.input.osm_land_cover)
     natura = rasterio.open(snakemake.input.natura)
     groundwater = xr.open_dataset(snakemake.input.groundwater_depth).sel(
         lon=slice(subnodes["geometry"].x.min(), subnodes["geometry"].x.max()),
@@ -549,10 +549,10 @@ if __name__ == "__main__":
     )
     subnodes = add_ptes_limit(
         subnodes,
-        corine,
+        osm_land_cover,
         natura,
         groundwater,
-        snakemake.params.district_heating["ptes_codes_corine"],
+        snakemake.params.district_heating["osm_landcover_codes"],
         snakemake.params.district_heating["max_groundwater_depth"],
         snakemake.params.district_heating["ptes_potential_scalar"],
     )
