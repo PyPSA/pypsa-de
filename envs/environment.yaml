@@ -17,7 +17,7 @@ dependencies:
 - jpype1
 
 # Inhouse packages
-- pypsa>=0.32
+- pypsa<=0.31.0
 - atlite>=0.2.9
 - linopy
 - powerplantmatching>=0.5.15,<0.6

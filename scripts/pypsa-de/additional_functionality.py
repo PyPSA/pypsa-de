@@ -640,33 +640,42 @@ def add_h2_derivate_limit(n, investment_year, limits_volume_max):
             ]
         ].index
 
-        incoming_p = (
-            n.model["Link-p"].loc[:, incoming] * n.snapshot_weightings.generators
-        ).sum()
-        outgoing_p = (
-            n.model["Link-p"].loc[:, outgoing] * n.snapshot_weightings.generators
-        ).sum()
+        carrier_idx_dict = {
+            "renewable_oil": 0,
+            "methanol": 1,
+            "renewable_gas": 2,
+            "H2_derivate": [0, 1, 2],
+        }
+        for carrier, idx in carrier_idx_dict.items():
+            cname = f"{carrier}_import_limit-{ct}"
 
-        lhs = incoming_p - outgoing_p
+            incoming_p = (
+                n.model["Link-p"].loc[:, incoming[idx]]
+                * n.snapshot_weightings.generators
+            ).sum()
+            outgoing_p = (
+                n.model["Link-p"].loc[:, outgoing[idx]]
+                * n.snapshot_weightings.generators
+            ).sum()
 
-        cname = f"H2_derivate_import_limit-{ct}"
+            lhs = incoming_p - outgoing_p
 
-        n.model.add_constraints(lhs <= limit, name=f"GlobalConstraint-{cname}")
+            n.model.add_constraints(lhs <= limit, name=f"GlobalConstraint-{cname}")
 
-        if cname in n.global_constraints.index:
-            logger.warning(
-                f"Global constraint {cname} already exists. Dropping and adding it again."
+            if cname in n.global_constraints.index:
+                logger.warning(
+                    f"Global constraint {cname} already exists. Dropping and adding it again."
+                )
+                n.global_constraints.drop(cname, inplace=True)
+
+            n.add(
+                "GlobalConstraint",
+                cname,
+                constant=limit,
+                sense="<=",
+                type="",
+                carrier_attribute="",
             )
-            n.global_constraints.drop(cname, inplace=True)
-
-        n.add(
-            "GlobalConstraint",
-            cname,
-            constant=limit,
-            sense="<=",
-            type="",
-            carrier_attribute="",
-        )
 
     # Export bans on efuels are implemented in modify_prenetwork by restricting p_max_pu of the DE -> EU links
 

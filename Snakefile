@@ -583,9 +583,9 @@ rule plot_ariadne_variables:
         transmission_investment_csv=RESULTS + "ariadne/transmission_investment.csv",
         trassenlaenge_csv=RESULTS + "ariadne/trassenlaenge.csv",
         Kernnetz_Investment_plot=RESULTS + "ariadne/Kernnetz_Investment_plot.png",
-        elec_trade=RESULTS + "ariadne/elec-trade-DE.png",
-        h2_trade=RESULTS + "ariadne/h2-trade-DE.png",
-        trade_balance=RESULTS + "ariadne/trade-balance-DE.png",
+        elec_trade=RESULTS + "ariadne/elec-trade-DE.pdf",
+        h2_trade=RESULTS + "ariadne/h2-trade-DE.pdf",
+        trade_balance=RESULTS + "ariadne/trade-balance-DE.pdf",
     log:
         RESULTS + "logs/plot_ariadne_variables.log",
     script:
@@ -687,11 +687,11 @@ rule plot_ariadne_report:
         ),
     output:
         elec_price_duration_curve=RESULTS
-        + "ariadne/report/elec_price_duration_curve.png",
-        elec_price_duration_hist=RESULTS + "ariadne/report/elec_price_duration_hist.png",
-        backup_capacity=RESULTS + "ariadne/report/backup_capacity.png",
-        backup_generation=RESULTS + "ariadne/report/backup_generation.png",
-        elec_prices_spatial_de=RESULTS + "ariadne/report/elec_prices_spatial_de.png",
+        + "ariadne/report/elec_price_duration_curve.pdf",
+        elec_price_duration_hist=RESULTS + "ariadne/report/elec_price_duration_hist.pdf",
+        backup_capacity=RESULTS + "ariadne/report/backup_capacity.pdf",
+        backup_generation=RESULTS + "ariadne/report/backup_generation.pdf",
+        elec_prices_spatial_de=RESULTS + "ariadne/report/elec_prices_spatial_de.pdf",
         results=directory(RESULTS + "ariadne/report"),
         elec_transmission=directory(RESULTS + "ariadne/report/elec_transmission"),
         h2_transmission=directory(RESULTS + "ariadne/report/h2_transmission"),
@@ -710,6 +710,6 @@ rule plot_ariadne_report:
 rule ariadne_report_only:
     input:
         expand(
-            RESULTS + "ariadne/report/elec_price_duration_curve.png",
+            RESULTS + "ariadne/report/elec_price_duration_curve.pdf",
             run=config_provider("run", "name"),
         ),
