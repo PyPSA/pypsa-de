@@ -432,7 +432,7 @@ def plot_nodal_elec_balance(
     if condense_groups is not None:
         nb = get_condense_sum(nb, condense_groups, condense_names)
 
-    ## summaris low contributing carriers acccording to their sum over the period (threshold in GWh)
+    ## summaris low contributing carriers according to their sum over the period (threshold in GWh)
     techs_below_threshold = nb.columns[nb.abs().sum() < threshold].tolist()
     if techs_below_threshold:
         other = {tech: "other" for tech in techs_below_threshold}
@@ -2351,7 +2351,7 @@ def plot_elec_map_de(
         patch_kw=dict(facecolor="lightgrey"),
         legend_kw=legend_kw_circles,
     )
-    # ensure cirlce is not outside the box
+    # ensure circle is not outside the box
     legend = ax.get_legend()
     legend.get_frame().set_boxstyle("square, pad=0.7")
 
@@ -2859,7 +2859,7 @@ if __name__ == "__main__":
     ]
     del _networks
 
-    # # for running with explicit networks not within repo structur (comment out load data and load regions)
+    # # for running with explicit networks not within repo structure (comment out load data and load regions)
     # diry = "postnetworks-folder"
     # file_list = os.listdir(diry)
     # file_list.sort()
