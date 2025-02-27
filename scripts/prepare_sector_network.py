@@ -2910,18 +2910,15 @@ def add_biomass(n, costs):
             carrier="municipal solid waste",
         )
 
-        e_max_pu = pd.DataFrame(1, index=n.snapshots, columns=spatial.msw.nodes)
-        e_max_pu.iloc[-1] = 0
-
         n.add(
-            "Store",
+            "Generator",
             spatial.msw.nodes,
             bus=spatial.msw.nodes,
             carrier="municipal solid waste",
-            e_nom=msw_biomass_potentials_spatial,
+            p_nom=msw_biomass_potentials_spatial,
             marginal_cost=0,  # costs.at["municipal solid waste", "fuel"],
-            e_max_pu=e_max_pu,
-            e_initial=msw_biomass_potentials_spatial,
+            e_sum_min=msw_biomass_potentials_spatial,
+            e_sum_max=msw_biomass_potentials_spatial,
         )
 
     n.add(
@@ -2941,23 +2938,25 @@ def add_biomass(n, costs):
     )
 
     n.add(
-        "Store",
+        "Generator",
         spatial.biogas.nodes,
         bus=spatial.biogas.nodes,
         carrier="biogas",
-        e_nom=biogas_potentials_spatial,
+        p_nom=biogas_potentials_spatial,
         marginal_cost=costs.at["biogas", "fuel"],
-        e_initial=biogas_potentials_spatial,
+        e_sum_min=0,
+        e_sum_max=biogas_potentials_spatial,
     )
 
     n.add(
-        "Store",
+        "Generator",
         spatial.biomass.nodes,
         bus=spatial.biomass.nodes,
         carrier="solid biomass",
-        e_nom=solid_biomass_potentials_spatial,
+        p_nom=solid_biomass_potentials_spatial,
         marginal_cost=costs.at["solid biomass", "fuel"],
-        e_initial=solid_biomass_potentials_spatial,
+        e_sum_min=0,
+        e_sum_max=solid_biomass_potentials_spatial,
     )
 
     if options["solid_biomass_import"].get("enable", False):
@@ -3009,38 +3008,29 @@ def add_biomass(n, costs):
         )
 
     if biomass_potentials.filter(like="unsustainable").sum().sum() > 0:
-        # Create timeseries to force usage of unsustainable potentials
-        e_max_pu = pd.DataFrame(1, index=n.snapshots, columns=spatial.biogas.nodes)
-        e_max_pu.iloc[-1] = 0
-
         n.add(
-            "Store",
+            "Generator",
             spatial.biogas.nodes,
             suffix=" unsustainable",
             bus=spatial.biogas.nodes,
             carrier="unsustainable biogas",
-            e_nom=unsustainable_biogas_potentials_spatial,
+            p_nom=unsustainable_biogas_potentials_spatial,
+            p_nom_extendable=False,
             marginal_cost=costs.at["biogas", "fuel"],
-            e_initial=unsustainable_biogas_potentials_spatial,
-            e_nom_extendable=False,
-            e_max_pu=e_max_pu,
+            e_sum_min=unsustainable_biogas_potentials_spatial,
+            e_sum_max=unsustainable_biogas_potentials_spatial,
         )
-
-        e_max_pu = pd.DataFrame(
-            1, index=n.snapshots, columns=spatial.biomass.nodes_unsustainable
-        )
-        e_max_pu.iloc[-1] = 0
 
         n.add(
-            "Store",
+            "Generator",
             spatial.biomass.nodes_unsustainable,
             bus=spatial.biomass.nodes,
             carrier="unsustainable solid biomass",
-            e_nom=unsustainable_solid_biomass_potentials_spatial,
+            p_nom=unsustainable_solid_biomass_potentials_spatial,
+            p_nom_extendable=False,
             marginal_cost=costs.at["fuelwood", "fuel"],
-            e_initial=unsustainable_solid_biomass_potentials_spatial,
-            e_nom_extendable=False,
-            e_max_pu=e_max_pu,
+            e_sum_min=unsustainable_solid_biomass_potentials_spatial,
+            e_sum_max=unsustainable_solid_biomass_potentials_spatial,
         )
 
         n.add(
@@ -3051,21 +3041,16 @@ def add_biomass(n, costs):
             unit="MWh_LHV",
         )
 
-        e_max_pu = pd.DataFrame(
-            1, index=n.snapshots, columns=spatial.biomass.bioliquids
-        )
-        e_max_pu.iloc[-1] = 0
-
         n.add(
-            "Store",
+            "Generator",
             spatial.biomass.bioliquids,
             bus=spatial.biomass.bioliquids,
             carrier="unsustainable bioliquids",
-            e_nom=unsustainable_liquid_biofuel_potentials_spatial,
+            p_nom=unsustainable_liquid_biofuel_potentials_spatial,
+            p_nom_extendable=False,
             marginal_cost=costs.at["biodiesel crops", "fuel"],
-            e_initial=unsustainable_liquid_biofuel_potentials_spatial,
-            e_nom_extendable=False,
-            e_max_pu=e_max_pu,
+            e_sum_min=unsustainable_liquid_biofuel_potentials_spatial,
+            e_sum_max=unsustainable_liquid_biofuel_potentials_spatial,
         )
 
         add_carrier_buses(n, "oil")
@@ -3191,6 +3176,7 @@ def add_biomass(n, costs):
         n.add(
             "Generator",
             spatial.biomass.nodes,
+            suffix=" transported",
             bus=spatial.biomass.nodes,
             carrier="solid biomass",
             p_nom=10000,
@@ -3209,6 +3195,7 @@ def add_biomass(n, costs):
             n.add(
                 "Generator",
                 spatial.biomass.nodes_unsustainable,
+                suffix=" transported",
                 bus=spatial.biomass.nodes,
                 carrier="unsustainable solid biomass",
                 p_nom=10000,
@@ -3220,14 +3207,10 @@ def add_biomass(n, costs):
                 )
                 * average_distance,
             )
-            # Set last snapshot of e_max_pu for unsustainable solid biomass to 1 to make operational limit work
-            unsus_stores_idx = n.stores.query(
-                "carrier == 'unsustainable solid biomass'"
-            ).index
-            unsus_stores_idx = unsus_stores_idx.intersection(
-                n.stores_t.e_max_pu.columns
-            )
-            n.stores_t.e_max_pu.loc[n.snapshots[-1], unsus_stores_idx] = 1
+            # Set e_sum_min to 0 to allow for the faux biomass transport
+            n.generators.loc[
+                n.generators.carrier == "unsustainable solid biomass", "e_sum_min"
+            ] = 0
             n.add(
                 "GlobalConstraint",
                 "unsustainable biomass limit",
@@ -3248,6 +3231,9 @@ def add_biomass(n, costs):
                 marginal_cost=0  # costs.at["municipal solid waste", "fuel"]
                 + bus_transport_costs * average_distance,
             )
+            n.generators.loc[
+                n.generators.carrier == "municipal solid waste", "e_sum_min"
+            ] = 0
             n.add(
                 "GlobalConstraint",
                 "msw limit",
@@ -4022,7 +4008,7 @@ def add_industry(n, costs):
         if cf_industry["waste_to_energy"]:
             n.add(
                 "Link",
-                spatial.nodes + " waste CHP",
+                spatial.nodes + " urban central waste CHP",
                 bus0=waste_source,
                 bus1=spatial.nodes,
                 bus2=spatial.nodes + " urban central heat",
@@ -4550,7 +4536,7 @@ def cluster_heat_buses(n):
         return agg
 
     logger.info("Cluster residential and service heat buses.")
-    components = ["Bus", "Carrier", "Generator", "Link", "Load", "Store"]
+    components = ["Bus", "Carrier", "Generator", "Link", "Load", "Store", "StorageUnit"]
 
     for c in n.iterate_components(components):
         df = c.df
@@ -5085,10 +5071,6 @@ if __name__ == "__main__":
 
     if options["cluster_heat_buses"] and not first_year_myopic:
         cluster_heat_buses(n)
-
-    maybe_adjust_costs_and_potentials(
-        n, snakemake.params["adjustments"], investment_year
-    )
 
     n.meta = dict(snakemake.config, **dict(wildcards=dict(snakemake.wildcards)))
 
