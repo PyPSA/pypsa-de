@@ -2474,11 +2474,17 @@ def add_heat(
                 nodes + f" {heat_system} water tanks",
                 bus=nodes + f" {heat_system} heat",
                 carrier=f"{heat_system} water tanks",
-                efficiency_store=costs.at["water tank charger", "efficiency"],
+                efficiency_store=costs.at[
+                    f"{heat_system.central_or_decentral} water tank charger",
+                    "efficiency",
+                ],
                 max_hours=costs.at[
                     "central water tank storage", "energy to power ratio"
                 ],
-                efficiency_dispatch=costs.at["water tank discharger", "efficiency"],
+                efficiency_dispatch=costs.at[
+                    f"{heat_system.central_or_decentral} water tank discharger",
+                    "efficiency",
+                ],
                 p_nom_extendable=True,
                 standing_loss=1 - np.exp(-1 / 24 / tes_time_constant_days),
                 capital_cost=costs.at[
