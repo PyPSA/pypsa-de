@@ -64,6 +64,10 @@ scenario:
   # - 2035
   # - 2040
   - 2045
+  
+clustering:
+  temporal:
+    resolution_sector: 3H
 
 adjustments:
     electricity: false
