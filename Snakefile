@@ -274,6 +274,15 @@ if config["sector"]["district_heating"]["add_subnodes"] and config["sector"][
                 "https://gisco-services.ec.europa.eu/distribution/v2/lau/download/ref-lau-2021-01m.geojson.zip",
                 keep_local=True,
             ),
+            osm_land_cover=storage(
+                "https://heidata.uni-heidelberg.de/api/access/datafile/23053?format=original&gbrecs=true",
+                keep_local=True,
+            ),
+            natura=ancient("data/bundle/natura/natura.tiff"),
+            groundwater_depth=storage(
+                "http://thredds-gfnl.usc.es/thredds/fileServer/GLOBALWTDFTP/annualmeans/EURASIA_WTD_annualmean.nc",
+                keep_local=True
+                ),
         output:
             district_heating_subnodes=resources(
                 "district_heating_subnodes_base_s_{clusters}.geojson"
@@ -318,15 +327,6 @@ if config["sector"]["district_heating"]["add_subnodes"] and config["sector"][
             ),
             fernwaermeatlas="data/fernwaermeatlas/fernwaermeatlas.xlsx",
             cities="data/fernwaermeatlas/cities_geolocations.geojson",
-            osm_land_cover=storage(
-                "https://heidata.uni-heidelberg.de/api/access/datafile/23053?format=original&gbrecs=true",
-                keep_local=True,
-            ),
-            natura=ancient("data/bundle/natura/natura.tiff"),
-            groundwater_depth=storage(
-                "http://thredds-gfnl.usc.es/thredds/fileServer/GLOBALWTDFTP/annualmeans/EURASIA_WTD_annualmean.nc",
-                keep_local=True
-                ),
             cop_profiles=resources("cop_profiles_base_s_{clusters}_{planning_horizons}.nc"),
             direct_heat_source_utilisation_profiles=resources(
             "direct_heat_source_utilisation_profiles_base_s_{clusters}_{planning_horizons}.nc"

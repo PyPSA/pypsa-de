@@ -5,9 +5,25 @@ logger = logging.getLogger(__name__)
 
 import geopandas as gpd
 import pandas as pd
+import numpy as np
 from typing import Union
-
+import xarray as xr
 import shapely
+import rasterio
+from atlite.gis import ExclusionContainer
+from atlite.gis import shape_availability
+from tqdm import tqdm
+import sys
+import os
+
+path = "dev/pypsa-de"
+sys.path.insert(0, os.path.abspath(path))
+
+from scripts._helpers import (
+    configure_logging,
+    set_scenario_config,
+    update_config_from_wildcards,
+)
 
 
 # Function to encode city names in UTF-8
@@ -26,6 +42,60 @@ def encode_utf8(city_name: str) -> bytes:
         The UTF-8 encoded byte string of the city name.
     """
     return city_name.encode("utf-8")
+
+
+def process_eligible_points(
+    x_coords: list[float],
+    y_coords: list[float],
+    values: np.ndarray,
+    crs: str,
+    lau_shapes: gpd.GeoDataFrame,
+) -> gpd.GeoDataFrame:
+    """
+    Process points to create eligible area geometries for PTES potential assessment.
+
+    Parameters
+    ----------
+    x_coords : list[float]
+        X-coordinates of eligible points.
+    y_coords : list[float]
+        Y-coordinates of eligible points.
+    values : np.ndarray
+        Values associated with each point (eligibility flags).
+    crs : str
+        Coordinate reference system of the input points.
+    lau_shapes : gpd.GeoDataFrame
+        GeoDataFrame containing LAU (Local Administrative Unit) shapes to intersect with eligible areas.
+
+    Returns
+    -------
+    gpd.GeoDataFrame
+        GeoDataFrame containing the intersection of eligible areas with LAU shapes.
+    """
+    eligible_areas = pd.DataFrame({"x": x_coords, "y": y_coords, "eligible": values})
+    eligible_areas = gpd.GeoDataFrame(
+        eligible_areas,
+        geometry=gpd.points_from_xy(eligible_areas.x, eligible_areas.y),
+        crs=crs,
+    )
+
+    chunk_size = 100000  # Adjust based on your memory constraints
+    buffers = []
+
+    for i in range(0, len(eligible_areas), chunk_size):
+        chunk = eligible_areas.iloc[i : i + chunk_size].copy()
+        chunk["geometry"] = chunk.geometry.buffer(5, cap_style="square")
+        buffers.append(chunk)
+
+    eligible_areas = pd.concat(buffers, ignore_index=True)
+
+    # Use spatial indexing for more efficient overlay
+    merged_data = eligible_areas.union_all()
+    result = gpd.GeoDataFrame(geometry=[merged_data], crs=eligible_areas.crs)
+    result = result.explode(index_parts=False).reset_index(drop=True)
+
+    # Overlay with dh_systems using spatial indexing
+    return gpd.overlay(result, lau_shapes, how="intersection")
 
 
 def prepare_subnodes(
@@ -110,6 +180,125 @@ def prepare_subnodes(
     return subnodes
 
 
+def add_ptes_limit(
+    subnodes: gpd.GeoDataFrame,
+    osm_land_cover: rasterio.io.DatasetReader,
+    natura: rasterio.io.DatasetReader,
+    groundwater: xr.Dataset,
+    codes: list,
+    max_groundwater_depth: float,
+    ptes_potential_scalar: float,
+) -> gpd.GeoDataFrame:
+    """
+    Add PTES limit to subnodes according to land availability within city regions.
+
+    Parameters
+    ----------
+    subnodes : gpd.GeoDataFrame
+        GeoDataFrame containing information about district heating subnodes.
+    osm_land_cover : rasterio.io.DatasetReader
+        OSM land cover raster dataset.
+    natura : rasterio.io.DatasetReader
+        NATURA 2000 protected areas raster dataset.
+    groundwater : xr.Dataset
+        Groundwater depth dataset.
+    codes : list
+        List of CORINE land cover codes to include.
+    max_groundwater_depth : float
+        Maximum allowable groundwater depth for PTES installation.
+    ptes_potential_scalar : float
+        Scalar to adjust PTES potential.
+
+    Returns
+    -------
+    gpd.GeoDataFrame
+        Updated GeoDataFrame with PTES potential added.
+    """
+    dh_systems = subnodes.copy()
+    dh_systems["lau_shape"] = dh_systems["lau_shape"].apply(shapely.wkt.loads)
+    dh_systems = dh_systems.set_geometry("lau_shape")
+    dh_systems.crs = "EPSG:4326"
+    dh_systems = dh_systems.to_crs(3035)
+
+    # Process in batches by region/cluster
+    batch_results = []
+    batch_size = 1  # Define the batch size
+
+    for i in tqdm(
+        range(0, len(dh_systems), batch_size), desc="Processing LAU shapes", unit="area"
+    ):
+        batch = dh_systems.iloc[i : i + batch_size]
+
+        # Create exclusion container for this batch
+        excluder = ExclusionContainer(crs=3035, res=10)
+        excluder.add_raster(osm_land_cover, codes=codes, invert=True, crs=3035)
+        excluder.add_raster(natura, codes=[1], invert=True, crs=3035)
+
+        # Process just this batch
+        batch_shapes = batch["lau_shape"]
+        band, transform = shape_availability(batch_shapes, excluder)
+        masked_data = band
+        row_indices, col_indices = np.where(masked_data != osm_land_cover.nodata)
+        values = masked_data[row_indices, col_indices]
+
+        x_coords, y_coords = rasterio.transform.xy(transform, row_indices, col_indices)
+
+        # Create and process eligible areas for this batch
+        if len(x_coords) > 0:  # Only process if there are eligible areas
+            eligible_areas = process_eligible_points(
+                x_coords, y_coords, values, osm_land_cover.crs, batch
+            )
+            batch_results.append(eligible_areas)
+
+        # Clear memory
+        del band, masked_data, excluder
+        import gc
+
+        gc.collect()
+
+    # Combine results from all batches
+    if batch_results:
+        eligible_areas = pd.concat(batch_results, ignore_index=True)
+
+    eligible_areas = gpd.sjoin(
+        eligible_areas, dh_systems.drop("Stadt", axis=1), how="left", rsuffix=""
+    )[["Stadt", "geometry"]].set_geometry("geometry")
+
+    # filter for eligible areas that are larger than 10000 m^2
+    eligible_areas = eligible_areas[eligible_areas.area > 10000]
+
+    # Find closest value in groundwater dataset and kick out areas with groundwater level > threshold
+    eligible_areas["groundwater_level"] = eligible_areas.to_crs("EPSG:4326").apply(
+        lambda a: groundwater.sel(
+            lon=a.geometry.centroid.x, lat=a.geometry.centroid.y, method="nearest"
+        )["WTD"].values[0],
+        axis=1,
+    )
+    eligible_areas = eligible_areas[
+        eligible_areas.groundwater_level < max_groundwater_depth
+    ]
+
+    # Combine eligible areas by city
+    eligible_areas = eligible_areas.dissolve("Stadt")
+
+    # Calculate PTES potential according to Dronninglund and DEA parameters
+    eligible_areas["area_m2"] = eligible_areas.area
+    eligible_areas["nstorages_pot"] = eligible_areas.area_m2 / 10000
+    eligible_areas["storage_pot_mwh"] = eligible_areas["nstorages_pot"] * 4500
+
+    subnodes.set_index("Stadt", inplace=True)
+    subnodes["ptes_pot_mwh"] = (
+        eligible_areas.loc[subnodes.index.intersection(eligible_areas.index)][
+            "storage_pot_mwh"
+        ]
+        * ptes_potential_scalar
+    )
+    subnodes["ptes_pot_mwh"] = subnodes["ptes_pot_mwh"].fillna(0)
+    subnodes.reset_index(inplace=True)
+
+    return subnodes
+
+
 def extend_regions_onshore(
     regions_onshore: gpd.GeoDataFrame,
     subnodes_all: gpd.GeoDataFrame,
@@ -150,7 +339,7 @@ def extend_regions_onshore(
     subnodes["name"] = subnodes["cluster"] + " " + subnodes["Stadt"]
     # Crop city regions from onshore regions
     regions_onshore["geometry"] = regions_onshore.geometry.difference(
-        subnodes.unary_union
+        subnodes.union_all()
     )
 
     # Rename lau_shape to geometry
@@ -182,9 +371,9 @@ if __name__ == "__main__":
 
         os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
-        path = "../submodules/pypsa-eur/scripts"
+        path = "../../"
         sys.path.insert(0, os.path.abspath(path))
-        from _helpers import mock_snakemake
+        from scripts._helpers import mock_snakemake
 
         snakemake = mock_snakemake(
             "prepare_district_heating_subnodes",
@@ -197,6 +386,9 @@ if __name__ == "__main__":
             run="LowGroundWaterDepth",
         )
 
+    configure_logging(snakemake)
+    set_scenario_config(snakemake)
+    update_config_from_wildcards(snakemake.config, snakemake.wildcards)
     logger.info("Adding SysGF-specific functionality")
 
     heat_techs = gpd.read_file(snakemake.input.heating_technologies_nuts3).set_index(
@@ -227,6 +419,24 @@ if __name__ == "__main__":
         lau,
         heat_techs,
     )
+
+    # Add PTES limit to subnodes according to land availability within city regions
+    osm_land_cover = rasterio.open(snakemake.input.osm_land_cover)
+    natura = rasterio.open(snakemake.input.natura)
+    groundwater = xr.open_dataset(snakemake.input.groundwater_depth).sel(
+        lon=slice(subnodes["geometry"].x.min(), subnodes["geometry"].x.max()),
+        lat=slice(subnodes["geometry"].y.min(), subnodes["geometry"].y.max()),
+    )
+    subnodes = add_ptes_limit(
+        subnodes,
+        osm_land_cover,
+        natura,
+        groundwater,
+        snakemake.params.district_heating["osm_landcover_codes"],
+        snakemake.params.district_heating["max_groundwater_depth"],
+        snakemake.params.district_heating["ptes_potential_scalar"],
+    )
+
     subnodes.to_file(snakemake.output.district_heating_subnodes, driver="GeoJSON")
 
     regions_onshore_extended, regions_onshore_restricted = extend_regions_onshore(

@@ -4,7 +4,6 @@ import logging
 logger = logging.getLogger(__name__)
 
 import geopandas as gpd
-import numpy as np
 import pandas as pd
 import pypsa
 import xarray as xr
@@ -21,123 +20,6 @@ from scripts._helpers import (
     set_scenario_config,
     update_config_from_wildcards,
 )
-
-import shapely
-import rasterio
-from atlite.gis import ExclusionContainer
-from atlite.gis import shape_availability
-
-
-def add_ptes_limit(
-    subnodes: gpd.GeoDataFrame,
-    osm_land_cover: rasterio.io.DatasetReader,
-    natura: rasterio.io.DatasetReader,
-    groundwater: xr.Dataset,
-    codes: list,
-    max_groundwater_depth: float,
-    ptes_potential_scalar: float,
-) -> gpd.GeoDataFrame:
-    """
-    Add PTES limit to subnodes according to land availability within city regions.
-
-    Parameters
-    ----------
-    subnodes : gpd.GeoDataFrame
-        GeoDataFrame containing information about district heating subnodes.
-    osm_land_cover : rasterio.io.DatasetReader
-        OSM land cover raster dataset.
-    natura : rasterio.io.DatasetReader
-        NATURA 2000 protected areas raster dataset.
-    groundwater : xr.Dataset
-        Groundwater depth dataset.
-    codes : list
-        List of CORINE land cover codes to include.
-    max_groundwater_depth : float
-        Maximum allowable groundwater depth for PTES installation.
-    ptes_potential_scalar : float
-        Scalar to adjust PTES potential.
-
-    Returns
-    -------
-    gpd.GeoDataFrame
-        Updated GeoDataFrame with PTES potential added.
-    """
-    dh_systems = subnodes.copy()
-    dh_systems["lau_shape"] = dh_systems["lau_shape"].apply(shapely.wkt.loads)
-    dh_systems = dh_systems.set_geometry("lau_shape")
-    dh_systems.crs = "EPSG:4326"
-    dh_systems = dh_systems.to_crs(3035)
-
-    excluder = ExclusionContainer(crs=3035, res=50)
-
-    # Exclusion of unsuitable areas
-    excluder.add_raster(osm_land_cover, codes=codes, invert=True, crs=3035)
-
-    # Exclusion of NATURA protected areas
-    excluder.add_raster(natura, codes=[1], invert=True, crs=3035)
-
-    # Calculation of shape availability and transformation of raster data to geodataframe
-    band, transform = shape_availability(dh_systems.lau_shape, excluder)
-    masked_data = band
-    row_indices, col_indices = np.where(masked_data != osm_land_cover.nodata)
-    values = masked_data[row_indices, col_indices]
-
-    x_coords, y_coords = rasterio.transform.xy(transform, row_indices, col_indices)
-    eligible_areas = pd.DataFrame({"x": x_coords, "y": y_coords, "eligible": values})
-    eligible_areas = gpd.GeoDataFrame(
-        eligible_areas,
-        geometry=gpd.points_from_xy(eligible_areas.x, eligible_areas.y),
-        crs=osm_land_cover.crs,
-    )
-
-    # Area calculation with buffer to match raster resolution of 100mx100m
-    eligible_areas["geometry"] = eligible_areas.geometry.buffer(50, cap_style="square")
-    merged_data = eligible_areas.union_all()
-    eligible_areas = (
-        gpd.GeoDataFrame(geometry=[merged_data], crs=eligible_areas.crs)
-        .explode(index_parts=False)
-        .reset_index(drop=True)
-    )
-
-    # Divide geometries with boundaries of dh_systems
-    eligible_areas = gpd.overlay(eligible_areas, dh_systems, how="intersection")
-    eligible_areas = gpd.sjoin(
-        eligible_areas, dh_systems.drop("Stadt", axis=1), how="left", rsuffix=""
-    )[["Stadt", "geometry"]].set_geometry("geometry")
-
-    # filter for eligible areas that are larger than 10000 m^2
-    eligible_areas = eligible_areas[eligible_areas.area > 10000]
-
-    # Find closest value in groundwater dataset and kick out areas with groundwater level > threshold
-    eligible_areas["groundwater_level"] = eligible_areas.to_crs("EPSG:4326").apply(
-        lambda a: groundwater.sel(
-            lon=a.geometry.centroid.x, lat=a.geometry.centroid.y, method="nearest"
-        )["WTD"].values[0],
-        axis=1,
-    )
-    eligible_areas = eligible_areas[
-        eligible_areas.groundwater_level < max_groundwater_depth
-    ]
-
-    # Combine eligible areas by city
-    eligible_areas = eligible_areas.dissolve("Stadt")
-
-    # Calculate PTES potential according to Dronninglund and DEA parameters
-    eligible_areas["area_m2"] = eligible_areas.area
-    eligible_areas["nstorages_pot"] = eligible_areas.area_m2 / 10000
-    eligible_areas["storage_pot_mwh"] = eligible_areas["nstorages_pot"] * 4500
-
-    subnodes.set_index("Stadt", inplace=True)
-    subnodes["ptes_pot_mwh"] = (
-        eligible_areas.loc[subnodes.index.intersection(eligible_areas.index)][
-            "storage_pot_mwh"
-        ]
-        * ptes_potential_scalar
-    )
-    subnodes["ptes_pot_mwh"] = subnodes["ptes_pot_mwh"].fillna(0)
-    subnodes.reset_index(inplace=True)
-
-    return subnodes
 
 
 def add_subnodes(
@@ -513,8 +395,8 @@ if __name__ == "__main__":
             opts="",
             ll="vopt",
             sector_opts="none",
-            planning_horizons="2020",
-            run="KN2045_Bal_v4",
+            planning_horizons="2045",
+            run="Baseline",
         )
 
     configure_logging(snakemake)
@@ -539,23 +421,6 @@ if __name__ == "__main__":
     regions_onshore = gpd.read_file(snakemake.input.regions_onshore).set_index("name")
 
     subnodes = gpd.read_file(snakemake.input.subnodes)
-
-    # Add PTES limit to subnodes according to land availability within city regions
-    osm_land_cover = rasterio.open(snakemake.input.osm_land_cover)
-    natura = rasterio.open(snakemake.input.natura)
-    groundwater = xr.open_dataset(snakemake.input.groundwater_depth).sel(
-        lon=slice(subnodes["geometry"].x.min(), subnodes["geometry"].x.max()),
-        lat=slice(subnodes["geometry"].y.min(), subnodes["geometry"].y.max()),
-    )
-    subnodes = add_ptes_limit(
-        subnodes,
-        osm_land_cover,
-        natura,
-        groundwater,
-        snakemake.params.district_heating["osm_landcover_codes"],
-        snakemake.params.district_heating["max_groundwater_depth"],
-        snakemake.params.district_heating["ptes_potential_scalar"],
-    )
 
     add_subnodes(
         n,
