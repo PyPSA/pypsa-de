@@ -364,6 +364,7 @@ def add_co2limit_country(n, limit_countries, snakemake, debug=False):
     limit_countries : dict
     snakemake: snakemake object
     """
+    return
     logger.info(f"Adding CO2 budget limit for each country as per unit of 1990 levels")
 
     nhours = n.snapshot_weightings.generators.sum()
@@ -620,6 +621,7 @@ def force_boiler_profiles_existing_per_boiler(n):
 
 
 def add_h2_derivate_limit(n, investment_year, limits_volume_max):
+    return
     for ct in limits_volume_max["h2_derivate_import"]:
         limit = limits_volume_max["h2_derivate_import"][ct][investment_year] * 1e6
 
