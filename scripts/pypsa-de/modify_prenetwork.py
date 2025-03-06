@@ -915,6 +915,21 @@ def aladin_mobility_demand(n):
         n.stores.loc[dsm_i].e_nom *= pd.Series(factor.values, index=dsm_i)
 
 
+def remove_downstream_constraint(n):
+    """
+    Delete current downstream constraint and save global co2 limit in n.meta.
+
+    Parameters:
+        n (pypsa.Network): The PyPSA network object.
+
+    Returns:
+        None
+    """
+    logger.info(f"Remove global downstream co2 constraint.")
+    n.meta["_global_co2_limit"] = n.global_constraints.loc["CO2Limit", "constant"]
+    n.remove("GlobalConstraint", "CO2Limit")
+
+
 def add_hydrogen_turbines(n):
     """
     This adds links that instead of a gas turbine use a hydrogen turbine.
@@ -1285,17 +1300,67 @@ def scale_capacity(n, scaling):
                     links_i_current, "p_nom"
                 ]
 
+def adapt_demand_modelling(n, params):
+    
+    bus = n.buses[n.buses.carrier == "AC"].index[0]
+    loads_temporal_i = n.loads[(n.loads.bus == bus) & (n.loads.p_set == 0)].index
+    loads_static_i = n.loads[(n.loads.bus == bus) & (n.loads.p_set > 0)].index
+    loads_temporal = n.loads_t.p_set[loads_temporal_i].sum(axis=1) + n.loads.p_set[loads_static_i].sum()
+
+    if params["voll"]:
+        logger.info(f"Adding VOLL Generator with marginal cost of {params["voll_price"]} €/Mwh.")
+        n.add(
+            "Generator",
+            "load-shedding",
+            bus=bus,
+            carrier="load-shedding",
+            marginal_cost=params["voll_price"],
+            p_nom=loads_temporal.max(),
+        )
+    
+    if params["elastic"]:
+        logger.info("Adding elastic demand.")
+
+        n.add(
+            "Generator",
+            "load-shedding",
+            bus=bus,
+            carrier="load",
+            marginal_cost_quadratic=params["elastic_intercept"] / (2 * params["elastic_load"]),
+            marginal_cost=0,
+            p_nom=params["elastic_load"],
+        )
+        
+    if param_set := params["elastic_pwl"]:
+        logger.info(f"Adding piecewise linear elastic demand with set '{param_set}'.")
+        pwl = params["elastic_pwl_params"][param_set]
+        assert (
+            len(pwl["intercept"]) == len(pwl["slope"]) == len(pwl["nominal"])
+        ), "Piecewise linear demand must have same number of points for intercept, slope, and nominal."
+        for i, (intercept, slope, nominal) in enumerate(
+            zip(pwl["intercept"], pwl["slope"], pwl["nominal"])
+        ):
+            n.add(
+                "Generator",
+                f"load-shedding-segment-{i}",
+                bus=bus,
+                carrier="load-shedding",
+                marginal_cost=intercept - slope * nominal,
+                marginal_cost_quadratic=slope / 2,
+                p_nom=nominal,
+            )
+
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
         snakemake = mock_snakemake(
             "modify_prenetwork",
             simpl="",
-            clusters=27,
+            clusters=1,
             opts="",
             ll="vopt",
             sector_opts="none",
-            planning_horizons="2025",
+            planning_horizons="2020",
             run="KN2045_Bal_v4",
         )
 
@@ -1365,6 +1430,9 @@ if __name__ == "__main__":
         ):
             force_retrofit(n, snakemake.params.H2_plants)
 
+    if snakemake.params.emissions_upstream["enable"]:
+        remove_downstream_constraint(n)
+
     current_year = int(snakemake.wildcards.planning_horizons)
 
     enforce_transmission_project_build_years(n, current_year)
@@ -1373,6 +1441,10 @@ if __name__ == "__main__":
 
     force_connection_nep_offshore(n, current_year)
 
-    scale_capacity(n, snakemake.params.scale_capacity)
+    if snakemake.params.scale_capacity is not None:
+        scale_capacity(n, snakemake.params.scale_capacity)
+
+    if snakemake.params.demand_modelling["enable"]:
+        adapt_demand_modelling(n, snakemake.params.demand_modelling)
 
     n.export_to_netcdf(snakemake.output.network)

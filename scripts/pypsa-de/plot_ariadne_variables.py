@@ -243,6 +243,7 @@ def plot_Kernnetz(df, savepath=None, currency_year=2020):
 
 
 def plot_NEP_Trassen(df, savepath=None, gleichschaltung=True):
+
     NEP_Trassen = {
         "NEP-DC": {
             # Zu-/Umbeseilung + Ersatz-/Parallelneubau + Neubau
@@ -343,6 +344,7 @@ def plot_NEP_Trassen(df, savepath=None, gleichschaltung=True):
 
 
 def plot_NEP(df, savepath=None, gleichschaltung=True, currency_year=2020):
+
     key = "Investment|Energy Supply|Electricity|Transmission|"
 
     data = {
@@ -566,6 +568,7 @@ def ariadne_subplot(
 
 
 def side_by_side_plot(df, dfhybrid, title, savepath, rshift=1.25, **kwargs):
+
     idx = df.index.union(dfhybrid.index, sort=False)
 
     df = df.reindex(idx)
@@ -599,6 +602,7 @@ def within_plot(
     unit="EUR_2020/GJ",
     **kwargs,
 ):
+
     df = df.T.copy()
     if select_regex:
         df = df.filter(
@@ -626,6 +630,7 @@ def within_plot(
     axes = axes.flatten()
 
     for i, var in enumerate(df.columns.get_level_values("Variable")):
+
         axes[i].plot(df.xs(var, axis=1, level=0), label="PyPSA-Eur")
         if var in df2.index.get_level_values("Variable"):
             axes[i].plot(df2.T.xs(var, axis=1, level=0), label="REMIND-EU")
@@ -809,11 +814,11 @@ if __name__ == "__main__":
         snakemake = mock_snakemake(
             "plot_ariadne_variables",
             simpl="",
-            clusters=49,
+            clusters=22,
             opts="",
             ll="v1.2",
             sector_opts="None",
-            planning_horizons="2045",
+            planning_horizons="2020",
             run="KN2045_Bal_v4",
             # configfiles="config/config.public.yaml"
         )
@@ -1033,18 +1038,18 @@ if __name__ == "__main__":
         unit="EUR/tCO2",
     )
 
-    within_plot(
-        df[
-            df.index.get_level_values("Variable").str.startswith(
-                "Investment|Energy Supply"
-            )
-        ],
-        dfremind,
-        title="Investment in Energy Supply",
-        savepath=snakemake.output.investment_energy_supply,
-        unit="Billionen EUR",
-        write_sum=True,
-    )
+    # within_plot(
+    #     df[
+    #         df.index.get_level_values("Variable").str.startswith(
+    #             "Investment|Energy Supply"
+    #         )
+    #     ],
+    #     dfremind,
+    #     title="Investment in Energy Supply",
+    #     savepath=snakemake.output.investment_energy_supply,
+    #     unit="billion EUR",
+    #     write_sum=True,
+    # )
 
     elec_val_plot(df, savepath=snakemake.output.elec_val_2020)
 
@@ -1056,24 +1061,24 @@ if __name__ == "__main__":
         unit="PJ/yr",
     )
 
-    plot_NEP(df, savepath=snakemake.output.NEP_plot)
-    plot_NEP_Trassen(df, savepath=snakemake.output.NEP_Trassen_plot)
+    # plot_NEP(df, savepath=snakemake.output.NEP_plot)
+    # plot_NEP_Trassen(df, savepath=snakemake.output.NEP_Trassen_plot)
 
-    plot_Kernnetz(
-        df, savepath=snakemake.output.Kernnetz_Investment_plot, currency_year=2020
-    )
+    # plot_Kernnetz(
+    #     df, savepath=snakemake.output.Kernnetz_Investment_plot, currency_year=2020
+    # )
 
-    plot_elec_trade(
-        df,
-        savepath=snakemake.output.elec_trade,
-    )
+    # plot_elec_trade(
+    #     df,
+    #     savepath=snakemake.output.elec_trade,
+    # )
 
-    plot_h2_trade(
-        df,
-        savepath=snakemake.output.h2_trade,
-    )
+    # plot_h2_trade(
+    #     df,
+    #     savepath=snakemake.output.h2_trade,
+    # )
 
-    plot_trade(
-        df,
-        savepath=snakemake.output.trade_balance,
-    )
+    # plot_trade(
+    #     df,
+    #     savepath=snakemake.output.trade_balance,
+    # )

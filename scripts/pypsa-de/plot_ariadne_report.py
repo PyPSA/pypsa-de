@@ -1123,10 +1123,10 @@ def plot_price_duration_curve(
     language="english",
 ):
 
-    # only plot 2030 onwards
-    years = years[2:]
-    networks = dict(islice(networks.items(), 2, None))
-    year_colors = year_colors[2:]
+    # # only plot 2030 onwards
+    # years = years[2:]
+    # networks = dict(islice(networks.items(), 2, None))
+    # year_colors = year_colors[2:]
 
     fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(8, 6))
 
@@ -1189,10 +1189,10 @@ def plot_price_duration_hist(
     x_lim_values=[-50, 300],
 ):
 
-    # only plot 2030 onwards
-    years = years[2:]
-    networks = dict(islice(networks.items(), 2, None))
-    year_colors = year_colors[2:]
+    # # only plot 2030 onwards
+    # years = years[2:]
+    # networks = dict(islice(networks.items(), 2, None))
+    # year_colors = year_colors[2:]
     fig, axes = plt.subplots(ncols=1, nrows=len(years), figsize=(8, 3 * len(years)))
     axes = axes.flatten()
 
@@ -2852,12 +2852,22 @@ if __name__ == "__main__":
     _networks = [pypsa.Network(fn) for fn in snakemake.input.networks]
     modelyears = [fn[-7:-3] for fn in snakemake.input.networks]
 
-    # Hack the transmission projects
-    networks = [
-        process_postnetworks(n.copy(), _networks[0], int(my), snakemake, c)
-        for n, my, c in zip(_networks, modelyears, costs)
-    ]
-    del _networks
+    if snakemake.params.transmission_projects != "zero":   
+        # Hack the transmission projects
+        networks = [
+            hack_transmission_projects(n.copy(), _networks[0], int(my), snakemake, costs)
+            for n, my in zip(_networks, modelyears)
+        ]
+    else:
+        networks = _networks
+
+    # add reversed column
+    for network in networks:
+        if "reversed" not in network.lines.columns:
+            network.lines["reversed"] = False
+        if "reversed" not in network.links.columns:
+            network.links["reversed"] = False
+    
 
     # # for running with explicit networks not within repo structure (comment out load data and load regions)
     # diry = "postnetworks-folder"
@@ -2929,115 +2939,115 @@ if __name__ == "__main__":
             .droplevel("bus")
         )
 
-        # electricity supply and demand
-        logger.info("Plotting electricity supply and demand for year %s", year)
-        plot_nodal_elec_balance(
-            network=network,
-            nodal_balance=balance,
-            tech_colors=tech_colors,
-            start_date="2019-01-01 00:00:00",
-            end_date="2019-12-31 00:00:00",
-            savepath=f"{snakemake.output.elec_balances}/elec-all-year-DE-{year}.pdf",
-            model_run=snakemake.wildcards.run,
-            resample="D",
-            plot_lmps=False,
-            plot_loads=False,
-            german_carriers=True,
-            threshold=1e2,  # in GWh as sum over period
-            condense_groups=c_g,
-            condense_names=c_n,
-            title="Strombilanz",
-            ylabel="Stromerzeugung/ -verbrauch [GW]",
-        )
+        # # electricity supply and demand
+        # logger.info("Plotting electricity supply and demand for year %s", year)
+        # plot_nodal_elec_balance(
+        #     network=network,
+        #     nodal_balance=balance,
+        #     tech_colors=tech_colors,
+        #     start_date="2019-01-01 00:00:00",
+        #     end_date="2019-12-31 00:00:00",
+        #     savepath=f"{snakemake.output.elec_balances}/elec-all-year-DE-{year}.pdf",
+        #     model_run=snakemake.wildcards.run,
+        #     resample="D",
+        #     plot_lmps=False,
+        #     plot_loads=False,
+        #     german_carriers=True,
+        #     threshold=1e2,  # in GWh as sum over period
+        #     condense_groups=c_g,
+        #     condense_names=c_n,
+        #     title="Strombilanz",
+        #     ylabel="Stromerzeugung/ -verbrauch [GW]",
+        # )
 
-        plot_nodal_elec_balance(
-            network=network,
-            nodal_balance=balance,
-            tech_colors=tech_colors,
-            start_date="2019-01-01 00:00:00",
-            end_date="2019-01-31 00:00:00",
-            savepath=f"{snakemake.output.elec_balances}/elec-Jan-DE-{year}.pdf",
-            model_run=snakemake.wildcards.run,
-            german_carriers=True,
-            threshold=1e2,
-            condense_groups=[electricity_load, electricity_imports],
-            condense_names=["Electricity load", "Electricity trade"],
-            title="Strombilanz",
-            ylabel="Stromerzeugung/ -verbrauch [GW]",
-        )
+        # plot_nodal_elec_balance(
+        #     network=network,
+        #     nodal_balance=balance,
+        #     tech_colors=tech_colors,
+        #     start_date="2019-01-01 00:00:00",
+        #     end_date="2019-01-31 00:00:00",
+        #     savepath=f"{snakemake.output.elec_balances}/elec-Jan-DE-{year}.pdf",
+        #     model_run=snakemake.wildcards.run,
+        #     german_carriers=True,
+        #     threshold=1e2,
+        #     condense_groups=[electricity_load, electricity_imports],
+        #     condense_names=["Electricity load", "Electricity trade"],
+        #     title="Strombilanz",
+        #     ylabel="Stromerzeugung/ -verbrauch [GW]",
+        # )
 
-        plot_nodal_elec_balance(
-            network=network,
-            nodal_balance=balance,
-            tech_colors=tech_colors,
-            start_date="2019-05-01 00:00:00",
-            end_date="2019-05-31 00:00:00",
-            savepath=f"{snakemake.output.elec_balances}/elec-May-DE-{year}.pdf",
-            model_run=snakemake.wildcards.run,
-            german_carriers=True,
-            threshold=1e2,
-            condense_groups=[electricity_load, electricity_imports],
-            condense_names=["Electricity load", "Electricity trade"],
-            title="Strombilanz",
-            ylabel="Stromerzeugung/ -verbrauch [GW]",
-        )
+        # plot_nodal_elec_balance(
+        #     network=network,
+        #     nodal_balance=balance,
+        #     tech_colors=tech_colors,
+        #     start_date="2019-05-01 00:00:00",
+        #     end_date="2019-05-31 00:00:00",
+        #     savepath=f"{snakemake.output.elec_balances}/elec-May-DE-{year}.pdf",
+        #     model_run=snakemake.wildcards.run,
+        #     german_carriers=True,
+        #     threshold=1e2,
+        #     condense_groups=[electricity_load, electricity_imports],
+        #     condense_names=["Electricity load", "Electricity trade"],
+        #     title="Strombilanz",
+        #     ylabel="Stromerzeugung/ -verbrauch [GW]",
+        # )
 
-        # heat supply and demand
-        logger.info("Plotting heat supply and demand")
-        for carriers in ["urban central heat", "urban decentral heat", "rural heat"]:
-            plot_nodal_heat_balance(
-                network=network,
-                nodal_balance=balance,
-                tech_colors=tech_colors,
-                start_date="2019-01-01 00:00:00",
-                end_date="2019-12-31 00:00:00",
-                savepath=f"{snakemake.output.heat_balances}/heat-all-year-DE-{carriers}-{year}.pdf",
-                model_run=snakemake.wildcards.run,
-                resample="D",
-                plot_lmps=False,
-                plot_loads=False,
-                nice_names=True,
-                threshold=1e1,  # in GWh as sum over period
-                condense_groups=c_g,
-                condense_names=c_n,
-                carriers=[carriers],
-                ylabel="Wärme [GW]",
-                title=f"{carriers} balance",
-            )
+        # # heat supply and demand
+        # logger.info("Plotting heat supply and demand")
+        # for carriers in ["urban central heat", "urban decentral heat", "rural heat"]:
+        #     plot_nodal_heat_balance(
+        #         network=network,
+        #         nodal_balance=balance,
+        #         tech_colors=tech_colors,
+        #         start_date="2019-01-01 00:00:00",
+        #         end_date="2019-12-31 00:00:00",
+        #         savepath=f"{snakemake.output.heat_balances}/heat-all-year-DE-{carriers}-{year}.pdf",
+        #         model_run=snakemake.wildcards.run,
+        #         resample="D",
+        #         plot_lmps=False,
+        #         plot_loads=False,
+        #         nice_names=True,
+        #         threshold=1e1,  # in GWh as sum over period
+        #         condense_groups=c_g,
+        #         condense_names=c_n,
+        #         carriers=[carriers],
+        #         ylabel="Wärme [GW]",
+        #         title=f"{carriers} balance",
+        #     )
 
-            plot_nodal_heat_balance(
-                network=network,
-                nodal_balance=balance,
-                tech_colors=tech_colors,
-                start_date="2019-01-01 00:00:00",
-                end_date="2019-01-31 00:00:00",
-                savepath=f"{snakemake.output.heat_balances}/heat-Jan-DE-{carriers}-{year}.pdf",
-                model_run=snakemake.wildcards.run,
-                plot_lmps=False,
-                plot_loads=False,
-                nice_names=True,
-                threshold=1e1,
-                carriers=[carriers],
-                ylabel="Heat [GW]",
-                title=f"{carriers} balance",
-            )
+        #     plot_nodal_heat_balance(
+        #         network=network,
+        #         nodal_balance=balance,
+        #         tech_colors=tech_colors,
+        #         start_date="2019-01-01 00:00:00",
+        #         end_date="2019-01-31 00:00:00",
+        #         savepath=f"{snakemake.output.heat_balances}/heat-Jan-DE-{carriers}-{year}.pdf",
+        #         model_run=snakemake.wildcards.run,
+        #         plot_lmps=False,
+        #         plot_loads=False,
+        #         nice_names=True,
+        #         threshold=1e1,
+        #         carriers=[carriers],
+        #         ylabel="Heat [GW]",
+        #         title=f"{carriers} balance",
+        #     )
 
-            plot_nodal_heat_balance(
-                network=network,
-                nodal_balance=balance,
-                tech_colors=tech_colors,
-                start_date="2019-05-01 00:00:00",
-                end_date="2019-05-31 00:00:00",
-                savepath=f"{snakemake.output.heat_balances}/heat-May-DE-{carriers}-{year}.pdf",
-                model_run=snakemake.wildcards.run,
-                plot_lmps=False,
-                plot_loads=False,
-                nice_names=True,
-                threshold=1e1,
-                carriers=[carriers],
-                ylabel="Heat [GW]",
-                title=f"{carriers} balance",
-            )
+        #     plot_nodal_heat_balance(
+        #         network=network,
+        #         nodal_balance=balance,
+        #         tech_colors=tech_colors,
+        #         start_date="2019-05-01 00:00:00",
+        #         end_date="2019-05-31 00:00:00",
+        #         savepath=f"{snakemake.output.heat_balances}/heat-May-DE-{carriers}-{year}.pdf",
+        #         model_run=snakemake.wildcards.run,
+        #         plot_lmps=False,
+        #         plot_loads=False,
+        #         nice_names=True,
+        #         threshold=1e1,
+        #         carriers=[carriers],
+        #         ylabel="Heat [GW]",
+        #         title=f"{carriers} balance",
+        #     )
 
         # storage
         logger.info("Plotting storage")
@@ -3155,12 +3165,12 @@ if __name__ == "__main__":
             savepath=f"{snakemake.output.elec_transmission}/elec-cap-DE-{year}.pdf",
         )
 
-    plot_elec_trade(
-        networks,
-        planning_horizons,
-        tech_colors,
-        savepath=f"{snakemake.output.elec_transmission}/elec-trade-DE.pdf",
-    )
+    # plot_elec_trade(
+    #     networks,
+    #     planning_horizons,
+    #     tech_colors,
+    #     savepath=f"{snakemake.output.elec_transmission}/elec-trade-DE.pdf",
+    # )
 
     ## nodal balances general (might not be very robust)
     logger.info("Plotting nodal balances")

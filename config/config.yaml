@@ -4,22 +4,22 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20250130-morefinalfixes
+  prefix: 20250304-Pricing-Elastic5GW
+
   name:
   # - CurrentPolicies
-  - KN2045_Bal_v4
+   - KN2045_Bal_v4
+  # - KN2045_Bal_v4_upstream
   # - KN2045_Elec_v4
   # - KN2045_H2_v4
   # - KN2045plus_EasyRide
   # - KN2045plus_LowDemand
   # - KN2045minus_WorstCase
   # - KN2045minus_SupplyFocus
-  # - KN2045_Bal_LowDemand
-  # - KN2045_Bal_HighDemand
   scenarios:
     enable: true
     manual_file: config/scenarios.manual.yaml
-    file: config/scenarios.automated.yaml
+    file: config/scenarios.pricing.yaml
   shared_resources:
     policy: base #stops recalculating
     exclude:
@@ -63,7 +63,7 @@ scenario:
   ll:
   - vopt
   clusters:
-  - 27 #current options: 27, 49
+  - 1 #current options: 27, 49
   opts:
   - ''
   sector_opts:
@@ -75,6 +75,7 @@ scenario:
   - 2035
   - 2040
   - 2045
+  # - 2050
 
 existing_capacities:
   grouping_years_power: [1920, 1950, 1955, 1960, 1965, 1970, 1975, 1980, 1985, 1990, 1995, 2000, 2005, 2010, 2015, 2020]
@@ -83,30 +84,31 @@ existing_capacities:
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#countries
 # Germany plus 12 "Stromnachbarn"
-countries: ['AT', 'BE', 'CH', 'CZ', 'DE', 'DK', 'FR', 'GB', 'LU', 'NL', 'NO', 'PL', 'SE', 'ES', 'IT']
+countries: 
+  - DE
 
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#snapshots
-snapshots:
-  start: "2019-01-01"
-  end: "2020-01-01"
-  inclusive: 'left'
+# # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#snapshots
+# snapshots:
+#   start: "2019-01-01"
+#   end: "2020-01-01"
+#   inclusive: 'left'
 
-atlite:
-  default_cutout: europe-2019-sarah3-era5
-  cutouts:
-    europe-2019-sarah3-era5:
-      module: [sarah, era5] # in priority order
-      x: [-12., 42.]
-      y: [33., 72]
-      dx: 0.3
-      dy: 0.3
-      time: ['2019', '2019']
+# atlite:
+#   default_cutout: europe-2019-sarah3-era5
+#   cutouts:
+#     europe-2019-sarah3-era5:
+#       module: [sarah, era5] # in priority order
+#       x: [-12., 42.]
+#       y: [33., 72]
+#       dx: 0.3
+#       dy: 0.3
+#       time: ['2019', '2019']
 
 
 renewable:
   onwind:
     capacity_per_sqkm: 1.4
-    cutout: europe-2019-sarah3-era5
+    cutout: europe-2013-sarah3-era5
     correction_factor: 0.95
     resource:
       smooth: false  #this is false until correction to onshore wind speeds from GWA implemented
@@ -130,7 +132,7 @@ renewable:
   offwind-ac:
     capacity_per_sqkm: 6
     landfall_length: 30
-    cutout: europe-2019-sarah3-era5
+    cutout: europe-2013-sarah3-era5
     correction_factor: 0.95
     resource:
       smooth: true
@@ -154,7 +156,7 @@ renewable:
   offwind-dc:
     capacity_per_sqkm: 6
     landfall_length: 30
-    cutout: europe-2019-sarah3-era5
+    cutout: europe-2013-sarah3-era5
     correction_factor: 0.95
     resource:
       smooth: true
@@ -178,65 +180,28 @@ renewable:
   offwind-float: # disabled at the moment
     landfall_length: 30
     capacity_per_sqkm: 6
-    cutout: europe-2019-sarah3-era5
+    cutout: europe-2013-sarah3-era5
     correction_factor: 0.95
   solar:
-    cutout: europe-2019-sarah3-era5
+    cutout: europe-2013-sarah3-era5
     correction_factor: 0.9 # scaling to Abbildung 36 of https://www.ise.fraunhofer.de/de/veroeffentlichungen/studien/aktuelle-fakten-zur-photovoltaik-in-deutschland.html
   solar-hsat:
-    cutout: europe-2019-sarah3-era5
+    cutout: europe-2013-sarah3-era5
     correction_factor: 0.9 # scaling to Abbildung 36 of https://www.ise.fraunhofer.de/de/veroeffentlichungen/studien/aktuelle-fakten-zur-photovoltaik-in-deutschland.html
   hydro:
-    cutout: europe-2019-sarah3-era5
+    cutout: europe-2013-sarah3-era5
 
 lines:
   dynamic_line_rating:
-    cutout: europe-2019-sarah3-era5
+    cutout: europe-2013-sarah3-era5
 
+# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#enable
+enable:
+  retrieve: true # set to false once initial data is retrieved
+  retrieve_cutout: false # set to false once initial data is retrieved
 clustering:
-  # simplify_network:
-  #   to_substations: true
-  # Code snippet for editing focus_weights
-  # fw = pd.Series(snakemake.config["clustering"]["focus_weights"])
-  # fw = fw.div(fw.min()).round()
-  # fw["ES"] = 1
-  # print(fw.div(fw.sum()).subtract(5e-5).round(4).to_dict().__repr__().replace(",","\n"))
-  focus_weights:
-  # 27 nodes: 8 for Germany, 3 for Italy, 2 each for Denmark, UK and Spain, 1 per each of other 10 "Stromnachbarn"
-    'DE': 0.2966
-    'AT': 0.0370
-    'BE': 0.0370
-    'CH': 0.0370
-    'CZ': 0.0370
-    'DK': 0.0741
-    'FR': 0.0370
-    'GB': 0.0741
-    'LU': 0.0370
-    'NL': 0.0370
-    'NO': 0.0370
-    'PL': 0.0370
-    'SE': 0.0370
-    'ES': 0.0741
-    'IT': 0.1111
-  # high spatial resolution: change clusters to 49
-  # 49 nodes: 30 for Germany, 3 for Italy, 2 each for Denmark, UK and Spain, 1 per each of other 10 "Stromnachbarn"
-    # 'DE': 0.6124
-    # 'AT': 0.0204
-    # 'BE': 0.0204
-    # 'CH': 0.0204
-    # 'CZ': 0.0204
-    # 'DK': 0.0408
-    # 'FR': 0.0204
-    # 'GB': 0.0408
-    # 'LU': 0.0204
-    # 'NL': 0.0204
-    # 'NO': 0.0204
-    # 'PL': 0.0204
-    # 'SE': 0.0204
-    # 'ES': 0.0408
-    # 'IT': 0.0612
   temporal:
-    resolution_sector: 365H
+    resolution_sector: 3H
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#co2-budget
 co2_budget:
@@ -249,10 +214,10 @@ co2_budget:
   2050: 0.000 # climate-neutral by 2050
 
 wasserstoff_kernnetz:
-  enable: true
+  enable: false
   reload_locations: false
   divide_pipes: true
-  pipes_segment_length: 50
+  pipes_segment_length: 10
   border_crossing: true
   aggregate_build_years: "mean"
   recalculate_length: true
@@ -298,13 +263,12 @@ sector:
   biomass_spatial: true
   #TBD what to include in config
   #relax so no infeasibility in 2050 with no land transport demand
-  min_part_load_fischer_tropsch: 0.
   regional_methanol_demand: true  #set to true if regional CO2 constraints needed
   regional_oil_demand: true  #set to true if regional CO2 constraints needed
   regional_coal_demand: true  #set to true if regional CO2 constraints needed
   gas_network: false
   regional_gas_demand: true
-  H2_retrofit: true
+  H2_retrofit: false
   biogas_upgrading_cc: true
   biomass_to_liquid: true
   biomass_to_liquid_cc: true
@@ -328,21 +292,28 @@ sector:
     2045: 0.05
     2050: 0.05
   land_transport_electric_share:
-    2020: 0.05
-    2025: 0.15
-    2030: 0.3
-    2035: 0.45
+    2020: 0.03
+    2025: 0.07
+    2030: 0.2
+    2035: 0.4
     2040: 0.7
     2045: 0.85
     2050: 0.95
   land_transport_ice_share:
-    2020: 0.9
-    2025: 0.8
-    2030: 0.65
-    2035: 0.5
+    2020: 0.92
+    2025: 0.88
+    2030: 0.75
+    2035: 0.55
     2040: 0.25
     2045: 0.1
     2050: 0.0
+  electricity_distribution_grid: false
+  co2_sequestration_potential: 150
+  min_part_load_fischer_tropsch: 0 #0.5
+  min_part_load_methanolisation: 0 #0.3
+  min_part_load_methanation: 0 #0.3
+  bev_dsm: 2030
+  bev_availability: 0.5
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#industry
 industry:
@@ -401,8 +372,8 @@ industry:
     2040: 0.6
     2045: 0.6
     2050: 0.6
-  waste_to_energy: true
-  waste_to_energy_cc: true
+  waste_to_energy: false
+  waste_to_energy_cc: false
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#solving
 solving:
@@ -431,56 +402,75 @@ solving:
         H2 pipeline: 0.05
         H2 pipeline retrofitted: 0.05
       fractional_last_unit_size: true
+    overwrite_with_fixed_capacities: false
   constraints:
     efuel_export_ban: false
     limits_capacity_max:
-      Generator:
-        onwind:
-          DE:
-            2020: 54.5
-            2025: 69
-            2030: 115 # EEG2023 Ziel für 2030
-            2035: 160 # EEG2023 Ziel für 2040
-            2040: 250
-            2045: 250
-        offwind:
-          DE:
-            2020: 7.8
-            2025: 11.3
-            2030: 29.3 # uba Projektionsbericht and NEP without delayed BalWin 3
-            2035: 50 # Planned projects until 2035 (offshore_connection_points.csv) -1.3 GW for potential delays
-            2040: 65   # Planned projects until 2040 -1.5 GW for potential retirments
-            2045: 70
-        solar:
-          DE:
-            2020: 53.7
-            2025: 110 # EEG2023; assumes for 2026: 128 GW, assuming a fair share reached by end of 2025
-            2030: 235 # PV Ziel 2030 + 20 GW
-            2035: 400
-            2040: 800
-            2045: 1000
-      Store:
-        co2 sequestered:
-          DE:
-            2020: 0
-            2025: 0
-            2030: 10000
-            2035: 20000
-            2040: 50000
-            2045: 80000
+      # Generator:
+      #   onwind:
+      #     DE:
+      #       2020: 54.5
+      #       2025: 69
+      #       2030: 157 # EEG2023 Ziel für 2035
+      #       2035: 250
+      #       2040: 250
+      #       2045: 250
+      #   offwind:
+      #     DE:
+      #       2020: 7.8
+      #       2025: 11.3
+      #       2030: 31.3 # uba Projektionsbericht
+      #       2035: 70
+      #       2040: 70
+      #       2045: 70
+      #   solar:
+      #     DE:
+      #       2020: 53.7
+      #       2025: 110 # EEG2023; assumes for 2026: 128 GW, assuming a fair share reached by end of 2025
+      #       2030: 309 # EEG2023 Ziel für 2035
+      #       2035: 1000
+      #       2040: 1000
+      #       2045: 1000
+      # Store:
+      #   co2 sequestered:
+      #     DE:
+      #       2020: 0
+      #       2025: 0
+      #       2030: 10000
+      #       2035: 20000
+      #       2040: 50000
+      #       2045: 80000
       Link:
-        methanolisation:
+        urban central resistive heater:
           DE:
-            2030: 5.7
-            2035: 5.7
-            2040: 5.7
-            2045: 5.7
-        Fischer-Tropsch:
+            2020: 5
+            2025: 8
+            2030: 10
+            2035: 20
+        urban decentral resistive heater:
           DE:
-            2030: 2.5
-            2035: 2.5
-            2040: 2.5
-            2045: 2.5
+            2020: 5
+            2025: 10
+            2030: 15
+            2035: 30
+        rural resistive heater:
+          DE:
+            2020: 5
+            2025: 8
+            2030: 10
+            2035: 20
+        # methanolisation:
+        #   DE:
+        #     2030: 5.7
+        #     2035: 5.7
+        #     2040: 5.7
+        #     2045: 5.7
+        # Fischer-Tropsch:
+        #   DE:
+        #     2030: 2.5
+        #     2035: 2.5
+        #     2040: 2.5
+        #     2045: 2.5
         HVC to air:
           DE:
             2020: 0 # all HVC in Germany is either burned or recycled
@@ -512,70 +502,52 @@ solving:
             2035: 101
             2040: 101
             2045: 101
-  # For reference, this are the values specified in the laws
-  # limits_capacity_min:
-  #     Generator:
-  #       onwind:
-  #         DE:
-  #           2030: 115 # Wind-an-Land Law
-  #           2035: 157 # Wind-an-Land Law
-  #           2040: 160 # Wind-an-Land Law
-  #           2045: 160
-  #       offwind:
-  #         DE:
-  #           2030: 30 # Wind-auf-See Law
-  #           2035: 40 # 40 Wind-auf-See Law
-  #           # assuming at least 1/3 of difference reached in 2040
-  #           2040: 50
-  #           2045: 70 #70 Wind-auf-See Law
-  #       solar:
-  #         DE:
-  #           # EEG2023; Ziel for 2024: 88 GW and for 2026: 128 GW,
-  #           # assuming at least 1/3 of difference reached in 2025
-  #           2025: 101
-  #           2030: 215 # PV strategy
-  #           2035: 309
-  #           2040: 400 # PV strategy
-  #           2045: 400
-  #           # What about the EEG2023 "Strommengenpfad"?
     # boundary condition of maximum volumes
-    limits_volume_max:
-      # constrain electricity import in TWh
-      electricity_import:
-        DE:
-          2020: -20
-          2025: 0
-          2030: 0
-          2035: 40
-          2040: 80
-          2045: 125
-      electrolysis:
-      # boundary condition lower?
-        DE:
-          2020: 0
-          2025: 5
-          2030: 45
-          2035: 130
-          2040: 215
-          2045: 300
-      h2_derivate_import:
-      # boundary condition lower?
-        DE:
-          2020: 0
-          2025: 0
-          2030: 10
-          2035: 105
-          2040: 200
-          2045: 300
-      h2_import:
-      # boundary condition lower?
-        DE:
-          2020: 0
-          2025: 5
-          2030: 15
-          2035: 115
-          2040: 220
-          2045: 325
+    # limits_volume_max:
+    #   # constrain electricity import in TWh
+    #   electricity_import:
+    #     DE:
+    #       2020: -20
+    #       2025: 0
+    #       2030: 0
+    #       2035: 40
+    #       2040: 80
+    #       2045: 125
+    #   electrolysis:
+    #   # boundary condition lower?
+    #     DE:
+    #       2020: 0
+    #       2025: 5
+    #       2030: 45
+    #       2035: 130
+    #       2040: 215
+    #       2045: 300
+    #   h2_derivate_import:
+    #   # boundary condition lower?
+    #     DE:
+    #       2020: 0
+    #       2025: 0
+    #       2030: 10
+    #       2035: 105
+    #       2040: 200
+    #       2045: 300
+    #   h2_import:
+    #   # boundary condition lower?
+    #     DE:
+    #       2020: 0
+    #       2025: 5
+    #       2030: 15
+    #       2035: 115
+    #       2040: 220
+    #       2045: 325
+    #   FT_production:
+    #     DE:
+    #       2020: 200
+    #       2025: 200
+    #       2030: 200
+    #       2035: 200
+    #       2040: 200
+    #       2045: 200
     limits_volume_min:
       electrolysis:
         DE:
@@ -595,15 +567,18 @@ solving:
         2045: 35
   # solver:
   #   options: gurobi-numeric-focus
-  # solver_options:
-  #   gurobi-default:
-  #     NumericFocus: 1
-  #     FeasibilityTol: 1.e-4
-  #     BarHomogeneous: 1
+  solver_options:
+    gurobi-default:
+      # NumericFocus: 1
+      # FeasibilityTol: 1.e-4
+      BarHomogeneous: 1
+
+  
 
 plotting:
   tech_colors:
     load: "#111100"
+    load-shedding: "#111100"
     H2 pipeline (Kernnetz): '#6b3161'
     renewable oil: '#c9c9c9'
     urban central H2 retrofit CHP: '#ff0000'
@@ -661,17 +636,20 @@ pypsa_eur:
 
 
 co2_price_add_on_fossils:
-  # 2020: 25
-  # 2025: 60
+  2020: 25 # CO2 price in 2020: 25 € / t CO2
+  2025: 0  # CO2 price in 2025: 55 € / t CO2
 
 must_run:
-  2020:
-    DE:
-      lignite: 0.4
-      # biogas: 0.6
+  # 2020:
+  #   DE:
+  #     # lignite: 0.4
+  #     # biogas: 0.6
+
+emissions_upstream:
+  enable: false
 
 transmission_projects:
-  new_link_capacity: keep #keep or zero
+  new_link_capacity: zero #keep or zero
 
 onshore_nep_force:
   cutin_year: 2020
@@ -685,7 +663,71 @@ offshore_nep_force:
   delay_years: 0
 
 scale_capacity:
-  2020:
-    DE:
-      CCGT: 10000
-      "urban central gas CHP": 22000
+  # 2020:
+  #   DE:
+  #     CCGT: 10000
+  #     "urban central gas CHP": 22000
+
+biomass:
+  year: 2030
+  scenario: ENS_Med
+  classes:
+    solid biomass:
+    - Agricultural waste
+    - Fuelwood residues
+    - Secondary Forestry residues - woodchips
+    - Sawdust
+    - Residues from landscape care
+    not included:
+    - Sugar from sugar beet
+    - Rape seed
+    - "Sunflower, soya seed "
+    - Bioethanol barley, wheat, grain maize, oats, other cereals and rye
+    - Miscanthus, switchgrass, RCG
+    - Willow
+    - Poplar
+    - FuelwoodRW
+    - C&P_RW
+    biogas:
+    - Manure solid, liquid
+    - Sludge
+    municipal solid waste:
+    - Municipal waste
+  share_unsustainable_use_retained:
+    2020: 0
+    2025: 0
+    2030: 0
+    2035: 0
+    2040: 0
+    2045: 0
+    2050: 0
+  share_sustainable_potential_available:
+    2020: 1
+    2025: 1
+    2030: 1
+    2035: 1
+    2040: 1
+    2045: 1
+    2050: 1
+
+demand_modelling: 
+  enable: false
+  voll: false
+  elastic: false
+  elastic_pwl: false # false, default, lower, higher
+  elastic_intercept: 2000 # EUR/tMWh	Price at which load vanishes
+  elastic_load: 5000 # MW
+  voll_price: 2000 # €/MWh
+  elastic_pwl_params:
+    default:
+      intercept: [8000, 400, 200]
+      slope: [80, 40, 20]
+      nominal: [1700, 100, 200]
+    lower:
+      intercept: [16000, 800, 400]
+      slope: [160, 80, 40]
+      nominal: [95, 5, 10]
+    higher:
+      intercept: [4000, 200, 100]
+      slope: [40, 20, 10]
+      nominal: [95, 5, 10]

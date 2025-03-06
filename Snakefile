@@ -313,6 +313,8 @@ rule modify_prenetwork:
         shipping_methanol_share=config_provider("sector", "shipping_methanol_share"),
         mwh_meoh_per_tco2=config_provider("sector", "MWh_MeOH_per_tCO2"),
         scale_capacity=config_provider("scale_capacity"),
+        emissions_upstream=config_provider("emissions_upstream"),
+        demand_modelling=config_provider("demand_modelling"), 
     input:
         costs_modifications="ariadne-data/costs_{planning_horizons}-modifications.csv",
         network=RESULTS
@@ -498,6 +500,7 @@ rule export_ariadne_variables:
         post_discretization=config_provider("solving", "options", "post_discretization"),
         NEP_year=config_provider("costs", "NEP"),
         NEP_transmission=config_provider("costs", "transmission"),
+        transmission_projects=config_provider("transmission_projects", "new_link_capacity"),
     input:
         template=resources("template_ariadne_database.xlsx"),
         industry_demands=expand(
@@ -575,17 +578,17 @@ rule plot_ariadne_variables:
         + "ariadne/final_energy_residential_commercial_price.png",
         all_prices=RESULTS + "ariadne/all_prices.png",
         policy_carbon=RESULTS + "ariadne/policy_carbon.png",
-        investment_energy_supply=RESULTS + "ariadne/investment_energy_supply.png",
+        # investment_energy_supply=RESULTS + "ariadne/investment_energy_supply.png",
         elec_val_2020=RESULTS + "ariadne/elec_val_2020.png",
         trade=RESULTS + "ariadne/trade.png",
-        NEP_plot=RESULTS + "ariadne/NEP_plot.png",
-        NEP_Trassen_plot=RESULTS + "ariadne/NEP_Trassen_plot.png",
-        transmission_investment_csv=RESULTS + "ariadne/transmission_investment.csv",
-        trassenlaenge_csv=RESULTS + "ariadne/trassenlaenge.csv",
-        Kernnetz_Investment_plot=RESULTS + "ariadne/Kernnetz_Investment_plot.png",
-        elec_trade=RESULTS + "ariadne/elec-trade-DE.pdf",
-        h2_trade=RESULTS + "ariadne/h2-trade-DE.pdf",
-        trade_balance=RESULTS + "ariadne/trade-balance-DE.pdf",
+        # NEP_plot=RESULTS + "ariadne/NEP_plot.png",
+        # NEP_Trassen_plot=RESULTS + "ariadne/NEP_Trassen_plot.png",
+        # transmission_investment_csv=RESULTS + "ariadne/transmission_investment.csv",
+        # trassenlaenge_csv=RESULTS + "ariadne/trassenlaenge.csv",
+        # Kernnetz_Investment_plot=RESULTS + "ariadne/Kernnetz_Investment_plot.png",
+        # elec_trade=RESULTS + "ariadne/elec-trade-DE.pdf",
+        # h2_trade=RESULTS + "ariadne/h2-trade-DE.pdf",
+        # trade_balance=RESULTS + "ariadne/trade-balance-DE.pdf",
     log:
         RESULTS + "logs/plot_ariadne_variables.log",
     script:
@@ -605,6 +608,14 @@ rule ariadne_all:
             run=config_provider("run", "name"),
             **config["scenario"],
             allow_missing=True,
+        ),
+        expand(
+            RESULTS + "ariadne/report/elec_price_duration_curve.pdf",
+            run=config_provider("run", "name"),
+        ),
+        expand(
+            RESULTS + "ariadne/pricing/elec_pdc.png",
+            run=config_provider("run", "name"),
         ),
         exported_variables=expand(
             RESULTS + "ariadne/exported_variables_full.xlsx",
@@ -667,6 +678,7 @@ rule plot_ariadne_report:
         NEP_year=config_provider("costs", "NEP"),
         hours=config_provider("clustering", "temporal", "resolution_sector"),
         NEP_transmission=config_provider("costs", "transmission"),
+        transmission_projects=config_provider("transmission_projects", "new_link_capacity"),
     input:
         networks=expand(
             RESULTS
@@ -713,3 +725,42 @@ rule ariadne_report_only:
             RESULTS + "ariadne/report/elec_price_duration_curve.pdf",
             run=config_provider("run", "name"),
         ),
+
+rule pricing_analysis:
+    params:
+        planning_horizons=config_provider("scenario", "planning_horizons"),
+        plotting=config_provider("plotting"),
+        run=config_provider("run", "name"),
+        NEP_year=config_provider("costs", "NEP"),
+        hours=config_provider("clustering", "temporal", "resolution_sector"),
+        transmission_projects=config_provider("transmission_projects", "new_link_capacity"),
+        costs=config_provider("costs"),
+    input:
+        networks=expand(
+            RESULTS
+            + "postnetworks/base_s_{clusters}_l{ll}_{opts}_{sector_opts}_{planning_horizons}.nc",
+            **config["scenario"],
+            allow_missing=True,
+        ),
+        costs=expand(
+            resources("costs_{planning_horizons}.csv"),
+            **config["scenario"],
+            allow_missing=True,
+        ),
+    output:
+        elec_pdc=RESULTS + "ariadne/pricing/elec_pdc.png",
+        price_setting_dev=RESULTS + "ariadne/pricing/price_setting_development.png",
+        pricing=directory(RESULTS + "ariadne/pricing"),
+        merit_order_3cases=directory(RESULTS + "ariadne/pricing/merit_order_3cases"),
+        merit_order_all=directory(RESULTS + "ariadne/pricing/merit_order"),
+        price_setter=directory(RESULTS + "ariadne/pricing/price_setter"),
+        price_taker=directory(RESULTS + "ariadne/pricing/price_taker"),
+        pdc_price_setter=directory(RESULTS + "ariadne/pricing/pdc_price_setter"),
+        pdc_price_taker=directory(RESULTS + "ariadne/pricing/pdc_price_taker"),
+    resources:
+        mem_mb=30000,
+        runtime="30h",
+    log:
+        RESULTS + "logs/pricing_analysis.log",
+    script:
+        "scripts/pypsa-de/pricing_analysis.py"
