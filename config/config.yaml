@@ -4,11 +4,11 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20250304-Pricing-Elastic5GW
+  prefix: 20250307-Pricing
 
   name:
   # - CurrentPolicies
-   - KN2045_Bal_v4
+   - KN2045_Bal_v4_voll
   # - KN2045_Bal_v4_upstream
   # - KN2045_Elec_v4
   # - KN2045_H2_v4
@@ -197,7 +197,7 @@ lines:
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#enable
 enable:
-  retrieve: true # set to false once initial data is retrieved
+  retrieve: false # set to false once initial data is retrieved
   retrieve_cutout: false # set to false once initial data is retrieved
 clustering:
   temporal:
@@ -402,7 +402,8 @@ solving:
         H2 pipeline: 0.05
         H2 pipeline retrofitted: 0.05
       fractional_last_unit_size: true
-    overwrite_with_fixed_capacities: false
+    operation_analysis: true
+    overwrite_with_operation: false
   constraints:
     efuel_export_ban: false
     limits_capacity_max:

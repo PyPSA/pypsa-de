@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: : 2017-2023 The PyPSA-Eur Authors
 #
 # SPDX-License-Identifier: MIT
-KN2045_Bal_v4:
+KN2045_Bal_v4_voll:
 # Ausgewogener Mix an Technologien zur Dekarbonisierung der Sektoren
 # Breites Energieträgerportfolio in der Endenergie (Strom, Wasserstoff, synthetische Kraftstoffe)
 # Ausbau der erneuerbare Stromerzeugung erreicht politisch gesetzte Ziele
@@ -67,6 +67,28 @@ KN2045_Bal_v4:
       2035: 0.7713
       2040: 0.6948
       2045: 0.6909
+
+  demand_modelling: 
+    enable: true
+    voll: true
+    elastic: false
+    elastic_pwl: false # false, default, lower, higher
+    elastic_intercept: 2000 # EUR/tMWh	Price at which load vanishes
+    elastic_load: 5000 # MW
+    voll_price: 2000 # €/MWh
+    elastic_pwl_params:
+      default:
+        intercept: [8000, 400, 200]
+        slope: [80, 40, 20]
+        nominal: [1700, 100, 200]
+      lower:
+        intercept: [16000, 800, 400]
+        slope: [160, 80, 40]
+        nominal: [95, 5, 10]
+      higher:
+        intercept: [4000, 200, 100]
+        slope: [40, 20, 10]
+        nominal: [95, 5, 10]
 
 KN2045_Bal_v4_upstream:
 # Ausgewogener Mix an Technologien zur Dekarbonisierung der Sektoren

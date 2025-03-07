@@ -1061,13 +1061,14 @@ if __name__ == "__main__":
         from scripts._helpers import mock_snakemake
 
         snakemake = mock_snakemake(
-            "solve_sector_network_perfect",
-            configfiles="../config/test/config.perfect.yaml",
+            "solve_sector_network_myopic",
+            simpl="",
+            clusters=1,
             opts="",
-            clusters="5",
-            ll="v1.0",
-            sector_opts="",
-            # planning_horizons="2030",
+            ll="vopt",
+            sector_opts="none",
+            planning_horizons="2025",
+            run="KN2045_Bal_v4_voll",
         )
     configure_logging(snakemake)
     set_scenario_config(snakemake)
