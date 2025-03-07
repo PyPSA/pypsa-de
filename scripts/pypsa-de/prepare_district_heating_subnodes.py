@@ -232,7 +232,7 @@ def add_ptes_limit(
         # Create exclusion container for this batch
         excluder = ExclusionContainer(crs=3035, res=10)
         excluder.add_raster(osm_land_cover, codes=codes, invert=True, crs=3035)
-        excluder.add_raster(natura, codes=[1], invert=True, crs=3035)
+        excluder.add_raster(natura, codes=[1], invert=False, crs=3035)
 
         # Process just this batch
         batch_shapes = batch["lau_shape"]
