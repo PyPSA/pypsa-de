@@ -295,7 +295,7 @@ if config["sector"]["district_heating"]["add_subnodes"] and config["sector"][
             ),
 
         resources:
-            mem_mb=1000,
+            mem_mb=20000,
         script:
             "scripts/pypsa-de/prepare_district_heating_subnodes.py"
 
@@ -352,7 +352,7 @@ if config["sector"]["district_heating"]["add_subnodes"] and config["sector"][
                 else []
             ),
         resources:
-            mem_mb=60000,
+            mem_mb=10000,
         script:
             "scripts/pypsa-de/add_district_heating_subnodes.py"
 
