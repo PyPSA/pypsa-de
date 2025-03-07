@@ -381,7 +381,7 @@ dependencies:
 - ruamel.yaml.clib=0.2.8
 - scikit-learn=1.6.0
 - scip=9.1.1
-- scipy=1.15.0
+- scipy=1.15.1
 - seaborn=0.13.2
 - seaborn-base=0.13.2
 - setuptools=75.6.0

@@ -381,7 +381,7 @@ dependencies:
 - pyogrio=0.10.0
 - pyparsing=3.2.1
 - pyproj=3.7.0
-- pypsa=0.32.0
+- pypsa=0.31.0
 - pyscipopt=5.2.1
 - pyshp=2.3.1
 - pyside6=6.8.1
@@ -416,7 +416,7 @@ dependencies:
 - s2n=1.5.10
 - scikit-learn=1.6.0
 - scip=9.1.1
-- scipy=1.15.0
+- scipy=1.15.1
 - seaborn=0.13.2
 - seaborn-base=0.13.2
 - setuptools=75.6.0
