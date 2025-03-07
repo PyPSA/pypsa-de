@@ -194,12 +194,12 @@ def add_subnodes(
             mother_nodes_ptes_pot.index + " urban central water pits"
         )
 
-        if "urban central water pits" in n.storage_units.index:
+        if not n.storage_units.filter(like="urban central water pits", axis=0).empty:
             n.storage_units.loc[mother_nodes_ptes_pot.index, "p_nom_max"] = (
                 mother_nodes_ptes_pot
                 / n.storage_units.loc[mother_nodes_ptes_pot.index, "max_hours"]
             )
-        elif "urban central water pits" in n.stores.index:
+        elif not n.stores.filter(like="urban central water pits", axis=0).empty:
             n.stores.loc[mother_nodes_ptes_pot.index, "e_nom_max"] = (
                 mother_nodes_ptes_pot
             )
