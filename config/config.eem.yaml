@@ -86,3 +86,16 @@ sector:
   district_heating:
     potential: 0.5
     add_subnodes: true
+
+solving:
+  constraints:
+    CCL: false
+    EQ: false
+    BAU: false
+    SAFE: false
+    efuel_export_ban: false
+    limits_capacity_max: {}
+    limits_capacity_min: {}
+    limits_volume_max: {}
+    limits_volume_min: {}
+    limits_power_max: {}
