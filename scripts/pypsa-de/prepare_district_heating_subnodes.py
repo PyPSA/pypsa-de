@@ -10,11 +10,14 @@ from typing import Union
 import xarray as xr
 import shapely
 import rasterio
+from rasterio.windows import Window
+import rasterio
+import tempfile
 from atlite.gis import ExclusionContainer
 from atlite.gis import shape_availability
-from tqdm import tqdm
 import sys
 import os
+
 
 path = "dev/pypsa-de"
 sys.path.insert(0, os.path.abspath(path))
@@ -42,6 +45,86 @@ def encode_utf8(city_name: str) -> bytes:
         The UTF-8 encoded byte string of the city name.
     """
     return city_name.encode("utf-8")
+
+
+def get_chunked_raster(dataset_path, bounds, buffer_distance=1000):
+    """
+    Returns windowed data from a raster without creating memory files.
+
+    Parameters:
+    ----------
+    dataset_path : str
+        Path to the raster dataset.
+    bounds : tuple
+        (min_x, min_y, max_x, max_y) in the dataset's CRS.
+    buffer_distance : int, optional
+        Buffer distance in the dataset's units to add around the bounds.
+        Default is 1000.
+
+    Returns:
+    -------
+    rasterio.io.DatasetReader
+        A windowed raster dataset with optimized memory usage.
+    """
+
+    # Open the source dataset
+    with rasterio.open(dataset_path) as src:
+        # Buffer the bounds
+        buffered_bounds = (
+            bounds[0] - buffer_distance,
+            bounds[1] - buffer_distance,
+            bounds[2] + buffer_distance,
+            bounds[3] + buffer_distance,
+        )
+
+        # Get window for the buffered bounds
+        window = rasterio.windows.from_bounds(*buffered_bounds, transform=src.transform)
+
+        # Ensure window coordinates are valid integers
+        window = Window(
+            int(max(0, window.col_off)),
+            int(max(0, window.row_off)),
+            int(min(src.width - int(window.col_off), window.width)),
+            int(min(src.height - int(window.row_off), window.height)),
+        )
+
+        # Create a temporary file for the windowed data
+        # This is more efficient than using MemoryFile for large datasets
+        with tempfile.NamedTemporaryFile(suffix=".tif", delete=False) as temp:
+            temp_path = temp.name
+
+        # Create the output dataset with proper metadata
+        with rasterio.open(
+            temp_path,
+            "w",
+            driver="GTiff",
+            height=window.height,
+            width=window.width,
+            count=src.count,
+            dtype=src.dtypes[0],
+            crs=src.crs,
+            transform=src.window_transform(window),
+            nodata=src.nodata,
+        ) as dst:
+            # Read and write the windowed data
+            dst.write(src.read(window=window))
+
+    # Return a reader for the temporary file
+    # The OS will clean it up when the process exits or it's manually deleted
+    dataset = rasterio.open(temp_path)
+
+    # Register finalizer to remove temporary file when dataset is garbage collected
+    import weakref
+
+    def cleanup(temp_path):
+        try:
+            os.unlink(temp_path)
+        except:
+            pass
+
+    weakref.finalize(dataset, cleanup, temp_path)
+
+    return dataset
 
 
 def process_eligible_points(
@@ -79,15 +162,8 @@ def process_eligible_points(
         crs=crs,
     )
 
-    chunk_size = 100000  # Adjust based on your memory constraints
-    buffers = []
-
-    for i in range(0, len(eligible_areas), chunk_size):
-        chunk = eligible_areas.iloc[i : i + chunk_size].copy()
-        chunk["geometry"] = chunk.geometry.buffer(5, cap_style="square")
-        buffers.append(chunk)
-
-    eligible_areas = pd.concat(buffers, ignore_index=True)
+    # Apply a 5 meter buffer to all geometries to yield 10m raster resolution
+    eligible_areas["geometry"] = eligible_areas.geometry.buffer(5, cap_style="square")
 
     # Use spatial indexing for more efficient overlay
     merged_data = eligible_areas.union_all()
@@ -143,10 +219,13 @@ def prepare_subnodes(
     subnodes = subnodes.dropna(subset=["geometry"])
     # Convert the DataFrame to a GeoDataFrame
     subnodes = gpd.GeoDataFrame(subnodes, crs="EPSG:4326")
+    # Rename geometry column to point_coords
+    subnodes = subnodes.rename(columns={"geometry": "point_coords"})
+    subnodes = subnodes.set_geometry("point_coords")
 
     # Assign cluster to subnodes according to onshore regions
     subnodes["cluster"] = subnodes.apply(
-        lambda x: regions_onshore.geometry.contains(x.geometry).idxmax(), axis=1
+        lambda x: regions_onshore.geometry.contains(x.point_coords).idxmax(), axis=1
     )
     # For cities that are assigned to onshore regions outside Germany assign closest German cluster
     subnodes.loc[~subnodes.cluster.str.contains("DE"), "cluster"] = subnodes.loc[
@@ -154,36 +233,48 @@ def prepare_subnodes(
     ].apply(
         lambda x: (
             regions_onshore.filter(like="DE", axis=0)
-            .geometry.distance(x.geometry)
+            .geometry.distance(x.point_coords)
             .idxmin()
         ),
         axis=1,
     )
     subnodes["lau"] = subnodes.apply(
-        lambda x: lau.loc[lau.geometry.contains(x.geometry).idxmax(), "LAU_ID"], axis=1
+        lambda x: lau.loc[lau.geometry.contains(x.point_coords).idxmax(), "LAU_ID"],
+        axis=1,
     )
     subnodes["lau_shape"] = subnodes.apply(
-        lambda x: lau.loc[lau.geometry.contains(x.geometry).idxmax(), "geometry"].wkt,
+        lambda x: lau.loc[
+            lau.geometry.contains(x.point_coords).idxmax(), "geometry"
+        ].wkt,
         axis=1,
     )
     subnodes["nuts3"] = subnodes.apply(
-        lambda x: heat_techs.geometry.contains(x.geometry).idxmax(),
+        lambda x: heat_techs.geometry.contains(x.point_coords).idxmax(),
         axis=1,
     )
     subnodes["nuts3_shape"] = subnodes.apply(
         lambda x: heat_techs.loc[
-            heat_techs.geometry.contains(x.geometry).idxmax(), "geometry"
+            heat_techs.geometry.contains(x.point_coords).idxmax(), "geometry"
         ].wkt,
         axis=1,
     )
+
+    # Set LAU shapes as geometry and adjust CRS
+    subnodes["lau_shape"] = subnodes["lau_shape"].apply(shapely.wkt.loads)
+    subnodes = subnodes.set_geometry("lau_shape")
+    subnodes.crs = "EPSG:4326"
+    subnodes = subnodes.to_crs(3035)
+
+    # Make point_coords wkt
+    subnodes["point_coords"] = subnodes["point_coords"].apply(lambda x: x.wkt)
 
     return subnodes
 
 
 def add_ptes_limit(
     subnodes: gpd.GeoDataFrame,
-    osm_land_cover: rasterio.io.DatasetReader,
-    natura: rasterio.io.DatasetReader,
+    osm_land_cover_path: rasterio.io.DatasetReader,
+    natura_path: rasterio.io.DatasetReader,
     groundwater: xr.Dataset,
     codes: list,
     max_groundwater_depth: float,
@@ -214,47 +305,57 @@ def add_ptes_limit(
     gpd.GeoDataFrame
         Updated GeoDataFrame with PTES potential added.
     """
+    import dask
+    from dask.diagnostics import ProgressBar
+
     dh_systems = subnodes.copy()
-    dh_systems["lau_shape"] = dh_systems["lau_shape"].apply(shapely.wkt.loads)
-    dh_systems = dh_systems.set_geometry("lau_shape")
-    dh_systems.crs = "EPSG:4326"
-    dh_systems = dh_systems.to_crs(3035)
 
-    # Process in batches by region/cluster
-    batch_results = []
-    batch_size = 1  # Define the batch size
+    # Increase batch size for better performance
+    batch_size = 1
 
-    for i in tqdm(
-        range(0, len(dh_systems), batch_size), desc="Processing LAU shapes", unit="area"
-    ):
-        batch = dh_systems.iloc[i : i + batch_size]
+    # Create batches
+    batches = []
+    for i in range(0, len(dh_systems), batch_size):
+        batches.append(dh_systems.iloc[i : i + batch_size])
 
-        # Create exclusion container for this batch
+    # Define the processing function for a single batch
+    def process_batch(batch):
+        # Get efficient chunked rasters for this batch
+        osm_dataset = get_chunked_raster(osm_land_cover_path, batch.total_bounds)
+        natura_dataset = get_chunked_raster(natura_path, batch.total_bounds)
+
+        # Create exclusion container
         excluder = ExclusionContainer(crs=3035, res=10)
-        excluder.add_raster(osm_land_cover, codes=codes, invert=True, crs=3035)
-        excluder.add_raster(natura, codes=[1], invert=False, crs=3035)
+        excluder.add_raster(osm_dataset, codes=codes, invert=True, crs=3035)
+        excluder.add_raster(natura_dataset, codes=[1], invert=False, crs=3035)
 
-        # Process just this batch
+        # Process batch shapes
         batch_shapes = batch["lau_shape"]
         band, transform = shape_availability(batch_shapes, excluder)
-        masked_data = band
-        row_indices, col_indices = np.where(masked_data != osm_land_cover.nodata)
-        values = masked_data[row_indices, col_indices]
+
+        # Extract valid points
+        row_indices, col_indices = np.where(band != osm_dataset.nodata)
+        values = band[row_indices, col_indices]
 
         x_coords, y_coords = rasterio.transform.xy(transform, row_indices, col_indices)
 
-        # Create and process eligible areas for this batch
-        if len(x_coords) > 0:  # Only process if there are eligible areas
+        # Process eligible points if any exist
+        if len(x_coords) > 0:
             eligible_areas = process_eligible_points(
-                x_coords, y_coords, values, osm_land_cover.crs, batch
+                x_coords, y_coords, values, osm_dataset.crs, batch
             )
-            batch_results.append(eligible_areas)
+            return eligible_areas
+        return None
 
-        # Clear memory
-        del band, masked_data, excluder
-        import gc
+    # Create delayed tasks for each batch
+    delayed_results = [dask.delayed(process_batch)(batch) for batch in batches]
 
-        gc.collect()
+    # Execute tasks in parallel with progress bar
+    with ProgressBar():
+        results = dask.compute(*delayed_results)
+
+    # Filter out None results and combine
+    batch_results = [result for result in results if result is not None]
 
     # Combine results from all batches
     if batch_results:
@@ -326,7 +427,6 @@ def extend_regions_onshore(
         GeoDataFrame with restricted onshore regions, replacing geometries
         with the remaining city areas.
     """
-    subnodes_all["lau_shape"] = subnodes_all["lau_shape"].apply(shapely.wkt.loads)
     if isinstance(head, bool):
         head = 40
     # Extend regions_onshore to include the cities' lau regions
@@ -420,17 +520,15 @@ if __name__ == "__main__":
         heat_techs,
     )
 
-    # Add PTES limit to subnodes according to land availability within city regions
-    osm_land_cover = rasterio.open(snakemake.input.osm_land_cover)
-    natura = rasterio.open(snakemake.input.natura)
+    bounds = subnodes.to_crs("EPSG:4326").total_bounds  # (minx, miny, maxx, maxy)
     groundwater = xr.open_dataset(snakemake.input.groundwater_depth).sel(
-        lon=slice(subnodes["geometry"].x.min(), subnodes["geometry"].x.max()),
-        lat=slice(subnodes["geometry"].y.min(), subnodes["geometry"].y.max()),
+        lon=slice(bounds[0], bounds[2]),  # minx to maxx
+        lat=slice(bounds[1], bounds[3]),  # miny to maxy
     )
     subnodes = add_ptes_limit(
         subnodes,
-        osm_land_cover,
-        natura,
+        snakemake.input.osm_land_cover,
+        snakemake.input.natura,
         groundwater,
         snakemake.params.district_heating["osm_landcover_codes"],
         snakemake.params.district_heating["max_groundwater_depth"],
