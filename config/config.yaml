@@ -7,10 +7,10 @@ run:
   prefix: 20250307-Pricing
 
   name:
-   - KN2045_Bal_v4_voll
-   - KN2045_Bal_v4_elastic5GW
-   - KN2045_Bal_v4_elasticAĺl
-   - KN2045_Bal_v4_elasticPWL
+  - KN2045_Bal_v4_voll
+  # - KN2045_Bal_v4_elastic5GW
+  # - KN2045_Bal_v4_elasticAll
+  # - KN2045_Bal_v4_elasticPWL
   # - KN2045_Bal_v4_upstream
 
   scenarios:
