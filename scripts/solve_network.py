@@ -34,6 +34,9 @@ import pathlib
 import re
 import sys
 
+sys.path.append(os.path.abspath(os.path.dirname(__file__)))  # Adds 'scripts/' to path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))  # Adds repo root
+
 import numpy as np
 import pandas as pd
 import pypsa
@@ -1067,7 +1070,7 @@ if __name__ == "__main__":
             opts="",
             ll="vopt",
             sector_opts="none",
-            planning_horizons="2025",
+            planning_horizons="2045",
             run="KN2045_Bal_v4_voll",
         )
     configure_logging(snakemake)
@@ -1103,7 +1106,11 @@ if __name__ == "__main__":
     logger.info(f"Maximum memory usage: {mem.mem_usage}")
 
     n.meta = dict(snakemake.config, **dict(wildcards=dict(snakemake.wildcards)))
-    n.export_to_netcdf(snakemake.output.network)
+    
+    if solve_opts["overwrite_with_operation"]:
+        n.export_to_netcdf(snakemake.output.network_lt)
+    else:
+        n.export_to_netcdf(snakemake.output.network)
 
     with open(snakemake.output.config, "w") as file:
         yaml.dump(
@@ -1113,3 +1120,45 @@ if __name__ == "__main__":
             allow_unicode=True,
             sort_keys=False,
         )
+
+    # operation analysis
+    if solve_opts["operation_analysis"]:
+
+        logger.info(f"Solving again with fixed capacities")
+        # delete linopy model from before
+        del n.model
+
+        # co2 constraint can become infeasible bc of numerical issues (2 ways to handle it)
+        
+        # (1) round co2 constraint to make feasible (rounding with <= softens the constraint)
+        # n.global_constraints.loc["CO2Limit" , "constant"] = round(n.global_constraints.loc["CO2Limit" , "constant"])
+
+        # (2) multiply co2 store e_nom_opt by 2
+        n.stores.loc[n.stores.carrier == "co2", "e_nom_opt"] *= 2
+
+        n.optimize.fix_optimal_capacities()
+        n = prepare_network(
+            n,
+            solve_opts,
+            config=snakemake.config,
+            foresight=snakemake.params.foresight,
+            planning_horizons=snakemake.params.planning_horizons,
+            co2_sequestration_potential=snakemake.params["co2_sequestration_potential"],
+        )
+        n = solve_network(
+            n,
+            config=snakemake.config,
+            params=snakemake.params,
+            solving=snakemake.params.solving,
+            log_fn=snakemake.log.solver,
+        )
+
+        n.meta = dict(snakemake.config, **dict(wildcards=dict(snakemake.wildcards)))
+        n.export_to_netcdf(snakemake.output.network_st)
+
+        if solve_opts["overwrite_with_operation"]:
+            n.export_to_netcdf(snakemake.output.network)
+
+
+
+

@@ -7,15 +7,12 @@ run:
   prefix: 20250307-Pricing
 
   name:
-  # - CurrentPolicies
    - KN2045_Bal_v4_voll
+   - KN2045_Bal_v4_elastic5GW
+   - KN2045_Bal_v4_elasticAĺl
+   - KN2045_Bal_v4_elasticPWL
   # - KN2045_Bal_v4_upstream
-  # - KN2045_Elec_v4
-  # - KN2045_H2_v4
-  # - KN2045plus_EasyRide
-  # - KN2045plus_LowDemand
-  # - KN2045minus_WorstCase
-  # - KN2045minus_SupplyFocus
+
   scenarios:
     enable: true
     manual_file: config/scenarios.manual.yaml
@@ -714,7 +711,8 @@ biomass:
 demand_modelling: 
   enable: false
   voll: false
-  elastic: false
+  elastic_capa: false
+  elastic_all: false
   elastic_pwl: false # false, default, lower, higher
   elastic_intercept: 2000 # EUR/tMWh	Price at which load vanishes
   elastic_load: 5000 # MW
@@ -723,7 +721,7 @@ demand_modelling:
     default:
       intercept: [8000, 400, 200]
       slope: [80, 40, 20]
-      nominal: [1700, 100, 200]
+      nominal: [52000,3000,5500]
     lower:
       intercept: [16000, 800, 400]
       slope: [160, 80, 40]

@@ -1318,8 +1318,8 @@ def adapt_demand_modelling(n, params):
             p_nom=loads_temporal.max(),
         )
     
-    if params["elastic"]:
-        logger.info("Adding elastic demand.")
+    if params["elastic_capa"]:
+        logger.info(f"Adding elastic demand generator with capacity of {params["elastic_load"]} and intercept of {params["elastic_intercept"]}.")
 
         n.add(
             "Generator",
@@ -1329,8 +1329,24 @@ def adapt_demand_modelling(n, params):
             marginal_cost_quadratic=params["elastic_intercept"] / (2 * params["elastic_load"]),
             marginal_cost=0,
             p_nom=params["elastic_load"],
+            p_nom_extendable=False,
         )
-        
+
+    if params["elastic_all"]:
+        logger.info(f"Adding elastic demand generator with capacity equal to complete load and intercept of {params["elastic_intercept"]}.")
+
+        n.add(
+            "Generator",
+            "load-shedding",
+            bus=bus,
+            carrier="load",
+            marginal_cost_quadratic=params["elastic_intercept"] / (2 * loads_temporal),
+            marginal_cost=0,
+            p_nom=loads_temporal.max(),
+            p_max_pu = loads_temporal / loads_temporal.max(),
+            p_nom_extendable=False,
+        )
+
     if param_set := params["elastic_pwl"]:
         logger.info(f"Adding piecewise linear elastic demand with set '{param_set}'.")
         pwl = params["elastic_pwl_params"][param_set]
