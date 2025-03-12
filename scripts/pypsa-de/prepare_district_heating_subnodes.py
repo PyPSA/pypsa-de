@@ -17,6 +17,8 @@ from atlite.gis import ExclusionContainer
 from atlite.gis import shape_availability
 import sys
 import os
+import dask
+from dask.diagnostics import ProgressBar
 
 
 path = "dev/pypsa-de"
@@ -27,6 +29,34 @@ from scripts._helpers import (
     set_scenario_config,
     update_config_from_wildcards,
 )
+
+
+def load_census_data(census_path: str) -> gpd.GeoDataFrame:
+    """
+    Load heating raster data of census from a CSV file, clean data, and return a GeoDataFrame.
+
+    Parameters
+    ----------
+    census_path : str
+        Path to the CSV file containing the census data.
+
+    Returns
+    -------
+    gpd.GeoDataFrame
+        GeoDataFrame containing the census data.
+    """
+    # Load and clean the census data
+    census = pd.read_csv(census_path, encoding="latin1", sep=";")
+    census = census.replace("\x96", 0)
+
+    # Create a GeoDataFrame from the census data
+    census = gpd.GeoDataFrame(
+        census,
+        geometry=gpd.points_from_xy(census.x_mp_100m, census.y_mp_100m),
+        crs="EPSG:3035",
+    )
+
+    return census
 
 
 # Function to encode city names in UTF-8
@@ -47,9 +77,13 @@ def encode_utf8(city_name: str) -> bytes:
     return city_name.encode("utf-8")
 
 
-def get_chunked_raster(dataset_path, bounds, buffer_distance=1000):
+def get_chunked_raster(
+    dataset_path: str,
+    bounds: tuple[float, float, float, float],
+    buffer_distance: float = 1000,
+) -> rasterio.io.DatasetReader:
     """
-    Returns windowed data from a raster without creating memory files.
+    Returns windowed data from a raster.
 
     Parameters:
     ----------
@@ -57,14 +91,14 @@ def get_chunked_raster(dataset_path, bounds, buffer_distance=1000):
         Path to the raster dataset.
     bounds : tuple
         (min_x, min_y, max_x, max_y) in the dataset's CRS.
-    buffer_distance : int, optional
+    buffer_distance : float, optional
         Buffer distance in the dataset's units to add around the bounds.
         Default is 1000.
 
     Returns:
     -------
     rasterio.io.DatasetReader
-        A windowed raster dataset with optimized memory usage.
+        A windowed raster dataset.
     """
 
     # Open the source dataset
@@ -89,7 +123,6 @@ def get_chunked_raster(dataset_path, bounds, buffer_distance=1000):
         )
 
         # Create a temporary file for the windowed data
-        # This is more efficient than using MemoryFile for large datasets
         with tempfile.NamedTemporaryFile(suffix=".tif", delete=False) as temp:
             temp_path = temp.name
 
@@ -116,7 +149,7 @@ def get_chunked_raster(dataset_path, bounds, buffer_distance=1000):
     # Register finalizer to remove temporary file when dataset is garbage collected
     import weakref
 
-    def cleanup(temp_path):
+    def cleanup(temp_path: str) -> None:
         try:
             os.unlink(temp_path)
         except:
@@ -227,6 +260,9 @@ def prepare_subnodes(
     subnodes["cluster"] = subnodes.apply(
         lambda x: regions_onshore.geometry.contains(x.point_coords).idxmax(), axis=1
     )
+
+    subnodes["name"] = subnodes["cluster"] + " " + subnodes["Stadt"]
+
     # For cities that are assigned to onshore regions outside Germany assign closest German cluster
     subnodes.loc[~subnodes.cluster.str.contains("DE"), "cluster"] = subnodes.loc[
         ~subnodes.cluster.str.contains("DE")
@@ -271,6 +307,92 @@ def prepare_subnodes(
     return subnodes
 
 
+def process_geometries(
+    gdf: gpd.GeoDataFrame, min_area: float = None, buffer_factor: float = None
+) -> gpd.GeoDataFrame:
+    """
+    Process geometries in a GeoDataFrame by dissolving, exploding, and optionally filtering and buffering.
+
+    Parameters
+    ----------
+    gdf : gpd.GeoDataFrame
+        GeoDataFrame containing geometries to be processed. Must contain a 'Stadt' column for dissolving.
+    min_area : float, optional
+        Minimum area threshold. Geometries smaller than this will be filtered out.
+    buffer_factor : float, optional
+        Factor used to calculate buffer distance as a proportion of the square root of geometry area.
+
+    Returns
+    -------
+    gpd.GeoDataFrame
+        Processed GeoDataFrame with dissolved and exploded geometries, optionally filtered and buffered.
+    """
+    gdf = gdf.dissolve("Stadt").explode(index_parts=False).reset_index(drop=False)
+    if min_area is not None:
+        gdf = gdf.loc[gdf.area > min_area]
+    if buffer_factor is not None:
+        gdf["geometry"] = gdf.geometry.buffer(np.sqrt(gdf.area) * buffer_factor)
+    return gdf
+
+
+def refine_dh_areas_from_census_data(
+    subnodes: gpd.GeoDataFrame, census: gpd.GeoDataFrame
+) -> gpd.GeoDataFrame:
+    """
+    Refine district heating areas based on census raster data.
+
+    Parameters
+    ----------
+    subnodes : gpd.GeoDataFrame
+        GeoDataFrame containing information about district heating subnodes.
+    census : gpd.GeoDataFrame
+        GeoDataFrame containing census data about geographical distribution of heating systems.
+
+    Returns
+    -------
+    gpd.GeoDataFrame
+        Updated GeoDataFrame with refined district heating areas.
+    """
+    # Keep rows where share of district heating is larger than 1%
+    census = census[
+        census["Fernheizung"].astype(int) / census["Insgesamt_Heizungsart"].astype(int)
+        > 0.01
+    ]
+
+    # Add buffer, so tiles are 100x100m
+    census["geometry"] = census.geometry.buffer(50, cap_style="square")
+
+    # Union of conjunct geometries
+    census = census.union_all()
+    census = gpd.GeoDataFrame(geometry=[census], crs="EPSG:3035")
+
+    # Explode to single geometries
+    census = census.explode().reset_index(drop=True)
+    # Assign to subnodes lau_regions
+    census = gpd.overlay(subnodes, census, how="intersection")
+
+    # Add lau_shape from subnodes to census
+    lau_shape_dict = dict(zip(subnodes["Stadt"], subnodes["lau_shape"]))
+    census["lau_shape"] = census["Stadt"].map(lau_shape_dict)
+
+    census["geometry"] = census.convex_hull
+
+    # Filter out single tiles with area < 10000 m^2
+    census = census.loc[census.area > 10000]
+
+    # Buffer the census areas by 1% of their area and combine them
+    # Buffer by 1% of area square root
+    census["geometry"] = census.geometry.buffer(np.sqrt(census.area) * 0.01)
+
+    # Process with increasing buffer factors and area thresholds
+    census = process_geometries(census)
+    census = process_geometries(census, min_area=100000, buffer_factor=0.05)
+    census = process_geometries(census, buffer_factor=0.05)
+    census = process_geometries(census, min_area=1000000)
+
+    return census.dissolve("Stadt").reset_index()
+
+
 def add_ptes_limit(
     subnodes: gpd.GeoDataFrame,
     osm_land_cover_path: rasterio.io.DatasetReader,
@@ -305,8 +427,6 @@ def add_ptes_limit(
     gpd.GeoDataFrame
         Updated GeoDataFrame with PTES potential added.
     """
-    import dask
-    from dask.diagnostics import ProgressBar
 
     dh_systems = subnodes.copy()
 
@@ -330,7 +450,7 @@ def add_ptes_limit(
         excluder.add_raster(natura_dataset, codes=[1], invert=False, crs=3035)
 
         # Process batch shapes
-        batch_shapes = batch["lau_shape"]
+        batch_shapes = batch["geometry"]
         band, transform = shape_availability(batch_shapes, excluder)
 
         # Extract valid points
@@ -406,18 +526,17 @@ def extend_regions_onshore(
     head: Union[int, bool] = 40,
 ) -> Union[gpd.GeoDataFrame, gpd.GeoDataFrame]:
     """
-    Extend onshore regions to include city LAU regions and restrict geometries.
+    Extend onshore regions to include city LAU regions and restrict onshore regions to
+    district heating areas of Fernwärmeatlas.
 
     Parameters
     ----------
     regions_onshore : geopandas.GeoDataFrame
-        GeoDataFrame containing the onshore regions with geometries.
+        GeoDataFrame containing the onshore regions.
     subnodes_all : pandas.DataFrame
-        DataFrame containing information about subnodes, including city names,
-        clusters, and LAU shapes in WKT format.
+        DataFrame containing preprocessed district heating systems of Fernwärmeatlas.
     head : int or bool, optional
-        Number of top cities to include based on "Wärmeeinspeisung in GWh/a".
-        If set to True, defaults to 40. Default is 40.
+        Number of top cities to include based on yearly district heat feed-in. Default is 40.
 
     Returns
     -------
@@ -425,40 +544,47 @@ def extend_regions_onshore(
         GeoDataFrame with extended onshore regions including city LAU regions.
     regions_onshore_restricted : geopandas.GeoDataFrame
         GeoDataFrame with restricted onshore regions, replacing geometries
-        with the remaining city areas.
+        with the district heating areas.
     """
     if isinstance(head, bool):
         head = 40
-    # Extend regions_onshore to include the cities' lau regions
-    subnodes = subnodes_all.sort_values(
-        by="Wärmeeinspeisung in GWh/a", ascending=False
-    ).head(head)[["Stadt", "cluster", "lau_shape"]]
 
-    subnodes = gpd.GeoDataFrame(subnodes, crs="EPSG:4326", geometry="lau_shape")
-    # Create column name that comprises cluster and Stadt
-    subnodes["name"] = subnodes["cluster"] + " " + subnodes["Stadt"]
+    # Extend regions_onshore to include the cities' lau regions
+    subnodes = (
+        subnodes_all.sort_values(by="Wärmeeinspeisung in GWh/a", ascending=False)
+        .head(head)[["name", "cluster", "lau_shape"]]
+        .rename(columns={"lau_shape": "geometry"})
+    )
+    # Create GeoDataFrame with lau_shape as geometry and EPSG:4326 CRS
+    subnodes = gpd.GeoDataFrame(subnodes, geometry="geometry", crs="EPSG:3035")
+    subnodes = subnodes.to_crs("EPSG:4326")
+
     # Crop city regions from onshore regions
     regions_onshore["geometry"] = regions_onshore.geometry.difference(
         subnodes.union_all()
     )
 
     # Rename lau_shape to geometry
-    subnodes = subnodes.rename(columns={"lau_shape": "geometry"}).drop(
-        columns=["Stadt", "cluster"]
-    )
-    # Concat regions_onshore and subnodes
+    subnodes = subnodes.drop(columns=["cluster"])
+
+    # Concat regions_onshore and subnodes CRS of regions_onshore
     regions_onshore_extended = pd.concat([regions_onshore, subnodes.set_index("name")])
 
     # Restrict regions_onshore geometries to only consist of the remaining city areas
-    subnodes_rest = subnodes_all[~subnodes_all["Stadt"].isin(subnodes["name"])]
+    subnodes_rest = subnodes_all.loc[
+        ~subnodes_all.Stadt.apply(lambda s: s in subnodes.name.str.cat())
+    ]
 
-    subnodes_rest_dissolved = subnodes_rest.set_geometry("lau_shape").dissolve(
-        "cluster"
+    subnodes_rest_dissolved = (
+        subnodes_rest.set_geometry("geometry").dissolve("cluster").to_crs("EPSG:4326")
     )
     # regions_onshore_restricted should replace geometries of regions_onshore with the geometries of subnodes_rest
     regions_onshore_restricted = regions_onshore_extended.copy()
     regions_onshore_restricted.loc[subnodes_rest_dissolved.index, "geometry"] = (
-        subnodes_rest_dissolved["lau_shape"]
+        subnodes_rest_dissolved["geometry"]
+    )
+    regions_onshore_restricted.loc[subnodes.name, "geometry"] = (
+        subnodes_all.loc[subnodes.index].set_index("name").geometry.to_crs("EPSG:4326")
     )
 
     return regions_onshore_extended, regions_onshore_restricted
@@ -495,7 +621,6 @@ if __name__ == "__main__":
         "index"
     )
     lau = gpd.read_file(
-        # "/home/cpschau/Code/dev/pypsa-ariadne/.snakemake/storage/http/gisco-services.ec.europa.eu/distribution/v2/lau/download/ref-lau-2021-01m.geojson/LAU_RG_01M_2021_3035.geojson",
         f"{snakemake.input.lau}!LAU_RG_01M_2021_3035.geojson",
         crs="EPSG:3035",
     ).to_crs("EPSG:4326")
@@ -519,6 +644,11 @@ if __name__ == "__main__":
         lau,
         heat_techs,
     )
+
+    census = load_census_data(
+        f"{snakemake.input.census}!Zensus2022_Heizungsart_100m-Gitter.csv"
+    )
+    subnodes = refine_dh_areas_from_census_data(subnodes, census)
 
     bounds = subnodes.to_crs("EPSG:4326").total_bounds  # (minx, miny, maxx, maxy)
     groundwater = xr.open_dataset(snakemake.input.groundwater_depth).sel(

@@ -274,6 +274,10 @@ if config["sector"]["district_heating"]["add_subnodes"] and config["sector"][
                 "https://gisco-services.ec.europa.eu/distribution/v2/lau/download/ref-lau-2021-01m.geojson.zip",
                 keep_local=True,
             ),
+            census=storage(
+                "https://www.zensus2022.de/static/Zensus_Veroeffentlichung/Zensus2022_Heizungsart.zip",
+                keep_local=True,
+            ),
             osm_land_cover=storage(
                 "https://heidata.uni-heidelberg.de/api/access/datafile/23053?format=original&gbrecs=true",
                 keep_local=True,
