@@ -406,3 +406,182 @@ KN2045_Bal_v4_upstream:
       2045: 0.6909
   emissions_upstream:
     enable: true
+
+KN2045_Bal_v4:
+# Ausgewogener Mix an Technologien zur Dekarbonisierung der Sektoren
+# Breites Energieträgerportfolio in der Endenergie (Strom, Wasserstoff, synthetische Kraftstoffe)
+# Ausbau der erneuerbare Stromerzeugung erreicht politisch gesetzte Ziele
+# Importe erneuerbar erzeugter Energien auf mittlerem Niveau
+# dient als Referenzszenario in der Familie der Ariadne-Szenarien
+
+  iiasa_database:
+    reference_scenario: KN2045_Bal_v4
+    fallback_reference_scenario: KN2045_Bal_v4
+  co2_budget_DE_source: KSG
+
+  costs:
+    horizon: mean
+    NEP: 2021
+    transmission: overhead   # either overhead line ("overhead") or underground cable ("underground")
+  solving:
+    constraints:
+      limits_capacity_min:
+        Link:
+          H2 Electrolysis:
+            DE:
+              2030: 5
+      co2_budget_national:
+        2020:
+          DE: 0.671
+        2025:
+          DE: 0.523
+        2030:
+          DE: 0.346
+        2035:
+          DE: 0.216
+        2040:
+          DE: 0.09
+        2045:
+          DE: -0.05
+        2050:
+          DE: -0.048
+  industry:
+    steam_biomass_fraction: 0.4
+    steam_hydrogen_fraction: 0.3
+    steam_electricity_fraction: 0.3
+
+    St_primary_fraction:
+      2020: 0.7023
+      2025: 0.705
+      2030: 0.6929
+      2035: 0.6598
+      2040: 0.6273
+      2045: 0.6047
+    DRI_fraction:
+      2020: 0.0
+      2025: 0.0
+      2030: 0.2011
+      2035: 0.496
+      2040: 0.7729
+      2045: 1.0
+  sector:
+    aviation_demand_factor:
+      2020: 1.0
+      2025: 0.9361
+      2030: 0.8558
+      2035: 0.7713
+      2040: 0.6948
+      2045: 0.6909
+  demand_modelling: 
+    enable: false
+    voll: false
+    elastic_capa: false
+    elastic_all: false
+    elastic_pwl: false # false, default, lower, higher
+    elastic_intercept: 2000 # EUR/tMWh	Price at which load vanishes
+    elastic_load: 5000 # MW
+    voll_price: 2000 # €/MWh
+    elastic_pwl_params:
+      default:
+        intercept: [8000, 400, 200]
+        slope: [80, 40, 20]
+        nominal: [52000,3000,5500]
+      lower:
+        intercept: [16000, 800, 400]
+        slope: [160, 80, 40]
+        nominal: [95, 5, 10]
+      higher:
+        intercept: [4000, 200, 100]
+        slope: [40, 20, 10]
+        nominal: [95, 5, 10]
+
+KN2045_Bal_v4_24H:
+# Ausgewogener Mix an Technologien zur Dekarbonisierung der Sektoren
+# Breites Energieträgerportfolio in der Endenergie (Strom, Wasserstoff, synthetische Kraftstoffe)
+# Ausbau der erneuerbare Stromerzeugung erreicht politisch gesetzte Ziele
+# Importe erneuerbar erzeugter Energien auf mittlerem Niveau
+# dient als Referenzszenario in der Familie der Ariadne-Szenarien
+
+  iiasa_database:
+    reference_scenario: KN2045_Bal_v4
+    fallback_reference_scenario: KN2045_Bal_v4
+  co2_budget_DE_source: KSG
+
+  clustering:
+    temporal:
+      resolution_sector: 24H
+
+  costs:
+    horizon: mean
+    NEP: 2021
+    transmission: overhead   # either overhead line ("overhead") or underground cable ("underground")
+  solving:
+    constraints:
+      limits_capacity_min:
+        Link:
+          H2 Electrolysis:
+            DE:
+              2030: 5
+      co2_budget_national:
+        2020:
+          DE: 0.671
+        2025:
+          DE: 0.523
+        2030:
+          DE: 0.346
+        2035:
+          DE: 0.216
+        2040:
+          DE: 0.09
+        2045:
+          DE: -0.05
+        2050:
+          DE: -0.048
+  industry:
+    steam_biomass_fraction: 0.4
+    steam_hydrogen_fraction: 0.3
+    steam_electricity_fraction: 0.3
+
+    St_primary_fraction:
+      2020: 0.7023
+      2025: 0.705
+      2030: 0.6929
+      2035: 0.6598
+      2040: 0.6273
+      2045: 0.6047
+    DRI_fraction:
+      2020: 0.0
+      2025: 0.0
+      2030: 0.2011
+      2035: 0.496
+      2040: 0.7729
+      2045: 1.0
+  sector:
+    aviation_demand_factor:
+      2020: 1.0
+      2025: 0.9361
+      2030: 0.8558
+      2035: 0.7713
+      2040: 0.6948
+      2045: 0.6909
+  demand_modelling: 
+    enable: true
+    voll: false
+    elastic_capa: false
+    elastic_all: false
+    elastic_pwl: default # false, default, lower, higher
+    elastic_intercept: 2000 # EUR/tMWh	Price at which load vanishes
+    elastic_load: 5000 # MW
+    voll_price: 2000 # €/MWh
+    elastic_pwl_params:
+      default:
+        intercept: [9000,500, 250]
+        slope: [100, 50, 25]
+      lower:
+        intercept: [16000, 800, 400]
+        slope: [160, 80, 40]
+        nominal: [95, 5, 10]
+      higher:
+        intercept: [4000, 200, 100]
+        slope: [40, 20, 10]
+        nominal: [95, 5, 10]

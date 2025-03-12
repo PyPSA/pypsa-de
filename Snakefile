@@ -742,11 +742,34 @@ rule pricing_analysis:
             **config["scenario"],
             allow_missing=True,
         ),
-        costs=expand(
-            resources("costs_{planning_horizons}.csv"),
+    output:
+        pricing=directory(RESULTS + "ariadne/pricing"),
+    resources:
+        mem_mb=30000,
+        runtime="30h",
+    log:
+        RESULTS + "logs/pricing_analysis.log",
+    script:
+        "scripts/pypsa-de/pricing_analysis.py"
+
+
+rule pricing_plots:
+    params:
+        planning_horizons=config_provider("scenario", "planning_horizons"),
+        plotting=config_provider("plotting"),
+        run=config_provider("run", "name"),
+        NEP_year=config_provider("costs", "NEP"),
+        hours=config_provider("clustering", "temporal", "resolution_sector"),
+        transmission_projects=config_provider("transmission_projects", "new_link_capacity"),
+    input:
+        networks=expand(
+            RESULTS
+            + "postnetworks/base_s_{clusters}_l{ll}_{opts}_{sector_opts}_{planning_horizons}.nc",
             **config["scenario"],
             allow_missing=True,
         ),
+        pricing_s=RESULTS + "ariadne/pricing/res_1cl_3H_s.pkl",
+        pricing_d=RESULTS + "ariadne/pricing/res_1cl_3H_s.pkl",
     output:
         elec_pdc=RESULTS + "ariadne/pricing/elec_pdc.png",
         price_setting_dev=RESULTS + "ariadne/pricing/price_setting_development.png",
@@ -761,6 +784,6 @@ rule pricing_analysis:
         mem_mb=30000,
         runtime="30h",
     log:
-        RESULTS + "logs/pricing_analysis.log",
+        RESULTS + "logs/pricing_plots.log",
     script:
-        "scripts/pypsa-de/pricing_analysis.py"
+        "scripts/pypsa-de/pricing_plots.py"

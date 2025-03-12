@@ -125,13 +125,11 @@ rule solve_sector_network_myopic:
         + "postnetworks/base_s_{clusters}_l{ll}_{opts}_{sector_opts}_{planning_horizons}.nc",
         config=RESULTS
         + "configs/config.base_s_{clusters}_l{ll}_{opts}_{sector_opts}_{planning_horizons}.yaml",
-        # Conditional output for fixed capacities run
         network_st=RESULTS 
-        + "postnetworks/base_s_{clusters}_l{ll}_{opts}_{sector_opts}_{planning_horizons}_st.nc" 
-        if config_provider("solving", "options", "operation_analysis", default=False) else [],
+        + "postnetworks/base_s_{clusters}_l{ll}_{opts}_{sector_opts}_{planning_horizons}_st.nc", 
         network_lt=RESULTS 
-        + "postnetworks/base_s_{clusters}_l{ll}_{opts}_{sector_opts}_{planning_horizons}_lt.nc" 
-        if config_provider("solving", "options", "overwrite_with_operation", default=False) else []
+        + "postnetworks/base_s_{clusters}_l{ll}_{opts}_{sector_opts}_{planning_horizons}_lt.nc",
+
     shadow:
         "shallow"
     log:
