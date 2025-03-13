@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20242008_dh_subnodes_off
+  prefix: 20250313_refined_dh_areas
   name:
   # - CurrentPolicies
   - KN2045_Bal_v4
@@ -294,6 +294,7 @@ sector:
       2045: 0.8
       2050: 1.0
     add_subnodes: false
+    excluder_resolution: 10
     osm_landcover_codes: [21, 23, 32, 33]
     max_groundwater_depth: -10
     ptes_potential_scalar: 1

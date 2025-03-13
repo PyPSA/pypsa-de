@@ -395,6 +395,7 @@ def refine_dh_areas_from_census_data(
 
 def add_ptes_limit(
     subnodes: gpd.GeoDataFrame,
+    excluder_resolution: int,
     osm_land_cover_path: rasterio.io.DatasetReader,
     natura_path: rasterio.io.DatasetReader,
     groundwater: xr.Dataset,
@@ -445,7 +446,7 @@ def add_ptes_limit(
         natura_dataset = get_chunked_raster(natura_path, batch.total_bounds)
 
         # Create exclusion container
-        excluder = ExclusionContainer(crs=3035, res=10)
+        excluder = ExclusionContainer(crs=3035, res=excluder_resolution)
         excluder.add_raster(osm_dataset, codes=codes, invert=True, crs=3035)
         excluder.add_raster(natura_dataset, codes=[1], invert=False, crs=3035)
 
@@ -663,6 +664,7 @@ if __name__ == "__main__":
         snakemake.params.district_heating["osm_landcover_codes"],
         snakemake.params.district_heating["max_groundwater_depth"],
         snakemake.params.district_heating["ptes_potential_scalar"],
+        snakemake.params.district_heating["excluder_resolution"],
     )
 
     subnodes.to_file(snakemake.output.district_heating_subnodes, driver="GeoJSON")
