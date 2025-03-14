@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-# SPDX-FileCopyrightText: : 2020-2024 The PyPSA-Eur Authors
+# SPDX-FileCopyrightText: Contributors to PyPSA-Eur <https://github.com/pypsa/pypsa-eur>
 #
 # SPDX-License-Identifier: MIT
 """
@@ -13,10 +12,10 @@ import geopandas as gpd
 import matplotlib.pyplot as plt
 import pandas as pd
 import pypsa
+from scripts._helpers import configure_logging, retry, set_scenario_config
+from scripts.plot_power_network import assign_location, load_projection
 from pypsa.plot import add_legend_circles, add_legend_lines, add_legend_patches
 
-from scripts._helpers import configure_logging, set_scenario_config
-from scripts.plot_power_network import assign_location, load_projection
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +43,7 @@ def group_pipes(df, drop_direction=False):
     )
 
 
+@retry
 def plot_h2_map(n, regions):
     # if "H2 pipeline" not in n.links.carrier.unique():
     #     return
@@ -249,6 +249,7 @@ def plot_h2_map(n, regions):
     ax.set_facecolor("white")
 
     fig.savefig(snakemake.output.map, bbox_inches="tight")
+    plt.close(fig)
 
 
 if __name__ == "__main__":
