@@ -543,7 +543,7 @@ def ariadne_subplot(
 
     # Check that all values have the same Unit
     if not unit:
-        unit = df.columns.get_level_values("Unit").unique().dropna().item()
+        unit = df.columns.get_level_values("Unit").unique().dropna().tolist()
 
     df.columns = df.columns.droplevel("Unit")
 
