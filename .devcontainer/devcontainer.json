@@ -19,8 +19,8 @@
       "8000": {"label": "mkdocs"},
       "2718": {"label": "marimo"}
     },
-    "postCreateCommand": [],
-    "postAttachCommand": "pixi shell",
+    "postCreateCommand": "",
+    "postAttachCommand": "",
     "customizations": {
       "jetbrains": {
         "backend": "PyCharm"
