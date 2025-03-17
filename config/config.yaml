@@ -5,9 +5,9 @@
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
   prefix: 20250130-morefinalfixes
-  name:
+  name: testrun
   # - CurrentPolicies
-  - KN2045_Bal_v4
+  # - KN2045_Bal_v4
   # - KN2045_Elec_v4
   # - KN2045_H2_v4
   # - KN2045plus_EasyRide
@@ -17,7 +17,7 @@ run:
   # - KN2045_Bal_LowDemand
   # - KN2045_Bal_HighDemand
   scenarios:
-    enable: true
+    enable: false
     manual_file: config/scenarios.manual.yaml
     file: config/scenarios.automated.yaml
   shared_resources:
@@ -63,7 +63,8 @@ scenario:
   ll:
   - vopt
   clusters:
-  - 27 #current options: 27, 49
+#  - adm todo: use administrative clustering
+  - 27 # current options: 27, 49
   opts:
   - ''
   sector_opts:
@@ -201,6 +202,12 @@ clustering:
   # fw = fw.div(fw.min()).round()
   # fw["ES"] = 1
   # print(fw.div(fw.sum()).subtract(5e-5).round(4).to_dict().__repr__().replace(",","\n"))
+  # todo: use administrative clustering
+#  mode: administrative
+#    administrative:
+#      level: 0 # countries
+#      AT: 2 # + 8 regions
+#      DE: 1 # + 15 regions
   focus_weights:
   # 27 nodes: 8 for Germany, 3 for Italy, 2 each for Denmark, UK and Spain, 1 per each of other 10 "Stromnachbarn"
     'DE': 0.2966
