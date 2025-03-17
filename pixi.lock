@@ -4,6 +4,7 @@ environments:
     channels:
     - url: https://conda.anaconda.org/conda-forge/
     - url: https://conda.anaconda.org/bioconda/
+    - url: https://conda.anaconda.org/fico-xpress/
     indexes:
     - https://pypi.org/simple
     packages:
@@ -317,7 +318,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/mpfr-4.2.1-h90cbb55_3.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/msgpack-python-1.1.0-py312h68727a3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/multiurl-0.3.3-pyhd8ed1ab_1.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/mumps-include-5.7.3-ha770c72_8.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/mumps-include-5.7.3-h23d43cc_9.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/mumps-seq-5.7.3-h27a6a8b_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/munkres-1.1.4-pyh9f0ad1d_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/noarch/mypy_extensions-1.0.0-pyha770c72_1.conda
@@ -346,7 +347,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/pandas-2.2.3-py312hf9745cd_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pandera-0.23.1-hd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pandera-base-0.23.1-pyhd8ed1ab_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/pango-1.56.2-h861ebed_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/pango-1.56.3-h861ebed_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/parso-0.8.4-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/partd-1.4.2-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/passlib-1.7.4-pyhd8ed1ab_2.conda
@@ -445,7 +446,7 @@ environments:
       - conda: https://conda.anaconda.org/bioconda/noarch/snakemake-interface-common-1.17.4-pyhdfd78af_0.tar.bz2
       - conda: https://conda.anaconda.org/bioconda/noarch/snakemake-interface-executor-plugins-9.3.3-pyhdfd78af_0.tar.bz2
       - conda: https://conda.anaconda.org/bioconda/noarch/snakemake-interface-report-plugins-1.1.0-pyhdfd78af_0.tar.bz2
-      - conda: https://conda.anaconda.org/bioconda/noarch/snakemake-interface-storage-plugins-3.4.0-pyhdfd78af_0.tar.bz2
+      - conda: https://conda.anaconda.org/bioconda/noarch/snakemake-interface-storage-plugins-3.5.0-pyhdfd78af_0.tar.bz2
       - conda: https://conda.anaconda.org/bioconda/noarch/snakemake-minimal-8.24.1-pyhdfd78af_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/linux-64/snappy-1.2.1-h8bd8927_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/sniffio-1.3.1-pyhd8ed1ab_1.conda
@@ -565,6 +566,8 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/3d/fe/c318657e6a4b8ab5b3eafa07cd1c360a732c6b37ba6085f3c82339ebbbdc/snakemake_interface_common-1.17.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/1d/7f/0c6de70886eaf9e83076d782ae4d8d86343b792101209c97918f25610297/snakemake_storage_plugin_http-0.2.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/24/e9/d1ddff8471ba389caf862867f60718b2843010ec8ba8693c642569012b3d/tsam-2.3.6-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/f6/af/120af3af8b76b8ec0c4454427681a06c5d9514fe641da201c9d2528c1bbd/xpress-9.5.4-cp312-cp312-manylinux1_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/3a/5f/623f25b393fe3ce85a10298d235b6e74728704d4e21e6173da364bc1fa73/xpresslibs-9.5.4-cp38-abi3-manylinux1_x86_64.whl
 packages:
 - conda: https://conda.anaconda.org/conda-forge/linux-64/_libgcc_mutex-0.1-conda_forge.tar.bz2
   sha256: fe51de6107f9edc7aa4f786a70f4a883943bc9d39b3bb7307c04c41410990726
@@ -4984,13 +4987,13 @@ packages:
   - pkg:pypi/multiurl?source=hash-mapping
   size: 22108
   timestamp: 1734431509996
-- conda: https://conda.anaconda.org/conda-forge/linux-64/mumps-include-5.7.3-ha770c72_8.conda
-  sha256: c71603418563278b58a5b271b168bc6bcd3d17e67521effc00fb83c1db99d237
-  md5: 30b5ce863e6e77df2da3ff8022a4c23b
+- conda: https://conda.anaconda.org/conda-forge/linux-64/mumps-include-5.7.3-h23d43cc_9.conda
+  sha256: 8985fbb75321b8fcb5f554a933ce614e917f27caae47b45a365c697c8cf65161
+  md5: 02eb6294239f527356c90d9885a761a0
   license: CECILL-C
   purls: []
-  size: 23329
-  timestamp: 1741371313210
+  size: 20782
+  timestamp: 1742217626177
 - conda: https://conda.anaconda.org/conda-forge/linux-64/mumps-seq-5.7.3-h27a6a8b_0.conda
   sha256: 32facdad34df86928ed1632264b943c87174edeb9d74ccfaaf353f8a669579c2
   md5: d524b41c7757ea147337039fa4158fbb
@@ -5448,15 +5451,15 @@ packages:
   - pkg:pypi/pandera?source=hash-mapping
   size: 153748
   timestamp: 1741441141466
-- conda: https://conda.anaconda.org/conda-forge/linux-64/pango-1.56.2-h861ebed_0.conda
-  sha256: d70d6f3dcd210a8048730713ed287dfc5c0ced80ed514808cf991e110c84cdcc
-  md5: 040f01140009618ce21ce6c5921704ba
+- conda: https://conda.anaconda.org/conda-forge/linux-64/pango-1.56.3-h861ebed_0.conda
+  sha256: 6bc073dc2759cb00bc9e94c7142acab58432245c6e04d1cef179e8afd3b58d6f
+  md5: 6d853ca33bc46bce99ce16ccd83d0466
   depends:
   - __glibc >=2.17,<3.0.a0
   - cairo >=1.18.4,<2.0a0
   - fontconfig >=2.15.0,<3.0a0
   - fonts-conda-ecosystem
-  - freetype >=2.12.1,<3.0a0
+  - freetype >=2.13.3,<3.0a0
   - fribidi >=1.0.10,<2.0a0
   - harfbuzz >=10.4.0,<11.0a0
   - libexpat >=2.6.4,<3.0a0
@@ -5466,8 +5469,8 @@ packages:
   - libzlib >=1.3.1,<2.0a0
   license: LGPL-2.1-or-later
   purls: []
-  size: 452053
-  timestamp: 1741789650104
+  size: 454553
+  timestamp: 1742223788507
 - conda: https://conda.anaconda.org/conda-forge/noarch/parso-0.8.4-pyhd8ed1ab_1.conda
   sha256: 17131120c10401a99205fc6fe436e7903c0fa092f1b3e80452927ab377239bcc
   md5: 5c092057b6badd30f75b06244ecd01c9
@@ -7033,9 +7036,9 @@ packages:
   license: MIT
   size: 13269
   timestamp: 1728055589409
-- conda: https://conda.anaconda.org/bioconda/noarch/snakemake-interface-storage-plugins-3.4.0-pyhdfd78af_0.tar.bz2
-  sha256: 94a8ff0fd2d69d78b20155e1218aa4d3fb9b46c1b7dbefadc27cd844c2a4ef02
-  md5: 17abd71eef0e933cfd7a804cbd7c8760
+- conda: https://conda.anaconda.org/bioconda/noarch/snakemake-interface-storage-plugins-3.5.0-pyhdfd78af_0.tar.bz2
+  sha256: 317345849a2442b2fed81a22a0db6c064478c57c654d685c12ac70c28189cd28
+  md5: 36cf36560726841f9341cd8a71248750
   depends:
   - python >=3.11.0,<4.0.0
   - reretry >=0.11.8,<0.12.0
@@ -7046,8 +7049,8 @@ packages:
   license_family: MIT
   purls:
   - pkg:pypi/snakemake-interface-storage-plugins?source=hash-mapping
-  size: 18756
-  timestamp: 1741779924248
+  size: 18818
+  timestamp: 1742225310372
 - conda: https://conda.anaconda.org/bioconda/noarch/snakemake-minimal-8.24.1-pyhdfd78af_0.tar.bz2
   sha256: 5784bca72010b0a0d5982693bcd5bde449f7eab056d1c681acfcfebdbe66d018
   md5: 5134605f1aaebfab35d82dce90aaf1ee
@@ -8337,6 +8340,17 @@ packages:
   purls: []
   size: 17819
   timestamp: 1734214575628
+- pypi: https://files.pythonhosted.org/packages/f6/af/120af3af8b76b8ec0c4454427681a06c5d9514fe641da201c9d2528c1bbd/xpress-9.5.4-cp312-cp312-manylinux1_x86_64.whl
+  name: xpress
+  version: 9.5.4
+  sha256: c8a072ec14373a2fb9d66f62b2395aadcb935327de69ca22d8048b7f7495aee1
+  requires_dist:
+  - numpy>=1.26,<2.0a0
+  - xpresslibs==9.5.4
+- pypi: https://files.pythonhosted.org/packages/3a/5f/623f25b393fe3ce85a10298d235b6e74728704d4e21e6173da364bc1fa73/xpresslibs-9.5.4-cp38-abi3-manylinux1_x86_64.whl
+  name: xpresslibs
+  version: 9.5.4
+  sha256: 86d4324d97490d65f7380c43727f77476bbbfe75749bd97fcb95b2a5e81f3ae2
 - conda: https://conda.anaconda.org/conda-forge/noarch/xyzservices-2025.1.0-pyhd8ed1ab_0.conda
   sha256: 9978c22319e85026d5a4134944f73bac820c948ca6b6c32af6b6985b5221cd8a
   md5: fdf07e281a9e5e10fc75b2dd444136e9
