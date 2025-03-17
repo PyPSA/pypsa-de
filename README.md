@@ -7,6 +7,11 @@ We prefer using pixi. Run the following command to get ready
 pixi shell
 ```
 
+Do not forget to install pre commit hooks locally.
+```
+pre-commit install
+```
+
 ## Connecting to the Ariadne-Database
 
 ### For external users: Use config.public.yaml
