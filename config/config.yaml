@@ -236,7 +236,7 @@ clustering:
     # 'ES': 0.0408
     # 'IT': 0.0612
   temporal:
-    resolution_sector: 365H
+    resolution_sector: 3H
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#co2-budget
 co2_budget:
@@ -408,6 +408,9 @@ industry:
 solving:
   runtime: 12h
   mem_mb: 70000 #30000 is OK for 22 nodes, 365H; 140000 for 22 nodes 3H; 400000 for 44 nodes 3H
+  model_kwargs:
+    solver_dir: "/mnt/storage/tmp"
+  keep_files: false
   options:
     assign_all_duals: true
     load_shedding: false
@@ -593,8 +596,16 @@ solving:
         2035: 25
         2040: 30
         2045: 35
-  # solver:
-  #   options: gurobi-numeric-focus
+  solver:
+    name: xpress
+    options: xpress-default
+  solver_options:
+    xpress-default:
+      THREADS: 16
+      CROSSOVER: 0  # no crossover
+#      FEASTOL: 0.000001
+#      HEURTHREADS: -1  # chose, defaults to 0
+      LPFLAGS: 4  # barrier method
   # solver_options:
   #   gurobi-default:
   #     NumericFocus: 1
