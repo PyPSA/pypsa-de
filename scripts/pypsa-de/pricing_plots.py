@@ -263,7 +263,7 @@ def plot_supply_demand_s(n, supply, demand, buses, timestep, ylim=None, p="p_nom
     supply = supply.sort_values(by=mc)
     demand = demand[demand[d] > 1]
     demand.loc[:,d] = demand[d] / 1e3
-    demand.loc["bidding_price"] = demand.bidding_price.clip(lower=0) # Clip negative bidding prices to 0
+    demand.loc[:,"bidding_price"] = demand.bidding_price.clip(lower=0) # Clip negative bidding prices to 0
     
     if compress_demand:
         demand = get_compressed_demand(demand, th=0.1)
@@ -427,9 +427,9 @@ if __name__ == "__main__":
     networks = n_dict
 
     # Load price setting data
-    with open(snakemake.input.pricing_s, 'rb') as file:
+    with open(snakemake.input.price_setter_s, 'rb') as file:
         results_s = pickle.load(file)
-    with open(snakemake.input.pricing_d, 'rb') as file:
+    with open(snakemake.input.price_setter_d, 'rb') as file:
         results_d = pickle.load(file)
 
     # convert to datetime
@@ -437,7 +437,6 @@ if __name__ == "__main__":
         results_s[year].timestep = pd.to_datetime(results_s[year].timestep, format=date_format)
         results_d[year].timestep = pd.to_datetime(results_d[year].timestep, format=date_format)
      
-
     # update tech_colors
     colors_update = networks[2020].carriers.color.rename(networks[2020].carriers.nice_name).to_dict()
     colors_update = {k: v for k, v in colors_update.items() if v != ""}
@@ -467,6 +466,7 @@ if __name__ == "__main__":
     tech_colors["urban central H2 retrofit OCGT"] = "seagreen"
     tech_colors["load-shedding"] = "slategrey"
 
+    
     # plotting - merit order 3 cases
     n = networks[2020]
     if "2019-01-11 15:00:00" in  n.snapshots:
@@ -475,6 +475,8 @@ if __name__ == "__main__":
         ts = ["2013-02-18 15:00:00", "2013-12-31 15:00:00", "2013-07-07 12:00:00"]
     else: 
         ts = n.snapshots[[0, 1, -1]]
+
+    buses = bus = n.buses.query("carrier == 'AC'").index
 
     for year in planning_horizons:
 
@@ -486,7 +488,6 @@ if __name__ == "__main__":
         # Plot each subplot and collect legend handles and labels
         for i in range(num_subplots):
             n = networks[year]
-            buses = ["DE0 0"]
             timestep = str(ts[i])
             supply, demand = get_supply_demand(n, buses, timestep)
             supply_handles_labels = \
@@ -510,7 +511,7 @@ if __name__ == "__main__":
     for year in planning_horizons:
         n = networks[year]
         # plot only every 100th timestep
-        for timestep in n.snapshots[::5]:
+        for timestep in n.snapshots[::100]:
             supply, demand = get_supply_demand(n, buses, str(timestep))
             plot_supply_demand(n, 
                     supply, 
@@ -628,7 +629,8 @@ if __name__ == "__main__":
     
     # plotting - price duration curves
     # Fraction of time [%]
-    bus = "DE0 0" 
+    bus = bus = n.buses.query("carrier == 'AC'").index[0]
+
     fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(6, 5))
 
     for i, n in enumerate(networks.values()):

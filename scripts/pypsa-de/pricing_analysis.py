@@ -6,9 +6,12 @@ import sys
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))  # Adds 'scripts/' to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))  # Adds repo root
 
+import multiprocessing as mp
+import pandas as pd
+from functools import partial
+from tqdm import tqdm
 import pypsa
 import numpy as np
-import pandas as pd
 from datetime import datetime
 import pickle
 from pypsa.descriptors import get_switchable_as_dense as as_dense
@@ -282,70 +285,6 @@ def get_compressed_demand(demand, th):
     return grouped_df
 
 
-def get_all_supply_prices(n, bus, period=None, carriers=None):
-
-    index = n.snapshots if period is None else period
-
-    # Initialize a dictionary to store results temporarily
-    res_dict = {ts: {} for ts in index}
-
-    for gen in n.generators.index[(n.generators.bus == bus) & ((n.generators.carrier.isin(carriers)) if carriers is not None else True)]:
-        marginal_cost = n.generators.loc[gen].marginal_cost
-        for ts in index:
-            res_dict[ts][gen] = marginal_cost
-
-    for su in n.storage_units.index[(n.storage_units.bus == bus) & ((n.storage_units.carrier.isin(carriers)) if carriers is not None else True)]:
-        for ts in index:
-            res_dict[ts][su] = (
-                n.storage_units.loc[su].marginal_cost +
-                n.storage_units_t.mu_energy_balance.loc[ts, su] *
-                1 / n.storage_units.efficiency_dispatch.loc[su]
-            )
-
-    for st in n.stores.index[(n.stores.bus == bus) & ((n.stores.carrier.isin(carriers)) if carriers is not None else True)]:
-        for ts in index:
-            res_dict[ts][st] = (
-                n.stores.loc[st].marginal_cost +
-                n.stores_t.mu_energy_balance.loc[ts, st]
-            )
-
-    loc_buses = ["bus" + str(i) for i in np.arange(0, 5)]
-    for link in n.links.index[(n.links.bus0 != bus) & (n.links[loc_buses].isin([bus]).any(axis=1)) & ((n.links.carrier.isin(carriers)) if carriers is not None else True)]:
-        for ts in index:
-            res_dict[ts][link] = supply_price_link(n, link, ts, bus)
-
-    # Convert the dictionary to a DataFrame
-    res = pd.DataFrame.from_dict(res_dict, orient='index')
-    
-    return res
-
-
-def get_all_demand_prices(n, bus, period=None, carriers=None):
-
-    index = n.snapshots if period is None else period
-
-    # Initialize a dictionary to store results temporarily
-    res_dict = {ts: {} for ts in index}
-
-    for su in n.storage_units.index[(n.storage_units.bus == bus) & ((n.storage_units.carrier.isin(carriers))  if carriers is not None else True)]:
-        for ts in index:
-            res_dict[ts][su] = (-n.storage_units_t.mu_upper.loc[ts, su] + n.storage_units_t.mu_energy_balance.loc[ts, su])
-
-    for st in n.stores.index[(n.stores.bus == bus) & ((n.stores.carrier.isin(carriers)) if carriers is not None else True)]:
-        for ts in index:
-            res_dict[ts][st] = (-n.stores_t.mu_upper.loc[ts, st] + n.stores_t.mu_energy_balance.loc[ts, st])
-
-    loc_buses = ["bus" + str(i) for i in np.arange(0, 5)]
-    for link in n.links.index[(n.links[loc_buses].isin([bus]).any(axis=1)) & ((n.links.carrier.isin(carriers)) if carriers is not None else True)]:
-        for ts in index:
-            res_dict[ts][link] = demand_price_link(n, link, ts, bus)
-
-    # Convert the dictionary to a DataFrame
-    res = pd.DataFrame.from_dict(res_dict, orient='index')
-    
-    return res
-
-
 def price_setter(n, bus, timestep, minimum_generation=1e-3, co2_add_on=False, suppress_warnings=False):
     mp = n.buses_t.marginal_price.loc[timestep, bus]
     if not isinstance(bus, list):
@@ -459,6 +398,223 @@ def price_setter(n, bus, timestep, minimum_generation=1e-3, co2_add_on=False, su
 
     return sc, dc
 
+def process_bus_snapshot(args):
+    """Process a single bus-snapshot combination for a specific network"""
+    n, bus, snapshot, suppress_warnings = args
+    s, d = price_setter(n, bus, str(snapshot), suppress_warnings=suppress_warnings)
+    return (bus, snapshot, s, d)
+
+def get_all_supply_prices(n, bus, period=None, carriers=None):
+
+    index = n.snapshots if period is None else period
+
+    # Initialize a dictionary to store results temporarily
+    res_dict = {ts: {} for ts in index}
+
+    for gen in n.generators.index[(n.generators.bus == bus) & ((n.generators.carrier.isin(carriers)) if carriers is not None else True)]:
+        marginal_cost = n.generators.loc[gen].marginal_cost
+        for ts in index:
+            res_dict[ts][gen] = marginal_cost
+
+    for su in n.storage_units.index[(n.storage_units.bus == bus) & ((n.storage_units.carrier.isin(carriers)) if carriers is not None else True)]:
+        for ts in index:
+            res_dict[ts][su] = (
+                n.storage_units.loc[su].marginal_cost +
+                n.storage_units_t.mu_energy_balance.loc[ts, su] *
+                1 / n.storage_units.efficiency_dispatch.loc[su]
+            )
+
+    for st in n.stores.index[(n.stores.bus == bus) & ((n.stores.carrier.isin(carriers)) if carriers is not None else True)]:
+        for ts in index:
+            res_dict[ts][st] = (
+                n.stores.loc[st].marginal_cost +
+                n.stores_t.mu_energy_balance.loc[ts, st]
+            )
+
+    loc_buses = ["bus" + str(i) for i in np.arange(0, 5)]
+    for link in n.links.index[(n.links.bus0 != bus) & (n.links[loc_buses].isin([bus]).any(axis=1)) & ((n.links.carrier.isin(carriers)) if carriers is not None else True)]:
+        for ts in index:
+            res_dict[ts][link] = supply_price_link(n, link, ts, bus)
+
+    # Convert the dictionary to a DataFrame
+    res = pd.DataFrame.from_dict(res_dict, orient='index')
+    
+    return res
+
+
+def get_all_demand_prices(n, bus, period=None, carriers=None):
+
+    index = n.snapshots if period is None else period
+
+    # Initialize a dictionary to store results temporarily
+    res_dict = {ts: {} for ts in index}
+
+    for su in n.storage_units.index[(n.storage_units.bus == bus) & ((n.storage_units.carrier.isin(carriers))  if carriers is not None else True)]:
+        for ts in index:
+            res_dict[ts][su] = (-n.storage_units_t.mu_upper.loc[ts, su] + n.storage_units_t.mu_energy_balance.loc[ts, su])
+
+    for st in n.stores.index[(n.stores.bus == bus) & ((n.stores.carrier.isin(carriers)) if carriers is not None else True)]:
+        for ts in index:
+            res_dict[ts][st] = (-n.stores_t.mu_upper.loc[ts, st] + n.stores_t.mu_energy_balance.loc[ts, st])
+
+    loc_buses = ["bus" + str(i) for i in np.arange(0, 5)]
+    for link in n.links.index[(n.links[loc_buses].isin([bus]).any(axis=1)) & ((n.links.carrier.isin(carriers)) if carriers is not None else True)]:
+        for ts in index:
+            res_dict[ts][link] = demand_price_link(n, link, ts, bus)
+
+    # Convert the dictionary to a DataFrame
+    res = pd.DataFrame.from_dict(res_dict, orient='index')
+    
+    return res
+
+def process_supply_item(args):
+    """Process a single supply item (generator, storage unit, store, or link) for a specific timestamp"""
+    n, bus, item_type, item_id, timestamp, carriers = args
+    
+    if item_type == 'generator':
+        value = n.generators.loc[item_id].marginal_cost
+    elif item_type == 'storage_unit':
+        value = (n.storage_units.loc[item_id].marginal_cost +
+                n.storage_units_t.mu_energy_balance.loc[timestamp, item_id] *
+                1 / n.storage_units.efficiency_dispatch.loc[item_id])
+    elif item_type == 'store':
+        value = (n.stores.loc[item_id].marginal_cost +
+                n.stores_t.mu_energy_balance.loc[timestamp, item_id])
+    elif item_type == 'link':
+        value = supply_price_link(n, item_id, timestamp, bus)
+    else:
+        value = None
+        
+    return (timestamp, item_id, value)
+
+
+def get_all_supply_prices_parallel(n, bus, period=None, carriers=None, processes=None):
+    """Parallelized version of get_all_supply_prices"""
+    index = n.snapshots if period is None else period
+    if processes is None:
+        processes = mp.cpu_count()
+    
+    # Prepare list of all items to process
+    items_to_process = []
+    
+    # Add generators
+    generators = n.generators.index[(n.generators.bus == bus) & 
+                                   ((n.generators.carrier.isin(carriers)) if carriers is not None else True)]
+    for gen in generators:
+        for ts in index:
+            items_to_process.append((n, bus, 'generator', gen, ts, carriers))
+    
+    # Add storage units
+    storage_units = n.storage_units.index[(n.storage_units.bus == bus) & 
+                                         ((n.storage_units.carrier.isin(carriers)) if carriers is not None else True)]
+    for su in storage_units:
+        for ts in index:
+            items_to_process.append((n, bus, 'storage_unit', su, ts, carriers))
+    
+    # Add stores
+    stores = n.stores.index[(n.stores.bus == bus) & 
+                           ((n.stores.carrier.isin(carriers)) if carriers is not None else True)]
+    for st in stores:
+        for ts in index:
+            items_to_process.append((n, bus, 'store', st, ts, carriers))
+    
+    # Add links
+    loc_buses = ["bus" + str(i) for i in np.arange(0, 5)]
+    links = n.links.index[(n.links.bus0 != bus) & 
+                         (n.links[loc_buses].isin([bus]).any(axis=1)) & 
+                         ((n.links.carrier.isin(carriers)) if carriers is not None else True)]
+    for link in links:
+        for ts in index:
+            items_to_process.append((n, bus, 'link', link, ts, carriers))
+    
+    # Process items in parallel
+    results = []
+    with mp.Pool(processes=processes) as pool:
+        results = list(tqdm(
+            pool.imap(process_supply_item, items_to_process),
+            total=len(items_to_process),
+            desc=f"Processing supply prices for bus {bus}",
+            unit="items"
+        ))
+    
+    # Organize results into a dictionary
+    res_dict = {ts: {} for ts in index}
+    for timestamp, item_id, value in results:
+        res_dict[timestamp][item_id] = value
+    
+    # Convert the dictionary to a DataFrame
+    res = pd.DataFrame.from_dict(res_dict, orient='index')
+    return res
+
+
+def process_demand_item(args):
+    """Process a single demand item (storage unit, store, or link) for a specific timestamp"""
+    n, bus, item_type, item_id, timestamp, carriers = args
+    
+    if item_type == 'storage_unit':
+        value = (-n.storage_units_t.mu_upper.loc[timestamp, item_id] + 
+                 n.storage_units_t.mu_energy_balance.loc[timestamp, item_id])
+    elif item_type == 'store':
+        value = (-n.stores_t.mu_upper.loc[timestamp, item_id] + 
+                 n.stores_t.mu_energy_balance.loc[timestamp, item_id])
+    elif item_type == 'link':
+        value = demand_price_link(n, item_id, timestamp, bus)
+    else:
+        value = None
+        
+    return (timestamp, item_id, value)
+
+
+def get_all_demand_prices_parallel(n, bus, period=None, carriers=None, processes=None):
+    """Parallelized version of get_all_demand_prices"""
+    index = n.snapshots if period is None else period
+    if processes is None:
+        processes = mp.cpu_count()
+    
+    # Prepare list of all items to process
+    items_to_process = []
+    
+    # Add storage units
+    storage_units = n.storage_units.index[(n.storage_units.bus == bus) & 
+                                         ((n.storage_units.carrier.isin(carriers)) if carriers is not None else True)]
+    for su in storage_units:
+        for ts in index:
+            items_to_process.append((n, bus, 'storage_unit', su, ts, carriers))
+    
+    # Add stores
+    stores = n.stores.index[(n.stores.bus == bus) & 
+                           ((n.stores.carrier.isin(carriers)) if carriers is not None else True)]
+    for st in stores:
+        for ts in index:
+            items_to_process.append((n, bus, 'store', st, ts, carriers))
+    
+    # Add links
+    loc_buses = ["bus" + str(i) for i in np.arange(0, 5)]
+    links = n.links.index[(n.links[loc_buses].isin([bus]).any(axis=1)) & 
+                         ((n.links.carrier.isin(carriers)) if carriers is not None else True)]
+    for link in links:
+        for ts in index:
+            items_to_process.append((n, bus, 'link', link, ts, carriers))
+    
+    # Process items in parallel
+    results = []
+    with mp.Pool(processes=processes) as pool:
+        results = list(tqdm(
+            pool.imap(process_demand_item, items_to_process),
+            total=len(items_to_process),
+            desc=f"Processing demand prices for bus {bus}",
+            unit="items"
+        ))
+    
+    # Organize results into a dictionary
+    res_dict = {ts: {} for ts in index}
+    for timestamp, item_id, value in results:
+        res_dict[timestamp][item_id] = value
+    
+    # Convert the dictionary to a DataFrame
+    res = pd.DataFrame.from_dict(res_dict, orient='index')
+    return res
+
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
@@ -476,13 +632,13 @@ if __name__ == "__main__":
             opts="",
             ll="vopt",
             sector_opts="None",
-            run="KN2045_Bal_v4_24H",
+            run="KN2045_Bal_v4_365H",
         )
     
     # ensure output directory exist
-    for dir in snakemake.output:
-        if not os.path.exists(dir):
-            os.makedirs(dir)
+    dir = snakemake.output[-1]
+    if not os.path.exists(dir):
+        os.makedirs(dir)
 
     configure_logging(snakemake)
     config = snakemake.config
@@ -502,48 +658,62 @@ if __name__ == "__main__":
     
     # calc price setter info
     networks = n_dict
+    nprocesses = snakemake.threads
     results_s = {}
     results_d = {}
-
+    
+    # Process year by year to maintain logging structure
     for year in planning_horizons:
         n = networks[year]
-        res_s = pd.DataFrame()
-        res_d = pd.DataFrame()
-        logger.info("")  # Adds a blank line to the log file
+        logger.info("")
         logger.info(f"Calculating price setter for year {year}")
+        
+        res_s_year = pd.DataFrame()
+        res_d_year = pd.DataFrame()
+        
+        # For each bus in the year
         for bus in n.buses.query("carrier == 'AC'").index:
-            for snapshot in n.snapshots:
-                s, d = price_setter(n, bus, str(snapshot), suppress_warnings=False)
-                res_s = pd.concat([res_s, s])
-                res_d = pd.concat([res_d, d])
-            results_s[year]  = res_s
-            results_d[year]  = res_d
+            # Prepare arguments for each snapshot
+            snapshot_args = [(n, bus, snapshot, False) for snapshot in n.snapshots]
+            
+            # Process all snapshots for this bus in parallel
+            with mp.Pool(processes=nprocesses) as pool:
+                results = list(tqdm(
+                    pool.imap(process_bus_snapshot, snapshot_args),
+                    total=len(snapshot_args),
+                    desc=f"Bus {bus} in year {year}",
+                    unit="snapshots"
+                ))
+            
+            # Collect results for this bus
+            for bus_result, snapshot_result, s, d in results:
+                res_s_year = pd.concat([res_s_year, s])
+                res_d_year = pd.concat([res_d_year, d])
+        
+        # Store results for this year
+        results_s[year] = res_s_year
+        results_d[year] = res_d_year
     
-    # save as pickle
-    path_s = snakemake.output.pricing + '/res_1cl_3H_s.pkl'
-    path_d = snakemake.output.pricing + '/res_1cl_3H_d.pkl'
-    with open(path_s, 'wb') as file:
+    with open(snakemake.output.price_setter_s, 'wb') as file:
         pickle.dump(results_s, file)
-    with open(path_d, 'wb') as file:
+    with open(snakemake.output.price_setter_d, 'wb') as file:
         pickle.dump(results_d, file)
 
-    # obtain all supply (bid) and demand (ask) prices and then divide in if they are accepted or not
-    bus = "DE0 0"
-    bid = {}
+    # obtain all supply (bid) and demand (ask) prices
+    bus = n.buses.query("carrier == 'AC'").index[0]
     ask = {}
+    bid = {}
 
     for year in planning_horizons:
-        n = networks[year]
-        bid[year] = get_all_supply_prices(n, bus)
-        ask[year] = get_all_demand_prices(n, bus)
-
-    # save as pickle
-    path_bid = snakemake.output.pricing + '/bid.pkl'
-    path_ask = snakemake.output.pricing + '/ask.pkl'
-    with open(path_bid, 'wb') as file:
-        pickle.dump(bid, file)
-    with open(path_ask, 'wb') as file:
+            logger.info(f"Calculating supply and demand prices for year {year}")
+            n = networks[year]
+            ask[year] = get_all_supply_prices_parallel(n, bus, processes=nprocesses)
+            bid[year] = get_all_demand_prices_parallel(n, bus, processes=nprocesses) 
+    
+    with open(snakemake.output.ask_prices, 'wb') as file:
         pickle.dump(ask, file)
+    with open(snakemake.output.bid_prices, 'wb') as file:
+        pickle.dump(bid, file)
 
     # # debugging 
     # path = "/home/julian-geis/repos/01_pricing-paper/pricing_analysis/data/results/20241031-OneNode-DownstreamVsUpstream-NoDistGrid"
@@ -551,3 +721,23 @@ if __name__ == "__main__":
     # results_d = pickle.load(open(path + "/res_1cl_3H_d.pkl", "rb"))
     # bid = pickle.load(open(path + "/bid.pkl", "rb"))
     # ask = pickle.load(open(path + "/ask.pkl", "rb"))
+
+    # without parallelisation
+    # for year in planning_horizons:
+    #     n = networks[year]
+    #     res_s = pd.DataFrame()
+    #     res_d = pd.DataFrame()
+    #     logger.info("")  # Adds a blank line to the log file
+    #     logger.info(f"Calculating price setter for year {year}")
+    #     for bus in n.buses.query("carrier == 'AC'").index:
+    #         for snapshot in n.snapshots:
+    #             s, d = price_setter(n, bus, str(snapshot), suppress_warnings=False)
+    #             res_s = pd.concat([res_s, s])
+    #             res_d = pd.concat([res_d, d])
+    #         results_s[year]  = res_s
+    #         results_d[year]  = res_d
+
+    # for year in planning_horizons:
+    #     n = networks[year]
+    #     bid[year] = get_all_supply_prices(n, bus)
+    #     ask[year] = get_all_demand_prices(n, bus)
