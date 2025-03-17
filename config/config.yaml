@@ -85,6 +85,7 @@ existing_capacities:
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#countries
 # Germany plus 12 "Stromnachbarn"
 countries: ['AT', 'BE', 'CH', 'CZ', 'DE', 'DK', 'FR', 'GB', 'LU', 'NL', 'NO', 'PL', 'SE', 'ES', 'IT']
+#countries: ['AL', 'AT', 'BA', 'BE', 'BG', 'CH', 'CZ', 'DE', 'DK', 'EE', 'ES', 'FI', 'FR', 'GB', 'GR', 'HR', 'HU', 'IE', 'IT', 'LT', 'LU', 'LV', 'ME', 'MK', 'NL', 'NO', 'PL', 'PT', 'RO', 'RS', 'SE', 'SI', 'SK', 'XK']
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#snapshots
 snapshots:
