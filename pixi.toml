@@ -1,5 +1,5 @@
 [project]
-channels = ["conda-forge", "bioconda"]
+channels = ["conda-forge", "bioconda", "fico-xpress"]
 name = "pypsa-at"
 platforms = ["linux-64"]
 version = "0.1.0"
@@ -59,6 +59,7 @@ pixi-pycharm = ">=0.0.8,<0.0.9"
 [pypi-dependencies]
 gurobipy = "*"
 highspy = "<1.8"
+xpress = "*"
 tsam = ">=2.3.1"
 snakemake-storage-plugin-http = "*"
 snakemake-executor-plugin-slurm = "*"
