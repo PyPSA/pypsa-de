@@ -29,6 +29,6 @@
     "containerEnv": {
       "SHELL": "/bin/zsh"
     },
-    "remoteUser": "aggm"
+    "remoteUser": "root"
   }
   
