@@ -276,6 +276,7 @@ coal_generation_ban:
 
 nuclear_generation_ban:
   DE: 2022
+  AT: 2000
 
 first_technology_occurrence:
   Link:
