@@ -1351,20 +1351,21 @@ def adapt_demand_modelling(n, params):
         logger.info(f"Adding piecewise linear elastic demand with set '{param_set}'.")
         pwl = params["elastic_pwl_params"][param_set]
         assert (
-            len(pwl["intercept"]) == len(pwl["slope"])
-        ), "Piecewise linear demand must have same number of points for intercept and slope."
-        for i, (intercept, slope) in enumerate(
-            zip(pwl["intercept"], pwl["slope"])
+            len(pwl["intercept"]) == len(pwl["slope"]) == len(pwl["nominal"])
+        ), "Piecewise linear demand must have same number of points for intercept, slope, and nominal."
+
+        scaling = params["elastic_pwl_load"] / sum(pwl["nominal"])
+        for i, (intercept, slope, nominal) in enumerate(
+            zip(pwl["intercept"], pwl["slope"], pwl["nominal"])
         ):
             n.add(
                 "Generator",
                 f"load-shedding-segment-{i}",
                 bus=bus,
                 carrier="load-shedding",
-                marginal_cost= intercept - slope * 100,
-                marginal_cost_quadratic=slope * 100/ 2 * loads_temporal,
-                p_nom=loads_temporal.max(),
-                p_max_pu = loads_temporal / loads_temporal.max(),
+                marginal_cost= intercept - slope * (nominal / scaling),
+                marginal_cost_quadratic= (slope / 2 ) / scaling,
+                p_nom=nominal * scaling,
                 p_nom_extendable=False,   
             )
 

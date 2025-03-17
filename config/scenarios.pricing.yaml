@@ -481,11 +481,12 @@ KN2045_Bal_v4:
     elastic_intercept: 2000 # EUR/tMWh	Price at which load vanishes
     elastic_load: 5000 # MW
     voll_price: 2000 # €/MWh
+    elastic_pwl_load: 50000 # MW
     elastic_pwl_params:
       default:
         intercept: [8000, 400, 200]
         slope: [80, 40, 20]
-        nominal: [52000,3000,5500]
+        nominal: [95, 5, 10]
       lower:
         intercept: [16000, 800, 400]
         slope: [160, 80, 40]
@@ -656,18 +657,20 @@ KN2045_Bal_v4_365H:
       2040: 0.6948
       2045: 0.6909
   demand_modelling: 
-    enable: false
+    enable: true
     voll: false
     elastic_capa: false
     elastic_all: false
-    elastic_pwl: false # false, default, lower, higher
+    elastic_pwl: default # false, default, lower, higher
     elastic_intercept: 2000 # EUR/tMWh	Price at which load vanishes
     elastic_load: 5000 # MW
     voll_price: 2000 # €/MWh
+    elastic_pwl_load: 50000 # MW
     elastic_pwl_params:
       default:
-        intercept: [9000,500, 250]
-        slope: [100, 50, 25]
+        intercept: [8000, 400, 200]
+        slope: [80, 40, 20]
+        nominal: [95, 5, 10]
       lower:
         intercept: [16000, 800, 400]
         slope: [160, 80, 40]
