@@ -76,6 +76,9 @@ scenario:
   - 2040
   - 2045
   # - 2050
+  lt_st:
+  - lt
+  - st
 
 existing_capacities:
   grouping_years_power: [1920, 1950, 1955, 1960, 1965, 1970, 1975, 1980, 1985, 1990, 1995, 2000, 2005, 2010, 2015, 2020]
@@ -730,3 +733,7 @@ demand_modelling:
     higher:
       intercept: [4000, 200, 100]
       slope: [40, 20, 10]
+
+pricing:
+  calc_bid_ask: false
+  parallel_method: fork # fork or spawn; fork works local and spawn on cluster

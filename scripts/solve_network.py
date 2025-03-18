@@ -1133,6 +1133,11 @@ if __name__ == "__main__":
     # (2) multiply co2 store e_nom_opt by 2
     n.stores.loc[n.stores.carrier == "co2", "e_nom_opt"] *= 2
 
+    # gas for industry load cannot be satisfied bc of numerical issues
+    if n.loads[n.loads.carrier == "gas for industry"].p_set.iloc[0] > n.links[n.links.carrier.isin(["gas for industry" , "gas for industry CC"])].p_nom_opt.sum():
+        n.links.loc[n.links.carrier == "gas for industry", "p_nom_opt"] = n.loads[n.loads.carrier == "gas for industry"].p_set - n.links[n.links.carrier == "gas for industry CC"].p_nom_opt
+
+
     n.optimize.fix_optimal_capacities()
     n = prepare_network(
         n,

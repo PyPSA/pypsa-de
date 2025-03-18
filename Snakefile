@@ -614,8 +614,10 @@ rule ariadne_all:
             run=config_provider("run", "name"),
         ),
         expand(
-            RESULTS + "ariadne/pricing/elec_pdc.png",
+            RESULTS + "ariadne/pricing/elec_pdc_{lt_st}.png",
             run=config_provider("run", "name"),
+            **config["scenario"],
+            allow_missing=True,
         ),
         exported_variables=expand(
             RESULTS + "ariadne/exported_variables_full.xlsx",
@@ -726,6 +728,73 @@ rule ariadne_report_only:
             run=config_provider("run", "name"),
         ),
 
+# rule pricing_analysis:
+#     params:
+#         planning_horizons=config_provider("scenario", "planning_horizons"),
+#         plotting=config_provider("plotting"),
+#         run=config_provider("run", "name"),
+#         NEP_year=config_provider("costs", "NEP"),
+#         hours=config_provider("clustering", "temporal", "resolution_sector"),
+#         transmission_projects=config_provider("transmission_projects", "new_link_capacity"),
+#         costs=config_provider("costs"),
+#         pricing=config_provider("pricing"),
+#     input:
+#         networks=expand(
+#             RESULTS
+#             + "postnetworks/base_s_{clusters}_l{ll}_{opts}_{sector_opts}_{planning_horizons}.nc",
+#             **config["scenario"],
+#             allow_missing=True,
+#         ),
+#     output:
+#         price_setter_s=RESULTS + "ariadne/pricing/analysis/price_setter_s.pkl",
+#         price_setter_d=RESULTS + "ariadne/pricing/analysis/price_setter_d.pkl",
+#         pricing=directory(RESULTS + "ariadne/pricing/analysis"),
+#     threads: 16
+#     resources:
+#         mem_mb=30000,
+#         runtime="30h",
+#     log:
+#         RESULTS + "logs/pricing_analysis.log",
+#     script:
+#         "scripts/pypsa-de/pricing_analysis.py"
+
+
+# rule pricing_plots:
+#     params:
+#         planning_horizons=config_provider("scenario", "planning_horizons"),
+#         plotting=config_provider("plotting"),
+#         run=config_provider("run", "name"),
+#         NEP_year=config_provider("costs", "NEP"),
+#         hours=config_provider("clustering", "temporal", "resolution_sector"),
+#         transmission_projects=config_provider("transmission_projects", "new_link_capacity"),
+#     input:
+#         networks=expand(
+#             RESULTS
+#             + "postnetworks/base_s_{clusters}_l{ll}_{opts}_{sector_opts}_{planning_horizons}.nc",
+#             **config["scenario"],
+#             allow_missing=True,
+#         ),
+#         price_setter_s=RESULTS + "ariadne/pricing/analysis/price_setter_s.pkl",
+#         price_setter_d=RESULTS + "ariadne/pricing/analysis/price_setter_d.pkl",
+#     output:
+#         elec_pdc=RESULTS + "ariadne/pricing/elec_pdc.png",
+#         price_setting_dev=RESULTS + "ariadne/pricing/price_setting_development.png",
+#         pricing=directory(RESULTS + "ariadne/pricing/plots"),
+#         merit_order_3cases=directory(RESULTS + "ariadne/pricing/plots/merit_order_3cases"),
+#         merit_order_all=directory(RESULTS + "ariadne/pricing/plots/merit_order"),
+#         price_setter=directory(RESULTS + "ariadne/pricing/plots/price_setter"),
+#         price_taker=directory(RESULTS + "ariadne/pricing/plots/price_taker"),
+#         pdc_price_setter=directory(RESULTS + "ariadne/pricing/plots/pdc_price_setter"),
+#         pdc_price_taker=directory(RESULTS + "ariadne/pricing/plots/pdc_price_taker"),
+#     resources:
+#         mem_mb=30000,
+#         runtime="30h",
+#     log:
+#         RESULTS + "logs/pricing_plots.log",
+#     script:
+#         "scripts/pypsa-de/pricing_plots.py"
+
+
 rule pricing_analysis:
     params:
         planning_horizons=config_provider("scenario", "planning_horizons"),
@@ -735,28 +804,26 @@ rule pricing_analysis:
         hours=config_provider("clustering", "temporal", "resolution_sector"),
         transmission_projects=config_provider("transmission_projects", "new_link_capacity"),
         costs=config_provider("costs"),
+        pricing=config_provider("pricing"),
     input:
         networks=expand(
             RESULTS
-            + "postnetworks/base_s_{clusters}_l{ll}_{opts}_{sector_opts}_{planning_horizons}.nc",
+            + "postnetworks/base_s_{clusters}_l{ll}_{opts}_{sector_opts}_{planning_horizons}_{lt_st}.nc",
             **config["scenario"],
             allow_missing=True,
         ),
     output:
-        price_setter_s=RESULTS + "ariadne/pricing/analysis/price_setter_s.pkl",
-        price_setter_d=RESULTS + "ariadne/pricing/analysis/price_setter_d.pkl",
-        ask_prices=RESULTS + "ariadne/pricing/analysis/ask.pkl",
-        bid_prices=RESULTS + "ariadne/pricing/analysis/bid.pkl",
-        pricing=directory(RESULTS + "ariadne/pricing/analysis"),
+        price_setter_s=RESULTS + "ariadne/pricing/analysis{lt_st}/price_setter_s.pkl",
+        price_setter_d=RESULTS + "ariadne/pricing/analysis{lt_st}/price_setter_d.pkl",
+        pricing=directory(RESULTS + "ariadne/pricing/analysis_{lt_st}"),
     threads: 16
     resources:
         mem_mb=30000,
         runtime="30h",
     log:
-        RESULTS + "logs/pricing_analysis.log",
+        RESULTS + "logs/pricing_analysis_{lt_st}.log",
     script:
         "scripts/pypsa-de/pricing_analysis.py"
-
 
 rule pricing_plots:
     params:
@@ -769,26 +836,26 @@ rule pricing_plots:
     input:
         networks=expand(
             RESULTS
-            + "postnetworks/base_s_{clusters}_l{ll}_{opts}_{sector_opts}_{planning_horizons}.nc",
+            + "postnetworks/base_s_{clusters}_l{ll}_{opts}_{sector_opts}_{planning_horizons}_{lt_st}.nc",
             **config["scenario"],
             allow_missing=True,
         ),
-        price_setter_s=RESULTS + "ariadne/pricing/analysis/price_setter_s.pkl",
-        price_setter_d=RESULTS + "ariadne/pricing/analysis/price_setter_d.pkl",
+        price_setter_s=RESULTS + "ariadne/pricing/analysis{lt_st}/price_setter_s.pkl",
+        price_setter_d=RESULTS + "ariadne/pricing/analysis{lt_st}/price_setter_d.pkl",
     output:
-        elec_pdc=RESULTS + "ariadne/pricing/elec_pdc.png",
-        price_setting_dev=RESULTS + "ariadne/pricing/price_setting_development.png",
-        pricing=directory(RESULTS + "ariadne/pricing/plots"),
-        merit_order_3cases=directory(RESULTS + "ariadne/pricing/plots/merit_order_3cases"),
-        merit_order_all=directory(RESULTS + "ariadne/pricing/plots/merit_order"),
-        price_setter=directory(RESULTS + "ariadne/pricing/plots/price_setter"),
-        price_taker=directory(RESULTS + "ariadne/pricing/plots/price_taker"),
-        pdc_price_setter=directory(RESULTS + "ariadne/pricing/plots/pdc_price_setter"),
-        pdc_price_taker=directory(RESULTS + "ariadne/pricing/plots/pdc_price_taker"),
+        elec_pdc=RESULTS + "ariadne/pricing/elec_pdc_{lt_st}.png",
+        price_setting_dev=RESULTS + "ariadne/pricing/price_setting_development_{lt_st}.png",
+        pricing=directory(RESULTS + "ariadne/pricing/plots_{lt_st}"),
+        merit_order_3cases=directory(RESULTS + "ariadne/pricing/plots_{lt_st}/merit_order_3cases"),
+        merit_order_all=directory(RESULTS + "ariadne/pricing/plots_{lt_st}/merit_order"),
+        price_setter=directory(RESULTS + "ariadne/pricing/plots_{lt_st}/price_setter"),
+        price_taker=directory(RESULTS + "ariadne/pricing/plots_{lt_st}/price_taker"),
+        pdc_price_setter=directory(RESULTS + "ariadne/pricing/plots_{lt_st}/pdc_price_setter"),
+        pdc_price_taker=directory(RESULTS + "ariadne/pricing/plots_{lt_st}/pdc_price_taker"),
     resources:
         mem_mb=30000,
         runtime="30h",
     log:
-        RESULTS + "logs/pricing_plots.log",
+        RESULTS + "logs/pricing_plots_{lt_st}.log",
     script:
         "scripts/pypsa-de/pricing_plots.py"

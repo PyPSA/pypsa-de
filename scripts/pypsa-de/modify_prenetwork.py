@@ -9,6 +9,9 @@ import pandas as pd
 import pypsa
 from shapely.geometry import Point
 
+sys.path.insert(0, os.path.abspath("../scripts"))
+sys.path.insert(0, os.path.abspath("../.."))
+
 from scripts._helpers import configure_logging, mock_snakemake
 from scripts.add_electricity import load_costs
 from scripts.prepare_sector_network import lossy_bidirectional_links, prepare_costs
@@ -1363,7 +1366,7 @@ def adapt_demand_modelling(n, params):
                 f"load-shedding-segment-{i}",
                 bus=bus,
                 carrier="load-shedding",
-                marginal_cost= intercept - slope * (nominal / scaling),
+                marginal_cost= intercept - slope * nominal,
                 marginal_cost_quadratic= (slope / 2 ) / scaling,
                 p_nom=nominal * scaling,
                 p_nom_extendable=False,   
@@ -1380,7 +1383,7 @@ if __name__ == "__main__":
             ll="vopt",
             sector_opts="none",
             planning_horizons="2020",
-            run="KN2045_Bal_v4",
+            run="KN2045_Bal_v4_365H",
         )
 
     configure_logging(snakemake)

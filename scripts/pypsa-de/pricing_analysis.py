@@ -661,6 +661,10 @@ if __name__ == "__main__":
     nprocesses = snakemake.threads
     results_s = {}
     results_d = {}
+
+    # # Use 'spawn' instead of 'fork' for better compatibility on cluster
+    if snakemake.params.pricing["parallel_method"] == "spawn":
+        mp.set_start_method('spawn', force=True)
     
     # Process year by year to maintain logging structure
     for year in planning_horizons:
@@ -699,21 +703,22 @@ if __name__ == "__main__":
     with open(snakemake.output.price_setter_d, 'wb') as file:
         pickle.dump(results_d, file)
 
-    # obtain all supply (bid) and demand (ask) prices
-    bus = n.buses.query("carrier == 'AC'").index[0]
-    ask = {}
-    bid = {}
+    if snakemake.params.pricing["calc_bid_ask"]:    
+        # obtain all supply (bid) and demand (ask) prices
+        bus = n.buses.query("carrier == 'AC'").index[0]
+        ask = {}
+        bid = {}
 
-    for year in planning_horizons:
-            logger.info(f"Calculating supply and demand prices for year {year}")
-            n = networks[year]
-            ask[year] = get_all_supply_prices_parallel(n, bus, processes=nprocesses)
-            bid[year] = get_all_demand_prices_parallel(n, bus, processes=nprocesses) 
-    
-    with open(snakemake.output.ask_prices, 'wb') as file:
-        pickle.dump(ask, file)
-    with open(snakemake.output.bid_prices, 'wb') as file:
-        pickle.dump(bid, file)
+        for year in planning_horizons:
+                logger.info(f"Calculating supply and demand prices for year {year}")
+                n = networks[year]
+                ask[year] = get_all_supply_prices_parallel(n, bus, processes=nprocesses)
+                bid[year] = get_all_demand_prices_parallel(n, bus, processes=nprocesses) 
+        
+        with open(snakemake.output.pricing + "ask.pkl", 'wb') as file:
+            pickle.dump(ask, file)
+        with open(snakemake.output.pricing + "bid.pkl", 'wb') as file:
+            pickle.dump(bid, file)
 
     # # debugging 
     # path = "/home/julian-geis/repos/01_pricing-paper/pricing_analysis/data/results/20241031-OneNode-DownstreamVsUpstream-NoDistGrid"
