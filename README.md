@@ -12,7 +12,17 @@ Do not forget to install pre commit hooks locally.
 pre-commit install
 ```
 
-## Connecting to the Ariadne-Database
+## Run the model
+
+Configure the mode run in ```config.yaml``` and execute
+```
+pixi run snakemake --configfile config/config.yaml
+```
+or
+```
+pixi shell
+snakemake --configfile config/config.yaml
+```
 
 ### For external users: Use config.public.yaml
 
@@ -26,19 +36,6 @@ snakemake COMMAND --configfile=config/config.public.yaml
 
 The additional config file specifies the required database, model, and scenario names for Ariadne1. If public users wish to edit the default scenario specifications, they can do so by changing `scenarios.public.yaml` to `scenarios.manual.yaml`. More details on using scenarios are given below.
 
-### For internal users: Provide login details
-
-The snakemake rule `retrieve_ariadne_database` logs into the interal Ariadne IIASA Database via the [`pyam`](https://pyam-iamc.readthedocs.io/en/stable/tutorials/iiasa.html) package. The credentials for logging into this database have to be stored locally on your machine with `ixmp4`. To do this activate the project environment and run
-
-```
-ixmp4 login <username>
-```
-
-You will be prompted to enter your `<password>`.
-
-Caveat: These credentials are stored on your machine in plain text.
-
-To switch between internal and public use, the command `ixmp4 logout` may be necessary.
 
 ## Run the analysis
 
