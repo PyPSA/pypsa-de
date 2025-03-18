@@ -14,14 +14,11 @@ pre-commit install
 
 ## Run the model
 
-Configure the mode run in ```config.yaml``` and execute
-```
-pixi run snakemake --configfile config/config.yaml
-```
-or
+Configure the model in ```config.yaml``` and run it
 ```
 pixi shell
-snakemake --configfile config/config.yaml
+snakemake build_scenarios --configfile=config/config.public.yaml -f
+snakemake ariadne_all --configfile config/config.public.yaml
 ```
 
 ### For external users: Use config.public.yaml
