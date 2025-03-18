@@ -4,12 +4,12 @@
 
 run:
   prefix: 20240627public_db
-  name:
-  - 8Gt_Bal_v3
+  name: testrun
+  # - 8Gt_Bal_v3
   # - 8Gt_Elec_v3
   # - 8Gt_H2_v3
   scenarios:
-    enable: true
+    enable: false
     manual_file: config/scenarios.public.yaml
     file: config/scenarios.automated.yaml
   shared_resources:

@@ -244,7 +244,7 @@ clustering:
     # 'ES': 0.0408
     # 'IT': 0.0612
   temporal:
-    resolution_sector: 24H
+    resolution_sector: 365H
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#co2-budget
 co2_budget:
