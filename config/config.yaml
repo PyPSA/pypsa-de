@@ -71,11 +71,11 @@ scenario:
   - none
   planning_horizons:
   - 2020
-  - 2025
+#  - 2025
   - 2030
-  - 2035
+#  - 2035
   - 2040
-  - 2045
+#  - 2045
 
 existing_capacities:
   grouping_years_power: [1920, 1950, 1955, 1960, 1965, 1970, 1975, 1980, 1985, 1990, 1995, 2000, 2005, 2010, 2015, 2020]
@@ -610,10 +610,10 @@ solving:
     options: xpress-default
   solver_options:
     xpress-default:
-      THREADS: 16
+      THREADS: 8
       CROSSOVER: 0  # no crossover
-      FEASTOL: 0.0001
-      MIPTOL: 0.0005
+#      FEASTOL: 0.0001
+#      MIPTOL: 0.0005
 #      HEURTHREADS: -1  # chose, defaults to 0
       LPFLAGS: 4  # barrier method
   # solver_options:
