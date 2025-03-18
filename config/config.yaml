@@ -611,11 +611,15 @@ solving:
   solver_options:
     xpress-default:
       THREADS: 8
+      LPFLAGS: 4  # barrier method
       CROSSOVER: 0  # no crossover
+      BARALG: 2  # as suggested by support
+      # scale objective and RHS at the cost of accuracy
+#      BAROBJSCALE: 1
+#      BARRHSSCALE: 1
+      # larger tolerances will increase speed but might cause numerical troubles
 #      FEASTOL: 0.0001
 #      MIPTOL: 0.0005
-#      HEURTHREADS: -1  # chose, defaults to 0
-      LPFLAGS: 4  # barrier method
   # solver_options:
   #   gurobi-default:
   #     NumericFocus: 1
