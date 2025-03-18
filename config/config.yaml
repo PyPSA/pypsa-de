@@ -612,7 +612,7 @@ solving:
     xpress-default:
       THREADS: 16
       CROSSOVER: 0  # no crossover
-#      FEASTOL: 0.000001
+      FEASTOL: 0.00001
 #      HEURTHREADS: -1  # chose, defaults to 0
       LPFLAGS: 4  # barrier method
   # solver_options:
