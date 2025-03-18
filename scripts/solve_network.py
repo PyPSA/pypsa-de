@@ -1005,7 +1005,7 @@ def solve_network(n, config, params, solving, **kwargs):
     kwargs["assign_all_duals"] = cf_solving.get("assign_all_duals", False)
     kwargs["io_api"] = cf_solving.get("io_api", None)
 
-    kwargs["model_kwargs"] = cf_solving.get("model_kwargs", {})
+    kwargs["model_kwargs"] = config["solving"].get("model_kwargs", {})
 
     if kwargs["solver_name"] == "gurobi":
         logging.getLogger("gurobipy").setLevel(logging.CRITICAL)
@@ -1063,13 +1063,14 @@ if __name__ == "__main__":
         from scripts._helpers import mock_snakemake
 
         snakemake = mock_snakemake(
-            "solve_sector_network_perfect",
-            configfiles="../config/test/config.perfect.yaml",
+            "solve_sector_network_myopic",
+            configfiles="config/config.public.yaml",
             opts="",
-            clusters="5",
-            ll="v1.0",
-            sector_opts="",
-            # planning_horizons="2030",
+            clusters="27",
+            ll="vopt",
+            sector_opts="none",
+            planning_horizons="2020",
+            run="8Gt_Bal_v3",
         )
     configure_logging(snakemake)
     set_scenario_config(snakemake)
