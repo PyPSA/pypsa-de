@@ -5,9 +5,9 @@
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
   prefix: 20250130-morefinalfixes
-  name: testrun
+  name:
   # - CurrentPolicies
-  # - KN2045_Bal_v4
+  - KN2045_Bal_v4
   # - KN2045_Elec_v4
   # - KN2045_H2_v4
   # - KN2045plus_EasyRide
@@ -17,7 +17,7 @@ run:
   # - KN2045_Bal_LowDemand
   # - KN2045_Bal_HighDemand
   scenarios:
-    enable: false
+    enable: true
     manual_file: config/scenarios.manual.yaml
     file: config/scenarios.automated.yaml
   shared_resources:
