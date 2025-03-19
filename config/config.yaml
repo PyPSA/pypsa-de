@@ -64,7 +64,7 @@ scenario:
   - vopt
   clusters:
 #  - adm todo: use administrative clustering
-  - 27 # current options: 27, 49
+  - 49 # current options: 27, 49
   opts:
   - ''
   sector_opts:
@@ -211,40 +211,40 @@ clustering:
 #      DE: 1 # + 15 regions
   focus_weights:
   # 27 nodes: 8 for Germany, 3 for Italy, 2 each for Denmark, UK and Spain, 1 per each of other 10 "Stromnachbarn"
-    'DE': 0.2966
-    'AT': 0.0370
-    'BE': 0.0370
-    'CH': 0.0370
-    'CZ': 0.0370
-    'DK': 0.0741
-    'FR': 0.0370
-    'GB': 0.0741
-    'LU': 0.0370
-    'NL': 0.0370
-    'NO': 0.0370
-    'PL': 0.0370
-    'SE': 0.0370
-    'ES': 0.0741
-    'IT': 0.1111
+  #  'DE': 0.2966
+  #  'AT': 0.0370
+  #  'BE': 0.0370
+  #  'CH': 0.0370
+  #  'CZ': 0.0370
+  #  'DK': 0.0741
+  #  'FR': 0.0370
+  #  'GB': 0.0741
+  #  'LU': 0.0370
+  #  'NL': 0.0370
+  #  'NO': 0.0370
+  #  'PL': 0.0370
+  #  'SE': 0.0370
+  #  'ES': 0.0741
+  #  'IT': 0.1111
   # high spatial resolution: change clusters to 49
   # 49 nodes: 30 for Germany, 3 for Italy, 2 each for Denmark, UK and Spain, 1 per each of other 10 "Stromnachbarn"
-    # 'DE': 0.6124
-    # 'AT': 0.0204
-    # 'BE': 0.0204
-    # 'CH': 0.0204
-    # 'CZ': 0.0204
-    # 'DK': 0.0408
-    # 'FR': 0.0204
-    # 'GB': 0.0408
-    # 'LU': 0.0204
-    # 'NL': 0.0204
-    # 'NO': 0.0204
-    # 'PL': 0.0204
-    # 'SE': 0.0204
-    # 'ES': 0.0408
-    # 'IT': 0.0612
+     'DE': 0.6124
+     'AT': 0.0204
+     'BE': 0.0204
+     'CH': 0.0204
+     'CZ': 0.0204
+     'DK': 0.0408
+     'FR': 0.0204
+     'GB': 0.0408
+     'LU': 0.0204
+     'NL': 0.0204
+     'NO': 0.0204
+     'PL': 0.0204
+     'SE': 0.0204
+     'ES': 0.0408
+     'IT': 0.0612
   temporal:
-    resolution_sector: 365H
+    resolution_sector: 3H
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#co2-budget
 co2_budget:
