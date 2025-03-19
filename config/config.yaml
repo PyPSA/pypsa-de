@@ -4,13 +4,13 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20250317-Pricing
+  prefix: 20250319-Pricing
 
   name:
   # - KN2045_Bal_v4
   # - KN2045_Bal_v4_24H
-   - KN2045_Bal_v4_365H
-  # - KN2045_Bal_v4_voll
+  # - KN2045_Bal_v4_365H
+  - KN2045_Bal_v4_voll
   # - KN2045_Bal_v4_elastic5GW
   # - KN2045_Bal_v4_elasticAll
   # - KN2045_Bal_v4_elasticPWL
@@ -723,16 +723,20 @@ demand_modelling:
   elastic_intercept: 2000 # EUR/tMWh	Price at which load vanishes
   elastic_load: 5000 # MW
   voll_price: 2000 # €/MWh
+  elastic_pwl_load: 50000 # MW
   elastic_pwl_params:
     default:
-      intercept: [9000,500, 250]
-      slope: [100, 50, 25]
+      intercept: [8000, 400, 200]
+      slope: [80, 40, 20]
+      nominal: [95, 5, 10]
     lower:
       intercept: [16000, 800, 400]
       slope: [160, 80, 40]
+      nominal: [95, 5, 10]
     higher:
       intercept: [4000, 200, 100]
       slope: [40, 20, 10]
+      nominal: [95, 5, 10]
 
 pricing:
   calc_bid_ask: false

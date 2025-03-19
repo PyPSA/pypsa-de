@@ -148,20 +148,6 @@ KN2045_Bal_v4_elastic5GW:
     elastic_pwl: false # false, default, lower, higher
     elastic_intercept: 2000 # EUR/tMWh	Price at which load vanishes
     elastic_load: 5000 # MW
-    voll_price: 2000 # €/MWh
-    elastic_pwl_params:
-      default:
-        intercept: [8000, 400, 200]
-        slope: [80, 40, 20]
-        nominal: [52000,3000,5500]
-      lower:
-        intercept: [16000, 800, 400]
-        slope: [160, 80, 40]
-        nominal: [95, 5, 10]
-      higher:
-        intercept: [4000, 200, 100]
-        slope: [40, 20, 10]
-        nominal: [95, 5, 10]
 
 KN2045_Bal_v4_elasticAll:
 # Ausgewogener Mix an Technologien zur Dekarbonisierung der Sektoren
@@ -234,22 +220,8 @@ KN2045_Bal_v4_elasticAll:
     elastic_capa: false
     elastic_all: true
     elastic_pwl: false # false, default, lower, higher
-    elastic_intercept: 2000 # EUR/tMWh	Price at which load vanishes
+    elastic_intercept: 4000 # EUR/tMWh	Price at which load vanishes
     elastic_load: 5000 # MW
-    voll_price: 2000 # €/MWh
-    elastic_pwl_params:
-      default:
-        intercept: [8000, 400, 200]
-        slope: [80, 40, 20]
-        nominal: [52000,3000,5500]
-      lower:
-        intercept: [16000, 800, 400]
-        slope: [160, 80, 40]
-        nominal: [95, 5, 10]
-      higher:
-        intercept: [4000, 200, 100]
-        slope: [40, 20, 10]
-        nominal: [95, 5, 10]
 
 KN2045_Bal_v4_elasticPWL:
 # Ausgewogener Mix an Technologien zur Dekarbonisierung der Sektoren
@@ -325,11 +297,12 @@ KN2045_Bal_v4_elasticPWL:
     elastic_intercept: 2000 # EUR/tMWh	Price at which load vanishes
     elastic_load: 5000 # MW
     voll_price: 2000 # €/MWh
+    elastic_pwl_load: 50000 # MW
     elastic_pwl_params:
       default:
         intercept: [8000, 400, 200]
         slope: [80, 40, 20]
-        nominal: [52000,3000,5500]
+        nominal: [95, 5, 10]
       lower:
         intercept: [16000, 800, 400]
         slope: [160, 80, 40]
@@ -474,27 +447,6 @@ KN2045_Bal_v4:
       2045: 0.6909
   demand_modelling: 
     enable: false
-    voll: false
-    elastic_capa: false
-    elastic_all: false
-    elastic_pwl: false # false, default, lower, higher
-    elastic_intercept: 2000 # EUR/tMWh	Price at which load vanishes
-    elastic_load: 5000 # MW
-    voll_price: 2000 # €/MWh
-    elastic_pwl_load: 50000 # MW
-    elastic_pwl_params:
-      default:
-        intercept: [8000, 400, 200]
-        slope: [80, 40, 20]
-        nominal: [95, 5, 10]
-      lower:
-        intercept: [16000, 800, 400]
-        slope: [160, 80, 40]
-        nominal: [95, 5, 10]
-      higher:
-        intercept: [4000, 200, 100]
-        slope: [40, 20, 10]
-        nominal: [95, 5, 10]
 
 KN2045_Bal_v4_24H:
 # Ausgewogener Mix an Technologien zur Dekarbonisierung der Sektoren
@@ -566,7 +518,7 @@ KN2045_Bal_v4_24H:
       2040: 0.6948
       2045: 0.6909
   demand_modelling: 
-    enable: true
+    enable: false
     voll: false
     elastic_capa: false
     elastic_all: false
@@ -574,10 +526,12 @@ KN2045_Bal_v4_24H:
     elastic_intercept: 2000 # EUR/tMWh	Price at which load vanishes
     elastic_load: 5000 # MW
     voll_price: 2000 # €/MWh
+    elastic_pwl_load: 50000 # MW
     elastic_pwl_params:
       default:
-        intercept: [9000,500, 250]
-        slope: [100, 50, 25]
+        intercept: [8000, 400, 200]
+        slope: [80, 40, 20]
+        nominal: [95, 5, 10]
       lower:
         intercept: [16000, 800, 400]
         slope: [160, 80, 40]
@@ -657,7 +611,7 @@ KN2045_Bal_v4_365H:
       2040: 0.6948
       2045: 0.6909
   demand_modelling: 
-    enable: true
+    enable: false
     voll: false
     elastic_capa: false
     elastic_all: false
