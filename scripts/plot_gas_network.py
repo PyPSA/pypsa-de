@@ -91,6 +91,9 @@ def plot_ch4_map(n):
     bus_sizes = pd.concat([fossil_gas, methanation, biogas])
     bus_sizes.sort_index(inplace=True)
 
+    non_buses = bus_sizes.index.unique(level=0).difference(n.buses.index)
+    bus_sizes = bus_sizes.drop(non_buses)
+
     to_remove = n.links.index[~n.links.carrier.str.contains("gas pipeline")]
     n.links.drop(to_remove, inplace=True)
 
