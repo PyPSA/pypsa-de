@@ -1,14 +1,16 @@
-# -*- coding: utf-8 -*-
-# SPDX-FileCopyrightText: : 2020-2024 The PyPSA-Eur Authors
+# SPDX-FileCopyrightText: Contributors to PyPSA-Eur <https://github.com/pypsa/pypsa-eur>
 #
 # SPDX-License-Identifier: MIT
 """
 Distribute country-level energy demands by population.
 """
 
-import pandas as pd
+import logging
 
-from scripts._helpers import set_scenario_config
+import pandas as pd
+from scripts._helpers import configure_logging, set_scenario_config
+
+logger = logging.getLogger(__name__)
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
@@ -19,6 +21,7 @@ if __name__ == "__main__":
             kind="heat",
             clusters=60,
         )
+    configure_logging(snakemake)
     set_scenario_config(snakemake)
 
     config = snakemake.config["energy"]

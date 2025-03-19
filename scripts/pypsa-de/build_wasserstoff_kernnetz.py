@@ -432,7 +432,14 @@ def create_border_crossing(wkn, regions_onshore, regions_offshore):
 
     # extract DE border
     de = regions[regions.country.isin(["DE"])].union_all()
-    de_border = de.exterior
+
+    # Handle MultiPolygon case
+    if de.geom_type == 'MultiPolygon':
+        largest_polygon = sorted(list(de.geoms), key=lambda x: x.area, reverse=True)[0]
+        de_border = largest_polygon.exterior
+    else:
+        de_border = de.exterior
+
     de_border_projected = gpd.GeoSeries([de_border], crs="EPSG:4326").to_crs(epsg=32633)
     de_polygon = Polygon(de_border_projected.iloc[0])
 

@@ -30,10 +30,6 @@ run:
     - build_industry_sector_ratios   # This is necessary to save build_industry_sector_ratios_data.log in the correct folder
     - modify_existing_heating
   disable_progressbar: true
-  debug_co2_limit: false
-  debug_h2deriv_limit: false
-  debug_unravel_oilbus: false
-  debug_unravel_gasbus: false
 
 iiasa_database:
   db_name: ariadne2_intern
@@ -281,6 +277,8 @@ costs:
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#sector
 sector:
+  chp:
+    enable: false # This should only deactivate the CHPs from prepare_sector_network, not those from add_existing_baseyear
   v2g: false
   solar_thermal: false
   district_heating:
@@ -437,7 +435,7 @@ solving:
         H2 pipeline retrofitted: 0.05
       fractional_last_unit_size: true
   constraints:
-    efuel_export_ban: true
+    efuel_export_ban: false
     limits_capacity_max:
       Generator:
         onwind:
