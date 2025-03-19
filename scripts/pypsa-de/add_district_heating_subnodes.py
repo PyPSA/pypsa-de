@@ -409,7 +409,7 @@ if __name__ == "__main__":
 
     lau = gpd.read_file(
         # "/home/cpschau/Code/dev/pypsa-ariadne/.snakemake/storage/http/gisco-services.ec.europa.eu/distribution/v2/lau/download/ref-lau-2021-01m.geojson/LAU_RG_01M_2021_3035.geojson",
-        f"{snakemake.input.lau}!LAU_RG_01M_2021_3035.geojson",
+        snakemake.input.lau,
         crs="EPSG:3035",
     ).to_crs("EPSG:4326")
 

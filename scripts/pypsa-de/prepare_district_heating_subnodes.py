@@ -622,7 +622,7 @@ if __name__ == "__main__":
         "index"
     )
     lau = gpd.read_file(
-        f"{snakemake.input.lau}!LAU_RG_01M_2021_3035.geojson",
+        snakemake.input.lau,
         crs="EPSG:3035",
     ).to_crs("EPSG:4326")
 

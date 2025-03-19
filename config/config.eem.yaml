@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: CC0-1.0
 
 run:
-  prefix: 20250227_eem_config_osm
+  prefix: 20250319_osm_refined_areas
   name:
   - Baseline
   - No_PTES
@@ -67,7 +67,7 @@ scenario:
   
 clustering:
   temporal:
-    resolution_sector: 3H
+    resolution_sector: 876H
 
 adjustments:
     electricity: false
@@ -86,6 +86,15 @@ sector:
   district_heating:
     potential: 0.5
     add_subnodes: true
+  heat_pump_sources:
+    urban central:
+      - air
+      - geothermal
+    urban decentral:
+    - air
+    rural:
+    - air
+    - ground
 
 solving:
   constraints:
