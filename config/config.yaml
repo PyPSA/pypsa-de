@@ -614,17 +614,12 @@ solving:
       LPFLAGS: 4  # barrier method
       CROSSOVER: 0  # no crossover
       BARALG: 2  # as suggested by support
-      # scale objective and RHS at the cost of accuracy
+      # scale objective and RHS to gain speed at the cost of accuracy
 #      BAROBJSCALE: 1
 #      BARRHSSCALE: 1
-      # larger tolerances will increase speed but might cause numerical troubles
+      # larger tolerances will gain speed at the cost of stability
 #      FEASTOL: 0.0001
 #      MIPTOL: 0.0005
-  # solver_options:
-  #   gurobi-default:
-  #     NumericFocus: 1
-  #     FeasibilityTol: 1.e-4
-  #     BarHomogeneous: 1
 
 plotting:
   tech_colors:
