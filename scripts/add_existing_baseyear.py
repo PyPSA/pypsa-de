@@ -41,6 +41,7 @@ spatial = SimpleNamespace()
 
 from scripts.build_powerplants import add_custom_powerplants
 
+
 def add_build_year_to_new_assets(n: pypsa.Network, baseyear: int) -> None:
     """
     Add build year to new assets in the network.
@@ -258,7 +259,7 @@ def add_power_capacities_installed_before_baseyear(
 
     # add chp plants
     add_chp_plants(n, grouping_years, costs, baseyear)
-    
+
     # drop assets which are already phased out / decommissioned
     phased_out = df_agg[df_agg["DateOut"] < baseyear].index
     df_agg.drop(phased_out, inplace=True)
@@ -509,10 +510,10 @@ def add_chp_plants(n, grouping_years, costs, baseyear):
     # phase out date at the end of the year)
     chp.Fueltype = chp.Fueltype.map(rename_fuel)
 
-    chp["grouping_year"] = np.take(
-        grouping_years, np.digitize(chp.DateIn, grouping_years, right=True)
+    chp["lifetime"] = (chp.DateOut - chp["grouping_year"] + 1).fillna(
+        snakemake.params.costs["fill_values"]["lifetime"]
     )
-    chp["lifetime"] = chp.DateOut - chp["grouping_year"] + 1
+    chp = chp.loc[chp.grouping_year + chp.lifetime >= baseyear]
 
     # check if the CHPs were read in from MaStR for Germany
     if "Capacity_thermal" in chp.columns:
@@ -735,7 +736,8 @@ def add_chp_plants(n, grouping_years, costs, baseyear):
                     bus3="co2 atmosphere",
                     carrier=f"urban central {generator} CHP",
                     p_nom=p_nom[bus] / costs.at[key, "efficiency"],
-                    capital_cost=costs.at[key, "capital_cost"] * costs.at[key, "efficiency"],
+                    capital_cost=costs.at[key, "capital_cost"]
+                    * costs.at[key, "efficiency"],
                     overnight_cost=costs.at[key, "investment"]
                     * costs.at[key, "efficiency"],
                     marginal_cost=costs.at[key, "VOM"],
@@ -756,7 +758,8 @@ def add_chp_plants(n, grouping_years, costs, baseyear):
                     bus2=bus + " urban central heat",
                     carrier=generator,
                     p_nom=p_nom[bus] / costs.at[key, "efficiency"],
-                    capital_cost=costs.at[key, "capital_cost"] * costs.at[key, "efficiency"],
+                    capital_cost=costs.at[key, "capital_cost"]
+                    * costs.at[key, "efficiency"],
                     overnight_cost=costs.at[key, "investment"]
                     * costs.at[key, "efficiency"],
                     marginal_cost=costs.at[key, "VOM"],
@@ -1050,7 +1053,9 @@ def add_heating_capacities_installed_before_baseyear(
                 overnight_cost=costs.at["biomass boiler", "efficiency"]
                 * costs.at["biomass boiler", "investment"],
                 p_nom=(
-                    existing_capacities.loc[nodes, (heat_system.value, "biomass boiler")]
+                    existing_capacities.loc[
+                        nodes, (heat_system.value, "biomass boiler")
+                    ]
                     * ratio
                     / costs.at["biomass boiler", "efficiency"]
                 ),
