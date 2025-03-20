@@ -55,6 +55,8 @@ descartes = "*"
 rasterio = "==1.4.1"
 libgdal-core = "<3.10.0"
 pixi-pycharm = ">=0.0.8,<0.0.9"
+marimo = ">=0.11.22,<0.12"
+plotly = ">=6.0.1,<7"
 
 [pypi-dependencies]
 gurobipy = "*"
