@@ -43,6 +43,7 @@ from build_powerplants import add_custom_powerplants
 
 from build_powerplants import add_custom_powerplants
 
+
 def add_build_year_to_new_assets(n: pypsa.Network, baseyear: int) -> None:
     """
     Add build year to new assets in the network.
@@ -204,6 +205,8 @@ def add_power_capacities_installed_before_baseyear(
         "OCGT": "OCGT",
         "CCGT": "CCGT",
         "Bioenergy": "solid biomass",
+        # "Waste": "waste",
+        # "nicht biogener Abfall": "waste",
     }
 
     # If heat is considered, add CHPs in the add_heating_capacities function.
@@ -260,7 +263,7 @@ def add_power_capacities_installed_before_baseyear(
 
     # add chp plants
     add_chp_plants(n, grouping_years, costs, baseyear)
-    
+
     # drop assets which are already phased out / decommissioned
     phased_out = df_agg[df_agg["DateOut"] < baseyear].index
     df_agg.drop(phased_out, inplace=True)
@@ -494,7 +497,9 @@ def add_chp_plants(n, grouping_years, costs, baseyear):
     ppl = pd.read_csv(snakemake.input.powerplants, index_col=0)
 
     if snakemake.input.get("custom_powerplants"):
-        if snakemake.input.custom_powerplants.endswith("german_chp_{clusters}.csv"):
+        if snakemake.input.custom_powerplants.endswith(
+            f"german_chp_base_s_{snakemake.wildcards.clusters}_{snakemake.wildcards.opts}_{snakemake.wildcards.sector_opts}_{snakemake.wildcards.planning_horizons}.csv"
+        ):
             logger.info("Supersedeing default German CHPs with custom_powerplants.")
             ppl = ppl.query("~(Set == 'CHP' and Country == 'DE')")
         ppl = add_custom_powerplants(ppl, snakemake.input.custom_powerplants, True)
@@ -514,7 +519,10 @@ def add_chp_plants(n, grouping_years, costs, baseyear):
     chp["grouping_year"] = np.take(
         grouping_years, np.digitize(chp.DateIn, grouping_years, right=True)
     )
-    chp["lifetime"] = chp.DateOut - chp["grouping_year"] + 1
+    chp["lifetime"] = (chp.DateOut - chp["grouping_year"] + 1).fillna(
+        snakemake.params.costs["fill_values"]["lifetime"]
+    )
+    chp = chp.loc[chp.grouping_year + chp.lifetime >= baseyear]
 
     # check if the CHPs were read in from MaStR for Germany
     if "Capacity_thermal" in chp.columns:
@@ -625,7 +633,7 @@ def add_chp_plants(n, grouping_years, costs, baseyear):
                         bus,
                         suffix=f" urban central {generator} CHP-{grouping_year}",
                         bus0=bus0,
-                        bus1=bus,
+                        bus1=" ".join(bus.split()[:2]),
                         bus2=bus + " urban central heat",
                         bus3="co2 atmosphere",
                         carrier=f"urban central {generator} CHP",
@@ -647,8 +655,8 @@ def add_chp_plants(n, grouping_years, costs, baseyear):
                         "Link",
                         bus,
                         suffix=f" urban {key}-{grouping_year}",
-                        bus0=spatial.biomass.df.loc[bus]["nodes"],
-                        bus1=bus,
+                        bus0=spatial.biomass.df.loc[" ".join(bus.split()[:2])]["nodes"],
+                        bus1=" ".join(bus.split()[:2]),
                         bus2=bus + " urban central heat",
                         carrier=generator,
                         p_nom=p_nom[bus],
@@ -732,12 +740,13 @@ def add_chp_plants(n, grouping_years, costs, baseyear):
                     bus,
                     suffix=f" urban central {generator} CHP-{grouping_year}",
                     bus0=bus0,
-                    bus1=bus,
+                    bus1=" ".join(bus.split()[:2]),
                     bus2=bus + " urban central heat",
                     bus3="co2 atmosphere",
                     carrier=f"urban central {generator} CHP",
                     p_nom=p_nom[bus] / costs.at[key, "efficiency"],
-                    capital_cost=costs.at[key, "capital_cost"] * costs.at[key, "efficiency"],
+                    capital_cost=costs.at[key, "capital_cost"]
+                    * costs.at[key, "efficiency"],
                     overnight_cost=costs.at[key, "investment"]
                     * costs.at[key, "efficiency"],
                     marginal_cost=costs.at[key, "VOM"],
@@ -753,12 +762,13 @@ def add_chp_plants(n, grouping_years, costs, baseyear):
                     "Link",
                     p_nom.index,
                     suffix=f" urban {key}-{grouping_year}",
-                    bus0=spatial.biomass.df.loc[p_nom.index]["nodes"],
-                    bus1=bus,
+                    bus0=spatial.biomass.df.loc[" ".join(bus.split()[:2])]["nodes"],
+                    bus1=" ".join(bus.split()[:2]),
                     bus2=bus + " urban central heat",
                     carrier=generator,
                     p_nom=p_nom[bus] / costs.at[key, "efficiency"],
-                    capital_cost=costs.at[key, "capital_cost"] * costs.at[key, "efficiency"],
+                    capital_cost=costs.at[key, "capital_cost"]
+                    * costs.at[key, "efficiency"],
                     overnight_cost=costs.at[key, "investment"]
                     * costs.at[key, "efficiency"],
                     marginal_cost=costs.at[key, "VOM"],
@@ -884,8 +894,10 @@ def add_heating_capacities_installed_before_baseyear(
             not heat_system == HeatSystem.URBAN_CENTRAL
         ) and use_electricity_distribution_grid:
             nodes_elec = nodes + " low voltage"
+            nodes_biomass = nodes
         else:
-            nodes_elec = nodes
+            nodes_elec = nodes.str.split().str[:2].str.join(" ")
+            nodes_biomass = nodes_elec
 
             too_large_grouping_years = [
                 gy for gy in grouping_years if gy >= int(baseyear)
@@ -908,7 +920,8 @@ def add_heating_capacities_installed_before_baseyear(
             # get number of years of each interval
             _years = valid_grouping_years.diff()
             # Fill NA from .diff() with value for the first interval
-            _years[0] = valid_grouping_years[0] - baseyear + default_lifetime
+            if valid_grouping_years.size > 1:
+                _years[0] = valid_grouping_years[0] - baseyear + default_lifetime
             # Installation is assumed to be linear for the past
             ratios = _years / _years.sum()
 
@@ -1043,7 +1056,7 @@ def add_heating_capacities_installed_before_baseyear(
                 "Link",
                 nodes,
                 suffix=f" {heat_system} biomass boiler-{grouping_year}",
-                bus0=spatial.biomass.df.loc[nodes, "nodes"].values,
+                bus0=spatial.biomass.df.loc[nodes_biomass, "nodes"].values,
                 bus1=nodes + " " + heat_system.value + " heat",
                 carrier=heat_system.value + " biomass boiler",
                 efficiency=costs.at["biomass boiler", "efficiency"],
@@ -1052,7 +1065,9 @@ def add_heating_capacities_installed_before_baseyear(
                 overnight_cost=costs.at["biomass boiler", "efficiency"]
                 * costs.at["biomass boiler", "investment"],
                 p_nom=(
-                    existing_capacities.loc[nodes, (heat_system.value, "biomass boiler")]
+                    existing_capacities.loc[
+                        nodes, (heat_system.value, "biomass boiler")
+                    ]
                     * ratio
                     / costs.at["biomass boiler", "efficiency"]
                 ),
