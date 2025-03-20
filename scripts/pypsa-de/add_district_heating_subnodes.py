@@ -97,8 +97,8 @@ def add_subnodes(
             (subnode["yearly_heat_demand_MWh"] / dh_load_cluster),
         )
 
-        dh_load_cluster_subnodes = subnodes.loc[
-            subnodes.cluster == subnode["cluster"], "yearly_heat_demand_MWh"
+        dh_load_cluster_subnodes = subnodes_head.loc[
+            subnodes_head.cluster == subnode["cluster"], "yearly_heat_demand_MWh"
         ].sum()
         lost_load = dh_load_cluster_subnodes - dh_load_cluster
 
