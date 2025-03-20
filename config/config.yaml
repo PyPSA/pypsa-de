@@ -99,10 +99,10 @@ atlite:
   cutouts:
     europe-2019-sarah3-era5:
       module: [sarah, era5] # in priority order
-      x: [-12., 42.]
-      y: [33., 72]
-      dx: 0.3
-      dy: 0.3
+#      x: [-12., 42.]
+#      y: [33., 72]
+#      dx: 0.3
+#      dy: 0.3
       time: ['2019', '2019']
 
 
