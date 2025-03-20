@@ -28,7 +28,7 @@ if config["foresight"] != "perfect":
             plotting=config_provider("plotting"),
         input:
             network=RESULTS
-            + "postnetworks/base_s_{clusters}_l{ll}_{opts}_{sector_opts}_{planning_horizons}.nc",
+            + "postnetworks/base_s_{clusters}_l{ll}_{opts}_{sector_opts}_{planning_horizons}_lt.nc",
             regions=resources("regions_onshore_base_s_{clusters}.geojson"),
         output:
             map=RESULTS
@@ -55,7 +55,7 @@ if config["foresight"] != "perfect":
             foresight=config_provider("foresight"),
         input:
             network=RESULTS
-            + "postnetworks/base_s_{clusters}_l{ll}_{opts}_{sector_opts}_{planning_horizons}.nc",
+            + "postnetworks/base_s_{clusters}_l{ll}_{opts}_{sector_opts}_{planning_horizons}_lt.nc",
             regions=resources("regions_onshore_base_s_{clusters}.geojson"),
         output:
             map=RESULTS
@@ -81,7 +81,7 @@ if config["foresight"] != "perfect":
             plotting=config_provider("plotting"),
         input:
             network=RESULTS
-            + "postnetworks/base_s_{clusters}_l{ll}_{opts}_{sector_opts}_{planning_horizons}.nc",
+            + "postnetworks/base_s_{clusters}_l{ll}_{opts}_{sector_opts}_{planning_horizons}_lt.nc",
             regions=resources("regions_onshore_base_s_{clusters}.geojson"),
         output:
             map=RESULTS
@@ -159,7 +159,7 @@ rule make_summary:
     input:
         networks=expand(
             RESULTS
-            + "postnetworks/base_s_{clusters}_l{ll}_{opts}_{sector_opts}_{planning_horizons}.nc",
+            + "postnetworks/base_s_{clusters}_l{ll}_{opts}_{sector_opts}_{planning_horizons}_lt.nc",
             **config["scenario"],
             allow_missing=True,
         ),
@@ -294,7 +294,7 @@ rule write_statistics:
         statistics=STATISTICS,
     input:
         network=RESULTS
-        + "postnetworks/base_s_{clusters}_l{ll}_{opts}_{sector_opts}_{planning_horizons}.nc",
+        + "postnetworks/base_s_{clusters}_l{ll}_{opts}_{sector_opts}_{planning_horizons}_lt.nc",
     output:
         **{
             f"{csv}": RESULTS

@@ -2850,7 +2850,7 @@ if __name__ == "__main__":
 
     # Load data
     _networks = [pypsa.Network(fn) for fn in snakemake.input.networks]
-    modelyears = [fn[-7:-3] for fn in snakemake.input.networks]
+    modelyears = snakemake.params.planning_horizons
 
     if snakemake.params.transmission_projects != "zero":   
         # Hack the transmission projects

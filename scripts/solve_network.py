@@ -120,7 +120,7 @@ def add_land_use_constraint_perfect(n):
     return n
 
 
-def add_land_use_constraint(n):
+def add_land_use_constraint(n, snakemake=None):
     # warning: this will miss existing offwind which is not classed AC-DC and has carrier 'offwind'
 
     for carrier in [
@@ -214,7 +214,7 @@ def add_solar_potential_constraints(n, config):
     n.model.add_constraints(lhs <= rhs, name="solar_potential")
 
 
-def add_co2_sequestration_limit(n, limit_dict):
+def add_co2_sequestration_limit(n, limit_dict, snakemake=None):
     """
     Add a global constraint on the amount of Mt CO2 that can be sequestered.
     """
@@ -373,6 +373,7 @@ def prepare_network(
     foresight=None,
     planning_horizons=None,
     co2_sequestration_potential=None,
+    snakemake=None,
 ):
     if "clip_p_max_pu" in solve_opts:
         for df in (
@@ -441,7 +442,7 @@ def prepare_network(
         n.snapshot_weightings[:] = 8760.0 / nhours
 
     if foresight == "myopic":
-        add_land_use_constraint(n)
+        add_land_use_constraint(n, snakemake=snakemake)
 
     if foresight == "perfect":
         n = add_land_use_constraint_perfect(n)
@@ -450,7 +451,7 @@ def prepare_network(
 
     if n.stores.carrier.eq("co2 sequestered").any():
         limit_dict = co2_sequestration_potential
-        add_co2_sequestration_limit(n, limit_dict=limit_dict)
+        add_co2_sequestration_limit(n, limit_dict=limit_dict, snakemake=snakemake)
 
     return n
 
@@ -936,62 +937,63 @@ def add_co2_atmosphere_constraint(n, snapshots):
             n.model.add_constraints(lhs <= rhs, name=f"GlobalConstraint-{name}")
 
 
-def extra_functionality(n, snapshots):
-    """
-    Collects supplementary constraints which will be passed to
-    ``pypsa.optimization.optimize``.
+def solve_network(n, config, params, solving, snakemake=None, **kwargs):
 
-    If you want to enforce additional custom constraints, this is a good
-    location to add them. The arguments ``opts`` and
-    ``snakemake.config`` are expected to be attached to the network.
-    """
-    config = n.config
-    constraints = config["solving"].get("constraints", {})
-    if constraints["BAU"] and n.generators.p_nom_extendable.any():
-        add_BAU_constraints(n, config)
-    if constraints["SAFE"] and n.generators.p_nom_extendable.any():
-        add_SAFE_constraints(n, config)
-    if constraints["CCL"] and n.generators.p_nom_extendable.any():
-        add_CCL_constraints(n, config)
+    def extra_functionality(n, snapshots):
+        """
+        Collects supplementary constraints which will be passed to
+        ``pypsa.optimization.optimize``.
 
-    reserve = config["electricity"].get("operational_reserve", {})
-    if reserve.get("activate"):
-        add_operational_reserve_margin(n, snapshots, config)
+        If you want to enforce additional custom constraints, this is a good
+        location to add them. The arguments ``opts`` and
+        ``snakemake.config`` are expected to be attached to the network.
+        """
+        config = n.config
+        constraints = config["solving"].get("constraints", {})
+        if constraints["BAU"] and n.generators.p_nom_extendable.any():
+            add_BAU_constraints(n, config)
+        if constraints["SAFE"] and n.generators.p_nom_extendable.any():
+            add_SAFE_constraints(n, config)
+        if constraints["CCL"] and n.generators.p_nom_extendable.any():
+            add_CCL_constraints(n, config)
 
-    if EQ_o := constraints["EQ"]:
-        add_EQ_constraints(n, EQ_o.replace("EQ", ""))
+        reserve = config["electricity"].get("operational_reserve", {})
+        if reserve.get("activate"):
+            add_operational_reserve_margin(n, snapshots, config)
 
-    if {"solar-hsat", "solar"}.issubset(
-        config["electricity"]["renewable_carriers"]
-    ) and {"solar-hsat", "solar"}.issubset(
-        config["electricity"]["extendable_carriers"]["Generator"]
-    ):
-        add_solar_potential_constraints(n, config)
+        if EQ_o := constraints["EQ"]:
+            add_EQ_constraints(n, EQ_o.replace("EQ", ""))
 
-    add_battery_constraints(n)
-    add_lossy_bidirectional_link_constraints(n)
-    add_pipe_retrofit_constraint(n)
-    if n._multi_invest:
-        add_carbon_constraint(n, snapshots)
-        add_carbon_budget_constraint(n, snapshots)
-        add_retrofit_gas_boiler_constraint(n, snapshots)
-    else:
-        add_co2_atmosphere_constraint(n, snapshots)
+        if {"solar-hsat", "solar"}.issubset(
+            config["electricity"]["renewable_carriers"]
+        ) and {"solar-hsat", "solar"}.issubset(
+            config["electricity"]["extendable_carriers"]["Generator"]
+        ):
+            add_solar_potential_constraints(n, config)
 
-    if config["sector"]["enhanced_geothermal"]["enable"]:
-        add_flexible_egs_constraint(n)
+        add_battery_constraints(n)
+        add_lossy_bidirectional_link_constraints(n)
+        add_pipe_retrofit_constraint(n)
+        if n._multi_invest:
+            add_carbon_constraint(n, snapshots)
+            add_carbon_budget_constraint(n, snapshots)
+            add_retrofit_gas_boiler_constraint(n, snapshots)
+        else:
+            add_co2_atmosphere_constraint(n, snapshots)
 
-    if n.params.custom_extra_functionality:
-        source_path = pathlib.Path(n.params.custom_extra_functionality).resolve()
-        assert source_path.exists(), f"{source_path} does not exist"
-        sys.path.append(os.path.dirname(source_path))
-        module_name = os.path.splitext(os.path.basename(source_path))[0]
-        module = importlib.import_module(module_name)
-        custom_extra_functionality = getattr(module, module_name)
-        custom_extra_functionality(n, snapshots, snakemake)
+        if config["sector"]["enhanced_geothermal"]["enable"]:
+            add_flexible_egs_constraint(n)
+
+        if n.params.custom_extra_functionality:
+            source_path = pathlib.Path(n.params.custom_extra_functionality).resolve()
+            assert source_path.exists(), f"{source_path} does not exist"
+            sys.path.append(os.path.dirname(source_path))
+            module_name = os.path.splitext(os.path.basename(source_path))[0]
+            module = importlib.import_module(module_name)
+            custom_extra_functionality = getattr(module, module_name)
+            custom_extra_functionality(n, snapshots, snakemake)
 
 
-def solve_network(n, config, params, solving, **kwargs):
     set_of_options = solving["solver"]["options"]
     cf_solving = solving["options"]
 
@@ -1090,6 +1092,7 @@ if __name__ == "__main__":
         foresight=snakemake.params.foresight,
         planning_horizons=snakemake.params.planning_horizons,
         co2_sequestration_potential=snakemake.params["co2_sequestration_potential"],
+        snakemake=snakemake,
     )
 
     with memory_logger(
@@ -1101,13 +1104,13 @@ if __name__ == "__main__":
             params=snakemake.params,
             solving=snakemake.params.solving,
             log_fn=snakemake.log.solver,
+            snakemake=snakemake,
         )
 
     logger.info(f"Maximum memory usage: {mem.mem_usage}")
 
     n.meta = dict(snakemake.config, **dict(wildcards=dict(snakemake.wildcards)))
     
-    n.export_to_netcdf(snakemake.output.network_lt)
     n.export_to_netcdf(snakemake.output.network)
 
     with open(snakemake.output.config, "w") as file:
@@ -1118,49 +1121,6 @@ if __name__ == "__main__":
             allow_unicode=True,
             sort_keys=False,
         )
-
-    # operation analysis
-
-    logger.info(f"Solving again with fixed capacities")
-    # delete linopy model from before
-    del n.model
-
-    # co2 constraint can become infeasible bc of numerical issues (2 ways to handle it)
-    
-    # (1) round co2 constraint to make feasible (rounding with <= softens the constraint)
-    # n.global_constraints.loc["CO2Limit" , "constant"] = round(n.global_constraints.loc["CO2Limit" , "constant"])
-
-    # (2) multiply co2 store e_nom_opt by 2
-    n.stores.loc[n.stores.carrier == "co2", "e_nom_opt"] *= 2
-
-    # gas for industry load cannot be satisfied bc of numerical issues
-    if n.loads[n.loads.carrier == "gas for industry"].p_set.iloc[0] > n.links[n.links.carrier.isin(["gas for industry" , "gas for industry CC"])].p_nom_opt.sum():
-        n.links.loc[n.links.carrier == "gas for industry", "p_nom_opt"] = n.loads[n.loads.carrier == "gas for industry"].p_set - n.links[n.links.carrier == "gas for industry CC"].p_nom_opt
-
-
-    n.optimize.fix_optimal_capacities()
-    n = prepare_network(
-        n,
-        solve_opts,
-        config=snakemake.config,
-        foresight=snakemake.params.foresight,
-        planning_horizons=snakemake.params.planning_horizons,
-        co2_sequestration_potential=snakemake.params["co2_sequestration_potential"],
-    )
-    n = solve_network(
-        n,
-        config=snakemake.config,
-        params=snakemake.params,
-        solving=snakemake.params.solving,
-        log_fn=snakemake.log.solver,
-    )
-
-    n.meta = dict(snakemake.config, **dict(wildcards=dict(snakemake.wildcards)))
-    n.export_to_netcdf(snakemake.output.network_st)
-
-    if solve_opts["overwrite_with_operation"]:
-        n.export_to_netcdf(snakemake.output.network)
-
 
 
 
