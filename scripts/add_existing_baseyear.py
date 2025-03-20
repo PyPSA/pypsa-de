@@ -498,7 +498,7 @@ def add_chp_plants(n, grouping_years, costs, baseyear):
 
     if snakemake.input.get("custom_powerplants"):
         if snakemake.input.custom_powerplants.endswith(
-            f"german_chp_base_s_{snakemake.wildcards.clusters}_l{snakemake.wildcards.ll}_{snakemake.wildcards.opts}_{snakemake.wildcards.sector_opts}_{snakemake.wildcards.planning_horizons}.csv"
+            f"german_chp_base_s_{snakemake.wildcards.clusters}_{snakemake.wildcards.opts}_{snakemake.wildcards.sector_opts}_{snakemake.wildcards.planning_horizons}.csv"
         ):
             logger.info("Supersedeing default German CHPs with custom_powerplants.")
             ppl = ppl.query("~(Set == 'CHP' and Country == 'DE')")

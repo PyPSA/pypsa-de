@@ -286,7 +286,7 @@ if config["sector"]["district_heating"]["add_subnodes"] and config["sector"][
             ),
             fernwaermeatlas="data/fernwaermeatlas/fernwaermeatlas.xlsx",
             cities="data/fernwaermeatlas/cities_geolocations.geojson",
-            lau="data/lau_regions.geojson",
+            lau_regions="data/lau_regions.zip",
             census=storage(
                 "https://www.zensus2022.de/static/Zensus_Veroeffentlichung/Zensus2022_Heizungsart.zip",
                 keep_local=True,
@@ -352,7 +352,7 @@ if config["sector"]["district_heating"]["add_subnodes"] and config["sector"][
             existing_heating_distribution=resources(
                 f"existing_heating_distribution_base_s_{{clusters}}_{baseyear_value}.csv"
             ),
-            lau="data/lau_regions.geojson",
+            lau_regions="data/lau_regions.zip",
         output:
             network=resources(
             "networks/base-extended_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc"

@@ -162,9 +162,9 @@ def add_subnodes(
 
         # Restrict PTES capacity in subnodes if modeled as store
         if stores.carrier.str.contains("pits$").any():
-            stores[stores.carrier.str.contains("pits$").index, "e_nom_max"] = subnode[
-                "ptes_pot_mwh"
-            ]
+            stores.loc[stores.carrier.str.contains("pits$").index, "e_nom_max"] = (
+                subnode["ptes_pot_mwh"]
+            )
         n.add("Store", stores.index, **stores)
 
         # Replicate district heating storage units of mother node for subnodes
@@ -310,7 +310,7 @@ def add_subnodes(
                 )
 
             # Restrict heat source potential in subnodes
-            if heat_source in snakemake.params.heat_utilisation_potentials:
+            if heat_source in snakemake.params.district_heating["limited_heat_sources"]:
                 # get potential
                 p_max_source = pd.read_csv(
                     snakemake.input[heat_source],
@@ -408,8 +408,7 @@ if __name__ == "__main__":
     n = pypsa.Network(snakemake.input.network)
 
     lau = gpd.read_file(
-        # "/home/cpschau/Code/dev/pypsa-ariadne/.snakemake/storage/http/gisco-services.ec.europa.eu/distribution/v2/lau/download/ref-lau-2021-01m.geojson/LAU_RG_01M_2021_3035.geojson",
-        snakemake.input.lau,
+        f"{snakemake.input.lau_regions}!LAU_RG_01M_2019_3035.geojson",
         crs="EPSG:3035",
     ).to_crs("EPSG:4326")
 

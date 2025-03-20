@@ -17,12 +17,10 @@ from atlite.gis import ExclusionContainer
 from atlite.gis import shape_availability
 import sys
 import os
+import zipfile
 import dask
 from dask.diagnostics import ProgressBar
 
-
-path = "dev/pypsa-de"
-sys.path.insert(0, os.path.abspath(path))
 
 from scripts._helpers import (
     configure_logging,
@@ -395,13 +393,13 @@ def refine_dh_areas_from_census_data(
 
 def add_ptes_limit(
     subnodes: gpd.GeoDataFrame,
-    excluder_resolution: int,
     osm_land_cover_path: rasterio.io.DatasetReader,
     natura_path: rasterio.io.DatasetReader,
     groundwater: xr.Dataset,
     codes: list,
     max_groundwater_depth: float,
     ptes_potential_scalar: float,
+    excluder_resolution: int,
 ) -> gpd.GeoDataFrame:
     """
     Add PTES limit to subnodes according to land availability within city regions.
@@ -622,7 +620,7 @@ if __name__ == "__main__":
         "index"
     )
     lau = gpd.read_file(
-        snakemake.input.lau,
+        f"{snakemake.input.lau_regions}!LAU_RG_01M_2019_3035.geojson",
         crs="EPSG:3035",
     ).to_crs("EPSG:4326")
 
@@ -637,6 +635,8 @@ if __name__ == "__main__":
         lambda x: regions_onshore.geometry.contains(x.geometry).idxmax(),
         axis=1,
     )
+    with zipfile.ZipFile(snakemake.input.census, "r") as z:
+        census = load_census_data(z.open("Zensus2022_Heizungsart_100m-Gitter.csv"))
 
     subnodes = prepare_subnodes(
         fernwaermeatlas,
@@ -646,9 +646,6 @@ if __name__ == "__main__":
         heat_techs,
     )
 
-    census = load_census_data(
-        f"{snakemake.input.census}!Zensus2022_Heizungsart_100m-Gitter.csv"
-    )
     subnodes = refine_dh_areas_from_census_data(subnodes, census)
 
     bounds = subnodes.to_crs("EPSG:4326").total_bounds  # (minx, miny, maxx, maxy)

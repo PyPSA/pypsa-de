@@ -3,20 +3,18 @@
 # SPDX-License-Identifier: CC0-1.0
 
 run:
-  prefix: 20250319_osm_refined_areas
+  prefix: 20250320_dhsubnodes
   name:
   - Baseline
-  - No_PTES
-  - LowPTESCAPEX
-  - HighPTESCAPEX
-  - LowStandingLosses
-  - HighStandingLosses
-  - LowGroundWaterDepth
-  - HighGroundWaterDepth
-  - LowEtPRatio
-  - HighEtPRatio
-  # - 8Gt_Elec_v3
-  # - 8Gt_H2_v3
+  # - No_PTES
+  # - LowPTESCAPEX
+  # - HighPTESCAPEX
+  # - LowStandingLosses
+  # - HighStandingLosses
+  # - LowGroundWaterDepth
+  # - HighGroundWaterDepth
+  # - LowEtPRatio
+  # - HighEtPRatio
   scenarios:
     enable: true
     manual_file: config/scenarios.eem.yaml
@@ -67,7 +65,7 @@ scenario:
   
 clustering:
   temporal:
-    resolution_sector: 876H
+    resolution_sector: 365H
 
 adjustments:
     electricity: false

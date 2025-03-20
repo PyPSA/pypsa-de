@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20250313_refined_dh_areas
+  prefix: 20250320_dhsubnodes
   name:
   # - CurrentPolicies
   - KN2045_Bal_v4

@@ -293,7 +293,9 @@ rule build_geothermal_heat_potential:
         ),
     input:
         isi_heat_potentials="data/isi_heat_utilisation_potentials.xlsx",
-        regions_onshore=resources("regions_onshore_base_s_{clusters}.geojson"),
+        regions_onshore=resources("regions_onshore_base-restricted_s_{clusters}.geojson")
+        if config["sector"]["district_heating"].get("add_subnodes", True)
+        else resources("regions_onshore_base_s_{clusters}.geojson"),
         lau_regions="data/lau_regions.zip",
     output:
         heat_source_power=resources(
@@ -336,7 +338,7 @@ rule build_cop_profiles:
         ),
         temp_soil_total=resources("temp_soil_total_base_s_{clusters}.nc"),
         temp_air_total=resources("temp_air_total_base_s_{clusters}.nc"),
-        regions_onshore=resources("regions_onshore_base_s_{clusters}.geojson") if  config["sector"][
+        regions_onshore=resources("regions_onshore_base-extended_s_{clusters}.geojson") if  config["sector"][
     "district_heating"
 ].get("add_subnodes", True) else resources("regions_onshore_base_s_{clusters}.geojson"),
     output:
