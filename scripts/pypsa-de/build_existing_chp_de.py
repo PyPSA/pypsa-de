@@ -232,9 +232,9 @@ def assign_subnode(CHP_de: pd.DataFrame, subnodes: gpd.GeoDataFrame) -> pd.DataF
         CHP_de, geometry=gpd.points_from_xy(CHP_de.lon, CHP_de.lat)
     )
     CHP_de.crs = subnodes.crs
-    # Set LAU shape column as geometry
-    subnodes["geometry"] = gpd.GeoSeries.from_wkt(subnodes["lau_shape"])
-    subnodes.drop("lau_shape", axis=1, inplace=True)
+
+    # Buffer the subnodes to avoid missing assignments
+    subnodes["geometry"] = subnodes.buffer(np.sqrt(subnodes.area) * 0.1)
     subnodes.index.rename("city", inplace=True)
 
     # Assign subnode to CHP plants based on the nuts3 region
@@ -289,7 +289,7 @@ if __name__ == "__main__":
     if snakemake.params.add_district_heating_subnodes:
         subnodes = gpd.read_file(
             snakemake.input.district_heating_subnodes,
-            columns=["Stadt", "lau_shape"],
+            columns=["Stadt", "geometry"],
         ).set_index("Stadt")
         CHP_de = assign_subnode(CHP_de, subnodes)
 
