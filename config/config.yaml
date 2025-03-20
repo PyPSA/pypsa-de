@@ -9,7 +9,7 @@ run:
   name:
   # - KN2045_Bal_v4
   # - KN2045_Bal_v4_24H
-  # - KN2045_Bal_v4_365H
+  - KN2045_Bal_v4_365H
   # - KN2045_Bal_v4_voll
   # - KN2045_Bal_v4_elastic5GW
   # - KN2045_Bal_v4_elasticAll

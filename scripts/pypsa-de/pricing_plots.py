@@ -400,7 +400,8 @@ if __name__ == "__main__":
             opts="",
             ll="vopt",
             sector_opts="None",
-            run="KN2045_Bal_v4_24H",
+            lt_st="lt",
+            run="KN2045_Bal_v4_voll",
         )
     
     # ensure output directory exist
@@ -417,7 +418,6 @@ if __name__ == "__main__":
 
     # Load networks
     networks = [pypsa.Network(fn) for fn in snakemake.input.networks]
-    modelyears = [fn[-7:-3] for fn in snakemake.input.networks]
 
     # save as dict
     n_dict = {}
@@ -629,7 +629,7 @@ if __name__ == "__main__":
     
     # plotting - price duration curves
     # Fraction of time [%]
-    bus = bus = n.buses.query("carrier == 'AC'").index[0]
+    bus = n.buses.query("carrier == 'AC'").index[0]
 
     fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(6, 5))
 
