@@ -694,6 +694,8 @@ plotting:
     H2 retrofit CCGT: '#ff0000'
     H2 OCGT: '#ff0000'
     H2 CCGT: '#ff0000'
+    BioSNG: '#ff0000'
+    BioSNG CC: '#ff0000'
     urban central H2 CHP: '#ff0000'
     renewable gas: '#e05b09'
   countries:
