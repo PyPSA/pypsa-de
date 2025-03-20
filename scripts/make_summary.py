@@ -649,7 +649,12 @@ def calculate_market_values(n, label, market_values):
     ## Now do market value of links ##
 
     for i in ["0", "1"]:
-        all_links = n.links.index[n.buses.loc[n.links["bus" + i], "carrier"] == carrier]
+        # all_links = n.links.index[n.buses.loc[n.links["bus" + i], "carrier"] == carrier]
+        bus_carrier_at_port = n.buses.filter(["bus" + i], axis=0)["carrier"]
+        if any(bus_carrier_at_port):
+            all_links = n.links.index[bus_carrier_at_port == carrier]
+        else:
+            all_links = pd.Series(name="carrier", dtype="object")
 
         techs = n.links.loc[all_links, "carrier"].value_counts().index
 
@@ -754,7 +759,16 @@ if __name__ == "__main__":
     if "snakemake" not in globals():
         from scripts._helpers import mock_snakemake
 
-        snakemake = mock_snakemake("make_summary")
+        snakemake = mock_snakemake(
+            "make_summary",
+            opts="",
+            clusters="61",
+            ll="vopt",
+            sector_opts="none",
+            planning_horizons=2020,
+            run="8Gt_Bal_v3",
+            configfiles="config/config.public.yaml",
+        )
 
     configure_logging(snakemake)
     set_scenario_config(snakemake)
