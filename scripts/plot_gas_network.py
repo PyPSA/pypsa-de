@@ -91,8 +91,12 @@ def plot_ch4_map(n):
     bus_sizes = pd.concat([fossil_gas, methanation, biogas])
     bus_sizes.sort_index(inplace=True)
 
+    bus_sizes = pd.concat([fossil_gas, methanation, biogas])
     non_buses = bus_sizes.index.unique(level=0).difference(n.buses.index)
-    bus_sizes = bus_sizes.drop(non_buses)
+    if any(non_buses):
+        logger.info(f"Dropping non-buses {non_buses.tolist()} for CH4 network plot.")
+        bus_sizes = bus_sizes.drop(non_buses)
+    bus_sizes.sort_index(inplace=True)
 
     to_remove = n.links.index[~n.links.carrier.str.contains("gas pipeline")]
     n.links.drop(to_remove, inplace=True)
@@ -238,11 +242,12 @@ if __name__ == "__main__":
         snakemake = mock_snakemake(
             "plot_gas_network",
             opts="",
-            clusters="22",
+            clusters="61",
             ll="vopt",
             sector_opts="none",
             planning_horizons=2020,
-            run="KN2045_Bal_v4",
+            run="8Gt_Bal_v3",
+            configfiles="config/config.public.yaml",
         )
 
     configure_logging(snakemake)
