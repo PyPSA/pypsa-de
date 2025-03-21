@@ -281,7 +281,7 @@ clustering:
     "SK": 0.0163
     "XK": 0.0163
   temporal:
-    resolution_sector: 365H
+    resolution_sector: 3H
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#co2-budget
 co2_budget:
@@ -390,27 +390,27 @@ sector:
     2045: 0.1
     2050: 0.0
   # additional technologies to be considered in the sector model
-  co2_vent: false
-  allam_cycle_gas: false
-  hydrogen_turbine: false
+  co2_vent: true
+  allam_cycle_gas: true
+  hydrogen_turbine: true
   regional_co2_sequestration_potential:
-    enable: false
+    enable: true
   co2network: true
   methanol:
-    regional_methanol_demand: false
-    methanol_reforming: false
-    methanol_reforming_cc: false
-    methanol_to_kerosene: false
+    regional_methanol_demand: true
+    methanol_reforming: true
+    methanol_reforming_cc: true
+    methanol_to_kerosene: true
     methanol_to_power:
-      ccgt: false
-      ccgt_cc: false
-      ocgt: false
-      allam: false
-    biomass_to_methanol: false
-    biomass_to_methanol_cc: false
-  ammonia: false
-  biomass_transport: false
-  electrobiofuels: false
+      ccgt: true
+      ccgt_cc: true
+      ocgt: true
+      allam: true
+    biomass_to_methanol: true
+    biomass_to_methanol_cc: true
+  ammonia: true
+  biomass_transport: true
+  electrobiofuels: true
   biosng: true
   biosng_cc: true
   bioH2: true
@@ -418,7 +418,7 @@ sector:
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#industry
 industry:
-  ammonia: false
+  ammonia: true
   St_primary_fraction:
     2020: 0.6
     2025: 0.55
