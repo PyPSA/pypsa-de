@@ -8,9 +8,10 @@ run:
 
   name:
   # - KN2045_Bal_v4
-  # - KN2045_Bal_v4_24H
-  - KN2045_Bal_v4_365H
   # - KN2045_Bal_v4_voll
+  - KN2045_Bal_v4_voll_1H 
+  # - KN2045_Bal_v4_24H
+  # - KN2045_Bal_v4_365H
   # - KN2045_Bal_v4_elastic5GW
   # - KN2045_Bal_v4_elasticAll
   # - KN2045_Bal_v4_elasticPWL
@@ -570,27 +571,7 @@ solving:
         2040: 30
         2045: 35
   solver:
-    options: gurobi-default  # gurobi-numeric-focus
-  solver_options:
-    gurobi-default:
-      method: 2
-      crossover: 0
-      BarConvTol: 1.e-6
-      Seed: 123
-      AggFill: 0
-      PreDual: 0
-      seed: 10
-    gurobi-numeric:
-      method: 2
-      crossover: 0
-      BarConvTol: 1.e-8
-      NumericFocus: 1
-      AggFill: 0
-      PreDual: 0
-      ScaleFlag: 2 # let gurobi rescale if constraints have very lorge or very small coefficients
-      # BarHomogeneous: 1     # Use homogeneous barrier if standard does not converge
-
-  
+    options: gurobi-default  # gurobi-numeric-focus  
 
 plotting:
   tech_colors:
