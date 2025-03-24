@@ -66,12 +66,19 @@ def add_subnodes(
     # Add subnodes to network
     for _, subnode in subnodes_head.iterrows():
         name = f'{subnode["cluster"]} {subnode["Stadt"]} urban central'
+        location = f"{subnode['cluster']} {subnode['Stadt']}"
 
         # Add buses
         buses = (
             n.buses.filter(like=f"{subnode['cluster']} urban central", axis=0)
             .reset_index()
-            .replace({f"{subnode['cluster']} urban central": name}, regex=True)
+            .replace(
+                {
+                    f"{subnode['cluster']} urban central": name,
+                    f"{subnode['cluster']}$": location,
+                },
+                regex=True,
+            )
             .set_index("Bus")
         )
         n.add("Bus", buses.index, **buses)
@@ -135,7 +142,7 @@ def add_subnodes(
             bus=f"{name} heat",
             p_set=lti_load,
             carrier="low-temperature heat for industry",
-            location=f"{subnode['cluster']} {subnode['Stadt']}",
+            location=location,
         )
 
         # Adjust loads of cluster buses
