@@ -321,7 +321,12 @@ def calculate_supply(n, label, supply):
         bus_map.at[""] = False
 
         for c in n.iterate_components(n.one_port_components):
-            items = c.df.index[c.df.bus.map(bus_map).fillna(False)]
+            items = c.df.index[
+                c.df.bus.map(bus_map)
+                .astype(bool)
+                .fillna(False)
+                .infer_objects(copy=False)
+            ]
 
             if len(items) == 0:
                 continue
@@ -341,7 +346,13 @@ def calculate_supply(n, label, supply):
 
         for c in n.iterate_components(n.branch_components):
             for end in [col[3:] for col in c.df.columns if col[:3] == "bus"]:
-                items = c.df.index[c.df["bus" + end].map(bus_map).fillna(False)]
+                items = c.df.index[
+                    c.df["bus" + end]
+                    .map(bus_map)
+                    .astype(bool)
+                    .fillna(False)
+                    .infer_objects(copy=False)
+                ]
 
                 if len(items) == 0:
                     continue
@@ -372,7 +383,12 @@ def calculate_supply_energy(n, label, supply_energy):
         bus_map.at[""] = False
 
         for c in n.iterate_components(n.one_port_components):
-            items = c.df.index[c.df.bus.map(bus_map).fillna(False)]
+            items = c.df.index[
+                c.df.bus.map(bus_map)
+                .astype(bool)
+                .fillna(False)
+                .infer_objects(copy=False)
+            ]
 
             if len(items) == 0:
                 continue
@@ -393,7 +409,13 @@ def calculate_supply_energy(n, label, supply_energy):
 
         for c in n.iterate_components(n.branch_components):
             for end in [col[3:] for col in c.df.columns if col[:3] == "bus"]:
-                items = c.df.index[c.df[f"bus{str(end)}"].map(bus_map).fillna(False)]
+                items = c.df.index[
+                    c.df[f"bus{str(end)}"]
+                    .map(bus_map)
+                    .astype(bool)
+                    .fillna(False)
+                    .infer_objects(copy=False)
+                ]
 
                 if len(items) == 0:
                     continue
@@ -427,7 +449,12 @@ def calculate_nodal_supply_energy(n, label, nodal_supply_energy):
         bus_map.at[""] = False
 
         for c in n.iterate_components(n.one_port_components):
-            items = c.df.index[c.df.bus.map(bus_map).fillna(False)]
+            items = c.df.index[
+                c.df.bus.map(bus_map)
+                .astype(bool)
+                .fillna(False)
+                .infer_objects(copy=False)
+            ]
 
             if len(items) == 0:
                 continue
@@ -458,7 +485,13 @@ def calculate_nodal_supply_energy(n, label, nodal_supply_energy):
 
         for c in n.iterate_components(n.branch_components):
             for end in [col[3:] for col in c.df.columns if col[:3] == "bus"]:
-                items = c.df.index[c.df["bus" + str(end)].map(bus_map).fillna(False)]
+                items = c.df.index[
+                    c.df["bus" + str(end)]
+                    .map(bus_map)
+                    .astype(bool)
+                    .fillna(False)
+                    .infer_objects(copy=False)
+                ]
 
                 if (len(items) == 0) or c.pnl["p" + end].empty:
                     continue
@@ -649,7 +682,12 @@ def calculate_market_values(n, label, market_values):
     ## Now do market value of links ##
 
     for i in ["0", "1"]:
-        all_links = n.links.index[n.buses.loc[n.links["bus" + i], "carrier"] == carrier]
+        # all_links = n.links.index[n.buses.loc[n.links["bus" + i], "carrier"] == carrier]
+        bus_carrier_at_port = n.buses.filter(["bus" + i], axis=0)["carrier"]
+        if any(bus_carrier_at_port):
+            all_links = n.links.index[bus_carrier_at_port == carrier]
+        else:
+            all_links = pd.Series(name="carrier", dtype="object")
 
         techs = n.links.loc[all_links, "carrier"].value_counts().index
 
@@ -754,7 +792,16 @@ if __name__ == "__main__":
     if "snakemake" not in globals():
         from scripts._helpers import mock_snakemake
 
-        snakemake = mock_snakemake("make_summary")
+        snakemake = mock_snakemake(
+            "make_summary",
+            opts="",
+            clusters="61",
+            ll="vopt",
+            sector_opts="none",
+            planning_horizons=2020,
+            run="8Gt_Bal_v3",
+            configfiles="config/config.public.yaml",
+        )
 
     configure_logging(snakemake)
     set_scenario_config(snakemake)

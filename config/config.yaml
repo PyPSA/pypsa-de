@@ -5,9 +5,9 @@
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
   prefix: 20250130-morefinalfixes
-  name: testrun
+  name:
   # - CurrentPolicies
-  # - KN2045_Bal_v4
+  - KN2045_Bal_v4
   # - KN2045_Elec_v4
   # - KN2045_H2_v4
   # - KN2045plus_EasyRide
@@ -17,7 +17,7 @@ run:
   # - KN2045_Bal_LowDemand
   # - KN2045_Bal_HighDemand
   scenarios:
-    enable: false
+    enable: true
     manual_file: config/scenarios.manual.yaml
     file: config/scenarios.automated.yaml
   shared_resources:
@@ -64,18 +64,19 @@ scenario:
   - vopt
   clusters:
 #  - adm todo: use administrative clustering
-  - 27 # current options: 27, 49
+  - 61 # current options: 27, 49
   opts:
   - ''
   sector_opts:
   - none
   planning_horizons:
   - 2020
-  - 2025
+#  - 2025
   - 2030
-  - 2035
+#  - 2035
   - 2040
   - 2045
+#  - 2050  # Throws Key Error when adding constraints
 
 existing_capacities:
   grouping_years_power: [1920, 1950, 1955, 1960, 1965, 1970, 1975, 1980, 1985, 1990, 1995, 2000, 2005, 2010, 2015, 2020]
@@ -84,8 +85,8 @@ existing_capacities:
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#countries
 # Germany plus 12 "Stromnachbarn"
-countries: ['AT', 'BE', 'CH', 'CZ', 'DE', 'DK', 'FR', 'GB', 'LU', 'NL', 'NO', 'PL', 'SE', 'ES', 'IT']
-#countries: ['AL', 'AT', 'BA', 'BE', 'BG', 'CH', 'CZ', 'DE', 'DK', 'EE', 'ES', 'FI', 'FR', 'GB', 'GR', 'HR', 'HU', 'IE', 'IT', 'LT', 'LU', 'LV', 'ME', 'MK', 'NL', 'NO', 'PL', 'PT', 'RO', 'RS', 'SE', 'SI', 'SK', 'XK']
+# countries: ['AT', 'BE', 'CH', 'CZ', 'DE', 'DK', 'FR', 'GB', 'LU', 'NL', 'NO', 'PL', 'SE', 'ES', 'IT']
+countries: ['AL', 'AT', 'BA', 'BE', 'BG', 'CH', 'CZ', 'DE', 'DK', 'EE', 'ES', 'FI', 'FR', 'GB', 'GR', 'HR', 'HU', 'IE', 'IT', 'LT', 'LU', 'LV', 'ME', 'MK', 'NL', 'NO', 'PL', 'PT', 'RO', 'RS', 'SE', 'SI', 'SK', 'XK']
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#snapshots
 snapshots:
@@ -98,10 +99,10 @@ atlite:
   cutouts:
     europe-2019-sarah3-era5:
       module: [sarah, era5] # in priority order
-      x: [-12., 42.]
-      y: [33., 72]
-      dx: 0.3
-      dy: 0.3
+#      x: [-12., 42.]
+#      y: [33., 72]
+#      dx: 0.3
+#      dy: 0.3
       time: ['2019', '2019']
 
 
@@ -211,40 +212,76 @@ clustering:
 #      DE: 1 # + 15 regions
   focus_weights:
   # 27 nodes: 8 for Germany, 3 for Italy, 2 each for Denmark, UK and Spain, 1 per each of other 10 "Stromnachbarn"
-    'DE': 0.2966
-    'AT': 0.0370
-    'BE': 0.0370
-    'CH': 0.0370
-    'CZ': 0.0370
-    'DK': 0.0741
-    'FR': 0.0370
-    'GB': 0.0741
-    'LU': 0.0370
-    'NL': 0.0370
-    'NO': 0.0370
-    'PL': 0.0370
-    'SE': 0.0370
-    'ES': 0.0741
-    'IT': 0.1111
+  #  'DE': 0.2966
+  #  'AT': 0.0370
+  #  'BE': 0.0370
+  #  'CH': 0.0370
+  #  'CZ': 0.0370
+  #  'DK': 0.0741
+  #  'FR': 0.0370
+  #  'GB': 0.0741
+  #  'LU': 0.0370
+  #  'NL': 0.0370
+  #  'NO': 0.0370
+  #  'PL': 0.0370
+  #  'SE': 0.0370
+  #  'ES': 0.0741
+  #  'IT': 0.1111
   # high spatial resolution: change clusters to 49
   # 49 nodes: 30 for Germany, 3 for Italy, 2 each for Denmark, UK and Spain, 1 per each of other 10 "Stromnachbarn"
-    # 'DE': 0.6124
-    # 'AT': 0.0204
-    # 'BE': 0.0204
-    # 'CH': 0.0204
-    # 'CZ': 0.0204
-    # 'DK': 0.0408
-    # 'FR': 0.0204
-    # 'GB': 0.0408
-    # 'LU': 0.0204
-    # 'NL': 0.0204
-    # 'NO': 0.0204
-    # 'PL': 0.0204
-    # 'SE': 0.0204
-    # 'ES': 0.0408
-    # 'IT': 0.0612
+#     'DE': 0.6124
+#     'AT': 0.0204
+#     'BE': 0.0204
+#     'CH': 0.0204
+#     'CZ': 0.0204
+#     'DK': 0.0408
+#     'FR': 0.0204
+#     'GB': 0.0408
+#     'LU': 0.0204
+#     'NL': 0.0204
+#     'NO': 0.0204
+#     'PL': 0.0204
+#     'SE': 0.0204
+#     'ES': 0.0408
+#     'IT': 0.0612
+    # all european countries, DE has 16 nodes, AT has 10, IT has 3, Dk has 2, rest has 1
+    # code snippet in .marimo/build_cluster_focus_weights.py
+    "AL": 0.0163
+    "AT": 0.167
+    "BA": 0.0163
+    "BE": 0.0163
+    "BG": 0.0163
+    "CH": 0.0163
+    "CZ": 0.0163
+    "DE": 0.2622
+    "DK": 0.0327
+    "EE": 0.0163
+    "ES": 0.0163
+    "FI": 0.0163
+    "FR": 0.0163
+    "GB": 0.0163
+    "GR": 0.0163
+    "HR": 0.0163
+    "HU": 0.0163
+    "IE": 0.0163
+    "IT": 0.0491
+    "LT": 0.0163
+    "LU": 0.0163
+    "LV": 0.0163
+    "ME": 0.0163
+    "MK": 0.0163
+    "NL": 0.0163
+    "NO": 0.0163
+    "PL": 0.0163
+    "PT": 0.0163
+    "RO": 0.0163
+    "RS": 0.0163
+    "SE": 0.0163
+    "SI": 0.0163
+    "SK": 0.0163
+    "XK": 0.0163
   temporal:
-    resolution_sector: 24H
+    resolution_sector: 365H
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#co2-budget
 co2_budget:
@@ -290,8 +327,8 @@ costs:
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#sector
 sector:
-  v2g: false
-  solar_thermal: false
+  v2g: true
+  solar_thermal: true
   district_heating:
     potential: 0.3
     progress:
@@ -311,7 +348,7 @@ sector:
   regional_methanol_demand: true  #set to true if regional CO2 constraints needed
   regional_oil_demand: true  #set to true if regional CO2 constraints needed
   regional_coal_demand: true  #set to true if regional CO2 constraints needed
-  gas_network: false
+  gas_network: true
   regional_gas_demand: true
   H2_retrofit: true
   biogas_upgrading_cc: true
@@ -352,6 +389,32 @@ sector:
     2040: 0.25
     2045: 0.1
     2050: 0.0
+  # additional technologies to be considered in the sector model
+  co2_vent: true
+  allam_cycle_gas: true
+  hydrogen_turbine: true
+  regional_co2_sequestration_potential:
+    enable: true
+  co2network: true
+  methanol:
+    regional_methanol_demand: false
+    methanol_reforming: false
+    methanol_reforming_cc: false
+    methanol_to_kerosene: false
+    methanol_to_power:
+      ccgt: false
+      ccgt_cc: false
+      ocgt: false
+      allam: false
+    biomass_to_methanol: false
+    biomass_to_methanol_cc: false
+  ammonia: true
+  biomass_transport: true
+  electrobiofuels: true
+  biosng: true
+  biosng_cc: true
+  bioH2: true
+  municipal_solid_waste: false
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#industry
 industry:
@@ -415,11 +478,11 @@ industry:
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#solving
 solving:
-  runtime: 12h
+  runtime: 24h
   mem_mb: 400000 #30000 is OK for 22 nodes, 365H; 140000 for 22 nodes 3H; 400000 for 44 nodes 3H
   model_kwargs:
     solver_dir: "/mnt/storage/tmp"
-  keep_files: false
+  keep_files: true
   options:
     assign_all_duals: true
     load_shedding: false
@@ -605,21 +668,29 @@ solving:
         2035: 25
         2040: 30
         2045: 35
+    # currently only DE is supported in additional_functionality.py
+#    co2_budget_national:
+#      2040:
+#        AT: 0
+#      2045:
+#        AT: 0
+#      2050:
+#        AT: 0
   solver:
     name: xpress
     options: xpress-default
   solver_options:
     xpress-default:
-      THREADS: 16
-      CROSSOVER: 0  # no crossover
-      FEASTOL: 0.00001
-#      HEURTHREADS: -1  # chose, defaults to 0
+      THREADS: 8
       LPFLAGS: 4  # barrier method
-  # solver_options:
-  #   gurobi-default:
-  #     NumericFocus: 1
-  #     FeasibilityTol: 1.e-4
-  #     BarHomogeneous: 1
+      CROSSOVER: 0  # no crossover
+      BARALG: 2  # as suggested by support
+      # scale objective and RHS to gain speed at the cost of accuracy
+#      BAROBJSCALE: 1
+#      BARRHSSCALE: 1
+      # larger tolerances will gain speed at the cost of stability
+#      FEASTOL: 0.0001
+#      MIPTOL: 0.0005
 
 plotting:
   tech_colors:
@@ -631,8 +702,11 @@ plotting:
     H2 retrofit CCGT: '#ff0000'
     H2 OCGT: '#ff0000'
     H2 CCGT: '#ff0000'
+    BioSNG: '#ff0000'
+    BioSNG CC: '#ff0000'
     urban central H2 CHP: '#ff0000'
     renewable gas: '#e05b09'
+    allam gas: '#e05b09'
   countries:
   - all
   - DE
