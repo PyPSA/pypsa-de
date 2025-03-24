@@ -1,28 +1,9 @@
 # -*- coding: utf-8 -*-
-# SPDX-FileCopyrightText: : 2020-2024 The PyPSA-Eur Authors
+# SPDX-FileCopyrightText: Contributors to PyPSA-Eur <https://github.com/pypsa/pypsa-eur>
 #
 # SPDX-License-Identifier: MIT
 """
 Build best case specific energy consumption by carrier and category.
-
-Relevant Settings
------------------
-
-.. code:: yaml
-
-    industry:
-        ammonia:
-..
-
-Inputs
--------
-- ``resources/ammonia_production.csv``
-- ``data/bundle-sector/jrc-idees-2021``
-
-Outputs
--------
-
-- ``resources/industry_sector_ratios.csv``
 
 Description
 -------
@@ -53,9 +34,10 @@ import logging
 import country_converter as coco
 import pandas as pd
 
-from scripts._helpers import mute_print, set_scenario_config
+from scripts._helpers import configure_logging, mute_print, set_scenario_config
 
 logger = logging.getLogger(__name__)
+
 cc = coco.CountryConverter()
 
 # GWh/ktoe OR MWh/toe
@@ -1464,9 +1446,8 @@ def textiles_and_leather():
     df.loc["heat", sector] += s_fec["Low-enthalpy heat"]
 
     # Efficiency changes due to electrification
-    key = "Textiles: Electric drying"
     # in new JRC data zero assume old data
-    # eff_elec = s_ued[key] / s_fec[key]
+
     eff_elec = 73.7 / 146.6
     df.loc["elec", sector] += s_ued["Textiles: Drying"] / eff_elec
 
@@ -1649,6 +1630,7 @@ if __name__ == "__main__":
         from scripts._helpers import mock_snakemake
 
         snakemake = mock_snakemake("build_industry_sector_ratios")
+    configure_logging(snakemake)
     set_scenario_config(snakemake)
 
     params = snakemake.params.industry

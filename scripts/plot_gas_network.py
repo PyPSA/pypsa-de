@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# SPDX-FileCopyrightText: : 2020-2024 The PyPSA-Eur Authors
+# SPDX-FileCopyrightText: Contributors to PyPSA-Eur <https://github.com/pypsa/pypsa-eur>
 #
 # SPDX-License-Identifier: MIT
 """
@@ -15,12 +15,13 @@ import pandas as pd
 import pypsa
 from pypsa.plot import add_legend_circles, add_legend_lines, add_legend_patches
 
-from scripts._helpers import configure_logging, set_scenario_config
+from scripts._helpers import configure_logging, retry, set_scenario_config
 from scripts.plot_power_network import assign_location, load_projection
 
 logger = logging.getLogger(__name__)
 
 
+@retry
 def plot_ch4_map(n):
     # if "gas pipeline" not in n.links.carrier.unique():
     #     return
@@ -89,13 +90,6 @@ def plot_ch4_map(n):
     biogas.index = pd.MultiIndex.from_product([biogas.index, ["biogas"]])
 
     bus_sizes = pd.concat([fossil_gas, methanation, biogas])
-    bus_sizes.sort_index(inplace=True)
-
-    bus_sizes = pd.concat([fossil_gas, methanation, biogas])
-    non_buses = bus_sizes.index.unique(level=0).difference(n.buses.index)
-    if any(non_buses):
-        logger.info(f"Dropping non-buses {non_buses.tolist()} for CH4 network plot.")
-        bus_sizes = bus_sizes.drop(non_buses)
     bus_sizes.sort_index(inplace=True)
 
     to_remove = n.links.index[~n.links.carrier.str.contains("gas pipeline")]
@@ -233,6 +227,7 @@ def plot_ch4_map(n):
     )
 
     fig.savefig(snakemake.output.map, bbox_inches="tight")
+    plt.close(fig)
 
 
 if __name__ == "__main__":
@@ -242,12 +237,11 @@ if __name__ == "__main__":
         snakemake = mock_snakemake(
             "plot_gas_network",
             opts="",
-            clusters="61",
+            clusters="22",
             ll="vopt",
             sector_opts="none",
             planning_horizons=2020,
-            run="8Gt_Bal_v3",
-            configfiles="config/config.public.yaml",
+            run="KN2045_Bal_v4",
         )
 
     configure_logging(snakemake)

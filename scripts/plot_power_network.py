@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# SPDX-FileCopyrightText: : 2020-2024 The PyPSA-Eur Authors
+# SPDX-FileCopyrightText: Contributors to PyPSA-Eur <https://github.com/pypsa/pypsa-eur>
 #
 # SPDX-License-Identifier: MIT
 """
@@ -16,8 +16,8 @@ import pandas as pd
 import pypsa
 from pypsa.plot import add_legend_circles, add_legend_lines, add_legend_patches
 
-from scripts._helpers import configure_logging, set_scenario_config
-from scripts.plot_summary import preferred_order, rename_techs
+from scripts._helpers import configure_logging, rename_techs, retry, set_scenario_config
+from scripts.plot_summary import preferred_order
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +55,8 @@ def assign_location(n):
                 continue
             names = ifind.index[ifind == i]
             c.df.loc[names, "location"] = names.str[:i]
+        if "location" not in c.df.columns:
+            c.df["location"] = None
 
 
 def load_projection(plotting_params):
@@ -63,6 +65,7 @@ def load_projection(plotting_params):
     return proj_func(**proj_kwargs)
 
 
+@retry
 def plot_map(
     n,
     components=["links", "stores", "storage_units", "generators"],
@@ -147,7 +150,7 @@ def plot_map(
 
     title = "added grid"
 
-    if snakemake.wildcards["ll"] == "v1.0":
+    if snakemake.params.transmission_limit == "lv1.0":
         # should be zero
         line_widths = n.lines.s_nom_opt - n.lines.s_nom
         link_widths = n.links.p_nom_opt - n.links.p_nom
@@ -242,6 +245,7 @@ def plot_map(
         )
 
     fig.savefig(snakemake.output.map, bbox_inches="tight")
+    plt.close(fig)
 
 
 if __name__ == "__main__":

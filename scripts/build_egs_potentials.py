@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# SPDX-FileCopyrightText: : 2023 @LukasFranken, The PyPSA-Eur Authors
+# SPDX-FileCopyrightText: Contributors to PyPSA-Eur <https://github.com/pypsa/pypsa-eur>
 #
 # SPDX-License-Identifier: MIT
 """
@@ -16,17 +16,17 @@ a heat potential (in GWh) and a cost (in EUR/MW).
 This scripts overlays that map with the network's regions, and builds a csv with CAPEX, OPEX and p_nom_max
 """
 
-import logging
-
-logger = logging.getLogger(__name__)
-
 import json
+import logging
 
 import geopandas as gpd
 import numpy as np
 import pandas as pd
 import xarray as xr
+from _helpers import configure_logging, set_scenario_config
 from shapely.geometry import Polygon
+
+logger = logging.getLogger(__name__)
 
 
 def prepare_egs_data(egs_file):
@@ -110,7 +110,7 @@ def prepare_capex(prepared_data):
         year_data = prepared_data[year].groupby("geometry").mean().reset_index()
 
         for g in year_data.geometry:
-            if not g in year_data.geometry.tolist():
+            if g not in year_data.geometry.tolist():
                 # weird but apparently necessary
                 continue
 
@@ -200,6 +200,9 @@ if __name__ == "__main__":
             "build_egs_potentials",
             clusters=37,
         )
+
+    configure_logging(snakemake)
+    set_scenario_config(snakemake)
 
     egs_config = snakemake.params["sector"]["enhanced_geothermal"]
     costs_config = snakemake.params["costs"]

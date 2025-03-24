@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: : 2022 The PyPSA-Eur Authors
+# SPDX-FileCopyrightText: Contributors to PyPSA-Eur <https://github.com/pypsa/pypsa-eur>
 #
 # SPDX-License-Identifier: CC0-1.0
 
@@ -8,6 +8,9 @@
 
 # Custom commits
 9865a970893d9e515786f33c629b14f71645bf1e
+6a974d0bba5f6d45957f0196b77fd49dbbbbf777
+151dc73b40dfbe78ba08d5698b39b1cf2e5a5ff5
+
 # DE model specific
 ca1f43c23f1c0936cb9f9e1062854fdf0060c409
 

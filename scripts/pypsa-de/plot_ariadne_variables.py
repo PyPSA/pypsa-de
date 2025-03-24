@@ -543,11 +543,8 @@ def ariadne_subplot(
 
     # Check that all values have the same Unit
     if not unit:
-        try:
-            unit = df.columns.get_level_values("Unit").unique().dropna().item()
-        except ValueError:
-            print("Workaround for Error due to multiple units applied.")
-            unit = df.columns.get_level_values("Unit").unique()[0]
+        unit = df.columns.get_level_values("Unit").unique().dropna().item()
+
     df.columns = df.columns.droplevel("Unit")
 
     # Simplify variable names
@@ -564,9 +561,6 @@ def ariadne_subplot(
         ax.plot([], [])
         ax.set_title("Ooops! Empty DataFrame")
         return ax
-
-    # todo: remove workaround due to negative hydrogen
-    df = df.clip(lower=0)
 
     return df.plot.area(ax=ax, title=title, legend=False, stacked=stacked, ylabel=unit)
 
@@ -884,20 +878,12 @@ if __name__ == "__main__":
         drop_regex=r"^(?!.*(Fossil|Renewables|Losses|Price|Volume)).+",
     )
 
-    if (
-        "2020" in df
-        and df.loc["Final Energy|Industry excl Non-Energy Use|Hydrogen", "2020"].item()
-        < 0
-    ):
+    if df.loc["Final Energy|Industry excl Non-Energy Use|Hydrogen", "2020"].item() < 0:
         val = df.loc["Final Energy|Industry excl Non-Energy Use|Hydrogen", "2020"]
         df.loc["Final Energy|Industry excl Non-Energy Use|Hydrogen", "2020"] = 0
         df.loc["Final Energy|Hydrogen", "2020"] = 0
         print("WARNING! NEGATIVE HYDROGEN DEMAND IN INDUSTRY IN 2020! ", val)
-    if (
-        "2025" in df
-        and df.loc["Final Energy|Industry excl Non-Energy Use|Hydrogen", "2025"].item()
-        < 0
-    ):
+    if df.loc["Final Energy|Industry excl Non-Energy Use|Hydrogen", "2025"].item() < 0:
         val = df.loc["Final Energy|Industry excl Non-Energy Use|Hydrogen", "2025"]
         df.loc["Final Energy|Industry excl Non-Energy Use|Hydrogen", "2025"] = 0
         df.loc["Final Energy|Hydrogen", "2025"] = 0

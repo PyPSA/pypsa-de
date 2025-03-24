@@ -1,25 +1,30 @@
-# PyPSA-AT - Hochaufgelöstes, sektorengekoppeltes Modell des österreichischen Energiesystems
+# PyPSA-DE - Hochaufgelöstes, sektorengekoppeltes Modell des deutschen Energiesystems
+
+PyPSA-DE ist ein sektorengekoppeltes Energiesystem-Modell auf Basis der Toolbox [PyPSA](https://github.com/PyPSA/pypsa) und des europäischen Modells [PyPSA-Eur](https://github.com/PyPSA/pypsa-eur). Der PyPSA-DE Workflow modelliert das deutsche Energiesystem mit deutschlandspezifischen Datensätzen (MaStR, Netzentwicklungsplan,...) im Verbund mit den direkten Stromnachbarn sowie Spanien und Italien. Der Ausbau und der Betrieb von Kraftwerken, des  Strom- und Wasserstoffübertragunsnetzes und die Energieversorgung aller Sektoren werden dann in einem linearen Optimierungsproblem gelöst, mit hoher zeitlicher und räumlicher Auflösung. PyPSA-DE wurde im Rahmen des Kopernikus-Projekts [Ariadne](https://ariadneprojekt.de/) entwickelt in dem Szenarien für ein klimaneutrales Deutschland untersucht werden, und spielt eine zentrale Rolle im [Ariadne Szenarienreport](https://ariadneprojekt.de/publikation/report-szenarien-zur-klimaneutralitat-2045/), als Leitmodell für den [Sektor Energiewirtschaft und Infrastruktur](https://ariadneprojekt.de/publikation/report-szenarien-zur-klimaneutralitat-2045/#6-sektorale-perspektive-energiewirtschaft) und als eines von drei Gesamtsystemmodellen. Die Ergebnisse aus der Modellierung mit PyPSA-DE werden auch im [Ariadne-Webinar zu den Kernaussagen des Berichts](https://youtu.be/UL3KAH7e0zs) ([Folien](https://ariadneprojekt.de/media/2025/03/Ariadne_Szen2025_Webinar_Folien_Kernaussagen.pdf)) und im [Ariadne-Webinar zur Energiewirtschaft](https://youtu.be/FcmHBL1MKQA) ([Folien](https://ariadneprojekt.de/media/2025/03/Ariadne_Szen2025_Webinar_Folien_Energiewirtschaft.pdf)) vorgestellt
+
+# PyPSA-DE - High resolution, sector-coupled model of the German Energy System
+
+PyPSA-DE is a sector-coupled energy system model based on the toolbox [PyPSA](https://github.com/PyPSA/pypsa) and the European model [PyPSA-Eur](https://github.com/PyPSA/pypsa-eur). It solves a linear optimization problem to simulate the electricty and hydrogen transmission networks, as well as supply, demand and storage in all sectors of the energy system in Germany and its neighboring countries, as well as Italy and Spain, with high spatial and temporal resolution. PyPSA-DE was developed in the context of the Kopernikus-Projekt [Ariadne](https://ariadneprojekt.de/en/), which studies scenarios of a carbon-neutral German economcy, and plays a decisive role in the [Ariadne Szenarienreport](https://ariadneprojekt.de/publikation/report-szenarien-zur-klimaneutralitat-2045/), as reference model for the [energy and infrastructure sectors](https://ariadneprojekt.de/publikation/report-szenarien-zur-klimaneutralitat-2045/#6-sektorale-perspektive-energiewirtschaft). The results of modeling with PyPSA-DE are also presented in the [Ariadne-Webinar on the core messages of the report](https://youtu.be/UL3KAH7e0zs) ([slides](https://ariadneprojekt.de/media/2025/03/Ariadne_Szen2025_Webinar_Folien_Kernaussagen.pdf)) and in the [Ariadne-Webinar on the energy sector](https://youtu.be/FcmHBL1MKQA) ([slides](https://ariadneprojekt.de/media/2025/03/Ariadne_Szen2025_Webinar_Folien_Energiewirtschaft.pdf)).
+
+This repository contains the entire scientific project, including data sources and code. The philosophy behind this repository is that no intermediary results are included, but all results are computed from raw data and code.
+
+[<img src="https://github.com/PyPSA/pypsa-de/blob/main/doc/img/INFRA_Stromnetzausbau.png?raw=true" width="400"/>](https://github.com/PyPSA/pypsa-de/blob/main/doc/img/INFRA_Stromnetzausbau.png?raw=true)
 
 ## Getting ready
 
-We prefer using pixi. Run the following command to get ready
+You need `conda` or `mamba` to run the analysis. Using conda, you can create an environment from within which you can run the analysis:
+
 ```
-pixi shell
+conda env create -f envs/{os}-pinned.yaml
 ```
 
-Do not forget to install pre commit hooks locally.
+Where `{os}` should be replaced with your operating system, e.g. for linux the command would be:
+
 ```
-pre-commit install
+conda env create -f envs/linux-pinned.yaml
 ```
 
-## Run the model
-
-Configure the model in ```config.yaml``` and run it
-```
-pixi shell
-snakemake build_scenarios --configfile=config/config.public.yaml -f
-snakemake ariadne_all --configfile config/config.public.yaml
-```
+## Connecting to the Ariadne-Database
 
 ### For external users: Use config.public.yaml
 
@@ -33,6 +38,19 @@ snakemake COMMAND --configfile=config/config.public.yaml
 
 The additional config file specifies the required database, model, and scenario names for Ariadne1. If public users wish to edit the default scenario specifications, they can do so by changing `scenarios.public.yaml` to `scenarios.manual.yaml`. More details on using scenarios are given below.
 
+### For internal users: Provide login details
+
+The snakemake rule `retrieve_ariadne_database` logs into the interal Ariadne IIASA Database via the [`pyam`](https://pyam-iamc.readthedocs.io/en/stable/tutorials/iiasa.html) package. The credentials for logging into this database have to be stored locally on your machine with `ixmp4`. To do this activate the project environment and run
+
+```
+ixmp4 login <username>
+```
+
+You will be prompted to enter your `<password>`.
+
+Caveat: These credentials are stored on your machine in plain text.
+
+To switch between internal and public use, the command `ixmp4 logout` may be necessary.
 
 ## Run the analysis
 
