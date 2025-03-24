@@ -598,7 +598,11 @@ def calculate_market_values(n, label, market_values):
     ## Now do market value of links ##
 
     for i in ["0", "1"]:
-        all_links = n.links.index[n.buses.loc[n.links["bus" + i], "carrier"] == carrier]
+        # todo: remove workaround for missing "EU gas" bus
+        all_links = n.links.index[
+            n.buses.loc[n.links["bus" + i].replace({"EU gas": "DE gas"}), "carrier"]
+            == carrier
+        ]
 
         techs = n.links.loc[all_links, "carrier"].value_counts().index
 
