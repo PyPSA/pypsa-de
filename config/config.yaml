@@ -281,7 +281,7 @@ clustering:
     "SK": 0.0163
     "XK": 0.0163
   temporal:
-    resolution_sector: 365H
+    resolution_sector: 3H
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#co2-budget
 co2_budget:
