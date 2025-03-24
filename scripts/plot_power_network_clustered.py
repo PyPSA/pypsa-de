@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# SPDX-FileCopyrightText: : 2023-2024 PyPSA-Eur Authors
+# SPDX-FileCopyrightText: Contributors to PyPSA-Eur <https://github.com/pypsa/pypsa-eur>
 #
 # SPDX-License-Identifier: MIT
 """
@@ -78,3 +78,4 @@ if __name__ == "__main__":
     )
 
     plt.savefig(snakemake.output.map, bbox_inches="tight")
+    plt.close()

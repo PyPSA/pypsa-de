@@ -7,7 +7,7 @@
 # You can modify the template to your needs and define all possible combinations of config values that should be considered.
 
 if "snakemake" in globals():
-    filename = snakemake.output[0]
+    filename = snakemake.output[0]  # noqa: F821
 else:
     filename = "../config/scenarios.yaml"
 

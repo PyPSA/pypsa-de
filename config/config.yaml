@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20250130-morefinalfixes
+  prefix: 20250319-mergemastermarch
   name:
   # - CurrentPolicies
   - KN2045_Bal_v4
@@ -30,10 +30,6 @@ run:
     - build_industry_sector_ratios   # This is necessary to save build_industry_sector_ratios_data.log in the correct folder
     - modify_existing_heating
   disable_progressbar: true
-  debug_co2_limit: false
-  debug_h2deriv_limit: false
-  debug_unravel_oilbus: false
-  debug_unravel_gasbus: false
 
 iiasa_database:
   db_name: ariadne2_intern
@@ -99,10 +95,10 @@ atlite:
   cutouts:
     europe-2019-sarah3-era5:
       module: [sarah, era5] # in priority order
-#      x: [-12., 42.]
-#      y: [33., 72]
-#      dx: 0.3
-#      dy: 0.3
+      x: [-12., 42.]
+      y: [33., 72]
+      dx: 0.3
+      dy: 0.3
       time: ['2019', '2019']
 
 
@@ -314,7 +310,6 @@ coal_generation_ban:
 
 nuclear_generation_ban:
   DE: 2022
-  AT: 2000
 
 first_technology_occurrence:
   Link:
