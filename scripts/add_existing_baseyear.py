@@ -663,38 +663,6 @@ def add_chp_plants(n, grouping_years, costs, baseyear):
                     )
 
     # CHPs that are not from MaStR
-
-    if options["heat_vent"]["urban central"]:
-        uch_buses = n.buses.index[n.buses.carrier == "urban central heat"]
-        missing_uch_buses = pd.Series(
-            {
-                bus + " urban central heat": bus
-                for bus in set(chp.bus.unique())
-                if bus + " urban central heat" not in uch_buses
-            }
-        )
-        if not missing_uch_buses.empty:
-            logger.info(f"add buses {missing_uch_buses}")
-
-            n.add(
-                "Bus",
-                missing_uch_buses.index,
-                carrier="urban central heat",
-                location=missing_uch_buses,
-            )
-            # Attach heat vent to these buses
-            n.add(
-                "Generator",
-                missing_uch_buses.index,
-                suffix=" vent",
-                bus=missing_uch_buses.index,
-                carrier="urban central heat vent",
-                p_nom_extendable=True,
-                p_max_pu=0,
-                p_min_pu=-1,
-                unit="MWh_th",
-            )
-
     chp_nodal_p_nom = chp.pivot_table(
         index=["grouping_year", "Fueltype"],
         columns="bus",
@@ -719,6 +687,15 @@ def add_chp_plants(n, grouping_years, costs, baseyear):
                 n.links.loc[bus + suffix, "p_nom"] = p_nom.loc[bus]
                 continue
 
+            # CHPs are represented as EOP if no urban central heat bus is available
+            if f"{bus} urban central heat" in n.buses.index:
+                bus2 = bus + " urban central heat"
+            else:
+                logger.warning(
+                    f"Bus {bus} urban central heat not found. CHP is represented as EOP."
+                )
+                bus2 = ""
+
             if generator != "urban central solid biomass CHP":
                 # lignite CHPs are not in DEA database - use coal CHP parameters
                 key = keys[generator]
@@ -732,7 +709,7 @@ def add_chp_plants(n, grouping_years, costs, baseyear):
                     suffix=f" urban central {generator} CHP-{grouping_year}",
                     bus0=bus0,
                     bus1=bus,
-                    bus2=bus + " urban central heat",
+                    bus2=bus2,
                     bus3="co2 atmosphere",
                     carrier=f"urban central {generator} CHP",
                     p_nom=p_nom[bus] / costs.at[key, "efficiency"],
@@ -755,7 +732,7 @@ def add_chp_plants(n, grouping_years, costs, baseyear):
                     suffix=f" urban {key}-{grouping_year}",
                     bus0=spatial.biomass.df.loc[p_nom.index]["nodes"],
                     bus1=bus,
-                    bus2=bus + " urban central heat",
+                    bus2=bus2,
                     carrier=generator,
                     p_nom=p_nom[bus] / costs.at[key, "efficiency"],
                     capital_cost=costs.at[key, "capital_cost"]
