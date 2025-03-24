@@ -213,7 +213,7 @@ def prepare_subnodes(
     heat_techs: gpd.GeoDataFrame,
 ) -> gpd.GeoDataFrame:
     """
-    Prepare subnodes by filtering district heating systems data for largest systems and assigning the corresponding LAU and onshore region shapes.
+    Prepare subnodes by assigning the corresponding LAU and onshore region shapes.
     Parameters
     ----------
     subnodes : pd.DataFrame
