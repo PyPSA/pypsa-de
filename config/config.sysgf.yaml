@@ -17,7 +17,7 @@ run:
   # - HighEtPRatio
   scenarios:
     enable: true
-    manual_file: config/scenarios.eem.yaml
+    manual_file: config/scenarios.sysgf.yaml
     file: config/scenarios.automated.yaml
   shared_resources:
     policy: base #stops recalculating
