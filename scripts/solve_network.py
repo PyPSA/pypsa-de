@@ -1066,10 +1066,10 @@ if __name__ == "__main__":
             "solve_sector_network_myopic",
             configfiles="config/config.public.yaml",
             opts="",
-            clusters="27",
+            clusters="61",
             ll="vopt",
             sector_opts="none",
-            planning_horizons="2020",
+            planning_horizons="2040",
             run="8Gt_Bal_v3",
         )
     configure_logging(snakemake)
