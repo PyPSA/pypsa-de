@@ -42,7 +42,7 @@ rule add_existing_baseyear:
         ),
         heating_efficiencies=resources("heating_efficiencies.csv"),
         custom_powerplants=resources(
-            "german_chp_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.csv"
+            "german_chp_base_s_{clusters}.csv"
         ),
     output:
         resources(
