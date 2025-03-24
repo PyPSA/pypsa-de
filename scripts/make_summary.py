@@ -321,7 +321,12 @@ def calculate_supply(n, label, supply):
         bus_map.at[""] = False
 
         for c in n.iterate_components(n.one_port_components):
-            items = c.df.index[c.df.bus.map(bus_map).fillna(False)]
+            items = c.df.index[
+                c.df.bus.map(bus_map)
+                .astype(bool)
+                .fillna(False)
+                .infer_objects(copy=False)
+            ]
 
             if len(items) == 0:
                 continue
@@ -341,7 +346,13 @@ def calculate_supply(n, label, supply):
 
         for c in n.iterate_components(n.branch_components):
             for end in [col[3:] for col in c.df.columns if col[:3] == "bus"]:
-                items = c.df.index[c.df["bus" + end].map(bus_map).fillna(False)]
+                items = c.df.index[
+                    c.df["bus" + end]
+                    .map(bus_map)
+                    .astype(bool)
+                    .fillna(False)
+                    .infer_objects(copy=False)
+                ]
 
                 if len(items) == 0:
                     continue
@@ -372,7 +383,12 @@ def calculate_supply_energy(n, label, supply_energy):
         bus_map.at[""] = False
 
         for c in n.iterate_components(n.one_port_components):
-            items = c.df.index[c.df.bus.map(bus_map).fillna(False)]
+            items = c.df.index[
+                c.df.bus.map(bus_map)
+                .astype(bool)
+                .fillna(False)
+                .infer_objects(copy=False)
+            ]
 
             if len(items) == 0:
                 continue
@@ -393,7 +409,13 @@ def calculate_supply_energy(n, label, supply_energy):
 
         for c in n.iterate_components(n.branch_components):
             for end in [col[3:] for col in c.df.columns if col[:3] == "bus"]:
-                items = c.df.index[c.df[f"bus{str(end)}"].map(bus_map).fillna(False)]
+                items = c.df.index[
+                    c.df[f"bus{str(end)}"]
+                    .map(bus_map)
+                    .astype(bool)
+                    .fillna(False)
+                    .infer_objects(copy=False)
+                ]
 
                 if len(items) == 0:
                     continue
@@ -427,7 +449,12 @@ def calculate_nodal_supply_energy(n, label, nodal_supply_energy):
         bus_map.at[""] = False
 
         for c in n.iterate_components(n.one_port_components):
-            items = c.df.index[c.df.bus.map(bus_map).fillna(False)]
+            items = c.df.index[
+                c.df.bus.map(bus_map)
+                .astype(bool)
+                .fillna(False)
+                .infer_objects(copy=False)
+            ]
 
             if len(items) == 0:
                 continue
@@ -458,7 +485,13 @@ def calculate_nodal_supply_energy(n, label, nodal_supply_energy):
 
         for c in n.iterate_components(n.branch_components):
             for end in [col[3:] for col in c.df.columns if col[:3] == "bus"]:
-                items = c.df.index[c.df["bus" + str(end)].map(bus_map).fillna(False)]
+                items = c.df.index[
+                    c.df["bus" + str(end)]
+                    .map(bus_map)
+                    .astype(bool)
+                    .fillna(False)
+                    .infer_objects(copy=False)
+                ]
 
                 if (len(items) == 0) or c.pnl["p" + end].empty:
                     continue
