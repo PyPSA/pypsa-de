@@ -165,6 +165,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/hdf4-4.2.15-h2a13503_7.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/hdf5-1.14.3-nompi_h2d575fe_109.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/hicolor-icon-theme-0.17-ha770c72_2.tar.bz2
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/highspy-1.10.0-np20py312h6792212_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/hpack-4.1.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/httpcore-1.0.7-pyh29332c3_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/httptools-0.6.4-py312h66e93f0_0.conda
@@ -403,7 +404,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/pyogrio-0.10.0-py312he8b4914_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pyparsing-3.2.1-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/pyproj-3.7.1-py312he630544_0.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/pypsa-0.31.0-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/pypsa-0.33.2-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/pyscipopt-5.4.1-py312h2ec8cdc_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pyshp-2.3.1-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/pyside6-6.8.2-py312h91f0f75_1.conda
@@ -562,7 +563,6 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstandard-0.23.0-py312h66e93f0_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.7-hb8e6e7a_1.conda
       - pypi: https://files.pythonhosted.org/packages/07/86/9cf33e48356fdf5001dbee4ab3ee04068a2f8c59bd7fffb452531bcb1b34/gurobipy-12.0.1-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
-      - pypi: https://files.pythonhosted.org/packages/1c/92/6c5838e12d65e22230128030987c7aab49a3a85e257de7cfccaa398a2873/highspy-1.7.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/b9/54/dd730b32ea14ea797530a4479b2ed46a6fb250f682a9cfb997e968bf0261/networkx-3.4.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/7e/80/cab10959dc1faead58dc8384a781dfbf93cb4d33d50988f7a69f1b7c9bbe/oauthlib-3.2.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/a3/58/35da89ee790598a0700ea49b2a66594140f44dec458c07e8e3d4979137fc/ply-3.11-py2.py3-none-any.whl
@@ -2780,15 +2780,23 @@ packages:
   purls: []
   size: 13841
   timestamp: 1605162808667
-- pypi: https://files.pythonhosted.org/packages/1c/92/6c5838e12d65e22230128030987c7aab49a3a85e257de7cfccaa398a2873/highspy-1.7.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-  name: highspy
-  version: 1.7.2
-  sha256: 71364d2136b0c31116684af47c63ba8bd2ca6da9320a4fadb69a0f57606bbdf7
-  requires_dist:
+- conda: https://conda.anaconda.org/conda-forge/linux-64/highspy-1.10.0-np20py312h6792212_0.conda
+  sha256: c4572460e2b18dff503919f8b39404e3d9ec69821b837d18e1950a52bb70a7d5
+  md5: 16d5617d7cd23aab5adf625b585ebf52
+  depends:
+  - python
   - numpy
-  - pytest ; extra == 'test'
-  - numpy ; extra == 'test'
-  requires_python: '>=3.8'
+  - __glibc >=2.17,<3.0.a0
+  - libgcc >=13
+  - libstdcxx >=13
+  - libgcc >=13
+  - python_abi 3.12.* *_cp312
+  license: MIT
+  license_family: MIT
+  purls:
+  - pkg:pypi/highspy?source=hash-mapping
+  size: 2075693
+  timestamp: 1742504350423
 - conda: https://conda.anaconda.org/conda-forge/noarch/hpack-4.1.0-pyhd8ed1ab_0.conda
   sha256: 6ad78a180576c706aabeb5b4c8ceb97c0cb25f1e112d76495bff23e3779948ba
   md5: 0a802cb9888dd14eeefc611f05c40b6e
@@ -6334,20 +6342,21 @@ packages:
   - pkg:pypi/pyproj?source=hash-mapping
   size: 553891
   timestamp: 1739711828185
-- conda: https://conda.anaconda.org/conda-forge/noarch/pypsa-0.31.0-pyhd8ed1ab_0.conda
-  sha256: 65a45f071a41d8dc4ea20ab9c41fd7eb61f4b56f7e945784fd7250256e95927b
-  md5: 791ea42f637cd80e972a8986acd7f8c0
+- conda: https://conda.anaconda.org/conda-forge/noarch/pypsa-0.33.2-pyhd8ed1ab_0.conda
+  sha256: 7a723039ecde2e4f77c84eab773124d79683c980f5d25402c59817f857a35b7d
+  md5: ff069830849bf06ab0d73c1cfd9e088c
   depends:
   - deprecation
   - geopandas >=0.9
-  - linopy >=0.3.12
+  - highspy
+  - linopy >=0.4
   - matplotlib-base
   - netcdf4
   - networkx >=2
   - numpy
   - pandas >=0.24
   - pytables
-  - python >=3.9
+  - python >=3.10
   - scipy
   - validators
   - xarray
@@ -6355,8 +6364,8 @@ packages:
   license_family: MIT
   purls:
   - pkg:pypi/pypsa?source=hash-mapping
-  size: 114754
-  timestamp: 1727808614837
+  size: 132120
+  timestamp: 1741789067679
 - conda: https://conda.anaconda.org/conda-forge/linux-64/pyscipopt-5.4.1-py312h2ec8cdc_0.conda
   sha256: 83c9e1f004b68fedbc59c7ebb8086cfe05a4266ec03a11479a84262eecb18540
   md5: 8092cd130dc90ef4c953721a47800141
