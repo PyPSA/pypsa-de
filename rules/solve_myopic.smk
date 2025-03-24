@@ -19,7 +19,7 @@ rule add_existing_baseyear:
             "networks/base-extended_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc"
         ) if config["sector"]["district_heating"].get("add_subnodes", True)
             else resources(
-            "base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc"
+            "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc"
         ),
         powerplants=resources("powerplants_s_{clusters}.csv"),
         busmap_s=resources("busmap_base_s.csv"),
@@ -94,10 +94,10 @@ rule add_brownfield:
         simplify_busmap=resources("busmap_base_s.csv"),
         cluster_busmap=resources("busmap_base_s_{clusters}.csv"),
         network=resources(
-        "prenetworks/base-extended_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc"
+        "networks/base-extended_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc"
         ) if config["sector"]["district_heating"].get("add_subnodes", True)
             else resources(
-                "base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc"
+                "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc"
                 ),
         network_p=solved_previous_horizon,  #solved network at previous time step
         costs=resources("costs_{planning_horizons}.csv"),
