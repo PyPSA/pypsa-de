@@ -13,6 +13,7 @@ import logging
 logger = logging.getLogger(__name__)
 import os
 import sys
+from typing import Union
 
 import geopandas as gpd
 import numpy as np
@@ -212,7 +213,9 @@ def calculate_efficiency(CHP_de):
     return CHP_de
 
 
-def assign_subnode(CHP_de: pd.DataFrame, subnodes: gpd.GeoDataFrame) -> pd.DataFrame:
+def assign_subnode(
+    CHP_de: pd.DataFrame, subnodes: gpd.GeoDataFrame, head: Union[bool, int]
+) -> pd.DataFrame:
     """
     Assign subnodes to the CHP plants based on their location.
     Parameters
@@ -221,6 +224,8 @@ def assign_subnode(CHP_de: pd.DataFrame, subnodes: gpd.GeoDataFrame) -> pd.DataF
         DataFrame containing CHP plant data with latitude and longitude.
     subnodes : gpd.GeoDataFrame
         GeoDataFrame containing subnode data with geometries.
+    head : Union[bool, int]
+        If int, select the largest N subnodes. If True, use all subnodes.
     Returns
     -------
     pd.DataFrame
@@ -231,7 +236,20 @@ def assign_subnode(CHP_de: pd.DataFrame, subnodes: gpd.GeoDataFrame) -> pd.DataF
     CHP_de = gpd.GeoDataFrame(
         CHP_de, geometry=gpd.points_from_xy(CHP_de.lon, CHP_de.lat)
     )
-    CHP_de.crs = subnodes.crs
+    # Set CRS to WGS84
+    CHP_de.crs = 4326
+    # Transform to the same CRS as the subnodes
+    CHP_de = CHP_de.to_crs(subnodes.crs)
+
+    # Select largest subnodes
+    if isinstance(head, bool):
+        subnodes = subnodes.sort_values(
+            by="yearly_heat_demand_MWh", ascending=False
+        ).head(40)
+    else:
+        subnodes = subnodes.sort_values(
+            by="yearly_heat_demand_MWh", ascending=False
+        ).head(head)
 
     # Buffer the subnodes to avoid missing assignments
     subnodes["geometry"] = subnodes.buffer(np.sqrt(subnodes.area) * 0.1)
@@ -289,8 +307,10 @@ if __name__ == "__main__":
     if snakemake.params.add_district_heating_subnodes:
         subnodes = gpd.read_file(
             snakemake.input.district_heating_subnodes,
-            columns=["Stadt", "geometry"],
+            columns=["Stadt", "yearly_heat_demand_MWh", "geometry"],
         ).set_index("Stadt")
-        CHP_de = assign_subnode(CHP_de, subnodes)
+        CHP_de = assign_subnode(
+            CHP_de, subnodes, head=snakemake.params.add_district_heating_subnodes
+        )
 
     CHP_de.to_csv(snakemake.output.german_chp, index=False)

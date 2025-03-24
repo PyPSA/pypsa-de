@@ -522,17 +522,17 @@ rule build_existing_chp_de:
         regions=resources("regions_onshore_base_s_{clusters}.geojson"),
         district_heating_subnodes=(
             resources(
-                "district_heating_subnodes_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.geojson"
+                "district_heating_subnodes_base_s_{clusters}.geojson"
             )
             if config["sector"]["district_heating"].get("add_subnodes", True)
             else []
         ),
     output:
         german_chp=resources(
-            "german_chp_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.csv"
+            "german_chp_base_s_{clusters}.csv"
         ),
     log:
-        logs("build_existing_chp_de_{clusters}_{opts}_{sector_opts}_{planning_horizons}.log"),
+        logs("build_existing_chp_de_{clusters}.log"),
     script:
         "scripts/pypsa-de/build_existing_chp_de.py"
 
