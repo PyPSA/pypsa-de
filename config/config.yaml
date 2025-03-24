@@ -281,7 +281,7 @@ clustering:
     "SK": 0.0163
     "XK": 0.0163
   temporal:
-    resolution_sector: 1H
+    resolution_sector: 365H
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#co2-budget
 co2_budget:
@@ -390,11 +390,11 @@ sector:
     2045: 0.1
     2050: 0.0
   # additional technologies to be considered in the sector model
-  co2_vent: false
-  allam_cycle_gas: false
-  hydrogen_turbine: false
+  co2_vent: true
+  allam_cycle_gas: true
+  hydrogen_turbine: true
   regional_co2_sequestration_potential:
-    enable: false
+    enable: true
   co2network: true
   methanol:
     regional_methanol_demand: false
@@ -408,9 +408,9 @@ sector:
       allam: false
     biomass_to_methanol: false
     biomass_to_methanol_cc: false
-  ammonia: false
-  biomass_transport: false
-  electrobiofuels: false
+  ammonia: true
+  biomass_transport: true
+  electrobiofuels: true
   biosng: true
   biosng_cc: true
   bioH2: true
@@ -478,7 +478,7 @@ industry:
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#solving
 solving:
-  runtime: 12h
+  runtime: 24h
   mem_mb: 400000 #30000 is OK for 22 nodes, 365H; 140000 for 22 nodes 3H; 400000 for 44 nodes 3H
   model_kwargs:
     solver_dir: "/mnt/storage/tmp"
@@ -698,6 +698,7 @@ plotting:
     BioSNG CC: '#ff0000'
     urban central H2 CHP: '#ff0000'
     renewable gas: '#e05b09'
+    allam gas: '#e05b09'
   countries:
   - all
   - DE
