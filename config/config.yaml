@@ -668,6 +668,14 @@ solving:
         2035: 25
         2040: 30
         2045: 35
+    # currently only DE is supported in additional_functionality.py
+#    co2_budget_national:
+#      2040:
+#        AT: 0
+#      2045:
+#        AT: 0
+#      2050:
+#        AT: 0
   solver:
     name: xpress
     options: xpress-default
