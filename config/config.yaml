@@ -59,8 +59,8 @@ scenario:
   ll:
   - vopt
   clusters:
-#  - adm todo: use administrative clustering
-  - 61 # current options: 27, 49
+  - adm
+#  - 61 # current options: 27, 49
   opts:
   - ''
   sector_opts:
@@ -201,12 +201,12 @@ clustering:
   # fw["ES"] = 1
   # print(fw.div(fw.sum()).subtract(5e-5).round(4).to_dict().__repr__().replace(",","\n"))
   # todo: use administrative clustering
-#  mode: administrative
-#    administrative:
-#      level: 0 # countries
-#      AT: 2 # + 8 regions
-#      DE: 1 # + 15 regions
-  focus_weights:
+  mode: administrative
+  administrative:
+    level: 0 # countries
+    AT: 2  # Bundesländer
+    DE: 1  # Bundesländer
+#  focus_weights:
   # 27 nodes: 8 for Germany, 3 for Italy, 2 each for Denmark, UK and Spain, 1 per each of other 10 "Stromnachbarn"
   #  'DE': 0.2966
   #  'AT': 0.0370
@@ -242,40 +242,40 @@ clustering:
 #     'IT': 0.0612
     # all european countries, DE has 16 nodes, AT has 10, IT has 3, Dk has 2, rest has 1
     # code snippet in .marimo/build_cluster_focus_weights.py
-    "AL": 0.0163
-    "AT": 0.167
-    "BA": 0.0163
-    "BE": 0.0163
-    "BG": 0.0163
-    "CH": 0.0163
-    "CZ": 0.0163
-    "DE": 0.2622
-    "DK": 0.0327
-    "EE": 0.0163
-    "ES": 0.0163
-    "FI": 0.0163
-    "FR": 0.0163
-    "GB": 0.0163
-    "GR": 0.0163
-    "HR": 0.0163
-    "HU": 0.0163
-    "IE": 0.0163
-    "IT": 0.0491
-    "LT": 0.0163
-    "LU": 0.0163
-    "LV": 0.0163
-    "ME": 0.0163
-    "MK": 0.0163
-    "NL": 0.0163
-    "NO": 0.0163
-    "PL": 0.0163
-    "PT": 0.0163
-    "RO": 0.0163
-    "RS": 0.0163
-    "SE": 0.0163
-    "SI": 0.0163
-    "SK": 0.0163
-    "XK": 0.0163
+#    "AL": 0.0163
+#    "AT": 0.167
+#    "BA": 0.0163
+#    "BE": 0.0163
+#    "BG": 0.0163
+#    "CH": 0.0163
+#    "CZ": 0.0163
+#    "DE": 0.2622
+#    "DK": 0.0327
+#    "EE": 0.0163
+#    "ES": 0.0163
+#    "FI": 0.0163
+#    "FR": 0.0163
+#    "GB": 0.0163
+#    "GR": 0.0163
+#    "HR": 0.0163
+#    "HU": 0.0163
+#    "IE": 0.0163
+#    "IT": 0.0491
+#    "LT": 0.0163
+#    "LU": 0.0163
+#    "LV": 0.0163
+#    "ME": 0.0163
+#    "MK": 0.0163
+#    "NL": 0.0163
+#    "NO": 0.0163
+#    "PL": 0.0163
+#    "PT": 0.0163
+#    "RO": 0.0163
+#    "RS": 0.0163
+#    "SE": 0.0163
+#    "SI": 0.0163
+#    "SK": 0.0163
+#    "XK": 0.0163
   temporal:
     resolution_sector: 3H
 
