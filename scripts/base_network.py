@@ -1452,7 +1452,6 @@ def build_admin_shapes(
     adm1_countries = ["BA", "MD", "UA", "XK"]
     adm1_countries = list(set(adm1_countries).intersection(n.buses.country.unique()))
 
-    # todo: hack input file to treat east tyrol as separate region
     nuts3_regions = gpd.read_file(nuts3_shapes)
     nuts3_regions = nuts3_regions.set_index(nuts3_regions.columns[0])
 

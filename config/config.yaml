@@ -206,6 +206,10 @@ clustering:
     level: 0 # countries
     AT: 2 # + 8 regions
     DE: 1 # + 15 regions
+    DK: 1 # +1 custom clustering for islands
+    IT: 1 # +2 custom clustering for islands
+    ES: 1 # +1 custom clustering for islands
+    UK: 1 # +1 custom clustering norh
 #  focus_weights:
   # 27 nodes: 8 for Germany, 3 for Italy, 2 each for Denmark, UK and Spain, 1 per each of other 10 "Stromnachbarn"
   #  'DE': 0.2966
@@ -778,3 +782,6 @@ scale_capacity:
     DE:
       CCGT: 10000
       "urban central gas CHP": 22000
+
+custom_administrative_clustering:
+  enable: true
