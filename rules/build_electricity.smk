@@ -82,7 +82,7 @@ rule base_network:
         admin_levels=config_provider("clustering", "administrative"),
     input:
         unpack(input_base_network),
-        nuts3_shapes=resources("nuts3_shapes-modified.geojson"),
+        nuts3_shapes=resources("nuts3_shapes.geojson"),
         country_shapes=resources("country_shapes.geojson"),
         offshore_shapes=resources("offshore_shapes.geojson"),
         europe_shape=resources("europe_shape.geojson"),
