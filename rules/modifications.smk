@@ -1,4 +1,4 @@
-rule modify_nuts3_shapes:
+rule custom_administrative_clustering:
     params:
         clustering=config_provider("clustering", "mode"),
         admin_levels=config_provider("clustering", "administrative"),
@@ -18,8 +18,8 @@ rule modify_nuts3_shapes:
 
 
 if (
-    config["custom_administrative_clustering"].get("enable", False)
-    and config_provider("clustering", "mode") == "administrative"
+    config_provider("custom_administrative_clustering", "enable")
+    # and config_provider("clustering", "mode") == "administrative"
 ):
 
-    ruleorder: modify_nuts3_shapes > base_network
+    ruleorder: custom_administrative_clustering > base_network
