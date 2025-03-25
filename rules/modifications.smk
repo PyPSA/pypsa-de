@@ -1,9 +1,9 @@
-rule custom_administrative_clustering:
+rule modify_nuts3_shapes:
     params:
         clustering=config_provider("clustering", "mode"),
         admin_levels=config_provider("clustering", "administrative"),
     input:
-        nuts3_shapes=resources("nuts3_shapes.geojson"),
+        nuts3_shapes=resources("nuts3_shapes-raw.geojson"),
     output:
         nuts3_shapes=resources("nuts3_shapes.geojson"),
     log:
@@ -15,11 +15,3 @@ rule custom_administrative_clustering:
         "../envs/environment.yaml"
     script:
         "../scripts/pypsa-at/modify_nuts3_shapes.py"
-
-
-if (
-    config_provider("custom_administrative_clustering", "enable")
-    # and config_provider("clustering", "mode") == "administrative"
-):
-
-    ruleorder: custom_administrative_clustering > base_network
