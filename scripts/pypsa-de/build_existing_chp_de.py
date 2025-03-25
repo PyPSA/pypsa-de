@@ -236,6 +236,10 @@ def assign_subnode(
     CHP_de = gpd.GeoDataFrame(
         CHP_de, geometry=gpd.points_from_xy(CHP_de.lon, CHP_de.lat)
     )
+    # Set LAU shape column as geometry
+    subnodes["geometry"] = gpd.GeoSeries.from_wkt(subnodes["lau_shape"])
+    subnodes.drop("lau_shape", axis=1, inplace=True)
+
     # Set CRS to WGS84
     CHP_de.crs = 4326
     # Transform to the same CRS as the subnodes
@@ -251,8 +255,6 @@ def assign_subnode(
             by="yearly_heat_demand_MWh", ascending=False
         ).head(head)
 
-    # Buffer the subnodes to avoid missing assignments
-    subnodes["geometry"] = subnodes.buffer(np.sqrt(subnodes.area) * 0.1)
     subnodes.index.rename("city", inplace=True)
 
     # Assign subnode to CHP plants based on the nuts3 region
@@ -307,7 +309,7 @@ if __name__ == "__main__":
     if snakemake.params.add_district_heating_subnodes:
         subnodes = gpd.read_file(
             snakemake.input.district_heating_subnodes,
-            columns=["Stadt", "yearly_heat_demand_MWh", "geometry"],
+            columns=["Stadt", "yearly_heat_demand_MWh", "lau_shape"],
         ).set_index("Stadt")
         CHP_de = assign_subnode(
             CHP_de, subnodes, head=snakemake.params.add_district_heating_subnodes
