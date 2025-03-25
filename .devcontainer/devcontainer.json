@@ -1,5 +1,5 @@
 {
-    "name": "pypsa-at",
+    "name": "pypsa-at-pw",
     "build": {
       "context": "..",
       "dockerfile": "Dockerfile"
