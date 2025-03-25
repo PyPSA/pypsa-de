@@ -204,8 +204,8 @@ clustering:
   mode: administrative
   administrative:
     level: 0 # countries
-    AT: 2  # Bundesländer
-    DE: 1  # Bundesländer
+    AT: 2 # + 8 regions
+    DE: 1 # + 15 regions
 #  focus_weights:
   # 27 nodes: 8 for Germany, 3 for Italy, 2 each for Denmark, UK and Spain, 1 per each of other 10 "Stromnachbarn"
   #  'DE': 0.2966
@@ -277,7 +277,7 @@ clustering:
 #    "SK": 0.0163
 #    "XK": 0.0163
   temporal:
-    resolution_sector: 3H
+    resolution_sector: 365H
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#co2-budget
 co2_budget:
