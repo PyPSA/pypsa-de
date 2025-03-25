@@ -63,14 +63,11 @@ if __name__ == "__main__":
     configure_logging(snakemake)
 
     logger.info("Applying custom administrative clustering.")
-    assert admin_levels.get("level") == 0
 
     config = snakemake.config
-
-    nuts3_shapes = snakemake.input.nuts3_shapes
     admin_levels = snakemake.params.get("admin_levels")
-
-    nuts3_regions = gpd.read_file(nuts3_shapes).set_index("index")
+    assert admin_levels.get("level") == 0
+    nuts3_regions = gpd.read_file(snakemake.input.nuts3_shapes).set_index("index")
 
     # AT: 10
     assert admin_levels.get("AT") == 2
@@ -102,3 +99,5 @@ if __name__ == "__main__":
     override_nuts("ES", "ES0")
     override_nuts("ES53", "ES1")  # Balearic Islands
     assert_expected_number_of_entries("ES", expected=2)
+
+    nuts3_regions.to_file(snakemake.output.nuts3_shapes)
