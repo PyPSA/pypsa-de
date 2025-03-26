@@ -73,4 +73,4 @@ def view_heat_capacity(
 
     output_path = make_evaluation_result_directories(result_path, subdir)
     metric.export(output_path, view_config["export"])
-    metric.assert_all_technologies_mapped()
+    metric.consistency_checks(view_config["checks"])

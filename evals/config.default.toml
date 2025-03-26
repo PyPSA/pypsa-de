@@ -15,8 +15,8 @@ yearly_balances_almost_zero = false
 
 [view.capacity.heat_capacity.export]
 plotly = true
-excel = true
 csv = true
+excel = false
 
 [view.capacity.heat_capacity.categories]
 "DAC" = "Direct Air Capture"

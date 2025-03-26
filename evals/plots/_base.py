@@ -1,15 +1,16 @@
+# -*- coding: utf-8 -*-
 """Common graph bases and emtpy figures."""
 
 import pathlib
 import typing
 
 import pandas as pd
+from configs import PlotConfig
+from constants import ALIAS_LOCATION_REV, RUN_META_DATA
 from jinja2 import Template
 from plotly import express as px
 from plotly import graph_objects as go
-
-from configs import PlotConfig
-from constants import ALIAS_LOCATION_REV, RUN_META_DATA
+from plotly.offline.offline import get_plotlyjs
 
 
 class ESMChart:
@@ -87,6 +88,11 @@ class ESMChart:
         div = self.fig.to_html(include_plotlyjs="directory", full_html=False)
         with file_path.open("w", encoding="utf-8") as fh:
             fh.write(Template(template_html).render(fig=div, **RUN_META_DATA))
+
+        # need to write the plotly.js too, because to_html does not
+        bundle_path = file_path.parent / "plotly.min.js"
+        if not bundle_path.exists():
+            bundle_path.write_text(get_plotlyjs(), encoding="utf-8")
 
         return file_path
 

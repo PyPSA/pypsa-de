@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Extends the StatisticsAccessor with additional metrics."""
 
 import logging
@@ -5,7 +6,6 @@ from functools import cached_property
 from pathlib import Path
 
 import pandas as pd
-
 from configs import MetricConfig
 from constants import NOW, DataModel, Group
 from fileio import (
@@ -243,13 +243,18 @@ class Metric:
         if export_config["csv"]:
             self.export_csv(output_path)
 
-    def assert_all_technologies_mapped(self) -> None:
+    def consistency_checks(self, config_checks: dict) -> None:
         """Assert all categories are assigned to a group.
 
         The method typically is called after exporting the metric.
         Unmapped categories do not cause evaluations to fail, but
         the evaluation function should return in error state to obviate
         missing entries in the mapping.
+
+        Parameter
+        ---------
+        config_checks
+            A dictionary with flags for every test.
 
         Returns
         -------
@@ -261,14 +266,25 @@ class Metric:
             If not all technologies or bus_carrier are
             assigned to a group.
         """
+        # todo: refactor mapping to categories in a new multiindex level used in plots package
         category = self.cfg.plotly.plot_category
         mapping = self.cfg.mapping
-        assert self.df.index.unique(category).isin(mapping.keys()).all(), (
-            f"Incomplete mapping found. There are technologies in the metric "
-            f"data frame, that are not assigned to a group."
-            f"\nMissing items: "
-            f"{self.df.index.unique(category).difference(mapping.keys())}"
-        )
+
+        if config_checks["all_categories_mapped"]:
+            assert self.df.index.unique(category).isin(mapping.keys()).all(), (
+                f"Incomplete mapping found. There are technologies in the metric "
+                f"data frame, that are not assigned to a group."
+                f"\nMissing items: "
+                f"{self.df.index.unique(category).difference(mapping.keys())}"
+            )
+
+        if config_checks["no_superfluous_categories"]:
+            superfluous_categories = self.df.index.unique(category).difference(
+                mapping.keys()
+            )
+            assert (
+                len(superfluous_categories) == 0
+            ), f"Superfluous categories found: {superfluous_categories}"
 
 
 def _split_trade_saldo_to_netted_import_export(df: pd.DataFrame) -> pd.DataFrame:

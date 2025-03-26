@@ -86,9 +86,8 @@ def run_eval(
         Exits the program with the number of failed evaluations as exit
         code.
     """
-    from fileio import read_networks, read_views_config
-
     import views
+    from fileio import read_networks, read_views_config
 
     eval_functions = [
         getattr(views, fn) for fn in views.__all__ if (not names or fn in names)
@@ -138,7 +137,7 @@ def run_tests() -> None:
 
 if __name__ == "__main__":
     # useful for debugging. Use run_eval command for production.
-    args = ["../results/evals-dev"]  # this is the copied folder in local repo results
+    # args = ["../results/evals-dev"]  # this is the copied folder in local repo results
     # cp -r /mnt/storage/pypsa-at-AT10-365H results/
     args = ["/mnt/storage/pypsa-at-AT10-365H"]  # This is the folder on the file share
     args.extend(["-n", "view_heat_capacity"])
