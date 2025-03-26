@@ -301,8 +301,6 @@ class ESMStatistics(StatisticsAccessor):
     def __init__(self, n: pypsa.Network, result_path: Path) -> None:
         super().__init__(n)
         self.result_path = result_path
-
-        # configure statistics:
         self.set_parameters(nice_names=False)
         groupers.add_grouper("location", get_location)
         groupers.add_grouper(
@@ -311,7 +309,6 @@ class ESMStatistics(StatisticsAccessor):
         groupers.add_grouper(
             "bus1", partial(get_location_from_comp_name_at_bus_port, port="1")
         )
-        # register grouper here once PyPSA >= 0.32
 
     def ac_load_split(self) -> pd.DataFrame:
         """Split energy amounts for electricity Loads.
