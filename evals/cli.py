@@ -83,8 +83,9 @@ def run_eval(
         Exits the program with the number of failed evaluations as exit
         code.
     """
-    import views
     from fileio import read_networks, read_views_config
+
+    import views
 
     eval_functions = [
         getattr(views, fn) for fn in views.__all__ if (not names or fn in names)
