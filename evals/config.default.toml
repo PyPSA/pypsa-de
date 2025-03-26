@@ -1,0 +1,47 @@
+[global]
+subdirectory = "OS/tests"
+
+[view.capacity.heat_capacity]
+
+name = "District Heat Production Capacities"
+unit = "GW"
+file_name  = "capacity_heat_{location}"
+cutoff = 0.0001
+
+[view.capacity.heat_capacity.export]
+plotly = true
+excel = true
+csv = true
+
+[view.capacity.heat_capacity.categories]
+"DAC" = "Direct Air Capture"
+"Fischer-Tropsch" = "Fischer-Tropsch"
+# "Fischer-Tropsch 1" = "Fischer-Tropsch"
+# "Fischer-Tropsch 2" = "Fischer-Tropsch"
+"Haber-Bosch" = "Haber-Bosch (Heat)"
+"H2 Electrolysis" = "Electrolysis (Heat)"
+"H2 Fuel Cell" = "Fuel Cell (Heat)"
+"methanolisation" = "Methanolisation (Heat)"
+"urban central air heat pump" = "Heat Pump"
+"urban central CHP" = "CHP"
+"urban central coal CHP" = "Coal CHP"
+"urban central gas CHP" = "Gas CHP"
+"urban central oil CHP" = "Oil CHP"
+"waste CHP" = "Waste CHP"
+"waste CHP CC" = "Waste CHP"
+
+# "urban central coal CHP CC heat" = "Coal CHP"
+# "urban central coal CHP heat" = "Coal CHP"
+#"urban central CHP" = "CHP"
+#"urban central gas CHP CC heat" = "Gas CHP"
+#"urban central gas CHP heat" = "Gas CHP"
+"urban central gas boiler" = "Gas Boiler"
+"urban central heat vent" = "Heat Vent"
+"urban central lignite CHP" = "Coal CHP"
+#"urban central lignite CHP heat" = "Coal CHP"
+"urban central resistive heater" = "Resistive Heater"
+"urban central solar thermal" = "Solar Thermal"
+"urban central solid biomass CHP" = "Biomass CHP"
+#"urban central solid biomass CHP CC" = "Biomass CHP"
+"urban central water tanks charger" = "Storage In"
+"urban central water tanks discharger" = "Storage Out"
