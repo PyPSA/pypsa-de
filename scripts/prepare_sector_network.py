@@ -21,6 +21,10 @@ from networkx.algorithms.connectivity.edge_augmentation import k_edge_augmentati
 from pypsa.geo import haversine_pts
 from scipy.stats import beta
 
+import sys
+
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+
 from scripts._helpers import (
     configure_logging,
     get,
@@ -2200,7 +2204,7 @@ def add_EVs(
     # temperature corrected efficiency
     efficiency = get_temp_efficency(
         car_efficiency,
-        temperature,
+        temperature[spatial.nodes],
         options["transport_heating_deadband_lower"],
         options["transport_heating_deadband_upper"],
         options["EV_lower_degree_factor"],
@@ -2238,7 +2242,6 @@ def add_EVs(
         lifetime=1,
         efficiency=options["bev_charge_efficiency"],
     )
-
 
     if options["bev_dsm"] and options["bev_dsm"] <= investment_year:
         e_nom = (
@@ -2281,7 +2284,7 @@ def add_fuel_cell_cars(n, p_set, fuel_cell_share, temperature):
     # temperature corrected efficiency
     efficiency = get_temp_efficency(
         car_efficiency,
-        temperature,
+        temperature[spatial.nodes],
         options["transport_heating_deadband_lower"],
         options["transport_heating_deadband_upper"],
         options["ICE_lower_degree_factor"],
@@ -2308,7 +2311,7 @@ def add_ice_cars(n, p_set, ice_share, temperature):
     # temperature corrected efficiency
     efficiency = get_temp_efficency(
         car_efficiency,
-        temperature,
+        temperature[spatial.nodes],
         options["transport_heating_deadband_lower"],
         options["transport_heating_deadband_upper"],
         options["ICE_lower_degree_factor"],
@@ -2640,7 +2643,9 @@ def add_heat(
         # 1e3 converts from W/m^2 to MW/(1000m^2) = kW/m^2
         solar_thermal = options["solar_cf_correction"] * solar_thermal / 1e3
 
-    for heat_system in (
+    for (
+        heat_system
+    ) in (
         HeatSystem
     ):  # this loops through all heat systems defined in _entities.HeatSystem
         overdim_factor = options["overdimension_heat_generators"][
@@ -2852,15 +2857,26 @@ def add_heat(
                 unit="MWh_th",
             )
 
+            energy_to_power_ratio_water_tanks = costs.at[
+                heat_system.central_or_decentral + " water tank storage",
+                "energy to power ratio",
+            ]
+
             n.add(
                 "Link",
                 nodes + f" {heat_system} water tanks charger",
                 bus0=nodes + f" {heat_system} heat",
                 bus1=nodes + f" {heat_system} water tanks",
-                efficiency=costs.at["water tank charger", "efficiency"],
+                efficiency=costs.at[
+                    heat_system.central_or_decentral + " water tank charger",
+                    "efficiency",
+                ],
                 carrier=f"{heat_system} water tanks charger",
                 p_nom_extendable=True,
                 marginal_cost=costs.at["water tank charger", "marginal_cost"],
+                lifetime=costs.at[
+                    heat_system.central_or_decentral + " water tank storage", "lifetime"
+                ],
             )
 
             n.add(
@@ -2869,9 +2885,19 @@ def add_heat(
                 bus0=nodes + f" {heat_system} water tanks",
                 bus1=nodes + f" {heat_system} heat",
                 carrier=f"{heat_system} water tanks discharger",
-                efficiency=costs.at["water tank discharger", "efficiency"],
+                efficiency=costs.at[
+                    heat_system.central_or_decentral + " water tank discharger",
+                    "efficiency",
+                ],
                 p_nom_extendable=True,
+                lifetime=costs.at[
+                    heat_system.central_or_decentral + " water tank storage", "lifetime"
+                ],
             )
+
+            n.links.loc[
+                nodes + f" {heat_system} water tanks charger", "energy to power ratio"
+            ] = energy_to_power_ratio_water_tanks
 
             tes_time_constant_days = options["tes_tau"][
                 heat_system.central_or_decentral
@@ -2889,14 +2915,73 @@ def add_heat(
                     heat_system.central_or_decentral + " water tank storage",
                     "capital_cost",
                 ],
-                overnight_cost=costs.at[
-                    heat_system.central_or_decentral + " water tank storage",
-                    "investment",
-                ],
                 lifetime=costs.at[
                     heat_system.central_or_decentral + " water tank storage", "lifetime"
                 ],
             )
+
+            if heat_system == HeatSystem.URBAN_CENTRAL:
+                n.add("Carrier", f"{heat_system} water pits")
+
+                n.add(
+                    "Bus",
+                    nodes + f" {heat_system} water pits",
+                    location=nodes,
+                    carrier=f"{heat_system} water pits",
+                    unit="MWh_th",
+                )
+
+                energy_to_power_ratio_water_pit = costs.at[
+                    "central water pit storage", "energy to power ratio"
+                ]
+
+                n.add(
+                    "Link",
+                    nodes + f" {heat_system} water pits charger",
+                    bus0=nodes + f" {heat_system} heat",
+                    bus1=nodes + f" {heat_system} water pits",
+                    efficiency=costs.at[
+                        "central water pit charger",
+                        "efficiency",
+                    ],
+                    carrier=f"{heat_system} water pits charger",
+                    p_nom_extendable=True,
+                    lifetime=costs.at["central water pit storage", "lifetime"],
+                    marginal_cost=costs.at[
+                        "central water pit charger", "marginal_cost"
+                    ],
+                )
+
+                n.add(
+                    "Link",
+                    nodes + f" {heat_system} water pits discharger",
+                    bus0=nodes + f" {heat_system} water pits",
+                    bus1=nodes + f" {heat_system} heat",
+                    carrier=f"{heat_system} water pits discharger",
+                    efficiency=costs.at[
+                        "central water pit discharger",
+                        "efficiency",
+                    ],
+                    p_nom_extendable=True,
+                    lifetime=costs.at["central water pit storage", "lifetime"],
+                )
+
+                n.links.loc[
+                    nodes + f" {heat_system} water pits charger",
+                    "energy to power ratio",
+                ] = energy_to_power_ratio_water_pit
+
+                n.add(
+                    "Store",
+                    nodes + f" {heat_system} water pits",
+                    bus=nodes + f" {heat_system} water pits",
+                    e_cyclic=True,
+                    e_nom_extendable=True,
+                    carrier=f"{heat_system} water pits",
+                    standing_loss=1 - np.exp(-1 / 24 / tes_time_constant_days),
+                    capital_cost=costs.at["central water pit storage", "capital_cost"],
+                    lifetime=costs.at["central water pit storage", "lifetime"],
+                )
 
         if options["resistive_heaters"]:
             key = f"{heat_system.central_or_decentral} resistive heater"
@@ -3435,10 +3520,6 @@ def add_biomass(
             marginal_cost=costs.at["biogas", "fuel"],
             e_sum_min=unsustainable_biogas_potentials_spatial,
             e_sum_max=unsustainable_biogas_potentials_spatial,
-        )
-
-        e_max_pu = pd.DataFrame(
-            1, index=n.snapshots, columns=spatial.biomass.nodes_unsustainable
         )
 
         n.add(
@@ -4503,7 +4584,7 @@ def add_industry(
             )
             n.add(
                 "Link",
-                spatial.nodes + " waste CHP",
+                spatial.nodes + " urban central waste CHP",
                 bus0=waste_source,
                 bus1=spatial.nodes,
                 bus2=urban_central_nodes,
@@ -5034,7 +5115,7 @@ def cluster_heat_buses(n):
         return agg
 
     logger.info("Cluster residential and service heat buses.")
-    components = ["Bus", "Carrier", "Generator", "Link", "Load", "Store"]
+    components = ["Bus", "Carrier", "Generator", "Link", "Load", "Store", "StorageUnit"]
 
     for c in n.iterate_components(components):
         df = c.df
@@ -5279,9 +5360,9 @@ def add_enhanced_geothermal(
         * Nyears
     )
 
-    assert (egs_potentials["capital_cost"] > 0).all(), (
-        "Error in EGS cost, negative values found."
-    )
+    assert (
+        egs_potentials["capital_cost"] > 0
+    ).all(), "Error in EGS cost, negative values found."
 
     orc_annuity = calculate_annuity(costs.at["organic rankine cycle", "lifetime"], dr)
     orc_capital_cost = (orc_annuity + FOM / (1 + FOM)) * orc_capex * Nyears
@@ -5432,13 +5513,17 @@ if __name__ == "__main__":
     if "snakemake" not in globals():
         from scripts._helpers import mock_snakemake
 
+        # Change directory to this script
+        os.chdir(os.path.dirname(os.path.realpath(__file__)))
+
         snakemake = mock_snakemake(
             "prepare_sector_network",
             opts="",
-            clusters="38",
+            clusters="27",
             ll="vopt",
-            sector_opts="",
+            sector_opts="none",
             planning_horizons="2030",
+            run="KN2045_Bal_v4",
         )
 
     configure_logging(snakemake)
@@ -5694,10 +5779,6 @@ if __name__ == "__main__":
 
     if options["cluster_heat_buses"] and not first_year_myopic:
         cluster_heat_buses(n)
-
-    maybe_adjust_costs_and_potentials(
-        n, snakemake.params["adjustments"], investment_year
-    )
 
     n.meta = dict(snakemake.config, **dict(wildcards=dict(snakemake.wildcards)))
 

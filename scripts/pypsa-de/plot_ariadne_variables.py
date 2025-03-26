@@ -712,7 +712,6 @@ def elec_val_plot(df, savepath):
         7.86,
         54.36,
     ]  # https://energy-charts.info/charts/installed_power/chart.htm?l=en&c=DE&year=2020
-
     elec_capacities["pypsa"] = [
         0,
         df.loc[("Capacity|Electricity|Hydro", "GW"), "2020"],
