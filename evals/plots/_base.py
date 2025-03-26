@@ -5,12 +5,13 @@ import pathlib
 import typing
 
 import pandas as pd
-from configs import PlotConfig
-from constants import ALIAS_LOCATION_REV, RUN_META_DATA
 from jinja2 import Template
 from plotly import express as px
 from plotly import graph_objects as go
 from plotly.offline.offline import get_plotlyjs
+
+from evals.configs import PlotConfig
+from evals.constants import ALIAS_LOCATION_REV, RUN_META_DATA
 
 
 class ESMChart:

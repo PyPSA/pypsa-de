@@ -14,8 +14,15 @@ from typing import Callable
 import pandas as pd
 import pypsa
 import yaml
-from configs import ExcelConfig, MetricConfig
-from constants import (
+from openpyxl.chart import BarChart, Reference
+from openpyxl.chart.marker import DataPoint
+from openpyxl.worksheet.worksheet import Worksheet
+from pandas import ExcelWriter
+from pydantic.v1.utils import deep_update
+from xlsxwriter.utility import xl_col_to_name, xl_rowcol_to_cell
+
+from evals.configs import ExcelConfig, MetricConfig
+from evals.constants import (
     ALIAS_COUNTRY_REV,
     ALIAS_LOCATION,
     ALIAS_REGION_REV,
@@ -23,19 +30,13 @@ from constants import (
     DataModel,
     Regex,
 )
-from openpyxl.chart import BarChart, Reference
-from openpyxl.chart.marker import DataPoint
-from openpyxl.worksheet.worksheet import Worksheet
-from pandas import ExcelWriter
-from pydantic.v1.utils import deep_update
-from utils import (
+from evals.utils import (
     calculate_cost_annuity,
     filter_by,
     get_mapping,
     insert_index_level,
     rename_aggregate,
 )
-from xlsxwriter.utility import xl_col_to_name, xl_rowcol_to_cell
 
 
 def read_networks(result_path: str | Path, sub_directory: str = "networks") -> dict:

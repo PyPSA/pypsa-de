@@ -1,8 +1,9 @@
+# -*- coding: utf-8 -*-
 """Module to collect configuration items and their default values."""
 
 from dataclasses import dataclass, field
 
-from constants import COLOUR_SCHEME_BMK, DataModel
+from evals.constants import COLOUR_SCHEME_BMK, DataModel
 
 
 @dataclass()

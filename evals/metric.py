@@ -6,14 +6,15 @@ from functools import cached_property
 from pathlib import Path
 
 import pandas as pd
-from configs import MetricConfig
-from constants import NOW, DataModel, Group
-from fileio import (
+
+from evals.configs import MetricConfig
+from evals.constants import NOW, DataModel, Group
+from evals.fileio import (
     export_excel_countries,
     export_excel_regions_at,
     export_vamos_jsons,
 )
-from utils import (
+from evals.utils import (
     add_dummy_rows,
     aggregate_locations,
     get_mapping,
