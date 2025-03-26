@@ -418,11 +418,11 @@ class Regex:
 
     # matches: startswith 2 capital letters, followed by up to 3 digits,
     # 1 space, and any number of digits for optional subnets.
-    region: re.Pattern = re.compile(r"^[A-Z]{2}\d{0,3}\s\d*")
+    region: re.Pattern = re.compile(r"^[A-Z]{2}[\d,A-G]{0,3}\s\d*")
 
     # matches: startswith 2 capital letters, followed by up to 3 digits,
     # groups: only the first 2 letters that are the country code
-    country: re.Pattern = re.compile(r"^([A-Z]{2})\d{0,3}")
+    country: re.Pattern = re.compile(r"^([A-Z]{2})[\d,A-G]{0,3}\s")
 
     # match anything inside parenthesis.
     unit: re.Pattern = re.compile(r"\([^()]*\)")
@@ -1488,39 +1488,36 @@ ALIAS_COUNTRY_REV: frozendict = frozendict({v: k for k, v in ALIAS_COUNTRY.items
 
 ALIAS_REGION: frozendict = frozendict(
     {
-        "AT0 0": "AT - Burgenland",
-        "AT0 1": "AT - Lower Austria",
-        "AT0 2": "AT - Vienna",
-        "AT0 3": "AT - Carinthia",
-        "AT0 4": "AT - Styria",
-        "AT0 5": "AT - Upper Austria",
-        "AT0 6": "AT - Salzburg",
-        "AT0 7": "AT - Vorarlberg",
-        "AT0 8": "AT - East Tyrol",
-        "AT0 9": "AT - Tyrol (excl. East)",
-        "DE0 0": "DE - Bavaria",
-        "DE0 1": "DE - Baden Wurttemberg",
-        "DE0 2": "DE - Midwest",
-        "DE0 3": "DE - Mideast",
-        "DE0 4": "DE - North",
+        "AT11": "Burgenland (AT)",
+        "AT12": "Lower Austria (AT)",
+        "AT13": "Vienna (AT)",
+        "AT21": "Carinthia (AT)",
+        "AT22": "Styria (AT)",
+        "AT31": "Upper Austria (AT)",
+        "AT32": "Salzburg (AT)",
+        "AT33": "Tyrol (AT)",
+        "AT333": "East Tyrol (AT)",
+        "AT34": "Vorarlberg (AT)",
+        # German NUTS1
+        "DE1": "Baden-Württemberg",
+        "DE2": "Bavaria",
+        "DE3": "Berlin",
+        "DE4": "Brandenburg",
+        "DE5": "Bremen",
+        "DE6": "Hamburg",
+        "DE7": "Hesse",
+        "DE8": "Mecklenburg-Western Pomerania",
+        "DE9": "Lower Saxony",
+        "DEA": "North Rhine-Westphalia",
+        "DEB": "Rhineland-Palatinate",
+        "DEC": "Saarland",
+        "DED": "Saxony",
+        "DEE": "Saxony-Anhalt",
+        "DEF": "Schleswig-Holstein",
+        "DEG": "Thuringia",
     }
 )
 ALIAS_REGION_REV: frozendict = frozendict({v: k for k, v in ALIAS_REGION.items()})
-
-ALIAS_REGION_SHORT: frozendict = frozendict(
-    {  # AT\d\d, where first digit is NUTS region, second is ISO 3166 code
-        "AT0 0": "AT11",
-        "AT0 1": "AT13",
-        "AT0 2": "AT19",
-        "AT0 3": "AT22",
-        "AT0 4": "AT26",
-        "AT0 5": "AT34",
-        "AT0 6": "AT35",
-        "AT0 7": "AT38",
-        "AT0 8": "AT37",
-        "AT0 9": "AT37",
-    }
-)
 
 ALIAS_LOCATION: frozendict = ALIAS_COUNTRY | ALIAS_REGION
 ALIAS_LOCATION_REV: frozendict = frozendict({v: k for k, v in ALIAS_LOCATION.items()})
