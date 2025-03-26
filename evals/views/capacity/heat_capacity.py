@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Create a view for optimal heat production capacities.
 
 The view shows one stacked bar per year for different groups of
@@ -30,14 +31,13 @@ def view_heat_capacity(
     -----
     See eval module docstring for parameter description.
     """
-    view_config = config["view"]
-    # todo: test override
-
     heat_capacity = collect_myopic_statistics(
         networks,
         statistic="optimal_capacity",
         bus_carrier=BusCarrier.HEAT_URBAN_CENTRAL,
     ).clip(lower=0)
+
+    view_config = config["view"]
 
     metric = Metric(
         metric_name=view_config["name"],

@@ -8,6 +8,11 @@ unit = "GW"
 file_name  = "capacity_heat_{location}"
 cutoff = 0.0001
 
+[view.capacity.heat_capacity.checks]
+all_categories_mapped = true
+no_superfluous_categories = true
+yearly_balances_almost_zero = false
+
 [view.capacity.heat_capacity.export]
 plotly = true
 excel = true

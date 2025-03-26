@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Input - Output related functions."""  # noqa: A005
 
 import inspect
@@ -13,13 +14,6 @@ from typing import Callable
 import pandas as pd
 import pypsa
 import yaml
-from openpyxl.chart import BarChart, Reference
-from openpyxl.chart.marker import DataPoint
-from openpyxl.worksheet.worksheet import Worksheet
-from pandas import ExcelWriter
-from xlsxwriter.utility import xl_col_to_name, xl_rowcol_to_cell
-from pydantic.v1.utils import deep_update
-
 from configs import ExcelConfig, MetricConfig
 from constants import (
     ALIAS_COUNTRY_REV,
@@ -29,6 +23,11 @@ from constants import (
     DataModel,
     Regex,
 )
+from openpyxl.chart import BarChart, Reference
+from openpyxl.chart.marker import DataPoint
+from openpyxl.worksheet.worksheet import Worksheet
+from pandas import ExcelWriter
+from pydantic.v1.utils import deep_update
 from utils import (
     calculate_cost_annuity,
     filter_by,
@@ -36,11 +35,10 @@ from utils import (
     insert_index_level,
     rename_aggregate,
 )
+from xlsxwriter.utility import xl_col_to_name, xl_rowcol_to_cell
 
 
-def read_networks(
-    result_path: str | Path, sub_directory: str = "networks"
-) -> dict:
+def read_networks(result_path: str | Path, sub_directory: str = "networks") -> dict:
     """Read postnetwork results from NetCDF (.nc) files.
 
     The function returns a dictionary of data frames. The planning
@@ -87,30 +85,34 @@ def read_networks(
     return networks
 
 
-def read_model_config(result_path: str | Path, sub_directory: str = "configs") -> dict:
-    """Read the run configuration from a YAML file.
+#
+# def read_model_config(result_path: str | Path, sub_directory: str = "configs") -> dict:
+#     """Read the run configuration from a YAML file.
+#
+#     Parameters
+#     ----------
+#     result_path
+#         Absolute or relative path to the run results folder that
+#         contains all model results (typically ends with "results",
+#         or is a time-stamp).
+#     sub_directory : optional
+#         The subdirectory name to read files from relative to the
+#         result folder.
+#
+#     Returns
+#     -------
+#     :
+#         The configuration items in a dictionary.
+#     """
+#     file_path = Path(result_path) / sub_directory / "config_customize.yaml"
+#     with file_path.open("r", encoding="utf-8") as config:
+#         return yaml.safe_load(config)
+#
 
-    Parameters
-    ----------
-    result_path
-        Absolute or relative path to the run results folder that
-        contains all model results (typically ends with "results",
-        or is a time-stamp).
-    sub_directory : optional
-        The subdirectory name to read files from relative to the
-        result folder.
 
-    Returns
-    -------
-    :
-        The configuration items in a dictionary.
-    """
-    file_path = Path(result_path) / sub_directory / "config_customize.yaml"
-    with file_path.open("r", encoding="utf-8") as config:
-        return yaml.safe_load(config)
-
-
-def read_views_config(func: Callable, config_override: str = "config.override.toml") -> dict:
+def read_views_config(
+    func: Callable, config_override: str = "config.override.toml"
+) -> dict:
     """Return the configuration for a view function.
 
     The function reads the default configuration from the

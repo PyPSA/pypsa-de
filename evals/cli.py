@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Command Line Interface to run evaluations.
 
 Commands may be run from anywhere as long as the virtual environment is
@@ -46,9 +47,11 @@ logger = logging.getLogger(__name__)
     default="networks",
 )
 @click.option("--names", "-n", multiple=True, required=False, default=[])
-@click.option("--config", "-c", type=str, multiple=False, required=False, default="")
+@click.option(
+    "--config_override", "-c", type=str, multiple=False, required=False, default=""
+)
 def run_eval(
-    result_path: click.Path, sub_directory: str, names: list, config: str
+    result_path: click.Path, sub_directory: str, names: list, config_override: str
 ) -> None:
     r"""Execute evaluation functions from the evals module.
 
@@ -72,7 +75,7 @@ def run_eval(
         A list of evaluation name, e.g. "eval_electricity_amounts",
         optional. Defaults to running all evaluations from
         evals.__all__.
-    config
+    config_override
         A path to a config.toml file with the same section as
         the config.defaults.toml used to override configurations
         used by view functions.
@@ -104,7 +107,7 @@ def run_eval(
         logger.info(f"({i}/{n_evals}) Start {func.__name__}...")
         eval_start = time()
         try:
-            cfg = read_views_config(func, config)
+            cfg = read_views_config(func, config_override)
             func(result_path=result_path, networks=networks, config=cfg)
         except Exception:  # noqa
             logger.exception(f"Exception during {func.__name__}.", exc_info=True)
@@ -139,4 +142,6 @@ if __name__ == "__main__":
     # cp -r /mnt/storage/pypsa-at-AT10-365H results/
     args = ["/mnt/storage/pypsa-at-AT10-365H"]  # This is the folder on the file share
     args.extend(["-n", "view_heat_capacity"])
+
+    args.extend(["-c", "config.override.toml"])
     run_eval(args)

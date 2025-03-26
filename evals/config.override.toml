@@ -2,5 +2,8 @@
 subdirectory = "esm/data"
 
 [view.capacity.heat_capacity]
+name = "override"
 file_name  = "heatKapas_{location}"
-title = "override"
+
+[view.capacity.heat_capacity.categories]
+"DAC" = "testing override"
