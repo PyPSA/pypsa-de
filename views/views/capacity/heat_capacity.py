@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Create a view for optimal heat production capacities.
 
 The view shows one stacked bar per year for different groups of
@@ -102,4 +103,4 @@ def view_heat_capacity(
     output_path = make_evaluation_result_directories(result_path, subdir)
     # metric.export(output_path, config)
     metric.export_plotly(output_path)
-    metric.assert_all_technologies_mapped()
+    metric.assertion_checks(view_config["checks"])

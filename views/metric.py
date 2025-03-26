@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Extends the StatisticsAccessor with additional metrics."""
 
 import logging
@@ -5,7 +6,6 @@ from functools import cached_property
 from pathlib import Path
 
 import pandas as pd
-
 from esmtools.configs import MetricConfig
 from esmtools.constants import NOW, DataModel, Group
 from esmtools.fileio import (
@@ -243,7 +243,7 @@ class Metric:
         if config["export_csv"]:
             self.export_csv(output_path)
 
-    def assert_all_technologies_mapped(self) -> None:
+    def assertion_checks(self) -> None:
         """Assert all categories are assigned to a group.
 
         The method typically is called after exporting the metric.
