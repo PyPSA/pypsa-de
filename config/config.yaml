@@ -282,7 +282,7 @@ clustering:
 #    "SK": 0.0163
 #    "XK": 0.0163
   temporal:
-    resolution_sector: 365H
+    resolution_sector: 3H
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#co2-budget
 co2_budget:
@@ -397,24 +397,24 @@ sector:
     enable: true
   co2network: true
   methanol:
-    regional_methanol_demand: false
-    methanol_reforming: false
-    methanol_reforming_cc: false
-    methanol_to_kerosene: false
+    regional_methanol_demand: true
+    methanol_reforming: true
+    methanol_reforming_cc: true
+    methanol_to_kerosene: true
     methanol_to_power:
-      ccgt: false
-      ccgt_cc: false
-      ocgt: false
-      allam: false
-    biomass_to_methanol: false
-    biomass_to_methanol_cc: false
+      ccgt: true
+      ccgt_cc: true
+      ocgt: true
+      allam: true
+    biomass_to_methanol: true
+    biomass_to_methanol_cc: true
   ammonia: true
   biomass_transport: true
   electrobiofuels: true
   biosng: true
   biosng_cc: true
   bioH2: true
-  municipal_solid_waste: false
+  municipal_solid_waste: true
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#industry
 industry:
@@ -707,6 +707,8 @@ plotting:
     urban central H2 CHP: '#ff0000'
     renewable gas: '#e05b09'
     allam gas: '#e05b09'
+    municipal solid waste transport: '#e05b09'
+
   countries:
   - all
   - DE
