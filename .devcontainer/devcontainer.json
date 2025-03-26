@@ -10,11 +10,6 @@
         "target": "/mnt/storage",
         "type": "bind"
       }
-//      {
-//        "source": "/mnt/storage/cutouts",
-//        "target": "/IdeaProjects/pypsa-at/cutouts",
-//        "type": "bind"
-//      },
     ],
     "forwardPorts": [
       8000,
@@ -36,4 +31,3 @@
     },
     "remoteUser": "root"
   }
-  
