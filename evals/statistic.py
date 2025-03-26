@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Collect statistics for ESM evaluations."""  # noqa: A005
 
+from functools import partial
 from inspect import getmembers
 from itertools import product
 from pathlib import Path
@@ -15,6 +16,7 @@ from pypsa.statistics import (
     get_bus_and_carrier,
     get_operation,
     get_weightings,
+    groupers,
     port_efficiency,
 )
 
@@ -74,6 +76,26 @@ def get_location(
         return bus_location.map(n.static("Bus").location).rename(DataModel.LOCATION)
 
     return n.static(c)[f"bus{port}"].map(n.buses.location).rename("location")
+
+
+def get_location_from_comp_name_at_bus_port(
+    n: pypsa.Network, c: str, port: str = ""
+) -> pd.Series:
+    """Return the location from the component name.
+
+    Parameters
+    ----------
+    n
+    c
+    port
+
+    Returns
+    -------
+    :
+
+    """
+    pat = f"({Regex.region.pattern})"
+    return n.static(c)[f"bus{port}"].str.extract(pat, expand=False)
 
 
 def get_location_and_carrier_and_bus_carrier(
@@ -282,6 +304,13 @@ class ESMStatistics(StatisticsAccessor):
 
         # configure statistics:
         self.set_parameters(nice_names=False)
+        groupers.add_grouper("location", get_location)
+        groupers.add_grouper(
+            "bus0", partial(get_location_from_comp_name_at_bus_port, port="0")
+        )
+        groupers.add_grouper(
+            "bus1", partial(get_location_from_comp_name_at_bus_port, port="1")
+        )
         # register grouper here once PyPSA >= 0.32
 
     def ac_load_split(self) -> pd.DataFrame:
