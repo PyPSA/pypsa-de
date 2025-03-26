@@ -1,11 +1,12 @@
+# -*- coding: utf-8 -*-
 """Module for Sankey diagram."""
 
 import numpy as np
 import pandas as pd
 from plotly.graph_objs import Figure, Sankey
 
-from constants import DataModel
-from utils import insert_index_level
+from evals.constants import DataModel
+from evals.utils import insert_index_level
 
 
 class ProtoSankey:

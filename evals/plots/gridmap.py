@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Barchart organized in subplots (facets)."""
 
 import base64
@@ -11,9 +12,9 @@ import geopandas as gpd
 import pandas as pd
 from folium import GeoJson, plugins
 
-from constants import ALIAS_COUNTRY, ALIAS_REGION, DataModel
-from data.icons import RIGHT_TO_BRACKET_SOLID
-from utils import filter_by, prettify_number
+from evals.constants import ALIAS_COUNTRY, ALIAS_REGION, DataModel
+from evals.data.icons import RIGHT_TO_BRACKET_SOLID
+from evals.utils import filter_by, prettify_number
 
 
 @dataclass
