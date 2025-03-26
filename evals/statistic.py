@@ -38,6 +38,44 @@ from evals.utils import (
 )
 
 
+def get_location(
+    n: pypsa.Network, c: str, port: str = "", location_port: str = ""
+) -> pd.Series:
+    """Return the grouper series for the location of a component.
+
+    The additional location port argument will swap the bus
+    location to the specified bus port locations. The default
+    location is the location from buses at the "port" argument.
+    But be careful, the location override will happen for all
+    ports of the component.
+
+    Note, that the bus_carrier will still be the bus_carrier
+    from the "port" argument, i.e. only the location is swapped.
+
+    Parameters
+    ----------
+    n
+        The network to evaluate.
+    c
+        The component name, e.g. 'Load', 'Generator', 'Link', etc.
+    port
+        Limit results to this branch port.
+    location_port
+        Use the specified port bus for the location, defaults to
+        using the location of the 'port' bus.
+
+    Returns
+    -------
+    :
+        A list of series to group statistics by.
+    """
+    if location_port and c in n.branch_components:
+        bus_location = n.static(c)[f"bus{location_port}"]
+        return bus_location.map(n.static("Bus").location).rename(DataModel.LOCATION)
+
+    return n.static(c)[f"bus{port}"].map(n.buses.location).rename("location")
+
+
 def get_location_and_carrier_and_bus_carrier(
     n: pypsa.Network,
     c: str,
@@ -172,7 +210,8 @@ def collect_myopic_statistics(
     if statistic in pypsa_statistics:
         # PyPSA 0.32 support registering grouper functions
         # https://github.com/PyPSA/PyPSA/pull/1078
-        kwargs.setdefault("groupby", get_location_and_carrier_and_bus_carrier)
+        # kwargs.setdefault("groupby", get_location_and_carrier_and_bus_carrier)
+        kwargs.setdefault("groupby", ["location", "carrier", "bus_carrier"])
 
     year_statistics = []
     for year, n in networks.items():
@@ -200,13 +239,14 @@ def collect_myopic_statistics(
     if kwargs.get("aggregate_time") is False:
         statistic.columns.name = DataModel.SNAPSHOTS
 
-    # drop entries with all zero rows. They only clutter results.
-    if drop_zero_rows:
-        statistic = (
-            statistic.loc[statistic != 0]  # Series
-            if isinstance(statistic, pd.Series)
-            else statistic.loc[(statistic != 0).any(axis=1)]  # DataFrame
-        )
+    # todo: verify zeros are being dropped out of the box
+    # # drop entries with all zero rows. They only clutter results.
+    # if drop_zero_rows:
+    #     statistic = (
+    #         statistic.loc[statistic != 0]  # Series
+    #         if isinstance(statistic, pd.Series)
+    #         else statistic.loc[(statistic != 0).any(axis=1)]  # DataFrame
+    #     )
 
     return statistic.sort_index()
 
