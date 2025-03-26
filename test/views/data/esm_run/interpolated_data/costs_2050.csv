@@ -1,0 +1,410 @@
+technology,year,parameter,value,unit,source
+BEV vehicle,2050,efficiency,1.0,per unit,Source
+BEV vehicle,2050,investment,129335143.7,EUR/MW,Source
+BEV vehicle,2050,lifetime,13.0,years,Source
+CCGT,2050,FOM,2.54,%/year,Excel_Inputdaten_ESM_costs
+CCGT,2050,VOM,2.91,EUR/MWhel,Excel_Inputdaten_ESM_costs
+CCGT,2050,efficiency,0.61,per unit,Excel_Inputdaten_ESM_costs
+CCGT,2050,investment,747.31,EUR/kWel,Excel_Inputdaten_ESM_costs
+CCGT,2050,lifetime,33.0,years,Excel_Inputdaten_ESM_costs
+CH4 pipeline,2050,FOM,0.8,%/year,Ontras
+CH4 pipeline,2050,lifetime,55.0,years,Ontras
+CH4 pipeline DIN1000,2050,investment,362.22,EUR/MW/km,Ontras
+CH4 pipeline DIN1400,2050,investment,207.23,EUR/MW/km,Ontras
+CH4 pipeline DIN600,2050,investment,852.08,EUR/MW/km,Ontras
+CH4 pipeline retrofit,2050,FOM,0.8,%/year,Ontras
+CH4 pipeline retrofit,2050,lifetime,55.0,years,Ontras
+CH4 pipeline retrofit DIN1000,2050,investment,140.05,EUR/MW/km,Ontras
+CH4 pipeline retrofit DIN1400,2050,investment,106.39,EUR/MW/km,Ontras
+CH4 pipeline retrofit DIN600,2050,investment,291.68,EUR/MW/km,Ontras
+CH4-powered PEMFC with internal SMR,2050,FOM,6.428571429,%/year,DEA (2020_ version 0001): Heating installations_ LT-PEMFC (microCHP) - methane/natural gas
+CH4-powered PEMFC with internal SMR,2050,efficiency,0.35100000000000003,per unit,DEA (2020_ version 0001): Heating installations_ LT-PEMFC (microCHP) - methane/natural gas
+CH4-powered PEMFC with internal SMR,2050,efficiency-heat,0.609,per unit,DEA (2020_ version 0001): Heating installations_ LT-PEMFC (microCHP) - methane/natural gas
+CH4-powered PEMFC with internal SMR,2050,investment,5785.123967,EUR/kWth,DEA (2020_ version 0001): Heating installations_ LT-PEMFC (microCHP) - methane/natural gas
+CH4-powered PEMFC with internal SMR,2050,lifetime,20.0,years,DEA (2020_ version 0001): Heating installations_ LT-PEMFC (microCHP) - methane/natural gas
+CNG vehicle,2050,efficiency,0.28571428600000004,per unit,Source
+CNG vehicle,2050,investment,33402141.29,EUR/MW,Source
+CNG vehicle,2050,lifetime,13.0,years,Source
+DSM-household: charger,2050,efficiency,1.0,per unit,Eigene Annahme
+DSM-household: discharger,2050,efficiency,1.0,per unit,Eigene Annahme
+DSM-household: storage,2050,investment,10.0,EUR/kWh,Eigene Annahme
+DSM-household: storage,2050,lifetime,10.0,years,Eigene Annahme
+DSM_Aluminum,2050,VOM,200.0,EUR/MWhel,TNG-Datensatz
+DSM_Aluminum,2050,efficiency,1.0,per unit,Eigene Annahme
+DSM_Cement,2050,VOM,100.0,EUR/MWhel,TNG-Datensatz
+DSM_Cement,2050,efficiency,1.0,per unit,Eigene Annahme
+DSM_Chlorine,2050,VOM,200.0,EUR/MWhel,TNG-Datensatz
+DSM_Chlorine,2050,efficiency,1.0,per unit,Eigene Annahme
+DSM_ChlorineM,2050,VOM,200.0,EUR/MWhel,TNG-Datensatz
+DSM_ChlorineM,2050,efficiency,1.0,per unit,Eigene Annahme
+DSM_ChlorineQ,2050,VOM,200.0,EUR/MWhel,TNG-Datensatz
+DSM_ChlorineQ,2050,efficiency,1.0,per unit,Eigene Annahme
+DSM_Household (turn-off),2050,VOM,20000.0,EUR/MWhel,Eigene Annahme
+DSM_Household (turn-off),2050,efficiency,1.0,per unit,Eigene Annahme
+DSM_Paper,2050,VOM,300.0,EUR/MWhel,TNG-Datensatz
+DSM_Paper,2050,efficiency,1.0,per unit,Eigene Annahme
+DSM_PaperH,2050,VOM,300.0,EUR/MWhel,TNG-Datensatz
+DSM_PaperH,2050,efficiency,1.0,per unit,Eigene Annahme
+DSM_PaperS,2050,VOM,300.0,EUR/MWhel,TNG-Datensatz
+DSM_PaperS,2050,efficiency,1.0,per unit,Eigene Annahme
+DSM_Steel,2050,VOM,125.0,EUR/MWhel,TNG-Datensatz
+DSM_Steel,2050,efficiency,1.0,per unit,Eigene Annahme
+FCEV vehicle,2050,efficiency,0.583333333,per unit,Source
+FCEV vehicle,2050,investment,93973462.54,EUR/MW,Source
+FCEV vehicle,2050,lifetime,13.0,years,Source
+Fischer-Tropsch,2050,FOM,4.84,%/year,Excel_Inputdaten_ESM_costs
+Fischer-Tropsch,2050,efficiency,0.67,per unit,Excel_Inputdaten_ESM_costs
+Fischer-Tropsch,2050,investment,366.245,EUR/kWH2,Excel_Inputdaten_ESM_costs
+Fischer-Tropsch,2050,lifetime,28.0,years,Excel_Inputdaten_ESM_costs
+H2 pipeline,2050,FOM,0.8,%/year,Ontras
+H2 pipeline,2050,investment,658.57,EUR/MW/km,Ontras
+H2 pipeline,2050,lifetime,55.0,years,Ontras
+H2-powered PEMFC with internal SMR,2050,FOM,6.666666667,%/year,DEA (2020_ version 0001): Heating installations_ LT-PEMFC (microCHP) - hydrogen
+H2-powered PEMFC with internal SMR,2050,efficiency,0.5,per unit,DEA (2020_ version 0001): Heating installations_ LT-PEMFC (microCHP) - hydrogen
+H2-powered PEMFC with internal SMR,2050,efficiency-heat,0.48,per unit,DEA (2020_ version 0001): Heating installations_ LT-PEMFC (microCHP) - hydrogen
+H2-powered PEMFC with internal SMR,2050,investment,8571.428570999999,EUR/kWth,DEA (2020_ version 0001): Heating installations_ LT-PEMFC (microCHP) - hydrogen
+H2-powered PEMFC with internal SMR,2050,lifetime,20.0,years,DEA (2020_ version 0001): Heating installations_ LT-PEMFC (microCHP) - hydrogen
+HEV vehicle,2050,efficiency,0.411764706,per unit,Source
+HEV vehicle,2050,investment,51666163.0,EUR/MW,Source
+HEV vehicle,2050,lifetime,13.0,years,Source
+HVAC overhead,2050,FOM,2.0,%/year,Hagspiel
+HVAC overhead,2050,investment,500.0,EUR/MW/km,Plankosten NEP 2035 (2021) GTSO Konsens & interne Annahmen
+HVAC overhead,2050,lifetime,40.0,years,Hagspiel
+HVDC inverter pair,2050,FOM,2.0,%/year,Hagspiel
+HVDC inverter pair,2050,investment,600000.0,EUR/MW,Plankosten NEP 2035 (2021) GTSO Konsens & interne Annahmen
+HVDC inverter pair,2050,lifetime,40.0,years,Hagspiel
+HVDC overhead,2050,FOM,2.0,%/year,Hagspiel
+HVDC overhead,2050,investment,2000.0,EUR/MW/km,Plankosten NEP 2035 (2021) GTSO Konsens & interne Annahmen
+HVDC overhead,2050,lifetime,40.0,years,Hagspiel
+HVDC submarine,2050,FOM,2.0,%/year,Hagspiel
+HVDC submarine,2050,investment,2000.0,EUR/MW/km,https://www.ffe.de/attachments/article/527/Kurzgutachten_Kostenvergleich%20Stromtransport.pdf (interne Annahmen)
+HVDC submarine,2050,lifetime,40.0,years,Hagspiel
+ICE vehicle,2050,efficiency,0.28,per unit,Source
+ICE vehicle,2050,investment,32219280.0,EUR/MW,Source
+ICE vehicle,2050,lifetime,13.0,years,Source
+OCGT,2050,FOM,3.25,%/year,dena-Leitstudie
+OCGT,2050,VOM,3.0,EUR/MWhel,DIW DataDoc http://hdl.handle.net/10419/80348
+OCGT,2050,efficiency,0.4,per unit,dena-Leitstudie
+OCGT,2050,investment,392.31071010000005,EUR/kWel,dena-Leitstudie
+OCGT,2050,lifetime,25.0,years,dena-Leitstudie
+PHEV vehicle,2050,efficiency,0.595744681,per unit,Source
+PHEV vehicle,2050,investment,76993375.0,EUR/MW,Source
+PHEV vehicle,2050,lifetime,13.0,years,Source
+PHS,2050,FOM,0.985221675,%/year,dena-Leitstudie
+PHS,2050,efficiency,0.75,per unit,DIW DataDoc http://hdl.handle.net/10419/80348
+PHS,2050,investment,1218.0,EUR/kWel,dena-Leitstudie
+PHS,2050,lifetime,45.0,years,dena-Leitstudie
+SMR,2050,FOM,7.030470914,%/year,https://www.gov.uk/government/publications/hydrogen-supply-chain-evidence-base
+SMR,2050,efficiency,0.74,per unit,https://www.gov.uk/government/publications/hydrogen-supply-chain-evidence-base
+SMR,2050,investment,296.5,EUR/kWCH4,https://www.gov.uk/government/publications/hydrogen-supply-chain-evidence-base
+SMR,2050,lifetime,25.0,years,TODO
+SMR CC,2050,FOM,6.536842105,%/year,https://www.gov.uk/government/publications/hydrogen-supply-chain-evidence-base+ slide 42 assumption for 2030
+SMR CC,2050,efficiency,0.67,per unit,https://www.gov.uk/government/publications/hydrogen-supply-chain-evidence-base+ slide 42 assumption for 2030+ CC uses 10% of gas
+SMR CC,2050,investment,596.5,EUR/kWCH4,https://www.gov.uk/government/publications/hydrogen-supply-chain-evidence-base+ slide 42 assumption for 2030+ GBP 466 exchange 1.16+ CC costed at 300 EUR/tCO2/a
+SMR CC,2050,lifetime,25.0,years,Eigene Annahme
+battery inverter,2050,FOM,0.9,%/year,DEA (2020_version 0007)_Energy storage_Lithium-ionNMC battery (Utility-scale_Samsung SDI E3-R135)
+battery inverter,2050,efficiency,0.92,per unit,DEA (2020_version 0007)_Energy storage_Lithium-ionNMC battery (Utility-scale_Samsung SDI E3-R135)
+battery inverter,2050,investment,60.0,EUR/kWel,DEA (2020_version 0007)_Energy storage_Lithium-ionNMC battery (Utility-scale_Samsung SDI E3-R135)
+battery inverter,2050,lifetime,30.0,years,DEA (2020_version 0007)_Energy storage_Lithium-ionNMC battery (Utility-scale_Samsung SDI E3-R135)
+battery storage,2050,investment,75.0,EUR/kWh,DEA (2020_version 0007)_Energy storage_Lithium-ionNMC battery (Utility-scale_Samsung SDI E3-R135)
+battery storage,2050,lifetime,30.0,years,DEA (2020_version 0007)_Energy storage_Lithium-ionNMC battery (Utility-scale_Samsung SDI E3-R135)
+biogas,2050,fuel,60.0,EUR/MWhth,Eigene Annahme
+biogas import,2050,fuel,94.0,EUR/MWhth,Excel_Inputdaten_ESM_costs
+biomass,2050,FOM,5.019774871,%/year,dena-Leitstudie
+biomass,2050,efficiency,0.3,per unit,dena-Leitstudie
+biomass,2050,investment,3223.813260000001,EUR/kWel,dena-Leitstudie
+biomass,2050,lifetime,30.0,years,dena-Leitstudie
+biomass CHP capture,2050,FOM,3.0,%/year,danish energy agency: Technology Data - Technology Data for Industrial Process Heat and Carbon Capture - Post-combustion carbon capture retrofit - 500 MW(th) biomass-fired boiler
+biomass CHP capture,2050,capture_rate,0.95,per unit,danish energy agency: Technology Data - Technology Data for Industrial Process Heat and Carbon Capture - Post-combustion carbon capture retrofit - 500 MW(th) biomass-fired boiler
+biomass CHP capture,2050,compression-electricity-input,0.075,MWh/tCO2,danish energy agency: Technology Data - Technology Data for Industrial Process Heat and Carbon Capture - Post-combustion carbon capture retrofit - 500 MW(th) biomass-fired boiler
+biomass CHP capture,2050,compression-heat-output,0.13,MWh/tCO2,danish energy agency: Technology Data - Technology Data for Industrial Process Heat and Carbon Capture - Post-combustion carbon capture retrofit - 500 MW(th) biomass-fired boiler
+biomass CHP capture,2050,electricity-input,0.02,MWh/tCO2,danish energy agency: Technology Data - Technology Data for Industrial Process Heat and Carbon Capture - Post-combustion carbon capture retrofit - 500 MW(th) biomass-fired boiler
+biomass CHP capture,2050,heat-input,0.66,MWh/tCO2,danish energy agency: Technology Data - Technology Data for Industrial Process Heat and Carbon Capture - Post-combustion carbon capture retrofit - 500 MW(th) biomass-fired boiler
+biomass CHP capture,2050,heat-output,0.66,MWh/tCO2,danish energy agency: Technology Data - Technology Data for Industrial Process Heat and Carbon Capture - Post-combustion carbon capture retrofit - 500 MW(th) biomass-fired boiler
+biomass CHP capture,2050,investment,1600000.0,EUR/(tCO2/h),danish energy agency: Technology Data - Technology Data for Industrial Process Heat and Carbon Capture - Post-combustion carbon capture retrofit - 500 MW(th) biomass-fired boiler
+biomass CHP capture,2050,lifetime,25.0,years,danish energy agency: Technology Data - Technology Data for Industrial Process Heat and Carbon Capture - Post-combustion carbon capture retrofit - 500 MW(th) biomass-fired boiler
+central CHP,2050,FOM,4.019607843,%/year,dena-Leitstudie
+central CHP,2050,investment,1000.392311,EUR/kWel,dena-Leitstudie
+central CHP,2050,lifetime,30.0,years,dena-Leitstudie
+central air-sourced heat pump,2050,FOM,0.26,%/year,DEA (2020_version 0009)_Generation of Electricity and District Heating_Air source heat pumps 10 MW
+central air-sourced heat pump,2050,efficiency,3.9,per unit,DEA (2020_version 0009)_Generation of Electricity and District Heating_Air source heat pumps 10 MW
+central air-sourced heat pump,2050,investment,760.0,EUR/kWth,DEA (2020_version 0009)_Generation of Electricity and District Heating_Air source heat pumps 10 MW
+central air-sourced heat pump,2050,lifetime,25.0,years,DEA (2020_version 0009)_Generation of Electricity and District Heating_Air source heat pumps 10 MW
+central gas CHP,2050,FOM,3.13,%/year,Excel_Inputdaten_ESM_costs
+central gas CHP,2050,VOM,2.2,EUR/MWh,Excel_Inputdaten_ESM_costs
+central gas CHP,2050,c_b,0.7,per unit,DEA (backpressure ratio)
+central gas CHP,2050,c_v,0.17,per unit,DEA (loss of fuel for additional heat)
+central gas CHP,2050,efficiency,0.45,per unit,dena-Leitstudie
+central gas CHP,2050,efficiency-heat,0.45,per unit,dena-Leitstudie
+central gas CHP,2050,investment,964.68,EUR/kWel,Excel_Inputdaten_ESM_costs
+central gas CHP,2050,lifetime,30.0,years,Excel_Inputdaten_ESM_costs
+central gas CHP,2050,p_nom_ratio,1.046511628,per unit,dena-Leitstudie
+central gas CHP CC,2050,FOM,3.1010000000000004,%/year,DEA
+central gas CHP CC,2050,VOM,4.57,EUR/MWh,DEA
+central gas CHP CC,2050,c_b,0.7,per unit,DEA (backpressure ratio)
+central gas CHP CC,2050,c_v,0.17,per unit,DEA (loss of fuel for additional heat)
+central gas CHP CC,2050,efficiency,0.36,per unit,DEA (condensation mode + efficiency loss due to capture)
+central gas CHP CC,2050,efficiency-heat,0.36,per unit,DEA (condensation mode + efficiency loss due to capture)
+central gas CHP CC,2050,investment,2694.22,EUR/kWel,Excel_Inputdaten_ESM_costs
+central gas CHP CC,2050,lifetime,30.0,years,dena-Leitstudie
+central gas CHP CC,2050,p_nom_ratio,1.046511628,per unit,dena-Leitstudie
+central gas boiler,2050,FOM,3.4,%/year,DEA (2020_version 0009)_Generation of Electricity and District Heating_District heating boiler_natural gas fired
+central gas boiler,2050,efficiency,0.85,per unit,DEA (2020_version 0009)_Generation of Electricity and District Heating_District heating boiler_natural gas fired
+central gas boiler,2050,investment,50.0,EUR/kWth,DEA (2020_version 0009)_Generation of Electricity and District Heating_District heating boiler_natural gas fired
+central gas boiler,2050,lifetime,25.0,years,DEA (2020_version 0009)_Generation of Electricity and District Heating_District heating boiler_natural gas fired
+central resistive heater,2050,FOM,0.98,%/year,DEA (2020_version 0009)_Generation of Electricity and District Heating_Electric boilers_average of 1-5 MW and 10+ MW
+central resistive heater,2050,efficiency,0.98,per unit,DEA (2020_version 0009)_Generation of Electricity and District Heating_Electric boilers_average of 1-5 MW and 10+ MW
+central resistive heater,2050,investment,112.244898,EUR/kWth,DEA (2020_version 0009)_Generation of Electricity and District Heating_Electric boilers_average of 1-5 MW and 10+ MW
+central resistive heater,2050,lifetime,20.0,years,DEA (2020_version 0009)_Generation of Electricity and District Heating_Electric boilers_average of 1-5 MW and 10+ MW
+central solar thermal,2050,FOM,0.61,%/year,Excel_Inputdaten_ESM_costs
+central solar thermal,2050,investment,179825.0,EUR/1000m2,Excel_Inputdaten_ESM_costs
+central solar thermal,2050,lifetime,30.0,years,DEA (2020_version 0009)_Generation of Electricity and District Heating_Solar District Heating
+central solid biomass CHP,2050,FOM,2.8545,%/year,DEA (2020_version 0009):_Generation of electricity and district heating_Large Wood Chips CHP_600 MW feed bzw Large Wood Pellets CHP_800 MW feed
+central solid biomass CHP,2050,VOM,3.2,EUR/MWh,DEA (2020_version 0009):_Generation of electricity and district heating_Large Wood Chips CHP_600 MW feed bzw Large Wood Pellets CHP_800 MW feed
+central solid biomass CHP,2050,c_b,1.01,per unit,DEA for wood pellets CHP (backpressure ratio)
+central solid biomass CHP,2050,c_v,0.15,per unit,DEA for wood pellets CHP (loss of fuel for additional heat)
+central solid biomass CHP,2050,efficiency,0.29,per unit,DEA for wood pellets CHP (condensation mode)
+central solid biomass CHP,2050,efficiency-heat,0.483,per unit,DEA for wood pellets CHP (condensation mode)
+central solid biomass CHP,2050,investment,2522.0,EUR/kWel,DEA (2020_version 0009):_Generation of electricity and district heating_Large Wood Chips CHP_600 MW feed bzw Large Wood Pellets CHP_800 MW feed
+central solid biomass CHP,2050,lifetime,25.0,years,DEA (2020_version 0009):_Generation of electricity and district heating_Large Wood Chips CHP_600 MW feed bzw Large Wood Pellets CHP_800 MW feed
+central solid biomass CHP,2050,p_nom_ratio,1.0,per unit,Eigene Annahme
+central solid biomass CHP CC,2050,FOM,2.8,%/year,DEA (2020_version 0009)_Generation of electricity and district heating_CO2 capture (post-combustion)
+central solid biomass CHP CC,2050,VOM,6.1,EUR/MWh,DEA (2020_version 0009)_Generation of electricity and district heating_CO2 capture (post-combustion)
+central solid biomass CHP CC,2050,c_b,1.01,per unit,DEA for wood pellets CHP (backpressure ratio)
+central solid biomass CHP CC,2050,c_v,0.15,per unit,DEA for wood pellets CHP (loss of fuel for additional heat)
+central solid biomass CHP CC,2050,efficiency,0.483,per unit,DEA for wood pellets CHP (condensation mode + efficiency loss due to capture)
+central solid biomass CHP CC,2050,efficiency-heat,0.483,per unit,DEA for wood pellets CHP (condensation mode + efficiency loss due to capture)
+central solid biomass CHP CC,2050,investment,5382.5,EUR/kWel,DEA (2020_version 0009)_Generation of electricity and district heating_CO2 capture (post-combustion)
+central solid biomass CHP CC,2050,lifetime,25.0,years,DEA (2020_version 0009)_Generation of electricity and district heating_CO2 capture (post-combustion)
+central solid biomass CHP CC,2050,p_nom_ratio,1.0,per unit,Eigene Annahme
+central water tank storage,2050,FOM,0.3,%/year,DEA (2020_version 0007)_Energy storage_Large-Scale Hot Water Tanks (steel)
+central water tank storage,2050,investment,175.0,EUR/m3,DEA (2020_version 0007)_Energy storage_Large-Scale Hot Water Tanks (steel)
+central water tank storage,2050,lifetime,40.0,years,DEA (2020_version 0007)_Energy storage_Large-Scale Hot Water Tanks (steel)
+coal,2050,CO2 intensity,0.338,t CO2/MWh,dena-Leitstudie
+coal,2050,fuel,6.212382408,EUR/MWhth,World Energy Outlook 2019_Sustainable Development
+coal CHP power plant,2050,FOM,1.838956454,%/year,dena-Leitstudie
+coal CHP power plant,2050,VOM,6.0,EUR/MWhel,DIW DataDoc http://hdl.handle.net/10419/80348
+coal CHP power plant,2050,c_b,1.01,per unit,DEA for wood supercritical pulverized fuel power plant (Coal CHP included)
+coal CHP power plant,2050,c_v,0.15,per unit,DEA for wood supercritical pulverized fuel power plant (Coal CHP included)
+coal CHP power plant,2050,discount rate,0.1,per unit,Annahme_TransnetBW
+coal CHP power plant,2050,efficiency,0.38,per unit,dena-Leitstudie
+coal CHP power plant,2050,efficiency-heat,0.15,per unit,dena-Leitstudie
+coal CHP power plant,2050,investment,2824.637113,EUR/kWel,dena-Leitstudie
+coal CHP power plant,2050,lifetime,45.0,years,dena-Leitstudie
+coal CHP power plant,2050,p_nom_ratio,1.0,per unit,Eigene Annahme
+coal CHP power plant (CC),2050,FOM,2.751448417,%/year,Dissertation T. Haasz+ DIW CC-Zuschlag (+eigene Berechnung)
+coal CHP power plant (CC),2050,VOM,4.826467726000001,EUR/MWhel,Dissertation T. Haasz+ DIW CC-Zuschlag (+eigene Berechnung)
+coal CHP power plant (CC),2050,c_b,1.01,per unit,DEA for wood supercritical pulverized fuel power plant (Coal CHP included)
+coal CHP power plant (CC),2050,c_v,0.15,per unit,DEA for wood supercritical pulverized fuel power plant (Coal CHP included)
+coal CHP power plant (CC),2050,discount rate,0.1,per unit,Annahme_TransnetBW
+coal CHP power plant (CC),2050,efficiency,0.34165214200000005,per unit,Dissertation T. Haasz+ DIW CC-Zuschlag (+eigene Berechnung)
+coal CHP power plant (CC),2050,efficiency-heat,0.135283019,per unit,Dissertation T. Haasz+ DIW CC-Zuschlag (+eigene Berechnung)
+coal CHP power plant (CC),2050,investment,5684.637113000002,EUR/kWel,Dissertation T. Haasz+ DIW CC-Zuschlag (+eigene Berechnung)
+coal CHP power plant (CC),2050,lifetime,40.0,years,Dissertation T. Haasz+ DIW CC-Zuschlag (+eigene Berechnung)
+coal CHP power plant (CC),2050,p_nom_ratio,1.0,per unit,Eigene Annahme
+coal power plant,2050,FOM,2.1,%/year,Excel_Inputdaten_ESM_costs
+coal power plant,2050,VOM,6.0,EUR/MWhel,DIW DataDoc http://hdl.handle.net/10419/80348
+coal power plant,2050,discount rate,0.1,per unit,Annahme_TransnetBW
+coal power plant,2050,efficiency,0.46,per unit,Excel_Inputdaten_ESM_costs
+coal power plant,2050,investment,1496.0,EUR/kWel,Excel_Inputdaten_ESM_costs
+coal power plant,2050,lifetime,45.0,years,Excel_Inputdaten_ESM_costs
+coal power plant (CC),2050,FOM,2.716221271,%/year,DEA (2020_version 0009)_Generation of electricity and district heating_CO2 capture (post-combustion)
+coal power plant (CC),2050,VOM,9.75,EUR/MWhel,DEA (2020_version 0009)_Generation of electricity and district heating_CO2 capture (post-combustion)
+coal power plant (CC),2050,discount rate,0.1,per unit,Annahme_TransnetBW
+coal power plant (CC),2050,efficiency,0.41,per unit,DEA (2020_version 0009)_Generation of electricity and district heating_CO2 capture (post-combustion)
+coal power plant (CC),2050,investment,4329.4,EUR/kWel,Excel_Inputdaten_ESM_costs
+coal power plant (CC),2050,lifetime,45.0,years,DEA (2020_version 0009)_Generation of electricity and district heating_CO2 capture (post-combustion)
+decentral CHP,2050,FOM,3.0,%/year,Palzer thesis (https://energiesysteme-zukunft.de/fileadmin/user_upload/Publikationen/PDFs/ESYS_Materialien_Optimierungsmodell_REMod-D.pdf)- (+eigene Berechnung)
+decentral CHP,2050,investment,1433.316558,EUR/kWel,Palzer thesis (https://energiesysteme-zukunft.de/fileadmin/user_upload/Publikationen/PDFs/ESYS_Materialien_Optimierungsmodell_REMod-D.pdf)- (+eigene Berechnung)
+decentral CHP,2050,lifetime,20.0,years,Palzer thesis (https://energiesysteme-zukunft.de/fileadmin/user_upload/Publikationen/PDFs/ESYS_Materialien_Optimierungsmodell_REMod-D.pdf)- (+eigene Berechnung)
+decentral air-sourced heat pump,2050,FOM,3.1,%/year,DEA (2020_version 0001)_Heating installations_Heat pump_Air-to-water
+decentral air-sourced heat pump,2050,efficiency,4.15,per unit,DEA (2020_version 0001)_Heating installations_Heat pump_Air-to-water
+decentral air-sourced heat pump,2050,investment,760.0,EUR/kWth,DEA (2020_version 0001)_Heating installations_Heat pump_Air-to-water
+decentral air-sourced heat pump,2050,lifetime,25.0,years,DEA (2020_version 0001)_Heating installations_Heat pump_Air-to-water
+decentral coal boiler,2050,FOM,3.0403477960000003,%/year,Eigene Annahme (analog Pelletheizung)
+decentral coal boiler,2050,efficiency,0.81,per unit,Eigene Annahme (analog Pelletheizung) (umgerechnet auf Brennwert)
+decentral coal boiler,2050,investment,177.5125,EUR/kWth,Eigene Annahme (10% teurer als Gaskessel)
+decentral coal boiler,2050,lifetime,25.0,years,Eigene Annahme
+decentral gas boiler,2050,FOM,4.8,%/year,DEA (2020_version 0001)_Heating installations_Natural gas boiler
+decentral gas boiler,2050,efficiency,0.83,per unit,DEA (2020_version 0001)_Heating installations_Natural gas boiler (umgerechnet auf Brennwert)
+decentral gas boiler,2050,investment,161.4,EUR/kWth,DEA (2020_version 0001)_Heating installations_Natural gas boiler
+decentral gas boiler,2050,lifetime,25.0,years,DEA (2020_version 0001)_Heating installations_Natural gas boiler
+decentral ground-sourced heat pump,2050,FOM,2.0,%/year,DEA (2020_version 0001)_Heating installations_Heat pump_ ground source
+decentral ground-sourced heat pump,2050,efficiency,4.45,per unit,DEA (2020_version 0001)_Heating installations_Heat pump_ ground source
+decentral ground-sourced heat pump,2050,investment,1200.0,EUR/kWth,DEA (2020_version 0001)_Heating installations_Heat pump_ ground source
+decentral ground-sourced heat pump,2050,lifetime,25.0,years,DEA (2020_version 0001)_Heating installations_Heat pump_ ground source
+decentral oil boiler,2050,FOM,3.46,%/year,DEA (2020_version 0001)_Heating installations_Oil boiler (mineral oil fired_< 10 % FAME)
+decentral oil boiler,2050,efficiency,0.87,per unit,DEA (2020_version 0001)_Heating installations_Oil boiler (mineral oil fired_< 10 % FAME) (umgerechnet auf Brennwert)
+decentral oil boiler,2050,investment,203.42,EUR/kWth,DEA (2020_version 0001)_Heating installations_Oil boiler (mineral oil fired_< 10 % FAME)
+decentral oil boiler,2050,lifetime,25.0,years,DEA (2020_version 0001)_Heating installations_Oil boiler (mineral oil fired_< 10 % FAME)
+decentral resistive heater,2050,FOM,0.047191011,%/year,DEA (2020_version 0001)_Heating installations_Solar heatingsystem_One-family house_Energy renovated
+decentral resistive heater,2050,efficiency,0.99,per unit,DEA (2020_version 0001)_Heating installations_Solar heatingsystem_One-family house_Energy renovated
+decentral resistive heater,2050,investment,561.8686869,EUR/kWth,DEA (2020_version 0001)_Heating installations_Solar heatingsystem_One-family house_Energy renovated
+decentral resistive heater,2050,lifetime,25.0,years,DEA (2020_version 0001)_Heating installations_Solar heatingsystem_One-family house_Energy renovated
+decentral solar thermal,2050,FOM,2.625,%/year,DEA (2020_version 0001)_Heating installations_Solar heatingsystem_One-family house_Energy renovated
+decentral solar thermal,2050,investment,400000.0,EUR/1000m2,DEA (2020_version 0001)_Heating installations_Solar heatingsystem_One-family house_Energy renovated
+decentral solar thermal,2050,lifetime,25.0,years,DEA (2020_version 0001)_Heating installations_Solar heatingsystem_One-family house_Energy renovated
+decentral solid biomass boiler,2050,FOM,4.79,%/year,DEA (2020_version 0001)_Heating installations_Biomass boiler_automatic stoking_wood pellets or wood chip
+decentral solid biomass boiler,2050,efficiency,0.81,per unit,DEA (2020_version 0001)_Heating installations_Biomass boiler_automatic stoking_wood pellets or wood chip(umgerechnet auf Brennwert)
+decentral solid biomass boiler,2050,investment,390.0,EUR/kWth,DEA (2020_version 0001)_Heating installations_Biomass boiler_automatic stoking_wood pellets or wood chip
+decentral solid biomass boiler,2050,lifetime,25.0,years,DEA (2020_version 0001)_Heating installations_Biomass boiler_automatic stoking_wood pellets or wood chip
+decentral water tank storage,2050,FOM,4.06504065,%/year,DEA (2020_version 0007)_Energy storage_Small-Scale Hot Water Tanks (steel)
+decentral water tank storage,2050,investment,13666.66667,EUR/m3,DEA (2020_version 0007)_Energy storage_Small-Scale Hot Water Tanks (steel)
+decentral water tank storage,2050,lifetime,30.0,years,DEA (2020_version 0007)_Energy storage_Small-Scale Hot Water Tanks (steel)
+direct air capture,2050,FOM,4.95,%/year,Danish Energy Agency
+direct air capture,2050,compression-electricity-input,0.15,MWh/tCO2,Danish Energy Agency
+direct air capture,2050,compression-heat-output,0.2,MWh/tCO2,Danish Energy Agency
+direct air capture,2050,electricity-input,0.28,MWh/tCO2,Danish Energy Agency
+direct air capture,2050,heat-input,1.5,MWh/tCO2,Danish Energy Agency
+direct air capture,2050,heat-output,0.75,MWh/tCO2,Danish Energy Agency
+direct air capture,2050,investment,4000000.0,EUR/(tCO2/h),Danish Energy Agency
+direct air capture,2050,lifetime,20.0,years,Danish Energy Agency
+electrolysis,2050,FOM,1.08,%/year,Excel_Inputdaten_ESM_costs
+electrolysis,2050,efficiency,0.81,per unit,Excel_Inputdaten_ESM_costs
+electrolysis,2050,investment,428.54,EUR/kWel,Excel_Inputdaten_ESM_costs
+electrolysis,2050,lifetime,23.0,years,Excel_Inputdaten_ESM_costs
+electrolysis_soec,2050,FOM,4.9,%/year,Excel_Inputdaten_ESM_costs
+electrolysis_soec,2050,electric_efficiency,0.86,per unit,Excel_Inputdaten_ESM_costs
+electrolysis_soec,2050,heat_efficiency,0.86,per unit,Excel_Inputdaten_ESM_costs
+electrolysis_soec,2050,investment,547.75,EUR/kWel,Excel_Inputdaten_ESM_costs
+electrolysis_soec,2050,lifetime,21.0,years,Excel_Inputdaten_ESM_costs
+fischer tropsch import,2050,fuel,124.0,EUR/MWh,Excel_Inputdaten_ESM_costs
+fuel cell,2050,FOM,5.0,%/year,DEA (2020_version 0009)_Generation of electricity and district heating_SOFC_CHP Natural Gas_Biogas bzw LT-PEMFC CHP hydrogen gas
+fuel cell,2050,efficiency,0.55,per unit,DEA (2020_version 0009)_Generation of electricity and district heating_SOFC_CHP Natural Gas_Biogas bzw LT-PEMFC CHP hydrogen gas
+fuel cell,2050,investment,800.0,EUR/kWel,DEA (2020_version 0009)_Generation of electricity and district heating_SOFC_CHP Natural Gas_Biogas bzw LT-PEMFC CHP hydrogen gas
+fuel cell,2050,lifetime,10.0,years,DEA (2020_version 0009)_Generation of electricity and district heating_SOFC_CHP Natural Gas_Biogas bzw LT-PEMFC CHP hydrogen gas
+gas,2050,CO2 intensity,0.2044,tCO2/MWth,dena-Leitstudie
+gas,2050,fuel,20.85919576,EUR/MWhth,World Energy Outlook 2019_Sustainable Development
+geothermal,2050,CO2 intensity,0.026,tCO2/MWth,https://www.eia.gov/environment/emissions/co2_vol_mass.php
+geothermal,2050,FOM,4.210059827,%/year,dena-Leitstudie
+geothermal,2050,efficiency,0.25,per unit,DIW DataDoc http://hdl.handle.net/10419/80348
+geothermal,2050,investment,8852.491173,EUR/kWel,dena-Leitstudie
+geothermal,2050,lifetime,30.0,years,dena-Leitstudie
+helmeth,2050,FOM,3.0,%/year,no source
+helmeth,2050,efficiency,0.85,per unit,Practical efficiency limit (S. 33)_http://www.helmeth.eu/images/joomlaplates/documents/HELMETH_DELIVERABLE_4.2_R1.0_2.pdf
+helmeth,2050,investment,3121.212121,EUR/kW,Eigene Berechnung bezogen auf Leistung des Elektrolyseurs (S. 30)_http://www.helmeth.eu/images/joomlaplates/documents/HELMETH_DELIVERABLE_4.2_R1.0_2.pdf
+helmeth,2050,lifetime,25.0,years,no source
+hydro,2050,FOM,0.51369863,%/year,dena-Leitstudie
+hydro,2050,efficiency,0.9,per unit,DIW DataDoc http://hdl.handle.net/10419/80348
+hydro,2050,investment,2336.0,EUR/kWel,dena-Leitstudie
+hydro,2050,lifetime,75.0,years,dena-Leitstudie
+hydrogen,2050,fuel,81.0,EUR/MWhth,Excel_Inputdaten_ESM_costs
+hydrogen pore storage underground,2050,investment,0.21,EUR/kWh,Excel_Inputdaten_ESM_costs
+hydrogen pore storage underground,2050,lifetime,50.0,years,Excel_Inputdaten_ESM_costs
+hydrogen storage,2050,investment,21.0,EUR/kWh,DEA (2020_version 0007)_Energy storage_Pressurized hydrogen gas storage system (Compressor & Type I tanks @ 200 bar)
+hydrogen storage,2050,lifetime,30.0,years,amtliche AfA-Tabelle
+hydrogen storage underground,2050,investment,0.21,EUR/kWh,Excel_Inputdaten_ESM_costs
+hydrogen storage underground,2050,lifetime,50.0,years,Excel_Inputdaten_ESM_costs
+industry CC,2050,FOM,2.0,%/year,Saygin et al 2013 https://doi.org/10.1016/j.ijggc.2013.05.032
+industry CC,2050,efficiency,0.9,per unit,Saygin et al 2013 https://doi.org/10.1016/j.ijggc.2013.05.032
+industry CC,2050,investment,223.1916759,EUR/tCO2/a,Saygin et al 2013 https://doi.org/10.1016/j.ijggc.2013.05.032
+industry CC,2050,lifetime,25.0,years,Saygin et al 2013 https://doi.org/10.1016/j.ijggc.2013.05.032
+lignite,2050,CO2 intensity,0.4062,t CO2/MWh,dena-Leitstudie
+lignite,2050,fuel,2.115490156,EUR/MWhth,World Energy Outlook 2019_Sustainable Development
+lignite CHP power plant,2050,FOM,2.3146331890000003,%/year,dena-Leitstudie
+lignite CHP power plant,2050,VOM,8.5,EUR/MWhel,DIW DataDoc http://hdl.handle.net/10419/80348
+lignite CHP power plant,2050,c_b,1.01,per unit,DEA for wood supercritical pulverized fuel power plant (Coal CHP included)
+lignite CHP power plant,2050,c_v,0.15,per unit,DEA for wood supercritical pulverized fuel power plant (Coal CHP included)
+lignite CHP power plant,2050,discount rate,0.1,per unit,Annahme_TransnetBW
+lignite CHP power plant,2050,efficiency,0.38,per unit,dena-Leitstudie
+lignite CHP power plant,2050,efficiency-heat,0.15,per unit,dena-Leitstudie
+lignite CHP power plant,2050,investment,2451.941938,EUR/kWel,dena-Leitstudie
+lignite CHP power plant,2050,lifetime,45.0,years,dena-Leitstudie
+lignite CHP power plant,2050,p_nom_ratio,1.0,per unit,Eigene Annahme
+lignite CHP power plant (CC),2050,FOM,1.822590859,%/year,Dissertation T. Haasz+ DIW CC-Zuschlag (+eigene Berechnung)
+lignite CHP power plant (CC),2050,VOM,5.215698993999999,EUR/MWhel,Dissertation T. Haasz+ DIW CC-Zuschlag (+eigene Berechnung)
+lignite CHP power plant (CC),2050,c_b,1.01,per unit,DEA for wood supercritical pulverized fuel power plant (Coal CHP included)
+lignite CHP power plant (CC),2050,c_v,0.15,per unit,DEA for wood supercritical pulverized fuel power plant (Coal CHP included)
+lignite CHP power plant (CC),2050,discount rate,0.1,per unit,Annahme_TransnetBW
+lignite CHP power plant (CC),2050,efficiency,0.34165214200000005,per unit,Dissertation T. Haasz+ DIW CC-Zuschlag (+eigene Berechnung)
+lignite CHP power plant (CC),2050,efficiency-heat,0.135283019,per unit,Dissertation T. Haasz+ DIW CC-Zuschlag (+eigene Berechnung)
+lignite CHP power plant (CC),2050,investment,6383.759808,EUR/kWel,Dissertation T. Haasz+ DIW CC-Zuschlag (+eigene Berechnung)
+lignite CHP power plant (CC),2050,lifetime,40.0,years,Dissertation T. Haasz+ DIW CC-Zuschlag (+eigene Berechnung)
+lignite CHP power plant (CC),2050,p_nom_ratio,1.0,per unit,Eigene Annahme
+lignite power plant,2050,FOM,2.24,%/year,Excel_Inputdaten_ESM_costs
+lignite power plant,2050,VOM,8.5,EUR/MWhel,DIW DataDoc http://hdl.handle.net/10419/80348
+lignite power plant,2050,discount rate,0.1,per unit,Annahme_TransnetBW
+lignite power plant,2050,efficiency,0.46,per unit,Excel_Inputdaten_ESM_costs
+lignite power plant,2050,investment,1632.33,EUR/kWel,Excel_Inputdaten_ESM_costs
+lignite power plant,2050,lifetime,45.0,years,Excel_Inputdaten_ESM_costs
+lignite power plant (CC),2050,FOM,2.815190835,%/year,DEA (2020_version 0009)_Generation of electricity and district heating_CO2 capture (post-combustion)
+lignite power plant (CC),2050,VOM,12.25,EUR/MWhel,DEA (2020_version 0009)_Generation of electricity and district heating_CO2 capture (post-combustion)
+lignite power plant (CC),2050,discount rate,0.1,per unit,Annahme_TransnetBW
+lignite power plant (CC),2050,efficiency,0.4,per unit,DEA (2020_version 0009)_Generation of electricity and district heating_CO2 capture (post-combustion)
+lignite power plant (CC),2050,investment,5069.74,EUR/kWel,Excel_Inputdaten_ESM_costs
+lignite power plant (CC),2050,lifetime,45.0,years,DEA (2020_version 0009)_Generation of electricity and district heating_CO2 capture (post-combustion)
+methanation,2050,FOM,2.76,%/year,Excel_Inputdaten_ESM_costs
+methanation,2050,efficiency,0.81,per unit,Excel_Inputdaten_ESM_costs
+methanation,2050,investment,284.65,EUR/kWMethan,Excel_Inputdaten_ESM_costs
+methanation,2050,lifetime,28.0,years,Excel_Inputdaten_ESM_costs
+micro CHP,2050,FOM,5.6,%/year,Palzer thesis (https://energiesysteme-zukunft.de/fileadmin/user_upload/Publikationen/PDFs/ESYS_Materialien_Optimierungsmodell_REMod-D.pdf)
+micro CHP,2050,efficiency,0.36,per unit,Palzer thesis (https://energiesysteme-zukunft.de/fileadmin/user_upload/Publikationen/PDFs/ESYS_Materialien_Optimierungsmodell_REMod-D.pdf)
+micro CHP,2050,efficiency-heat,0.44,per unit,Palzer thesis (https://energiesysteme-zukunft.de/fileadmin/user_upload/Publikationen/PDFs/ESYS_Materialien_Optimierungsmodell_REMod-D.pdf)
+micro CHP,2050,investment,3952.8,EUR/kWCH4,Palzer thesis (https://energiesysteme-zukunft.de/fileadmin/user_upload/Publikationen/PDFs/ESYS_Materialien_Optimierungsmodell_REMod-D.pdf)
+micro CHP,2050,lifetime,25.0,years,Palzer thesis (https://energiesysteme-zukunft.de/fileadmin/user_upload/Publikationen/PDFs/ESYS_Materialien_Optimierungsmodell_REMod-D.pdf)
+nuclear,2050,FOM,3.069515498,%/year,dena-Leitstudie
+nuclear,2050,VOM,2.1,EUR/MWhel,EIA 2019 Assumptions to the Annual Energy Outlook 2019: Electricity Market Module
+nuclear,2050,discount rate,0.1,per unit,Annahme_TransnetBW
+nuclear,2050,efficiency,0.33,per unit,dena-Leitstudie
+nuclear,2050,fuel,3.146303094,EUR/MWhth,IEA2011b
+nuclear,2050,investment,3259.121224,EUR/kWel,dena-Leitstudie
+nuclear,2050,lifetime,60.0,years,dena-Leitstudie
+offwind,2050,FOM,7.237354086,%/year,dena-Leitstudie
+offwind,2050,VOM,0.01,EUR/MWhel,RES costs made up to fix curtailment order (0.02)
+offwind,2050,investment,1260.298156,EUR/kWel,dena-Leitstudie
+offwind,2050,lifetime,25.0,years,dena-Leitstudie
+offwind-ac-connection-submarine,2050,investment,2685.0,EUR/MW/km,DEA https://ens.dk/en/our-services/projections-and-models/technology-data
+offwind-ac-connection-underground,2050,investment,1342.0,EUR/MW/km,DEA https://ens.dk/en/our-services/projections-and-models/technology-data
+offwind-ac-station,2050,investment,250.0,EUR/kWel,DEA https://ens.dk/en/our-services/projections-and-models/technology-data
+offwind-dc-connection-submarine,2050,investment,2000.0,EUR/MW/km,DTU report based on Fig 34 of https://ec.europa.eu/energy/sites/ener/files/documents/2014_nsog_report.pdf
+offwind-dc-connection-underground,2050,investment,1000.0,EUR/MW/km,Haertel 2017
+offwind-dc-station,2050,investment,400.0,EUR/kWel,Haertel 2017
+oil,2050,CO2 intensity,0.2847,tCO2/MWth,dena-Leitstudie
+oil,2050,fuel,28.05592055,EUR/MWhth,World Energy Outlook 2019_Sustainable Development
+oil power plant,2050,FOM,2.40952381,%/year,DEA
+oil power plant,2050,VOM,6.0,EUR/MWh,DEA
+oil power plant,2050,efficiency,0.37,per unit,DEA
+oil power plant,2050,investment,336.0,EUR/kWel,DEA
+oil power plant,2050,lifetime,25.0,years,DEA
+onwind-1,2050,FOM,2.21,%/year,dena-Leitstudie
+onwind-1,2050,VOM,0.01,EUR/MWhel,RES costs made up to fix curtailment order (0.015)
+onwind-1,2050,investment,1165.0,EUR/kWel,dena-Leitstudie+ eigene Berechnungen
+onwind-1,2050,lifetime,26.0,years,dena-Leitstudie
+onwind-2,2050,FOM,2.21,%/year,dena-Leitstudie
+onwind-2,2050,VOM,0.01,EUR/MWhel,RES costs made up to fix curtailment order (0.015)
+onwind-2,2050,investment,1165.0,EUR/kWel,dena-Leitstudie+ eigene Berechnungen
+onwind-2,2050,lifetime,26.0,years,dena-Leitstudie
+onwind-3,2050,FOM,2.21,%/year,dena-Leitstudie
+onwind-3,2050,VOM,0.01,EUR/MWhel,RES costs made up to fix curtailment order (0.015)
+onwind-3,2050,investment,1165.0,EUR/kWel,dena-Leitstudie+ eigene Berechnungen
+onwind-3,2050,lifetime,26.0,years,dena-Leitstudie
+onwind-4,2050,FOM,2.21,%/year,dena-Leitstudie
+onwind-4,2050,VOM,0.01,EUR/MWhel,RES costs made up to fix curtailment order (0.015)
+onwind-4,2050,investment,1165.0,EUR/kWel,dena-Leitstudie+ eigene Berechnungen
+onwind-4,2050,lifetime,26.0,years,dena-Leitstudie
+onwind-landcosts,2050,investment,0.0,EUR/kWel,-
+retrofitting I,2050,FOM,1.0,%/year,Palzer thesis (https://energiesysteme-zukunft.de/fileadmin/user_upload/Publikationen/PDFs/ESYS_Materialien_Optimierungsmodell_REMod-D.pdf)
+retrofitting I,2050,investment,102.6673377,EUR/m2/fraction reduction,Palzer thesis (https://energiesysteme-zukunft.de/fileadmin/user_upload/Publikationen/PDFs/ESYS_Materialien_Optimierungsmodell_REMod-D.pdf)
+retrofitting I,2050,lifetime,50.0,years,Palzer thesis (https://energiesysteme-zukunft.de/fileadmin/user_upload/Publikationen/PDFs/ESYS_Materialien_Optimierungsmodell_REMod-D.pdf)
+retrofitting II,2050,FOM,1.0,%/year,Palzer thesis (https://energiesysteme-zukunft.de/fileadmin/user_upload/Publikationen/PDFs/ESYS_Materialien_Optimierungsmodell_REMod-D.pdf)
+retrofitting II,2050,investment,181.17765480000003,EUR/m2/fraction reduction,Palzer thesis (https://energiesysteme-zukunft.de/fileadmin/user_upload/Publikationen/PDFs/ESYS_Materialien_Optimierungsmodell_REMod-D.pdf)
+retrofitting II,2050,lifetime,50.0,years,Palzer thesis (https://energiesysteme-zukunft.de/fileadmin/user_upload/Publikationen/PDFs/ESYS_Materialien_Optimierungsmodell_REMod-D.pdf)
+ror,2050,FOM,0.24,%/year,dena-Leitstudie
+ror,2050,efficiency,0.9,per unit,DIW DataDoc http://hdl.handle.net/10419/80348
+ror,2050,investment,5000.0,EUR/kWel,dena-Leitstudie
+ror,2050,lifetime,100.0,years,dena-Leitstudie
+solar,2050,FOM,4.166667,%/year,DIW DataDoc http://hdl.handle.net/10419/80348
+solar,2050,VOM,0.01,EUR/MWhel,RES costs made up to fix curtailment order
+solar,2050,investment,600.0,EUR/kWel,DIW DataDoc http://hdl.handle.net/10419/80348
+solar,2050,lifetime,25.0,years,dena-Leitstudie
+solar-rooftop,2050,FOM,3.10786106,%/year,dena-Leitstudie
+solar-rooftop,2050,investment,536.484896,EUR/kWel,dena-Leitstudie
+solar-rooftop,2050,lifetime,25.0,years,dena-Leitstudie
+solar-utility,2050,FOM,3.105590062,%/year,dena-Leitstudie
+solar-utility,2050,investment,473.7151824,EUR/kWel,dena-Leitstudie
+solar-utility,2050,lifetime,25.0,years,dena-Leitstudie
+solid biomass,2050,CO2 intensity,0.0,tCO2/MWth,dena-Leitstudie
+solid biomass,2050,fuel,75.0,EUR/MWh,Eigene Annahme
+value of lost load,2050,fuel,1000.0,EUR/MWh,TNG
+water tank charger,2050,efficiency,0.9,per unit,Palzer thesis (https://energiesysteme-zukunft.de/fileadmin/user_upload/Publikationen/PDFs/ESYS_Materialien_Optimierungsmodell_REMod-D.pdf)
+water tank discharger,2050,efficiency,0.9,per unit,Palzer thesis (https://energiesysteme-zukunft.de/fileadmin/user_upload/Publikationen/PDFs/ESYS_Materialien_Optimierungsmodell_REMod-D.pdf)

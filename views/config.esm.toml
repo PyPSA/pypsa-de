@@ -1,0 +1,6 @@
+[global]
+subdirectory = "esm/data"
+
+[view.capacity.heat_capacity]
+file_name  = "heatKapas_{location}"
+title = "override"
