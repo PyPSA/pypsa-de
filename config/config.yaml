@@ -7,8 +7,8 @@ run:
   prefix: 20250327-Pricing
 
   name:
-  # - KN2045_Bal_v4
-  - KN2045_Bal_v4_voll
+  - KN2045_Bal_v4
+  # - KN2045_Bal_v4_voll
   # - KN2045_Bal_v4_voll_1H 
   # - KN2045_Bal_v4_24H
   # - KN2045_Bal_v4_365H
@@ -287,25 +287,17 @@ sector:
     2040: 0.29
     2045: 0.36
     2050: 0.43
-  land_transport_fuel_cell_share:
-    2020: 0.05
-    2025: 0.05
-    2030: 0.05
-    2035: 0.05
-    2040: 0.05
-    2045: 0.05
-    2050: 0.05
   land_transport_electric_share:
-    2020: 0.03
-    2025: 0.07
-    2030: 0.2
-    2035: 0.4
-    2040: 0.7
-    2045: 0.85
-    2050: 0.95
+    2020: 0.02
+    2025: 0.03
+    2030: 0.25
+    2035: 0.45
+    2040: 0.75
+    2045: 0.9
+    2050: 1
   land_transport_ice_share:
-    2020: 0.92
-    2025: 0.88
+    2020: 0.98
+    2025: 0.97
     2030: 0.75
     2035: 0.55
     2040: 0.25
@@ -431,7 +423,7 @@ solving:
         solar:
           DE:
             2020: 53.7
-            2025: 110 # EEG2023; assumes for 2026: 128 GW, assuming a fair share reached by end of 2025
+            2025: 128 # EEG2023; assumes for 2026: 128 GW, assuming a fair share reached by end of 2025
             2030: 309 # EEG2023 Ziel für 2035
             2035: 1000
             2040: 1000
@@ -448,20 +440,20 @@ solving:
       Link:
         urban central resistive heater:
           DE:
-            2020: 5
-            2025: 8
+            2020: 2
+            2025: 5
             2030: 10
             2035: 20
         urban decentral resistive heater:
           DE:
-            2020: 5
-            2025: 10
+            2020: 3
+            2025: 5
             2030: 15
             2035: 30
         rural resistive heater:
           DE:
-            2020: 5
-            2025: 8
+            2020: 3
+            2025: 5
             2030: 10
             2035: 20
         # methanolisation:

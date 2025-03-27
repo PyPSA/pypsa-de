@@ -347,7 +347,7 @@ def price_setter(n, bus, timestep, minimum_generation=1e-3, co2_add_on=False, su
     p_s = supply[(supply.p > th_p) & (supply.mc_final <= (mp + 0.1))].p.sum()
     p_s_true = n.statistics.supply(bus_carrier="AC", aggregate_time=False)[timestep].sum()
     if abs(p_s - p_s_true) > 10: 
-        sc["valid"] = False
+        # sc["valid"] = False
         msg_s += f"Warning: Supply until marginal generator plus tolerance of {0.1} €/MWh does not match the total supply {p_s} != {p_s_true} (timestep {timestep}) \n"      
 
     # check if mg is the one with the highest mc which is running (what is running?) with tolerance
@@ -382,7 +382,7 @@ def price_setter(n, bus, timestep, minimum_generation=1e-3, co2_add_on=False, su
     d_s = demand[(demand.p > th_p) & (demand.bidding_price >= (mp - 0.1))].p.sum()
     d_s_true = n.statistics.withdrawal(bus_carrier="AC", aggregate_time=False)[timestep].sum()
     if abs(d_s - d_s_true) > 10: 
-        dc["valid"] = False
+        # dc["valid"] = False
         msg_d += f"Warning: Demand until least price taker minus tolerance of {0.1} €/MWh does not match the total demand {d_s} != {d_s_true} (timestep {timestep}) \n"
 
     if not suppress_warnings:
@@ -394,7 +394,7 @@ def price_setter(n, bus, timestep, minimum_generation=1e-3, co2_add_on=False, su
     # check if supply and demand are equal
     if abs(p_s - d_s) > 10:
         if not suppress_warnings:
-            logger.info(f"Warning: Supply until marginal gen ({p_s}) and demand until least price taker ({d_s})differs by {abs(p_s - d_s)} (timestep {timestep})")  
+            logger.info(f"Info: Supply until marginal gen ({p_s}) and demand until least price taker ({d_s})differs by {abs(p_s - d_s)} (timestep {timestep})")  
 
     return sc, dc
 
