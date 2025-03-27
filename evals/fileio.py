@@ -213,6 +213,7 @@ def read_csv_files(
 def prepare_costs(
     result_path: str | Path,
     n_years: int,
+    n: pypsa.Network,
     raw: bool = False,
     sub_directory: str = "esm_run/interpolated_data",
 ) -> pd.DataFrame:
@@ -226,6 +227,8 @@ def prepare_costs(
         or is a time-stamp).
     n_years
         The number of years used to calculate the annual costs.
+    n
+        The Notwork with the meta attribute to obtain the config.
     raw
         Whether to return the CSV data as is, i.e. without added cost
         calculations.
@@ -243,19 +246,18 @@ def prepare_costs(
     if raw:
         return costs
 
-    config = read_model_config(result_path)
     default_costs = {
         "CO2 intensity": 0,
         "FOM": 0,
         "VOM": 0,
-        "discount rate": config["costs"]["discountrate"],
+        "discount rate": n.meta["costs"]["discountrate"],
         "efficiency": 1,
         "fuel": 0,
         "investment": 0,
-        "lifetime": config["costs"]["lifetime"],
+        "lifetime": n.meta["costs"]["lifetime"],
     }
     costs.loc[costs["unit"].str.contains("/kW"), "value"] *= 1e3  # to 1/MW
-    usd_to_eur = config["costs"]["USD2013_to_EUR2013"]
+    usd_to_eur = n.meta["costs"]["USD2013_to_EUR2013"]
     costs.loc[costs["unit"].str.contains("USD"), "value"] *= usd_to_eur
 
     costs = costs["value"]
@@ -282,7 +284,7 @@ def prepare_costs(
 
     costs["fixed"] = costs.apply(_calculate_fixed_costs, axis=1)
 
-    # operations between data frames are easier if index names align
+    # align index names with data model
     costs.index.names = [DataModel.YEAR, DataModel.CARRIER]
 
     return costs
@@ -290,6 +292,7 @@ def prepare_costs(
 
 def prepare_co2_emissions(
     result_path: str | Path,
+    n: pypsa.Network,
     options: str | list[str],
     sub_directory: str = "../data",
 ) -> pd.DataFrame:
@@ -307,6 +310,8 @@ def prepare_co2_emissions(
         Absolute or relative path to the run results folder that
         contains all model results (typically ends with "results",
         or is a time-stamp).
+    n
+        The Notwork with the meta attribute to obtain the config.
     options : {'T', 'H', 'I'}
         Specify 'T', 'H', and/or 'I' to include transport,
         household, and/or industry emissions, respectively.
@@ -318,10 +323,13 @@ def prepare_co2_emissions(
     -------
     :
         The CO2 emission share by country.
+
+    Notes
+    -----
+    This function needs to be updated for Agriculture emissions and
+    for Austrian NUTS2 regions shares, that are not accurate otherwise.
     """
-    # metric_name = "CO2 Share (1)"
-    config = read_model_config(result_path)
-    scenario_path = Path(result_path) / sub_directory / config["scenario"]["name"]
+    scenario_path = Path(result_path) / sub_directory / n.meta["scenario"]["name"]
     co2 = read_csv_files(scenario_path, "co2_totals.csv", "general")
     co2 = co2.drop("EU28")  # The EU value distorts the sum
 
@@ -342,8 +350,8 @@ def prepare_co2_emissions(
 
     co2 = co2[cols].sum(axis=1)
     co2_dist = co2 / co2.sum()
-    cluster = config["scenario"]["clusters"][0]
-    if cluster != "AT10":
+    cluster = n.meta["scenario"]["clusters"][0]
+    if cluster != "adm":
         return co2_dist  # .to_frame(metric_name)
 
     # disaggregate AT cluster emissions by population share
@@ -361,6 +369,7 @@ def prepare_co2_emissions(
 def prepare_industry_demand(
     result_path: str | Path,
     networks: dict,
+    n: pypsa.Network,
     sub_directory: str = "interpolated_data",
     rename: bool = True,
 ) -> pd.Series:
@@ -385,6 +394,8 @@ def prepare_industry_demand(
     networks
         The pypsa postnetworks, used to extract the methane amounts
         including CC.
+    n
+        The Notwork with the meta attribute to obtain the config.
     sub_directory : optional
         The location of the CSV files relative to the results folder.
     rename : optional
@@ -398,9 +409,8 @@ def prepare_industry_demand(
     # delayed import to prevent circular import error
     from statistic import collect_myopic_statistics
 
-    config = read_model_config(result_path)
-    simpl = config["scenario"]["simpl"][0]
-    cluster = config["scenario"]["clusters"][0]
+    simpl = n.meta["scenario"]["simpl"][0]
+    cluster = n.meta["scenario"]["clusters"][0]
 
     file_name_pattern = f"industrial_demand_by_sector_elec_s{simpl}_{cluster}_*.csv"
     industry_demand = read_csv_files(result_path, file_name_pattern, sub_directory)
@@ -491,6 +501,7 @@ def prepare_industry_demand(
     return industry_demand
 
 
+@deprecation.deprecated("Not needed anymore and will be removed during migration.")
 def prepare_nodal_energy(
     result_path: str | Path, sub_directory: str = "../resources"
 ) -> pd.DataFrame:
@@ -1086,9 +1097,7 @@ def _expand_column_to_fit_content(ws: Worksheet, df: pd.DataFrame, col: int) -> 
     ws.column_dimensions[xl_col].width = column_width
 
 
-@deprecation.deprecated(
-    "Exporting VAMOS files is not required anymore and may be removed permanently."
-)
+@deprecation.deprecated("Not needed anymore and will be removed during migration.")
 def export_vamos_jsons(json_file_paths: list, file_name_template: str) -> None:
     """Write a JSON file for VAMOS UI that lists available figures.
 
