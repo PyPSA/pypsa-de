@@ -1,9 +1,9 @@
+# -*- coding: utf-8 -*-
 """Industry Evaluations."""
 
 from pathlib import Path
 
 import pandas as pd
-
 from constants import TITLE_SUFFIX, DataModel, Group
 from fileio import prepare_industry_demand
 from metric import Metric
@@ -173,7 +173,7 @@ def fetch_industry_demand_statistics(
     Parameters
     ----------
     networks
-        The loaded postnetworks.
+        The loaded networks.
     result_path
         The path to the results directory, needed to locate resource
         files.

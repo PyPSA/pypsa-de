@@ -53,23 +53,7 @@ def view_heat_capacity(
     metric.cfg.plotly.chart = ESMBarChart
     metric.cfg.plotly.file_name_template = view_config["file_name"]
     metric.cfg.plotly.cutoff = view_config["cutoff"]
-    metric.cfg.plotly.category_orders = (
-        Group.storage_out,
-        Group.solar_thermal,
-        Group.ft,
-        Group.chp_biomass,
-        Group.fuel_cell_heat,
-        Group.resistive_heater,
-        Group.ch4_boiler,
-        Group.chp_ch4,
-        Group.chp_coal,
-        Group.heat_pump,
-        # demand in reversed order:
-        Group.storage_in,
-        Group.grid_losses,
-        Group.hh_and_services_heat,
-        Group.industry,
-    )
+    metric.cfg.plotly.category_orders = view_config["order"]
 
     output_path = make_evaluation_result_directories(result_path, subdir)
     metric.export(output_path, view_config["export"])

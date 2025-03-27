@@ -1,9 +1,8 @@
+# -*- coding: utf-8 -*-
 """Module for transport sector evaluations."""
 
 from functools import partial
 from pathlib import Path
-
-from frozendict import frozendict
 
 from constants import (
     TITLE_SUFFIX,
@@ -14,6 +13,7 @@ from constants import (
     Mapping,
 )
 from fileio import prepare_nodal_energy
+from frozendict import frozendict
 from metric import Metric
 from plots.barchart import ESMBarChart
 from plots.facetbars import ESMGroupedBarChart
@@ -177,7 +177,7 @@ def _fetch_transport_statistics(networks: dict, result_path: Path) -> list:
     Parameters
     ----------
     networks
-        The loaded postnetworks.
+        The loaded networks.
     result_path
         The path to the results directory, needed to locate resource
         files.

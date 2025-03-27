@@ -1,9 +1,9 @@
+# -*- coding: utf-8 -*-
 """Module for heat evaluations."""
 
 from pathlib import Path
 
 import pandas as pd
-
 from constants import TITLE_SUFFIX, BusCarrier, Carrier, DataModel, Group
 from metric import Metric
 from plots.barchart import ESMBarChart
@@ -187,7 +187,7 @@ def get_heat_loss_factor(networks: dict) -> int:
     Parameters
     ----------
     networks
-        The loaded postnetworks.
+        The loaded networks.
 
     Returns
     -------

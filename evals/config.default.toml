@@ -7,6 +7,10 @@ name = "District Heat Production Capacities"
 unit = "GW"
 file_name  = "capacity_heat_{location}"
 cutoff = 0.0001
+# "Storage In", "Grid Losses","HH and Services (Heat)", "Industry" are in reverse order because demand
+order = ["Storage Out", "Solar Thermal","Fischer-Tropsch","Biomass CHP", "Fuel Cell (Heat)",
+"Resistive Heater", "Gas Boiler", "Gas CHP", "Coal CHP", "Heat Pump", "Storage In", "Grid Losses",
+"HH and Services (Heat)", "Industry"]
 
 [view.capacity.heat_capacity.checks]
 all_categories_mapped = true
@@ -19,6 +23,7 @@ csv = true
 excel = false
 
 [view.capacity.heat_capacity.categories]
+
 "DAC" = "Direct Air Capture"
 "Fischer-Tropsch" = "Fischer-Tropsch"
 # "Fischer-Tropsch 1" = "Fischer-Tropsch"

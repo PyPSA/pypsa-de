@@ -1,10 +1,10 @@
+# -*- coding: utf-8 -*-
 """Evaluate the Final Energy Demand."""
 
 from functools import partial
 from pathlib import Path
 
 import pandas as pd
-
 from constants import (
     TITLE_SUFFIX,
     BusCarrier,
@@ -12,11 +12,6 @@ from constants import (
     DataModel,
     Group,
     Mapping,
-)
-from evals.heat import get_heat_loss_factor, split_heat_hh_service_losses
-from evals.industry import (
-    INDUSTRY_BUS_CARRIER,
-    fetch_industry_demand_statistics,
 )
 from fileio import prepare_industry_demand, prepare_nodal_energy
 from metric import Metric
@@ -32,6 +27,12 @@ from utils import (
     insert_index_level,
     make_evaluation_result_directories,
     rename_aggregate,
+)
+
+from evals.heat import get_heat_loss_factor, split_heat_hh_service_losses
+from evals.industry import (
+    INDUSTRY_BUS_CARRIER,
+    fetch_industry_demand_statistics,
 )
 
 
@@ -380,7 +381,7 @@ def final_energy_demand_statistics(networks: dict, result_path: Path) -> list:
     Parameters
     ----------
     networks
-        The loaded postnetworks.
+        The loaded networks.
     result_path
         The path to the results directory, needed to locate resource
         files.
@@ -406,7 +407,7 @@ def _fetch_fed_transport(networks: dict, result_path: Path) -> pd.Series | pd.Da
     Parameters
     ----------
     networks
-        The loaded postnetworks.
+        The loaded networks.
     result_path
         The path to the results directory, needed to locate resource
         files.
@@ -501,7 +502,7 @@ def _fetch_fed_industry(networks: dict, result_path: Path) -> pd.Series | pd.Dat
     Parameters
     ----------
     networks
-        The loaded postnetworks.
+        The loaded networks.
     result_path
         The path to the results directory, needed to locate resource
         files.
@@ -536,7 +537,7 @@ def _fetch_fed_decentral_heat(networks: dict) -> pd.Series | pd.DataFrame:
     Parameters
     ----------
     networks
-        The loaded postnetworks.
+        The loaded networks.
 
     Returns
     -------
@@ -589,7 +590,7 @@ def _fetch_fed_district_heat(networks: dict) -> pd.Series | pd.DataFrame:
     Parameters
     ----------
     networks
-        The loaded postnetworks.
+        The loaded networks.
 
     Returns
     -------
@@ -644,7 +645,7 @@ def _fetch_fed_homes_and_trade(networks: dict) -> pd.Series | pd.DataFrame:
     Parameters
     ----------
     networks
-        The loaded postnetworks.
+        The loaded networks.
 
     Returns
     -------
@@ -654,5 +655,7 @@ def _fetch_fed_homes_and_trade(networks: dict) -> pd.Series | pd.DataFrame:
     """
     fed_homes_and_trade = collect_myopic_statistics(
         networks, statistic="ac_load_split", carrier=[Carrier.domestic_homes_and_trade]
-    ).mul(-1)  # plot demand upwards
+    ).mul(
+        -1
+    )  # plot demand upwards
     return rename_aggregate(fed_homes_and_trade, Group.hh_and_services)

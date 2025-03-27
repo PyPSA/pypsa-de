@@ -1,10 +1,10 @@
+# -*- coding: utf-8 -*-
 """Module for electricity evaluations."""
 
 import logging
 from pathlib import Path
 
 import pandas as pd
-
 from constants import (
     TITLE_SUFFIX,
     BusCarrier,
@@ -324,7 +324,9 @@ def eval_electricity_balance_ts(
             comps="StorageUnit",
             bus_carrier=BusCarrier.AC,
             aggregate_time=False,
-        ).mul(-1)  # demand is negative
+        ).mul(
+            -1
+        )  # demand is negative
 
     # replicate time series for industry and rail yearly demand
     rail_industry = collect_myopic_statistics(
@@ -343,7 +345,9 @@ def eval_electricity_balance_ts(
         bus_carrier=BusCarrier.AC,
         aggregate_time=False,
         drop_zero_rows=False,
-    ).mul(-1.0)  # demand is negative
+    ).mul(
+        -1.0
+    )  # demand is negative
     ac_demand = ac_demand.drop("value of lost load", level="carrier", errors="ignore")
     ac_demand = _subtract_rail_and_industry_demands_from_electricity_base_load(
         ac_demand, rail_industry
@@ -697,7 +701,7 @@ def _fetch_electricity_trade_statistics(
     Parameters
     ----------
     networks
-        The loaded postnetworks in a dictionary.
+        The loaded networks in a dictionary.
     aggregate_time
         The time aggregation to apply. Pass False to return time series.
     net_trade
