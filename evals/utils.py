@@ -816,3 +816,194 @@ def swap_multiindex_values(
     df_reversed_values.index.names = idx_names
 
     return df_reversed_values
+
+
+def add_grid_lines(buses: pd.DataFrame, statistic: pd.Series) -> pd.DataFrame:
+    """Add a column with gridlines to a statistic.
+
+    Parameters
+    ----------
+    buses
+        The Bus component data frame from a pypsa network.
+
+    statistic
+        A pandas object with a multiindex. There must be a "bus0" and
+        a "bus1" multiindex level, that hold the node names.
+
+    Returns
+    -------
+    :
+        A data frame with an additional "line" column that holds x/y
+        coordinate pairs between the respective bus0 and bus1 locations.
+    """
+    if isinstance(statistic, pd.Series):
+        statistic = statistic.to_frame()
+
+    bus0 = statistic.index.get_level_values("bus0")
+    bus1 = statistic.index.get_level_values("bus1")
+    ac_buses = filter_by(buses, carrier="AC")[["x", "y"]]
+
+    def _get_bus_lines(_nodes: tuple[str]) -> np.ndarray:
+        """Draw a line between buses using AC bus coordinates.
+
+        Note, that only AC buses have coordinates assigned.
+
+        Parameters
+        ----------
+        _nodes
+            The start node name and the end node name in a tuple.
+
+        Returns
+        -------
+        :
+            A one dimensional array with lists of coordinate pairs,
+            i.e. grid lines.
+        """
+        return ac_buses.loc[[*_nodes]][["y", "x"]].to_numpy()
+
+    # generate lines [(x0, y0), (x1,y1)] between buses for every
+    # row in grid and store it in a new column
+    statistic["line"] = [*map(_get_bus_lines, zip(bus0, bus1, strict=True))]
+
+    return statistic
+
+
+def align_edge_directions(
+    df: pd.DataFrame, lvl0: str = "bus0", lvl1: str = "bus1"
+) -> pd.DataFrame:
+    """Align the directionality of edges between two nodes.
+
+    Parameters
+    ----------
+    df
+        The input data frame with a multiindex.
+    lvl0
+        The first MultiIndex level name to swap values.
+    lvl1
+        The second MultiIndex level name to swap values.
+
+    Returns
+    -------
+    :
+        The input data frame with aligned edge directions between the
+        nodes in lvl1 and lvl0.
+    """
+    seen = []
+
+    def _reverse_values_if_seen(df_slice: pd.DataFrame) -> pd.DataFrame:
+        """Reverse index levels if they have a duplicated permutation.
+
+        Parameters
+        ----------
+        df_slice
+            A slice of a data frame with the bus0 and bus1 index level.
+
+        Returns
+        -------
+        :
+            The slice with exchanged level values if the combination of
+            lvl1 and lvl2 is not unique and the original slice
+            otherwise.
+        """
+        buses = {df_slice.index.unique(lvl0)[0], df_slice.index.unique(lvl1)[0]}
+        if buses in seen:
+            reversed_slice = df_slice.swaplevel(lvl0, lvl1)
+            # keep original names since we only want to swap values
+            reversed_slice.index.names = df_slice.index.names
+            return reversed_slice
+        else:
+            seen.append(buses)
+            return df_slice
+
+    return df.groupby([lvl0, lvl1], group_keys=False).apply(
+        _reverse_values_if_seen,
+    )
+
+
+def _split_trade_saldo_to_netted_import_export(df: pd.DataFrame) -> pd.DataFrame:
+    """Split the trade saldo carrier into import and export.
+
+    The splitting needs to happen after the location aggregation.
+    Otherwise, resulting netted import/export values are incorrect
+    for countries with multiple regions, if the regions become
+    aggregated, e.g. Germany.
+
+    Parameters
+    ----------
+    df
+        The input data frame with the foreign saldo carrier.
+
+    Returns
+    -------
+    :
+        The output data frame with positive trade values
+        as import and negative values as export.
+    """
+    saldo = df.query("carrier.str.contains('saldo')")
+
+    if saldo.empty:
+        return df
+
+    net_import = rename_aggregate(saldo.mul(saldo.gt(0)), Group.import_net)
+    net_export = rename_aggregate(saldo.mul(saldo.le(0)), Group.export_net)
+
+    saldo_carrier = saldo.index.unique("carrier")
+    df_without_saldo = df.drop(saldo_carrier, level=DataModel.CARRIER)
+
+    return pd.concat([df_without_saldo, net_import, net_export]).sort_index()
+
+
+def combine_statistics(
+    statistics: list,
+    metric_name: str,
+    is_unit: str,
+    to_unit: str,
+    keep_regions: tuple = ("AT",),
+    region_nice_names: bool = True,
+) -> pd.DataFrame:
+    """Build the metric data frame from statistics.
+
+    Parameters
+    ----------
+    statistics
+        The statistics to combine.
+    metric_name
+        The metric name used in plot titles and column labels.
+    is_unit
+        The common unit of input statistics.
+    to_unit
+        The desired unit of the output metric.
+    keep_regions
+        A collection of country codes for which original input
+        cluster codes will be included in the metric locations.
+    region_nice_names
+        Whether to replace location country codes with country/region
+        names.
+
+    Returns
+    -------
+    :
+        The formatted metric in the desired unit and locations.
+    """
+    df = pd.concat(statistics)
+
+    if was_series := isinstance(df, pd.Series):
+        df = df.to_frame(f"{metric_name} ({is_unit})")
+
+    df = aggregate_locations(df, keep_regions, region_nice_names)
+
+    df.attrs["name"] = metric_name
+    df.attrs["unit"] = to_unit
+
+    df.columns.name = DataModel.METRIC if was_series else DataModel.SNAPSHOTS
+    if df.columns.name == DataModel.SNAPSHOTS:
+        df.columns = pd.to_datetime(df.columns, errors="raise")
+
+    if to_unit and (is_unit != to_unit):
+        df = scale(df, to_unit=to_unit)
+
+    df = _split_trade_saldo_to_netted_import_export(df)
+
+    verify_metric_format(df)
+
+    return df

@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 """Collect statistics for ESM evaluations."""  # noqa: A005
-
+import logging
 from functools import partial
 from inspect import getmembers
 from itertools import product
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 import pypsa
+from deprecation import deprecated
 from pandas import DataFrame
 from pypsa.statistics import (
     StatisticsAccessor,
@@ -30,14 +30,17 @@ from evals.constants import (
     Regex,
 )
 from evals.fileio import read_csv_files
-from evals.metric import logger
 from evals.utils import (
+    add_grid_lines,
+    align_edge_directions,
     filter_by,
     get_trade_type,
     insert_index_level,
     split_location_carrier,
     trade_mask,
 )
+
+logger = logging.getLogger(__file__)
 
 
 def get_location(
@@ -78,7 +81,7 @@ def get_location(
     return n.static(c)[f"bus{port}"].map(n.buses.location).rename("location")
 
 
-def get_location_from_comp_name_at_bus_port(
+def get_location_from_name_at_port(
     n: pypsa.Network, c: str, port: str = ""
 ) -> pd.Series:
     """Return the location from the component name.
@@ -98,6 +101,7 @@ def get_location_from_comp_name_at_bus_port(
     return n.static(c)[f"bus{port}"].str.extract(pat, expand=False)
 
 
+@deprecated("Will be removed during migration.")
 def get_location_and_carrier_and_bus_carrier(
     n: pypsa.Network,
     c: str,
@@ -152,6 +156,7 @@ def get_location_and_carrier_and_bus_carrier(
     return [location, carrier, bus_carrier]
 
 
+@deprecated("Will be removed during migration.")
 def get_buses_and_carrier_and_bus_carrier(
     n: pypsa.Network, c: str, port: str = "", nice_names: bool = True
 ) -> list[pd.Series]:
@@ -188,7 +193,7 @@ def collect_myopic_statistics(
     statistic: str,
     aggregate_components: str = "sum",
     carrier: list | tuple = None,
-    drop_zero_rows: bool = True,
+    # drop_zero_rows: bool = True,
     **kwargs: object,
 ) -> pd.DataFrame | pd.Series:
     """Build a myopic statistic from loaded networks.
@@ -302,13 +307,10 @@ class ESMStatistics(StatisticsAccessor):
         super().__init__(n)
         self.result_path = result_path
         self.set_parameters(nice_names=False)
+        self.set_parameters(remove_zeros=True)
         groupers.add_grouper("location", get_location)
-        groupers.add_grouper(
-            "bus0", partial(get_location_from_comp_name_at_bus_port, port="0")
-        )
-        groupers.add_grouper(
-            "bus1", partial(get_location_from_comp_name_at_bus_port, port="1")
-        )
+        groupers.add_grouper("bus0", partial(get_location_from_name_at_port, port="0"))
+        groupers.add_grouper("bus1", partial(get_location_from_name_at_port, port="1"))
 
     def ac_load_split(self) -> pd.DataFrame:
         """Split energy amounts for electricity Loads.
@@ -1060,105 +1062,3 @@ class ESMStatistics(StatisticsAccessor):
             result = add_grid_lines(n, result)
 
         return result.sort_index()
-
-
-def add_grid_lines(buses: pd.DataFrame, statistic: pd.Series) -> pd.DataFrame:
-    """Add a column with gridlines to a statistic.
-
-    Parameters
-    ----------
-    buses
-        The Bus component data frame from a pypsa network.
-
-    statistic
-        A pandas object with a multiindex. There must be a "bus0" and
-        a "bus1" multiindex level, that hold the node names.
-
-    Returns
-    -------
-    :
-        A data frame with an additional "line" column that holds x/y
-        coordinate pairs between the respective bus0 and bus1 locations.
-    """
-    if isinstance(statistic, pd.Series):
-        statistic = statistic.to_frame()
-
-    bus0 = statistic.index.get_level_values("bus0")
-    bus1 = statistic.index.get_level_values("bus1")
-    ac_buses = filter_by(buses, carrier="AC")[["x", "y"]]
-
-    def _get_bus_lines(_nodes: tuple[str]) -> np.ndarray:
-        """Draw a line between buses using AC bus coordinates.
-
-        Note, that only AC buses have coordinates assigned.
-
-        Parameters
-        ----------
-        _nodes
-            The start node name and the end node name in a tuple.
-
-        Returns
-        -------
-        :
-            A one dimensional array with lists of coordinate pairs,
-            i.e. grid lines.
-        """
-        return ac_buses.loc[[*_nodes]][["y", "x"]].to_numpy()
-
-    # generate lines [(x0, y0), (x1,y1)] between buses for every
-    # row in grid and store it in a new column
-    statistic["line"] = [*map(_get_bus_lines, zip(bus0, bus1, strict=True))]
-
-    return statistic
-
-
-def align_edge_directions(
-    df: pd.DataFrame, lvl0: str = "bus0", lvl1: str = "bus1"
-) -> pd.DataFrame:
-    """Align the directionality of edges between two nodes.
-
-    Parameters
-    ----------
-    df
-        The input data frame with a multiindex.
-    lvl0
-        The first MultiIndex level name to swap values.
-    lvl1
-        The second MultiIndex level name to swap values.
-
-    Returns
-    -------
-    :
-        The input data frame with aligned edge directions between the
-        nodes in lvl1 and lvl0.
-    """
-    seen = []
-
-    def _reverse_values_if_seen(df_slice: pd.DataFrame) -> pd.DataFrame:
-        """Reverse index levels if they have a duplicated permutation.
-
-        Parameters
-        ----------
-        df_slice
-            A slice of a data frame with the bus0 and bus1 index level.
-
-        Returns
-        -------
-        :
-            The slice with exchanged level values if the combination of
-            lvl1 and lvl2 is not unique and the original slice
-            otherwise.
-        """
-        buses = {df_slice.index.unique(lvl0)[0], df_slice.index.unique(lvl1)[0]}
-        if buses in seen:
-            reversed_slice = df_slice.swaplevel(lvl0, lvl1)
-            # keep original names since we only want to swap values
-            reversed_slice.index.names = df_slice.index.names
-            return reversed_slice
-        else:
-            seen.append(buses)
-            return df_slice
-
-    return df.groupby([lvl0, lvl1], group_keys=False).apply(
-        _reverse_values_if_seen,
-    )

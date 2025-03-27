@@ -8,7 +8,7 @@ technologies.
 from pathlib import Path
 
 from evals.constants import BusCarrier, Group
-from evals.metric import Metric
+from evals.fileio import Metric
 from evals.plots.barchart import ESMBarChart
 from evals.statistic import collect_myopic_statistics
 from evals.utils import make_evaluation_result_directories

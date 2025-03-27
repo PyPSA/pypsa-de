@@ -6,6 +6,7 @@ import json
 import logging
 import re
 import tomllib
+from functools import cached_property
 from importlib import resources
 from pathlib import Path
 from typing import Callable
@@ -13,26 +14,22 @@ from typing import Callable
 import deprecation
 import pandas as pd
 import pypsa
-from openpyxl.chart import BarChart, Reference
-from openpyxl.chart.marker import DataPoint
-from openpyxl.worksheet.worksheet import Worksheet
-from pandas import ExcelWriter
 from pydantic.v1.utils import deep_update
-from xlsxwriter.utility import xl_col_to_name, xl_rowcol_to_cell
 
-from evals.configs import ExcelConfig, ViewDefaults
+from evals.configs import ViewDefaults
 from evals.constants import (
-    ALIAS_COUNTRY_REV,
     ALIAS_LOCATION,
-    ALIAS_REGION_REV,
+    NOW,
     RUN_META_DATA,
+    TITLE_SUFFIX,
     DataModel,
     Regex,
 )
+from evals.excel import export_excel_countries, export_excel_regions_at
 from evals.utils import (
+    add_dummy_rows,
     calculate_cost_annuity,
-    filter_by,
-    get_mapping,
+    combine_statistics,
     insert_index_level,
     rename_aggregate,
 )
@@ -712,429 +709,262 @@ def prepare_nodal_energy(
     return nodal_energy
 
 
-def export_excel_countries(
-    metric: pd.DataFrame,
-    writer: pd.ExcelWriter,
-    excel_defaults: ExcelConfig,
-    view_config: dict,
-) -> None:
-    """Add one sheet per country to an Excel file.
+#
+# @deprecation.deprecated("Not needed anymore and will be removed during migration.")
+# def export_vamos_jsons(json_file_paths: list, file_name_template: str) -> None:
+#     """Write a JSON file for VAMOS UI that lists available figures.
+#
+#     Parameters
+#     ----------
+#     json_file_paths
+#         A collection of file paths with JSON encoded plotly figures.
+#     file_name_template
+#         The file name template for the JSON files with unsubstituted
+#         variables.
+#     """
+#     directories = {fp.parent for fp in json_file_paths}
+#     assert len(directories) == 1, f"Multiple directories are not allowed: {directories}"
+#
+#     json_file_names = [fp.stem for fp in json_file_paths]
+#
+#     template_field_values = {}
+#     if "{year}" in file_name_template:
+#         template_field_values["Years"] = sorted(
+#             {re.search(r"_\d{4}_", s).group().strip("_") for s in json_file_names}
+#         )
+#     if "{location}" in file_name_template:
+#         template_field_values["Regions"] = [
+#             loc
+#             for loc in ALIAS_LOCATION
+#             if any(fn.endswith(loc) for fn in json_file_names)
+#         ]
+#
+#     payload = [
+#         {"naming_convention": f"{file_name_template}.json"},
+#         template_field_values,
+#         ALIAS_LOCATION,
+#         RUN_META_DATA,
+#     ]
+#
+#     directory = directories.pop()
+#     file_name = file_name_template.split("_{")[0]
+#     file_path = directory / f"{file_name}_FILTERS.json"
+#     with file_path.open("w", encoding="utf-8") as fh:
+#         json.dump(payload, fh, indent=2)
+class Metric:
+    """A class to build metrics from statistics.
 
-    The function appends one sheet per location to the workbook of the
-    opened writer instance.
+    The metric data frame consists of multiple joined statistics,
+    aggregated to countries and scaled to a specified unit. The
+    data frame format is verified and expected by export functions.
 
     Parameters
     ----------
-    metric
-        The data frame without carrier mapping applied.
-    writer
-        The ExcelWriter instance to add the sheets to.
-    excel_defaults
-        The default settings for Excel file export.
-    view_config
-        The view configuration items.
+    statistics
+        A list of Series for time aggregated statistics or list of
+        data frames for statistics with snapshots as columns.
+    statistics_unit
+        The input statistics unit.
+    keep_regions
+        A tuple of location prefixes that are used to match
+        locations to keep during aggregation.
+    region_nice_names
+        Whether, or not to rename country codes after aggregation
+        to show the full country name.
     """
-    categories = view_config["categories"]
-    carrier = metric.index.unique(DataModel.CARRIER)
-    df = rename_aggregate(metric, level=DataModel.CARRIER, mapper=categories)
-    df = filter_by(df, location=list(ALIAS_COUNTRY_REV))  # exclude regions
-    df = df.pivot_table(
-        index=excel_defaults.pivot_index,
-        columns=excel_defaults.pivot_columns,
-        aggfunc="sum",
-    )
 
-    for country, data in df.groupby(DataModel.LOCATION):
-        data = data.droplevel(DataModel.LOCATION)
-        _write_excel_sheet(data, excel_defaults, writer, str(country))
+    def __init__(  # noqa: PLR0913, PLR0917
+        self,
+        statistics: list,
+        statistics_unit: str,
+        view_config: dict,
+        keep_regions: tuple = ("AT",),
+        region_nice_names: bool = True,
+    ) -> None:
+        self.statistics = statistics
+        self.is_unit = statistics_unit
+        self.metric_name = view_config["name"]
+        self.to_unit = view_config["unit"]
+        self.keep_regions = keep_regions
+        self.region_nice_names = region_nice_names
+        self.view_config = view_config
+        self.defaults = ViewDefaults()
 
-    _write_categories_sheet(categories, carrier, writer, sheet_name="Categories")
+        # update defaults from config for this view
+        self.defaults.excel.title = view_config["name"] + TITLE_SUFFIX
+        self.defaults.plotly.title = view_config["name"] + TITLE_SUFFIX
+        self.defaults.plotly.file_name_template = view_config["file_name"]
+        self.defaults.plotly.cutoff = view_config["cutoff"]
+        self.defaults.plotly.category_orders = view_config["legend_order"]
 
+    @cached_property
+    def df(self) -> pd.DataFrame:
+        """Build the metric and store it as a cached property.
 
-def export_excel_regions_at(
-    metric: pd.DataFrame,
-    writer: pd.ExcelWriter,
-    excel_defaults: ExcelConfig,
-    view_config: dict,
-) -> None:
-    """Write one Excel sheet for Europe, Austria, and Austrian regions.
+        (This is useful, because users do not need to remember
+        building the metric data frame. It will be built once if needed)
 
-    The function appends one sheet per location to the workbook of the
-    opened writer instance.
-
-    Parameters
-    ----------
-    metric
-        The data frame without carrier mapping applied.
-    writer
-        The ExcelWriter instance to add the sheets to.
-    excel_defaults
-        The default settings for Excel file export.
-    view_config
-        The view configuration items.
-    """
-    categories = view_config["categories"]
-    carrier = metric.index.unique(DataModel.CARRIER)
-    df = rename_aggregate(metric, level=DataModel.CARRIER, mapper=categories)
-    df = filter_by(df, location=list(ALIAS_REGION_REV))
-    df_xlsx = df.pivot_table(
-        index=excel_defaults.pivot_index,
-        columns=excel_defaults.pivot_columns,
-        aggfunc="sum",
-    )
-
-    for country, data in df_xlsx.groupby(DataModel.LOCATION):
-        data = data.droplevel(DataModel.LOCATION)
-        _write_excel_sheet(data, excel_defaults, writer, str(country))
-
-    # append carrier tables to special region sheet
-    df_region = df.pivot_table(
-        index=DataModel.CARRIER,
-        columns=[DataModel.LOCATION, DataModel.YEAR],
-        aggfunc="sum",
-    ).droplevel(DataModel.METRIC, axis=1)
-
-    excel_defaults.chart_title = "Region AT"
-    _write_excel_sheet(
-        df_region,
-        excel_defaults,
-        writer,
-        sheet_name="Regions AT",
-        position=3,
-    )
-    groups = df_region.drop(
-        ["Europe", "Austria"], level=DataModel.LOCATION, axis=1, errors="ignore"
-    ).groupby(DataModel.CARRIER)
-
-    # update config for pivoted carrier tables and graphs
-    excel_defaults.chart = "clustered"
-    excel_defaults.chart_switch_axis = True
-
-    for carrier, df_reg in groups:
-        excel_defaults.chart_title = str(carrier).title()
-        _write_excel_sheet(
-            df_reg.T.unstack(1),
-            excel_defaults,
-            writer,
-            sheet_name="Regions AT",
-            position=3,
+        Returns
+        -------
+        :
+            The cached metric data frame.
+        """
+        return combine_statistics(
+            self.statistics,
+            self.metric_name,
+            self.is_unit,
+            self.to_unit,
+            self.keep_regions,
+            self.region_nice_names,
         )
 
-    _write_categories_sheet(categories, carrier, writer, sheet_name="Categories")
+    def export_plotly(self, output_path: Path) -> None:
+        """Create the plotly figure and export it as HTML and JSON.
 
-
-def _write_excel_sheet(
-    df: pd.DataFrame,
-    excel_defaults: ExcelConfig,
-    writer: pd.ExcelWriter,
-    sheet_name: str,
-    position: int = -1,
-) -> None:
-    """Write a data frame to an Excel sheet.
-
-    The input data are written to xlsx and a corresponding diagram
-    (currently only stacked bar chart) is included.
-
-    Parameters
-    ----------
-    df
-        The dataframe to be transformed and exported to Excel; works
-        with columns of multiindex level <= 2 f.ex. (location, year).
-    excel_defaults
-        The configuration of the Excel file and chart.
-    writer
-        The writer object that represents an opened Excel file.
-    sheet_name
-        The name of sheet included in xlsx, will also be the
-        name of diagram.
-    position
-        The position where the worksheet should
-        be added.
-    """
-    axis_labels = excel_defaults.axis_labels or [df.attrs["name"], df.attrs["unit"]]
-
-    # parametrize size of data in xlsx
-    number_rows, number_col = df.shape
-
-    start_row = 0
-    if ws := writer.sheets.get(sheet_name):
-        # the sheet already exists. We can determine the
-        # number of rows contained and append new data below
-        gap_size = 2 if ws.max_row > 0 else 0
-        start_row = ws.max_row + gap_size
-
-    df.to_excel(writer, sheet_name=sheet_name, startrow=start_row, float_format="%0.4f")
-    ws = writer.sheets.get(sheet_name)  # needed to update ws object
-
-    _delete_index_name_row(ws, df, start_row=start_row)
-    _expand_column_to_fit_content(ws, df, 0)
-
-    if excel_defaults.chart:
-        barchart = _create_excel_barchart(
-            ws, df, excel_defaults, axis_labels, start_row
+        Parameters
+        ----------
+        output_path
+            The path to the HTML folder with all the html files are
+            stored.
+        """
+        cfg = self.defaults.plotly
+        df = rename_aggregate(
+            self.df, level=cfg.plot_category, mapper=self.view_config["categories"]
         )
-        chart_start_cell = xl_rowcol_to_cell(start_row, number_col + 2)
-        ws.add_chart(barchart, chart_start_cell)
 
-    _move_excel_sheet(writer, sheet_name, position)
-
-
-def _write_categories_sheet(
-    mapping: dict, carrier: tuple, writer: ExcelWriter, sheet_name: str
-) -> None:
-    """Write the mapping to a separate Excel sheet.
-
-    This is useful to make the renaming process transparent. The mapping
-    sheet will show 2 columns: one for the model names and the other for
-    the group names (the names also visible in HTML figures).
-
-    Parameters
-    ----------
-    mapping
-        The model name (bus carrier, carrier, or sector) to group
-        relation as key value pairs.
-    carrier
-        A collection of all carrier technologies present in the
-        exported metric.
-    writer
-        The open ExcelWriter object.
-    sheet_name
-        The name of the sheet to write the 2 mapping columns to.
-    """
-    m = {k: v for k, v in mapping.items() if k in carrier}
-    df = pd.DataFrame.from_dict(m, orient="index", columns=["Category"])
-    df.columns.name = "Carrier"
-    df.to_excel(writer, sheet_name=sheet_name, float_format="%0.4f")
-    ws = writer.sheets.get(sheet_name)
-    _delete_index_name_row(ws, df, start_row=0)  # delete index name row
-    _expand_column_to_fit_content(ws, df, 0)
-    _expand_column_to_fit_content(ws, df, 1)
-
-
-def _delete_index_name_row(ws: Worksheet, df: pd.DataFrame, start_row: int) -> None:
-    """Remove the index name row from the Excel sheet.
-
-    Delete the row in the Excel worksheet based on the number of index
-    levels and the starting row.
-
-    Parameters
-    ----------
-    ws
-        The worksheet where the row will be deleted.
-    df
-        The DataFrame used to determine the number of index levels.
-    start_row
-        The starting row from which deletion will begin.
-    """
-    ws.delete_rows(df.columns.nlevels + 1 + start_row)
-
-
-def _move_excel_sheet(writer: ExcelWriter, sheet_name: str, position: int) -> None:
-    """Move an Excel sheet to a given position.
-
-    Parameters
-    ----------
-    writer
-        The writer instance that depicts an open Excel workbook.
-    sheet_name
-        The name of the sheet inside the workbook.
-    position
-        The wanted position of the sheet as integer (1-indexed).
-        String input is kept for backwards compatibility and should
-        not be used.
-
-    Returns
-    -------
-    :
-        Moves the work sheet to the requested position.
-    """
-    if position != -1:
-        wb = writer.book
-        offset = position - len(wb.sheetnames)
-        wb.move_sheet(writer.sheets[sheet_name], offset=offset)
-
-
-def _create_excel_barchart(
-    ws: Worksheet,
-    df: pd.DataFrame,
-    cfg: ExcelConfig,
-    axis_labels: list,
-    start_row: int,
-) -> BarChart:
-    """Create an Excel bar chart object.
-
-    The function support bar chart of two different orientations:
-      - categories from column labels, and
-      - categories from index labels
-
-    The bar chart position is to the right of the newly added data
-    that serves as a data references for the chart.
-
-    Parameters
-    ----------
-    ws
-        The open worksheet instance.
-    df
-        Reference data for the bar chart.
-    cfg
-        The configuration for the Excel file and Excel chart.
-    axis_labels
-        A list of strings. The first list item is the x-axis label,
-        the second is the y-axis label.
-    start_row
-        First row for data insertion.
-
-    Returns
-    -------
-    :
-        The Excel bar chart object ready for insertion in a sheet.
-    """
-    nrows, ncols = df.shape
-
-    # gapWidth controls the space between outer column level groups
-    cat_len = len(df.columns.unique(1))
-    chart_kwargs = {"gapWidth": 20} if cat_len > 1 else {}
-    chart = BarChart(**chart_kwargs)
-
-    # data includes index names left to numeric data
-    min_col = df.index.nlevels
-    min_row = df.columns.nlevels + 1 + start_row
-    max_col = df.index.nlevels + ncols  # same
-    max_row = df.columns.nlevels + start_row + nrows  # same
-
-    if cfg.chart_switch_axis:
-        # use column names as x-axis labels: the upper left cell shifts
-        min_col += 1  # one to the right
-        min_row -= 1  # one up
-
-    data = Reference(ws, min_col, min_row, max_col, max_row)
-
-    # reference is the horizontal header innermost one or two rows,
-    # or the index in case switch_row_col is True
-    min_col = df.index.nlevels + 1
-    max_col = df.index.nlevels + ncols
-    min_row = start_row + df.columns.nlevels - (1 if cat_len > 1 else 0)
-    max_row = start_row + df.columns.nlevels
-
-    if cfg.chart_switch_axis:
-        # the categories become the index names of the column names
-        # instead. The reference area transposes from row selection to
-        # column selection.
-        min_col = max_col = min_col - 1  # one left
-        min_row += 2  # one down
-        max_row = df.columns.nlevels + start_row + nrows
-
-    cats = Reference(ws, min_col, min_row, max_col, max_row)
-
-    chart.type = "col"
-    chart.grouping = cfg.chart
-    title = cfg.chart_title or df.columns.get_level_values("metric")[0]
-    chart.title = title.format(location=ws.title, unit=axis_labels[1])
-
-    # only stack chart if stacked otherwise 0 to avoid always
-    # plotting a stacked chart (=100%)
-    chart.overlap = 100 if cfg.chart == "stacked" else 0
-
-    chart.add_data(data, from_rows=not cfg.chart_switch_axis, titles_from_data=True)
-    chart.set_categories(cats)
-    chart.x_axis.title = axis_labels[0]
-    chart.y_axis.title = axis_labels[1]
-    # excel row height is in pixel. resolution is 72 DPI.
-    # default row height in Excel is 15
-    height_factor = 0.53  # 15 (px) / 72 (px/Inch) * 2.54 (cm/Inch) = (cm)
-    height_data = nrows + df.columns.nlevels
-    chart.height = min(height_data * height_factor, 10)
-    chart.width = cfg.chart_width  # cm
-
-    if cfg.chart_switch_axis:  # the legend is redundant, as is the x-axis label
-        chart.legend = None
-        chart.x_axis.title = None
-
-    # set bar colors in chart
-    for i, carrier in enumerate(df.index):
-        if not cfg.chart_switch_axis:
-            color = cfg.chart_colors.get(carrier)
-        else:
-            color = cfg.chart_colors.get(df.columns.unique("carrier")[0])
-
-        if not color:
-            continue
-
-        if not cfg.chart_switch_axis:
-            chart.series[i].graphicalProperties.solidFill = color
-            chart.series[i].graphicalProperties.line.solidFill = color
-        else:
-            for ser in chart.series:
-                single_bar = DataPoint(idx=i)
-                single_bar.graphicalProperties.solidFill = color
-                # white borders to separate neighbors of same color
-                single_bar.graphicalProperties.line.solidFill = "FFFFFF"
-                ser.data_points.append(single_bar)
-
-    return chart
-
-
-def _expand_column_to_fit_content(ws: Worksheet, df: pd.DataFrame, col: int) -> None:
-    """Expand cell columns to improve readability in Excel.
-
-    The function expands the column to the larger value of its current
-    column width and the largest string in the input data frame index.
-
-    Parameters
-    ----------
-    ws
-        The open work sheet instance.
-    df
-        The data added to the worksheet.
-    col
-        The index of the column that should become expanded.
-    """
-    xl_col = xl_col_to_name(col)
-    series = df.index if col == 0 else df[df.columns[col - 1]]
-    data_width = series.astype(str).str.len().max()
-    existing_width = ws.column_dimensions[xl_col].width
-    column_width = max(existing_width, data_width)
-    ws.column_dimensions[xl_col].width = column_width
-
-
-@deprecation.deprecated("Not needed anymore and will be removed during migration.")
-def export_vamos_jsons(json_file_paths: list, file_name_template: str) -> None:
-    """Write a JSON file for VAMOS UI that lists available figures.
-
-    Parameters
-    ----------
-    json_file_paths
-        A collection of file paths with JSON encoded plotly figures.
-    file_name_template
-        The file name template for the JSON files with unsubstituted
-        variables.
-    """
-    directories = {fp.parent for fp in json_file_paths}
-    assert len(directories) == 1, f"Multiple directories are not allowed: {directories}"
-
-    json_file_names = [fp.stem for fp in json_file_paths]
-
-    template_field_values = {}
-    if "{year}" in file_name_template:
-        template_field_values["Years"] = sorted(
-            {re.search(r"_\d{4}_", s).group().strip("_") for s in json_file_names}
+        df_plot = df.pivot_table(
+            index=cfg.pivot_index, columns=cfg.pivot_columns, aggfunc="sum"
         )
-    if "{location}" in file_name_template:
-        template_field_values["Regions"] = [
-            loc
-            for loc in ALIAS_LOCATION
-            if any(fn.endswith(loc) for fn in json_file_names)
-        ]
 
-    payload = [
-        {"naming_convention": f"{file_name_template}.json"},
-        template_field_values,
-        ALIAS_LOCATION,
-        RUN_META_DATA,
-    ]
+        df_plot = add_dummy_rows(df_plot, self.keep_regions)
+        df_plot = df_plot.drop(cfg.drop_years, level=DataModel.YEAR, errors="ignore")
 
-    directory = directories.pop()
-    file_name = file_name_template.split("_{")[0]
-    file_path = directory / f"{file_name}_FILTERS.json"
-    with file_path.open("w", encoding="utf-8") as fh:
-        json.dump(payload, fh, indent=2)
+        json_file_paths = []
+        for idx, data in df_plot.groupby(cfg.plotby):
+            chart = cfg.chart(data, cfg)
+            chart.plot()
+            chart.to_html(output_path, cfg.plotby, idx)
+            json_file_path = chart.to_json(output_path, cfg.plotby, idx)
+            json_file_paths.append(json_file_path)
+
+        if cfg.export_vamos_jsons:
+            export_vamos_jsons(json_file_paths, cfg.file_name_template)
+
+    def export_excel(self, output_path: Path) -> None:
+        """Export metrics to Excel files for countries and regions.
+
+        Parameters
+        ----------
+        output_path
+            The path where the Excel files will be saved.
+        """
+        file_name_stem = self.view_config["file_name"].split("_{")[0]
+        file_path = output_path / "XLSX" / f"{file_name_stem}_{NOW}.xlsx"
+        with pd.ExcelWriter(file_path, engine="openpyxl") as writer:
+            export_excel_countries(
+                self.df, writer, self.defaults.excel, self.view_config
+            )
+
+        if self.df.columns.name == DataModel.SNAPSHOTS:
+            return  # skips region sheets for time series
+
+        file_path_at = output_path / f"{file_name_stem}_AT_{NOW}.xlsx"
+        with pd.ExcelWriter(file_path_at, engine="openpyxl") as writer:
+            export_excel_regions_at(
+                self.df, writer, self.defaults.excel, self.view_config
+            )
+
+    def export_csv(self, output_path: Path) -> None:
+        """Encode the metric da frame to a CSV file.
+
+        Parameters
+        ----------
+        output_path
+            The path to the CSV folder with all the csv files are
+            stored.
+
+        Returns
+        -------
+        :
+            Writes the metric to a CSV file.
+        """
+        file_name = self.defaults.plotly.file_name_template.split("_{", maxsplit=1)[0]
+        file_path = output_path / "CSV" / f"{file_name}_{NOW}.csv"
+        self.df.to_csv(file_path, encoding="utf-8")
+
+    def export(self, output_path: Path, export_config: dict) -> None:
+        """Export the metric to formats specified in the config.
+
+        Parameters
+        ----------
+        output_path
+            The path to the CSV folder with all the csv files are
+            stored.
+        export_config
+            The export configuration from the TOML file for this view.
+
+        Returns
+        -------
+        :
+        """
+        if export_config["plotly"]:
+            self.export_plotly(output_path)
+        if export_config["excel"]:
+            self.export_excel(output_path)
+        if export_config["csv"]:
+            self.export_csv(output_path)
+
+    def consistency_checks(self, config_checks: dict) -> None:
+        """Assert all categories are assigned to a group.
+
+        The method typically is called after exporting the metric.
+        Unmapped categories do not cause evaluations to fail, but
+        the evaluation function should return in error state to obviate
+        missing entries in the mapping.
+
+        Parameter
+        ---------
+        config_checks
+            A dictionary with flags for every test.
+
+        Returns
+        -------
+        :
+
+        Raises
+        ------
+        AssertionError
+            If not all technologies or bus_carrier are
+            assigned to a group.
+        """
+        # todo: refactor mapping to categories in a new multiindex level used in plots package
+        category = self.defaults.plotly.plot_category
+        categories = self.view_config["categories"]
+
+        if config_checks["all_categories_mapped"]:
+            assert self.df.index.unique(category).isin(categories.keys()).all(), (
+                f"Incomplete categories detected. There are technologies in the metric "
+                f"data frame, that are not assigned to a group (nice name)."
+                f"\nMissing items: "
+                f"{self.df.index.unique(category).difference(categories.keys())}"
+            )
+
+        if config_checks["no_superfluous_categories"]:
+            superfluous_categories = self.df.index.unique(category).difference(
+                categories.keys()
+            )
+            assert (
+                len(superfluous_categories) == 0
+            ), f"Superfluous categories found: {superfluous_categories}"
+
+        if config_checks["legend_entry_order"]:
+            a = set(self.view_config["legend_order"])
+            b = set(categories.values())
+            additional = a.difference(b)
+            assert (
+                not additional
+            ), f"Superfluous categories defined in legend order: {additional}"
+            missing = b.difference(a)
+            assert (
+                not missing
+            ), f"Some categories are not defined in legend order: {missing}"
