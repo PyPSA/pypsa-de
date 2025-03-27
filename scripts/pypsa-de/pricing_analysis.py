@@ -394,7 +394,7 @@ def price_setter(n, bus, timestep, minimum_generation=1e-3, co2_add_on=False, su
     # check if supply and demand are equal
     if abs(p_s - d_s) > 10:
         if not suppress_warnings:
-            logger.warning(f"Warning: Supply until marginal gen ({p_s}) and demand until least price taker ({d_s})differs by {abs(p_s - d_s)} (timestep {timestep})")  
+            logger.info(f"Warning: Supply until marginal gen ({p_s}) and demand until least price taker ({d_s})differs by {abs(p_s - d_s)} (timestep {timestep})")  
 
     return sc, dc
 

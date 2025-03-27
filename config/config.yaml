@@ -4,12 +4,12 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20250318-Pricing
+  prefix: 20250327-Pricing
 
   name:
   # - KN2045_Bal_v4
-  # - KN2045_Bal_v4_voll
-  - KN2045_Bal_v4_voll_1H 
+  - KN2045_Bal_v4_voll
+  # - KN2045_Bal_v4_voll_1H 
   # - KN2045_Bal_v4_24H
   # - KN2045_Bal_v4_365H
   # - KN2045_Bal_v4_elastic5GW
@@ -411,31 +411,31 @@ solving:
   constraints:
     efuel_export_ban: false
     limits_capacity_max:
-      # Generator:
-      #   onwind:
-      #     DE:
-      #       2020: 54.5
-      #       2025: 69
-      #       2030: 157 # EEG2023 Ziel für 2035
-      #       2035: 250
-      #       2040: 250
-      #       2045: 250
-      #   offwind:
-      #     DE:
-      #       2020: 7.8
-      #       2025: 11.3
-      #       2030: 31.3 # uba Projektionsbericht
-      #       2035: 70
-      #       2040: 70
-      #       2045: 70
-      #   solar:
-      #     DE:
-      #       2020: 53.7
-      #       2025: 110 # EEG2023; assumes for 2026: 128 GW, assuming a fair share reached by end of 2025
-      #       2030: 309 # EEG2023 Ziel für 2035
-      #       2035: 1000
-      #       2040: 1000
-      #       2045: 1000
+      Generator:
+        onwind:
+          DE:
+            2020: 54.5
+            2025: 69
+            2030: 157 # EEG2023 Ziel für 2035
+            2035: 250
+            2040: 250
+            2045: 250
+        offwind:
+          DE:
+            2020: 7.8
+            2025: 11.3
+            2030: 31.3 # uba Projektionsbericht
+            2035: 70
+            2040: 70
+            2045: 70
+        solar:
+          DE:
+            2020: 53.7
+            2025: 110 # EEG2023; assumes for 2026: 128 GW, assuming a fair share reached by end of 2025
+            2030: 309 # EEG2023 Ziel für 2035
+            2035: 1000
+            2040: 1000
+            2045: 1000
       # Store:
       #   co2 sequestered:
       #     DE:
@@ -734,4 +734,4 @@ demand_modelling:
 
 pricing:
   calc_bid_ask: false
-  parallel_method: fork # fork or spawn; fork works local and spawn on cluster
+  parallel_method: spawn # fork or spawn; fork works local and spawn on cluster
