@@ -1,0 +1,19 @@
+/*.badge.dark-badge .title {*/
+/*    !*background-color: darkgrey;*!*/
+/*    color: black;*/
+/*}*/
+
+.badge.dark-badge .value {
+    background-color: black;
+    color: white;
+}
+
+/*.badge.tools-badge .title {*/
+/*    !*background-color: darkgrey;*!*/
+/*    color: black;*/
+/*}*/
+
+.badge.tools-badge .value {
+    background-color: darkgreen;
+    color: white;
+}

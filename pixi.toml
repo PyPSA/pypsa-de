@@ -4,8 +4,6 @@ name = "pypsa-at"
 platforms = ["linux-64"]
 version = "0.1.0"
 
-[tasks]
-
 [dependencies]
 python = ">=3.10"
 pip = "*"
@@ -54,15 +52,26 @@ cartopy = "*"
 descartes = "*"
 rasterio = "==1.4.1"
 libgdal-core = "<3.10.0"
-pixi-pycharm = ">=0.0.8,<0.0.9"
-marimo = ">=0.11.22,<0.12"
-plotly = ">=6.0.1,<7"
-pytest = ">=8.3.5,<9"
-click = ">=8.1.8,<9"
-folium = ">=0.19.5,<0.20"
-xlsxwriter = ">=3.2.2,<4"
-frozendict = ">=2.4.6,<3"
-mkdocs = ">=1.6.1,<2"
+
+[environments]
+dev = {features = ["dev"], solve-group = "prod"}
+
+[feature.dev.dependencies]
+pixi-pycharm="*"
+marimo="*"
+plotly="*"
+pytest="*"
+click="*"
+folium="*"
+xlsxwriter="*"
+frozendict="*"
+mkdocs="*"
+mkdocs-material= {version = "*"}  # , extras = ["imaging"]
+mkdocstrings-python="*"  # {version = "*"}  # , extras = ["python"]
+mkdocs-material-extensions="*"
+Pygments="*"
+mkdocs-marimo="*"
+mknotebooks="*"
 
 [pypi-dependencies]
 gurobipy = "*"
@@ -72,3 +81,4 @@ tsam = ">=2.3.1"
 snakemake-storage-plugin-http = "*"
 snakemake-executor-plugin-slurm = "*"
 snakemake-executor-plugin-cluster-generic = "*"
+mkdocs-badges="*"

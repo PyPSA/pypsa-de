@@ -106,8 +106,8 @@ def run_eval(
         logger.info(f"({i}/{n_evals}) Start {func.__name__}...")
         eval_start = time()
         try:
-            cfg = read_views_config(func, config_override)
-            func(result_path=result_path, networks=networks, config=cfg)
+            config = read_views_config(func, config_override)
+            func(result_path=result_path, networks=networks, config=config)
         except Exception:  # noqa
             logger.exception(f"Exception during {func.__name__}.", exc_info=True)
             fails.append(func.__name__)
