@@ -53,7 +53,7 @@ def view_heat_capacity(
     metric.cfg.plotly.chart = ESMBarChart
     metric.cfg.plotly.file_name_template = view_config["file_name"]
     metric.cfg.plotly.cutoff = view_config["cutoff"]
-    metric.cfg.plotly.category_orders = view_config["order"]
+    metric.cfg.plotly.category_orders = view_config["legend_order"]
 
     output_path = make_evaluation_result_directories(result_path, subdir)
     metric.export(output_path, view_config["export"])

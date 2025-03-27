@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 from pathlib import Path
 
-import pandas as pd
-
-from evals.constants import TITLE_SUFFIX, BusCarrier, Carrier, DataModel, Group
+from evals.constants import TITLE_SUFFIX, BusCarrier, Carrier, DataModel
 from evals.metric import Metric
 from evals.plots.barchart import ESMBarChart
 from evals.statistic import collect_myopic_statistics
@@ -13,6 +11,7 @@ from evals.utils import make_evaluation_result_directories
 def view_electricity_capacities(
     result_path: str | Path,
     networks: dict,
+    config: dict,
     subdir: str | Path = "esm_run/evaluation",
 ) -> None:  # numpydoc ignore=PR01
     """Evaluate the optimal capacity for AC technologies.
@@ -40,30 +39,23 @@ def view_electricity_capacities(
         .clip(lower=0)
         .drop(transmission_or_storage_links, level=DataModel.CARRIER, errors="ignore")
     )
-
+    e_caps = [ac_generation_and_storage, ac_production]
+    view_config = config["view"]
     metric = Metric(
-        metric_name="Optimal Capacity Electricity",
-        is_unit="MW",
-        to_unit="GW",
-        statistics=[ac_generation_and_storage, ac_production],
+        metric_name=view_config["name"],
+        is_unit=e_caps[0].attrs["unit"],
+        to_unit=view_config["unit"],
+        statistics=e_caps,
     )
-
-    metric.cfg.plotly.title = metric.df.attrs["name"] + TITLE_SUFFIX
+    title = view_config["name"] + TITLE_SUFFIX
+    metric.cfg.mapping = view_config["categories"]
+    metric.cfg.excel.title = title
+    metric.cfg.plotly.title = title
     metric.cfg.plotly.chart = ESMBarChart
-    metric.cfg.plotly.file_name_template = "eKapas_{location}"
-    # metric.cfg.plotly.cutoff = 0.0
-    metric.cfg.plotly.category_orders = (
-        Group.battery_storage,
-        Group.nuclear_power,
-        Group.pp_thermal,
-        Group.phs,
-        Group.reservoir,
-        Group.ror,
-        Group.wind,
-        Group.pv,
-    )
+    metric.cfg.plotly.file_name_template = view_config["file_name"]
+    metric.cfg.plotly.cutoff = view_config["cutoff"]
+    metric.cfg.plotly.category_orders = view_config["legend_order"]
 
     output_path = make_evaluation_result_directories(result_path, subdir)
-    metric.export_excel(output_path)
-    metric.export_csv(output_path)
-    metric.export_plotly(output_path)
+    metric.export(output_path, view_config["export"])
+    metric.consistency_checks(view_config["checks"])
