@@ -47,7 +47,7 @@ class PlotConfig:
     yaxis_color: str = "DarkSlateGrey"
     footnotes: tuple = ("", "")
     cutoff: float = 0.0001  # needs update depending on unit
-    cutoff_drop: bool = True  # only effictive in BarCharts
+    cutoff_drop: bool = True  # only effective in BarCharts
     drop_years: list = field(default_factory=lambda: ["2015"])
 
     legend_font_size: int = 20

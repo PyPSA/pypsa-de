@@ -2,7 +2,6 @@
 subdirectory = "OS/tests"
 
 [view.capacity.heat_capacity]
-
 name = "District Heat Production Capacities"
 unit = "GW"
 file_name = "capacity_heat_{location}"

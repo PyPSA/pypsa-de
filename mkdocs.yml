@@ -16,21 +16,21 @@ nav:
   - tutorials/model-modifications.md
 - Function Reference:
   - Evaluations:
-    - reference/index.md
-    - cli.py: reference/cli.md
-    - configs.py: reference/configs.md
-    - constants.py: reference/constants.md
-    - fileio.py: reference/fileio.md
-    - metric.py: reference/metric.md
-    - statistic.py: reference/statistic.md
-    - utils.py: reference/utils.md
+    - reference/evals/index.md
+    - cli.py: reference/evals/cli.md
+    - configs.py: reference/evals/configs.md
+    - constants.py: reference/evals/constants.md
+    - fileio.py: reference/evals/fileio.md
+    - metric.py: reference/evals/metric.md
+    - statistic.py: reference/evals/statistic.md
+    - utils.py: reference/evals/utils.md
     - Plots:
-      - reference/plots/index.md
-      - _base.py: reference/plots/_base.md
-      - barchart.py: reference/plots/barchart.md
-      - facetbars.py: reference/plots/facetbars.md
-      - gridmap.py: reference/plots/gridmap.md
-      - timeseries.py: reference/plots/timeseries.md
+      - reference/evals/plots/index.md
+      - _base.py: reference/evals/plots/_base.md
+      - barchart.py: reference/evals/plots/barchart.md
+      - facetbars.py: reference/evals/plots/facetbars.md
+      - gridmap.py: reference/evals/plots/gridmap.md
+      - timeseries.py: reference/evals/plots/timeseries.md
     - Views:
       - reference/evals/views/index.md
       - capacity:

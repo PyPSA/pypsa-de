@@ -7,7 +7,7 @@ technologies.
 
 from pathlib import Path
 
-from evals.constants import TITLE_SUFFIX, BusCarrier, Group
+from evals.constants import BusCarrier, Group
 from evals.metric import Metric
 from evals.plots.barchart import ESMBarChart
 from evals.statistic import collect_myopic_statistics
@@ -47,24 +47,6 @@ def view_heat_capacity(
 
     # constant view specific settings:
     metric.defaults.plotly.chart = ESMBarChart
-
-    metric.defaults.plotly.category_orders = (
-        Group.storage_out,
-        Group.solar_thermal,
-        Group.ft,
-        Group.chp_biomass,
-        Group.fuel_cell_heat,
-        Group.resistive_heater,
-        Group.ch4_boiler,
-        Group.chp_ch4,
-        Group.chp_coal,
-        Group.heat_pump,
-        # demand in reversed order:
-        Group.storage_in,
-        Group.grid_losses,
-        Group.hh_and_services_heat,
-        Group.industry,
-    )
 
     output_path = make_evaluation_result_directories(result_path, subdir)
     metric.export(output_path, view_config["export"])
