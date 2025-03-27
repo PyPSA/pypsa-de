@@ -7,13 +7,12 @@ import logging
 import re
 import tomllib
 from importlib import resources
-from os import login_tty
 from pathlib import Path
 from typing import Callable
 
+import deprecation
 import pandas as pd
 import pypsa
-import yaml
 from openpyxl.chart import BarChart, Reference
 from openpyxl.chart.marker import DataPoint
 from openpyxl.worksheet.worksheet import Worksheet
@@ -21,7 +20,7 @@ from pandas import ExcelWriter
 from pydantic.v1.utils import deep_update
 from xlsxwriter.utility import xl_col_to_name, xl_rowcol_to_cell
 
-from evals.configs import ExcelConfig, MetricConfig
+from evals.configs import ExcelConfig, ViewDefaults
 from evals.constants import (
     ALIAS_COUNTRY_REV,
     ALIAS_LOCATION,
@@ -705,7 +704,8 @@ def prepare_nodal_energy(
 def export_excel_countries(
     metric: pd.DataFrame,
     writer: pd.ExcelWriter,
-    cfg: MetricConfig,
+    excel_defaults: ExcelConfig,
+    view_config: dict,
 ) -> None:
     """Add one sheet per country to an Excel file.
 
@@ -718,31 +718,33 @@ def export_excel_countries(
         The data frame without carrier mapping applied.
     writer
         The ExcelWriter instance to add the sheets to.
-    cfg
-        The Excel file configuration.
+    excel_defaults
+        The default settings for Excel file export.
+    view_config
+        The view configuration items.
     """
-    mapping_int = get_mapping(cfg.mapping, "internal")
-    mapping_ext = get_mapping(cfg.mapping, "external")
-
+    categories = view_config["categories"]
     carrier = metric.index.unique(DataModel.CARRIER)
-    df = rename_aggregate(metric, level=DataModel.CARRIER, mapper=mapping_int)
+    df = rename_aggregate(metric, level=DataModel.CARRIER, mapper=categories)
     df = filter_by(df, location=list(ALIAS_COUNTRY_REV))  # exclude regions
     df = df.pivot_table(
-        index=cfg.excel.pivot_index, columns=cfg.excel.pivot_columns, aggfunc="sum"
+        index=excel_defaults.pivot_index,
+        columns=excel_defaults.pivot_columns,
+        aggfunc="sum",
     )
 
     for country, data in df.groupby(DataModel.LOCATION):
         data = data.droplevel(DataModel.LOCATION)
-        _write_excel_sheet(data, cfg.excel, writer, str(country))
+        _write_excel_sheet(data, excel_defaults, writer, str(country))
 
-    _write_mapping_sheet(mapping_int, carrier, writer, sheet_name="Internal Mapping")
-    _write_mapping_sheet(mapping_ext, carrier, writer, sheet_name="External Mapping")
+    _write_categories_sheet(categories, carrier, writer, sheet_name="Categories")
 
 
 def export_excel_regions_at(
     metric: pd.DataFrame,
     writer: pd.ExcelWriter,
-    cfg: MetricConfig,
+    excel_defaults: ExcelConfig,
+    view_config: dict,
 ) -> None:
     """Write one Excel sheet for Europe, Austria, and Austrian regions.
 
@@ -755,22 +757,24 @@ def export_excel_regions_at(
         The data frame without carrier mapping applied.
     writer
         The ExcelWriter instance to add the sheets to.
-    cfg
-        The Excel file configuration.
+    excel_defaults
+        The default settings for Excel file export.
+    view_config
+        The view configuration items.
     """
-    mapping_int = get_mapping(cfg.mapping, "internal")
-    mapping_ext = get_mapping(cfg.mapping, "external")
-
+    categories = view_config["categories"]
     carrier = metric.index.unique(DataModel.CARRIER)
-    df = rename_aggregate(metric, level=DataModel.CARRIER, mapper=mapping_int)
+    df = rename_aggregate(metric, level=DataModel.CARRIER, mapper=categories)
     df = filter_by(df, location=list(ALIAS_REGION_REV))
     df_xlsx = df.pivot_table(
-        index=cfg.excel.pivot_index, columns=cfg.excel.pivot_columns, aggfunc="sum"
+        index=excel_defaults.pivot_index,
+        columns=excel_defaults.pivot_columns,
+        aggfunc="sum",
     )
 
     for country, data in df_xlsx.groupby(DataModel.LOCATION):
         data = data.droplevel(DataModel.LOCATION)
-        _write_excel_sheet(data, cfg.excel, writer, str(country))
+        _write_excel_sheet(data, excel_defaults, writer, str(country))
 
     # append carrier tables to special region sheet
     df_region = df.pivot_table(
@@ -779,10 +783,10 @@ def export_excel_regions_at(
         aggfunc="sum",
     ).droplevel(DataModel.METRIC, axis=1)
 
-    cfg.excel.chart_title = "Region AT"
+    excel_defaults.chart_title = "Region AT"
     _write_excel_sheet(
         df_region,
-        cfg.excel,
+        excel_defaults,
         writer,
         sheet_name="Regions AT",
         position=3,
@@ -792,26 +796,25 @@ def export_excel_regions_at(
     ).groupby(DataModel.CARRIER)
 
     # update config for pivoted carrier tables and graphs
-    cfg.chart = "clustered"
-    cfg.chart_switch_axis = True
+    excel_defaults.chart = "clustered"
+    excel_defaults.chart_switch_axis = True
 
     for carrier, df_reg in groups:
-        cfg.chart_title = str(carrier).title()
+        excel_defaults.chart_title = str(carrier).title()
         _write_excel_sheet(
             df_reg.T.unstack(1),
-            cfg.excel,
+            excel_defaults,
             writer,
             sheet_name="Regions AT",
             position=3,
         )
 
-    _write_mapping_sheet(mapping_int, carrier, writer, sheet_name="Internal Mapping")
-    _write_mapping_sheet(mapping_ext, carrier, writer, sheet_name="External Mapping")
+    _write_categories_sheet(categories, carrier, writer, sheet_name="Categories")
 
 
 def _write_excel_sheet(
     df: pd.DataFrame,
-    cfg: ExcelConfig,
+    excel_defaults: ExcelConfig,
     writer: pd.ExcelWriter,
     sheet_name: str,
     position: int = -1,
@@ -826,7 +829,7 @@ def _write_excel_sheet(
     df
         The dataframe to be transformed and exported to Excel; works
         with columns of multiindex level <= 2 f.ex. (location, year).
-    cfg
+    excel_defaults
         The configuration of the Excel file and chart.
     writer
         The writer object that represents an opened Excel file.
@@ -837,7 +840,7 @@ def _write_excel_sheet(
         The position where the worksheet should
         be added.
     """
-    axis_labels = cfg.axis_labels or [df.attrs["name"], df.attrs["unit"]]
+    axis_labels = excel_defaults.axis_labels or [df.attrs["name"], df.attrs["unit"]]
 
     # parametrize size of data in xlsx
     number_rows, number_col = df.shape
@@ -855,15 +858,17 @@ def _write_excel_sheet(
     _delete_index_name_row(ws, df, start_row=start_row)
     _expand_column_to_fit_content(ws, df, 0)
 
-    if cfg.chart:
-        barchart = _create_excel_barchart(ws, df, cfg, axis_labels, start_row)
+    if excel_defaults.chart:
+        barchart = _create_excel_barchart(
+            ws, df, excel_defaults, axis_labels, start_row
+        )
         chart_start_cell = xl_rowcol_to_cell(start_row, number_col + 2)
         ws.add_chart(barchart, chart_start_cell)
 
     _move_excel_sheet(writer, sheet_name, position)
 
 
-def _write_mapping_sheet(
+def _write_categories_sheet(
     mapping: dict, carrier: tuple, writer: ExcelWriter, sheet_name: str
 ) -> None:
     """Write the mapping to a separate Excel sheet.
@@ -886,7 +891,7 @@ def _write_mapping_sheet(
         The name of the sheet to write the 2 mapping columns to.
     """
     m = {k: v for k, v in mapping.items() if k in carrier}
-    df = pd.DataFrame.from_dict(m, orient="index", columns=["Alias"])
+    df = pd.DataFrame.from_dict(m, orient="index", columns=["Category"])
     df.columns.name = "Carrier"
     df.to_excel(writer, sheet_name=sheet_name, float_format="%0.4f")
     ws = writer.sheets.get(sheet_name)
@@ -1081,6 +1086,9 @@ def _expand_column_to_fit_content(ws: Worksheet, df: pd.DataFrame, col: int) -> 
     ws.column_dimensions[xl_col].width = column_width
 
 
+@deprecation.deprecated(
+    "Exporting VAMOS files is not required anymore and may be removed permanently."
+)
 def export_vamos_jsons(json_file_paths: list, file_name_template: str) -> None:
     """Write a JSON file for VAMOS UI that lists available figures.
 

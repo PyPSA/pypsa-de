@@ -1,10 +1,10 @@
+# -*- coding: utf-8 -*-
 """Module for electricity evaluations."""
 
 import logging
 from pathlib import Path
 
 import pandas as pd
-
 from constants import (
     TITLE_SUFFIX,
     BusCarrier,
@@ -82,12 +82,12 @@ def eval_electricity_demand(
     )
 
     title = metric.df.attrs["name"] + TITLE_SUFFIX
-    metric.cfg.mapping = "e_demand"
-    metric.cfg.excel.chart_title = title
-    metric.cfg.plotly.title = title
-    metric.cfg.plotly.chart = ESMBarChart
-    metric.cfg.plotly.file_name_template = "elec_demand_{location}"
-    metric.cfg.plotly.category_orders = (
+    metric.defaults.mapping = "e_demand"
+    metric.defaults.excel.chart_title = title
+    metric.defaults.plotly.title = title
+    metric.defaults.plotly.chart = ESMBarChart
+    metric.defaults.plotly.file_name_template = "elec_demand_{location}"
+    metric.defaults.plotly.category_orders = (
         Group.industry,
         Group.hh_and_services,
         Group.dac,
@@ -144,12 +144,12 @@ def eval_electricity_production(
     )
 
     title = metric.df.attrs["name"] + TITLE_SUFFIX
-    metric.cfg.mapping = "e_production"
-    metric.cfg.excel.chart_title = title
-    metric.cfg.plotly.title = metric.df.attrs["name"] + TITLE_SUFFIX
-    metric.cfg.plotly.chart = ESMBarChart
-    metric.cfg.plotly.file_name_template = "elec_production_{location}"
-    metric.cfg.plotly.category_orders = (
+    metric.defaults.mapping = "e_production"
+    metric.defaults.excel.chart_title = title
+    metric.defaults.plotly.title = metric.df.attrs["name"] + TITLE_SUFFIX
+    metric.defaults.plotly.chart = ESMBarChart
+    metric.defaults.plotly.file_name_template = "elec_production_{location}"
+    metric.defaults.plotly.category_orders = (
         Group.ror,
         Group.phs_inflow,
         Group.wind,
@@ -222,17 +222,17 @@ def eval_residual_load(
         statistics=[renewable_production.abs(), ac_demand.abs(), phev_demand.abs()],
     )
 
-    metric.cfg.plotly.title = metric.df.attrs["name"] + TITLE_SUFFIX
-    metric.cfg.plotly.chart = ESMTimeSeriesChart
-    metric.cfg.plotly.plotby = [DataModel.LOCATION, DataModel.YEAR]
-    metric.cfg.plotly.file_name_template = "residual_load_{year}_{location}"
-    metric.cfg.plotly.pivot_index = [
+    metric.defaults.plotly.title = metric.df.attrs["name"] + TITLE_SUFFIX
+    metric.defaults.plotly.chart = ESMTimeSeriesChart
+    metric.defaults.plotly.plotby = [DataModel.LOCATION, DataModel.YEAR]
+    metric.defaults.plotly.file_name_template = "residual_load_{year}_{location}"
+    metric.defaults.plotly.pivot_index = [
         DataModel.YEAR,
         DataModel.LOCATION,
         DataModel.BUS_CARRIER,  # contains only AC
     ]
-    metric.cfg.plotly.categories = DataModel.BUS_CARRIER
-    metric.cfg.plotly.footnotes = (
+    metric.defaults.plotly.categories = DataModel.BUS_CARRIER
+    metric.defaults.plotly.footnotes = (
         "Residual load is calculated as the households & services demand,"
         " grid losses, demand from industry and from transport(excluding"
         " EV) minus the total production from photovoltaics, wind power"
@@ -324,7 +324,9 @@ def eval_electricity_balance_ts(
             comps="StorageUnit",
             bus_carrier=BusCarrier.AC,
             aggregate_time=False,
-        ).mul(-1)  # demand is negative
+        ).mul(
+            -1
+        )  # demand is negative
 
     # replicate time series for industry and rail yearly demand
     rail_industry = collect_myopic_statistics(
@@ -343,7 +345,9 @@ def eval_electricity_balance_ts(
         bus_carrier=BusCarrier.AC,
         aggregate_time=False,
         drop_zero_rows=False,
-    ).mul(-1.0)  # demand is negative
+    ).mul(
+        -1.0
+    )  # demand is negative
     ac_demand = ac_demand.drop("value of lost load", level="carrier", errors="ignore")
     ac_demand = _subtract_rail_and_industry_demands_from_electricity_base_load(
         ac_demand, rail_industry
@@ -380,24 +384,26 @@ def eval_electricity_balance_ts(
         statistics=[statistics, -inflexible_demand],
     )
 
-    metric.cfg.mapping = "electricity"
-    metric.cfg.plotly.title = metric.df.attrs["name"] + TITLE_SUFFIX
-    metric.cfg.plotly.chart = ESMTimeSeriesChart
-    metric.cfg.plotly.file_name_template = "elec_prod_dem_time_{year}_{location}"
-    metric.cfg.plotly.plotby = [DataModel.YEAR, DataModel.LOCATION]
-    metric.cfg.plotly.pivot_index = [
+    metric.defaults.mapping = "electricity"
+    metric.defaults.plotly.title = metric.df.attrs["name"] + TITLE_SUFFIX
+    metric.defaults.plotly.chart = ESMTimeSeriesChart
+    metric.defaults.plotly.file_name_template = "elec_prod_dem_time_{year}_{location}"
+    metric.defaults.plotly.plotby = [DataModel.YEAR, DataModel.LOCATION]
+    metric.defaults.plotly.pivot_index = [
         DataModel.YEAR,
         DataModel.LOCATION,
         DataModel.CARRIER,
     ]
-    metric.cfg.plotly.cutoff = 0.04999999  # None in the original Toolbox
+    metric.defaults.plotly.cutoff = 0.04999999  # None in the original Toolbox
     # the original toolbox discards values smaller than 0.05 from
     # production and demand time series:
     # df.apply(lambda x: np.nan if abs(x) < 0.05 else x)
-    metric.cfg.plotly.xaxis_title = ""
-    metric.cfg.plotly.pattern = dict.fromkeys([Group.import_net, Group.export_net], "/")
-    metric.cfg.plotly.legend_header = "Production/Demand"
-    metric.cfg.plotly.footnotes = (
+    metric.defaults.plotly.xaxis_title = ""
+    metric.defaults.plotly.pattern = dict.fromkeys(
+        [Group.import_net, Group.export_net], "/"
+    )
+    metric.defaults.plotly.legend_header = "Production/Demand"
+    metric.defaults.plotly.footnotes = (
         """
 <b>Storage In/Out</b> includes: Pumped Hydro Storage, Reservoirs, Batteries
 and V2G.
@@ -410,7 +416,7 @@ Powerplants.
 <br><b>Inflexible Demand</b> includes: Base Load, Industry and Transport.""",
         "",
     )
-    metric.cfg.plotly.category_orders = (
+    metric.defaults.plotly.category_orders = (
         "Inflexible Demand",
         Group.import_net,
         Group.storage_out,
@@ -493,13 +499,13 @@ def eval_electricity_balance(
     )
 
     title = metric.df.attrs["name"] + TITLE_SUFFIX
-    metric.cfg.mapping = "e_production"  # e_demand
-    metric.cfg.excel.chart_title = title
-    metric.cfg.plotly.title = title
-    metric.cfg.plotly.chart = ESMBarChart
-    metric.cfg.plotly.file_name_template = "elec_balance_{location}"
-    metric.cfg.plotly.cutoff = 0.0001
-    metric.cfg.plotly.pattern = dict.fromkeys(
+    metric.defaults.mapping = "e_production"  # e_demand
+    metric.defaults.excel.chart_title = title
+    metric.defaults.plotly.title = title
+    metric.defaults.plotly.chart = ESMBarChart
+    metric.defaults.plotly.file_name_template = "elec_balance_{location}"
+    metric.defaults.plotly.cutoff = 0.0001
+    metric.defaults.plotly.pattern = dict.fromkeys(
         [
             Group.import_european,
             Group.export_european,
@@ -508,7 +514,7 @@ def eval_electricity_balance(
         ],
         "/",
     )
-    metric.cfg.plotly.category_orders = (
+    metric.defaults.plotly.category_orders = (
         Group.nuclear_power,
         Group.chp_biomass,
         Group.pp_thermal,
@@ -529,7 +535,7 @@ def eval_electricity_balance(
         Group.export_domestic,
         Group.export_european,
     )
-    metric.cfg.plotly.footnotes = (  # fixme: Footnote not displayed
+    metric.defaults.plotly.footnotes = (  # fixme: Footnote not displayed
         "Balance does not include grid losses due to storage technologies.",
         "",
     )

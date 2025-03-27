@@ -1,9 +1,8 @@
+# -*- coding: utf-8 -*-
 """Module for transport sector evaluations."""
 
 from functools import partial
 from pathlib import Path
-
-from frozendict import frozendict
 
 from constants import (
     TITLE_SUFFIX,
@@ -14,6 +13,7 @@ from constants import (
     Mapping,
 )
 from fileio import prepare_nodal_energy
+from frozendict import frozendict
 from metric import Metric
 from plots.barchart import ESMBarChart
 from plots.facetbars import ESMGroupedBarChart
@@ -81,30 +81,30 @@ def eval_transport_total(
     )
 
     title = "Final Energy Demand Transport" + TITLE_SUFFIX
-    metric.cfg.mapping = Mapping.bus_carrier
+    metric.defaults.mapping = Mapping.bus_carrier
 
-    metric.cfg.excel.title = title
-    metric.cfg.excel.pivot_index = [
+    metric.defaults.excel.title = title
+    metric.defaults.excel.pivot_index = [
         DataModel.LOCATION,
         DataModel.BUS_CARRIER,
     ]
 
-    metric.cfg.plotly.title = title
-    metric.cfg.plotly.chart = ESMBarChart
-    metric.cfg.plotly.plot_category = DataModel.BUS_CARRIER
-    metric.cfg.plotly.pivot_index = [
+    metric.defaults.plotly.title = title
+    metric.defaults.plotly.chart = ESMBarChart
+    metric.defaults.plotly.plot_category = DataModel.BUS_CARRIER
+    metric.defaults.plotly.pivot_index = [
         DataModel.YEAR,
         DataModel.LOCATION,
         DataModel.BUS_CARRIER,
     ]
-    metric.cfg.plotly.file_name_template = "trans_sec_tot_{location}"
-    metric.cfg.plotly.legend_header = "Energy Carrier"
-    metric.cfg.plotly.footnotes = (
+    metric.defaults.plotly.file_name_template = "trans_sec_tot_{location}"
+    metric.defaults.plotly.legend_header = "Energy Carrier"
+    metric.defaults.plotly.footnotes = (
         "International aviation and navigation are not included.",
         "",
     )
-    metric.cfg.plotly.xaxis_title = "<b>Years</b>"
-    metric.cfg.plotly.cutoff = 0.0001
+    metric.defaults.plotly.xaxis_title = "<b>Years</b>"
+    metric.defaults.plotly.cutoff = 0.0001
 
     output_path = make_evaluation_result_directories(result_path, subdir)
     metric.export_excel(output_path)
@@ -140,30 +140,30 @@ def eval_transport_sectoral(
     )
 
     title = "Final Energy Demand Transport by Carrier and Sector" + TITLE_SUFFIX
-    metric.cfg.mapping = Mapping.bus_carrier
+    metric.defaults.mapping = Mapping.bus_carrier
 
-    metric.cfg.excel.chart_title = title
+    metric.defaults.excel.chart_title = title
 
-    metric.cfg.plotly.title = title
-    metric.cfg.plotly.chart = ESMGroupedBarChart
-    metric.cfg.plotly.facet_column = DataModel.CARRIER  # sector subplots
-    metric.cfg.plotly.plot_category = DataModel.BUS_CARRIER  # categories
-    metric.cfg.plotly.file_name_template = "trans_sec_dem_{location}"
-    metric.cfg.plotly.legend_header = "Energy Carrier"
-    metric.cfg.plotly.xaxis_title = ""  # skip to use sector names
-    metric.cfg.plotly.legend_font_size = 18
-    metric.cfg.plotly.xaxis_font_size = 18
-    metric.cfg.plotly.footnotes = (
+    metric.defaults.plotly.title = title
+    metric.defaults.plotly.chart = ESMGroupedBarChart
+    metric.defaults.plotly.facet_column = DataModel.CARRIER  # sector subplots
+    metric.defaults.plotly.plot_category = DataModel.BUS_CARRIER  # categories
+    metric.defaults.plotly.file_name_template = "trans_sec_dem_{location}"
+    metric.defaults.plotly.legend_header = "Energy Carrier"
+    metric.defaults.plotly.xaxis_title = ""  # skip to use sector names
+    metric.defaults.plotly.legend_font_size = 18
+    metric.defaults.plotly.xaxis_font_size = 18
+    metric.defaults.plotly.footnotes = (
         "<br>International aviation and navigation are not included.",
         "",
     )
-    metric.cfg.plotly.category_orders = (
+    metric.defaults.plotly.category_orders = (
         Group.electrictiy,
         Group.h2,
         Group.ch4,
         Group.oil,
     )
-    metric.cfg.plotly.cutoff = 0.00  # None in original Toolbox
+    metric.defaults.plotly.cutoff = 0.00  # None in original Toolbox
 
     output_path = make_evaluation_result_directories(result_path, subdir)
     metric.export_excel(output_path)

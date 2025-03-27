@@ -1,9 +1,9 @@
+# -*- coding: utf-8 -*-
 """Module for gas storage evaluations."""
 
 from pathlib import Path
 
 import pandas as pd
-
 from configs import PlotConfig
 from constants import TITLE_SUFFIX, BusCarrier, Carrier, DataModel, Group
 from metric import Metric
@@ -93,13 +93,13 @@ def eval_gas_storage_capacities(
 
     title = metric.df.attrs["name"] + TITLE_SUFFIX
 
-    metric.cfg.excel.chart_title = title
-    metric.cfg.plotly.title = title
-    metric.cfg.plotly.chart = ESMBarChart
-    metric.cfg.plotly.file_name_template = "StoreVol_{location}"
+    metric.defaults.excel.chart_title = title
+    metric.defaults.plotly.title = title
+    metric.defaults.plotly.chart = ESMBarChart
+    metric.defaults.plotly.file_name_template = "StoreVol_{location}"
 
-    metric.cfg.plotly.cutoff = 0.005  # TWh
-    metric.cfg.plotly.cutoff_drop = False
+    metric.defaults.plotly.cutoff = 0.005  # TWh
+    metric.defaults.plotly.cutoff_drop = False
 
     output_path = make_evaluation_result_directories(result_path, subdir)
     metric.export_excel(output_path)
@@ -182,19 +182,21 @@ def eval_phs_hydro_operation(
         metric = Metric(
             metric_name=metric_name, is_unit="", to_unit=1e-6, statistics=[statistic]
         )
-        metric.cfg.plotly = cfg_plotly  # use defaults
+        metric.defaults.plotly = cfg_plotly  # use defaults
 
         ts_names = metric.df.index.unique(DataModel.BUS_CARRIER)
-        metric.cfg.excel.chart_title = metric.df.attrs["name"] + " in" + TITLE_SUFFIX
-        metric.cfg.excel.axis_labels = [metric.df.attrs["name"], "TWh"]
-        metric.cfg.plotly.title = (
+        metric.defaults.excel.chart_title = (
+            metric.df.attrs["name"] + " in" + TITLE_SUFFIX
+        )
+        metric.defaults.excel.axis_labels = [metric.df.attrs["name"], "TWh"]
+        metric.defaults.plotly.title = (
             metric.df.attrs["name"] + " in {location} in {year} in {unit}"
         )
-        metric.cfg.plotly.file_name_template = file_name_template
-        metric.cfg.plotly.line_width = {
+        metric.defaults.plotly.file_name_template = file_name_template
+        metric.defaults.plotly.line_width = {
             c: 5 if c in (Group.soc, Group.soc_max) else 3 for c in ts_names
         }
-        metric.cfg.plotly.fill = {
+        metric.defaults.plotly.fill = {
             c: "tozeroy" if c == Group.soc else None for c in ts_names
         }
         # metric.export_excel(output_path)
@@ -232,21 +234,21 @@ def eval_electricity_storage(
 
     title = metric.df.attrs["name"] + TITLE_SUFFIX
 
-    metric.cfg.excel.chart_title = title
-    metric.cfg.plotly.title = title
-    metric.cfg.plotly.chart = ESMBarChart
-    metric.cfg.plotly.file_name_template = "elec_storage_volumes_{location}"
+    metric.defaults.excel.chart_title = title
+    metric.defaults.plotly.title = title
+    metric.defaults.plotly.chart = ESMBarChart
+    metric.defaults.plotly.file_name_template = "elec_storage_volumes_{location}"
 
-    metric.cfg.plotly.cutoff = 1e-6  # 1 MWh  # 0.005
-    metric.cfg.plotly.cutoff_drop = False
+    metric.defaults.plotly.cutoff = 1e-6  # 1 MWh  # 0.005
+    metric.defaults.plotly.cutoff_drop = False
 
-    metric.cfg.plotly.category_orders = (
+    metric.defaults.plotly.category_orders = (
         Group.reservoir,
         Group.battery_storage,
         Group.phs,
     )
 
-    metric.cfg.plotly.footnotes = (
+    metric.defaults.plotly.footnotes = (
         " Further potential power storage volumes resulting from vehicle-to-grid "
         "options are not included here. <br> Storage volumes smaller than 1 TWh "
         "are not displayed. <br> Storages are located according to their market "

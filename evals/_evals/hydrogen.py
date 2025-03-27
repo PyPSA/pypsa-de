@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Module for hydrogen evaluations."""
 
 from pathlib import Path
@@ -98,26 +99,28 @@ def eval_h2_balance_ts(
             trade_saldo,
         ],
     )
-    metric.cfg.mapping = "capacity"
-    metric.cfg.excel.chart = None
+    metric.defaults.mapping = "capacity"
+    metric.defaults.excel.chart = None
 
-    metric.cfg.plotly.title = metric.df.attrs["name"] + TITLE_SUFFIX
-    metric.cfg.plotly.file_name_template = "hydrogen_prod_dem_time_{year}_{location}"
-    metric.cfg.plotly.chart = ESMTimeSeriesChart
-    metric.cfg.plotly.plotby = [DataModel.YEAR, DataModel.LOCATION]
-    metric.cfg.plotly.pivot_index = [
+    metric.defaults.plotly.title = metric.df.attrs["name"] + TITLE_SUFFIX
+    metric.defaults.plotly.file_name_template = (
+        "hydrogen_prod_dem_time_{year}_{location}"
+    )
+    metric.defaults.plotly.chart = ESMTimeSeriesChart
+    metric.defaults.plotly.plotby = [DataModel.YEAR, DataModel.LOCATION]
+    metric.defaults.plotly.pivot_index = [
         DataModel.YEAR,
         DataModel.LOCATION,
         DataModel.CARRIER,
     ]
-    metric.cfg.plotly.xaxis_title = ""
-    metric.cfg.plotly.legend_header = "Production/Demand"
+    metric.defaults.plotly.xaxis_title = ""
+    metric.defaults.plotly.legend_header = "Production/Demand"
     # The Toolbox rounds values to second digit before clipping.
-    metric.cfg.plotly.cutoff = 0.001  # MWh
-    metric.cfg.plotly.pattern = dict.fromkeys(
+    metric.defaults.plotly.cutoff = 0.001  # MWh
+    metric.defaults.plotly.pattern = dict.fromkeys(
         [Group.export_net, Group.import_net, Group.import_global], "/"
     )
-    metric.cfg.plotly.category_orders = (
+    metric.defaults.plotly.category_orders = (
         # list production entries from outside to zero
         Group.import_net,
         Group.import_global,
@@ -134,7 +137,7 @@ def eval_h2_balance_ts(
         Group.transport,
         Group.industry,
     )
-    metric.cfg.plotly.footnotes = (
+    metric.defaults.plotly.footnotes = (
         "<br><b>Miscellaneous</b> includes residential and "
         "services rural H2-powered PEMFC.",
         "",
@@ -235,19 +238,19 @@ def eval_h2_balance(
 
     title = metric.df.attrs["name"] + TITLE_SUFFIX
 
-    metric.cfg.mapping = "h2_balance"  # "capacity"
-    metric.cfg.excel.chart_title = title
+    metric.defaults.mapping = "h2_balance"  # "capacity"
+    metric.defaults.excel.chart_title = title
 
-    metric.cfg.plotly.title = title
-    metric.cfg.plotly.chart = ESMBarChart
-    metric.cfg.plotly.file_name_template = "hydrogen_balance_{location}"
+    metric.defaults.plotly.title = title
+    metric.defaults.plotly.chart = ESMBarChart
+    metric.defaults.plotly.file_name_template = "hydrogen_balance_{location}"
     # fixme: Industry values for 2030 AT02 (Vienna) Hydrogen Balance
     #  (TWh) are exactly 0.1. The utils.apply_cutoff function truncates
     #  0.1 although the boundary is inclusive (0.1 should be kept). This
     #  is probably because of the imprecise float data type. The 0.099
     #  below is a hotfix for this problem. A better should be found!
-    metric.cfg.plotly.cutoff = 0.0999999  # should be 0.1 TWh
-    metric.cfg.plotly.pattern = dict.fromkeys(
+    metric.defaults.plotly.cutoff = 0.0999999  # should be 0.1 TWh
+    metric.defaults.plotly.pattern = dict.fromkeys(
         [
             Group.export_european,
             Group.import_european,
@@ -256,7 +259,7 @@ def eval_h2_balance(
         ],
         "/",
     )
-    metric.cfg.plotly.category_orders = (
+    metric.defaults.plotly.category_orders = (
         # production ordered from zero to outside
         Group.electrolysis,
         Group.smr,

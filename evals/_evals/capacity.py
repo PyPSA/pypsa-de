@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Module for electricity evaluations."""
 
 from functools import partial
@@ -51,11 +52,11 @@ def eval_electricity_capacities(
         statistics=[ac_generation_and_storage, ac_production],
     )
 
-    metric.cfg.plotly.title = metric.df.attrs["name"] + TITLE_SUFFIX
-    metric.cfg.plotly.chart = ESMBarChart
-    metric.cfg.plotly.file_name_template = "eKapas_{location}"
+    metric.defaults.plotly.title = metric.df.attrs["name"] + TITLE_SUFFIX
+    metric.defaults.plotly.chart = ESMBarChart
+    metric.defaults.plotly.file_name_template = "eKapas_{location}"
     # metric.cfg.plotly.cutoff = 0.0
-    metric.cfg.plotly.category_orders = (
+    metric.defaults.plotly.category_orders = (
         Group.battery_storage,
         Group.nuclear_power,
         Group.pp_thermal,
@@ -100,7 +101,9 @@ def eval_fuel_production_capacities(
         statistic="optimal_capacity",
         comps="Link",
         bus_carrier=[BusCarrier.CH4, BusCarrier.H2],
-    ).clip(lower=0)  # supply only
+    ).clip(
+        lower=0
+    )  # supply only
     gas_production = gas_production.drop(
         pipelines_or_biogas, level=DataModel.CARRIER, errors="ignore"
     )
@@ -154,21 +157,21 @@ def eval_fuel_production_capacities(
     )
 
     title = metric.df.attrs["name"] + TITLE_SUFFIX
-    metric.cfg.mapping = "capacity"
-    metric.cfg.excel.chart_title = title
-    metric.cfg.plotly.title = title
-    metric.cfg.plotly.file_name_template = "fKapas_{location}"
-    metric.cfg.plotly.chart = ESMBarChart
-    metric.cfg.plotly.cutoff = 0.0001  # GW
-    metric.cfg.plotly.legend_header = "Types of Production"
-    metric.cfg.plotly.category_orders = (
+    metric.defaults.mapping = "capacity"
+    metric.defaults.excel.chart_title = title
+    metric.defaults.plotly.title = title
+    metric.defaults.plotly.file_name_template = "fKapas_{location}"
+    metric.defaults.plotly.chart = ESMBarChart
+    metric.defaults.plotly.cutoff = 0.0001  # GW
+    metric.defaults.plotly.legend_header = "Types of Production"
+    metric.defaults.plotly.category_orders = (
         Group.electrolysis,
         Group.smr,
         Group.methanation,
         Group.ch4_bio_processing,
         Group.ft,
     )
-    metric.cfg.plotly.footnotes = (
+    metric.defaults.plotly.footnotes = (
         f"Values in thermic units (Output)<br>Bio Methane Processing approximated "
         f"as total quantity divided by {hours_productive} hours (since only base "
         f"load, capacity is linked to quantity).",

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Module for CO2 Emission evaluations."""
 
 from functools import partial
@@ -5,7 +6,6 @@ from pathlib import Path
 
 import pandas as pd
 import pypsa.statistics
-
 from constants import TITLE_SUFFIX, Carrier, DataModel, Group
 from fileio import (
     prepare_co2_emissions,
@@ -167,22 +167,22 @@ def eval_co2(
     )
 
     title = metric.df.attrs["name"] + TITLE_SUFFIX
-    metric.cfg.mapping = "co2"
-    metric.cfg.excel.chart_title = title
+    metric.defaults.mapping = "co2"
+    metric.defaults.excel.chart_title = title
 
-    metric.cfg.plotly.title = title
-    metric.cfg.plotly.chart = ESMBarChart
-    metric.cfg.plotly.pivot_index = DataModel.YEAR_IDX_NAMES[:-1]
-    metric.cfg.plotly.legend_header = "Types of Emitters"
-    metric.cfg.plotly.unit = f"{metric.df.attrs['unit']} CO2"
-    metric.cfg.plotly.cutoff = 0.1
-    metric.cfg.plotly.category_orders = (
+    metric.defaults.plotly.title = title
+    metric.defaults.plotly.chart = ESMBarChart
+    metric.defaults.plotly.pivot_index = DataModel.YEAR_IDX_NAMES[:-1]
+    metric.defaults.plotly.legend_header = "Types of Emitters"
+    metric.defaults.plotly.unit = f"{metric.df.attrs['unit']} CO2"
+    metric.defaults.plotly.cutoff = 0.1
+    metric.defaults.plotly.category_orders = (
         Group.transport,
         Group.smr,
         Group.smr_cc,
         Group.industry,
     )
-    metric.cfg.plotly.file_name_template = "co2_emissions_{location}"
+    metric.defaults.plotly.file_name_template = "co2_emissions_{location}"
 
     output_path = make_evaluation_result_directories(result_path, subdir)
     metric.export_plotly(output_path)

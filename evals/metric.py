@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pandas as pd
 
-from evals.configs import MetricConfig
-from evals.constants import NOW, DataModel, Group
+from evals.configs import ViewDefaults
+from evals.constants import NOW, TITLE_SUFFIX, DataModel, Group
 from evals.fileio import (
     export_excel_countries,
     export_excel_regions_at,
@@ -17,7 +17,6 @@ from evals.fileio import (
 from evals.utils import (
     add_dummy_rows,
     aggregate_locations,
-    get_mapping,
     rename_aggregate,
     scale,
     verify_metric_format,
@@ -91,24 +90,14 @@ class Metric:
 
     Parameters
     ----------
-    metric_name
-        The name of the metric. This name will be shown in the
-        result column label.
-
-    is_unit
-        The input statistics unit.
-
-    to_unit
-        The output metric unit.
-
     statistics
         A list of Series for time aggregated statistics or list of
         data frames for statistics with snapshots as columns.
-
+    statistics_unit
+        The input statistics unit.
     keep_regions
         A tuple of location prefixes that are used to match
         locations to keep during aggregation.
-
     region_nice_names
         Whether, or not to rename country codes after aggregation
         to show the full country name.
@@ -116,21 +105,27 @@ class Metric:
 
     def __init__(  # noqa: PLR0913, PLR0917
         self,
-        metric_name: str,
-        is_unit: str,
-        to_unit: str | float,
-        statistics: list[pd.DataFrame | pd.Series],
+        statistics: list,
+        statistics_unit: str,
+        view_config: dict,
         keep_regions: tuple = ("AT",),
         region_nice_names: bool = True,
     ) -> None:
-        self.metric_name = metric_name
-        self.is_unit = is_unit
-        self.to_unit = to_unit
+        self.statistics = statistics
+        self.is_unit = statistics_unit
+        self.metric_name = view_config["name"]
+        self.to_unit = view_config["unit"]
         self.keep_regions = keep_regions
         self.region_nice_names = region_nice_names
-        self.statistics = statistics
+        self.view_config = view_config
+        self.defaults = ViewDefaults()
 
-        self.cfg = MetricConfig()  # holds defaults
+        # update defaults from config for this view
+        self.defaults.excel.title = view_config["name"] + TITLE_SUFFIX
+        self.defaults.plotly.title = view_config["name"] + TITLE_SUFFIX
+        self.defaults.plotly.file_name_template = view_config["file_name"]
+        self.defaults.plotly.cutoff = view_config["cutoff"]
+        self.defaults.plotly.category_orders = view_config["legend_order"]
 
     @cached_property
     def df(self) -> pd.DataFrame:
@@ -162,9 +157,10 @@ class Metric:
             The path to the HTML folder with all the html files are
             stored.
         """
-        cfg = self.cfg.plotly
-        mapper = get_mapping(self.cfg.mapping, "external")
-        df = rename_aggregate(self.df, level=cfg.plot_category, mapper=mapper)
+        cfg = self.defaults.plotly
+        df = rename_aggregate(
+            self.df, level=cfg.plot_category, mapper=self.view_config["categories"]
+        )
 
         df_plot = df.pivot_table(
             index=cfg.pivot_index, columns=cfg.pivot_columns, aggfunc="sum"
@@ -192,17 +188,21 @@ class Metric:
         output_path
             The path where the Excel files will be saved.
         """
-        file_name_stem = self.cfg.plotly.file_name_template.split("_{")[0]
-        file_path = output_path / f"{file_name_stem}_{NOW}.xlsx"
+        file_name_stem = self.view_config["file_name"].split("_{")[0]
+        file_path = output_path / "XLSX" / f"{file_name_stem}_{NOW}.xlsx"
         with pd.ExcelWriter(file_path, engine="openpyxl") as writer:
-            export_excel_countries(self.df, writer, self.cfg)
+            export_excel_countries(
+                self.df, writer, self.defaults.excel, self.view_config
+            )
 
         if self.df.columns.name == DataModel.SNAPSHOTS:
             return  # skips region sheets for time series
 
         file_path_at = output_path / f"{file_name_stem}_AT_{NOW}.xlsx"
         with pd.ExcelWriter(file_path_at, engine="openpyxl") as writer:
-            export_excel_regions_at(self.df, writer, self.cfg)
+            export_excel_regions_at(
+                self.df, writer, self.defaults.excel, self.view_config
+            )
 
     def export_csv(self, output_path: Path) -> None:
         """Encode the metric da frame to a CSV file.
@@ -218,7 +218,7 @@ class Metric:
         :
             Writes the metric to a CSV file.
         """
-        file_name = self.cfg.plotly.file_name_template.split("_{", maxsplit=1)[0]
+        file_name = self.defaults.plotly.file_name_template.split("_{", maxsplit=1)[0]
         file_path = output_path / "CSV" / f"{file_name}_{NOW}.csv"
         self.df.to_csv(file_path, encoding="utf-8")
 
@@ -268,24 +268,36 @@ class Metric:
             assigned to a group.
         """
         # todo: refactor mapping to categories in a new multiindex level used in plots package
-        category = self.cfg.plotly.plot_category
-        mapping = self.cfg.mapping
+        category = self.defaults.plotly.plot_category
+        categories = self.view_config["categories"]
 
         if config_checks["all_categories_mapped"]:
-            assert self.df.index.unique(category).isin(mapping.keys()).all(), (
-                f"Incomplete mapping found. There are technologies in the metric "
-                f"data frame, that are not assigned to a group."
+            assert self.df.index.unique(category).isin(categories.keys()).all(), (
+                f"Incomplete categories detected. There are technologies in the metric "
+                f"data frame, that are not assigned to a group (nice name)."
                 f"\nMissing items: "
-                f"{self.df.index.unique(category).difference(mapping.keys())}"
+                f"{self.df.index.unique(category).difference(categories.keys())}"
             )
 
         if config_checks["no_superfluous_categories"]:
             superfluous_categories = self.df.index.unique(category).difference(
-                mapping.keys()
+                categories.keys()
             )
             assert (
                 len(superfluous_categories) == 0
             ), f"Superfluous categories found: {superfluous_categories}"
+
+        if config_checks["legend_entry_order"]:
+            a = set(self.view_config["legend_order"])
+            b = set(categories.values())
+            additional = a.difference(b)
+            assert (
+                not additional
+            ), f"Superfluous categories defined in legend order: {additional}"
+            missing = b.difference(a)
+            assert (
+                not missing
+            ), f"Some categories are not defined in legend order: {missing}"
 
 
 def _split_trade_saldo_to_netted_import_export(df: pd.DataFrame) -> pd.DataFrame:

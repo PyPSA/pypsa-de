@@ -1,10 +1,10 @@
+# -*- coding: utf-8 -*-
 """Module for Sankey evaluations."""
 
 from functools import partial
 from pathlib import Path
 
 import pandas as pd
-
 from constants import BusCarrier, Carrier, DataModel, TradeTypes
 from fileio import prepare_industry_demand
 from metric import Metric
@@ -81,7 +81,9 @@ def build_metric_generation(networks: dict, result_path: Path) -> Metric:
         statistic="supply",
         groupby=partial(get_location_and_carrier_and_bus_carrier, location_port="1"),
         comps=["Generator", "StorageUnit"],
-    ).drop("PHS", level="carrier")  # included in phs statistic
+    ).drop(
+        "PHS", level="carrier"
+    )  # included in phs statistic
 
     trade_import = collect_myopic_statistics(
         networks,
@@ -173,7 +175,7 @@ def format_metric_for_sankey(metric: Metric) -> pd.DataFrame:
     -------
     :
     """
-    mapper = get_mapping(metric.cfg.mapping)
+    mapper = get_mapping(metric.defaults.mapping)
     df = rename_aggregate(metric.df, mapper=mapper)
     df = rename_aggregate(df, mapper=Mapping.bus_carrier, level=DataModel.BUS_CARRIER)
 

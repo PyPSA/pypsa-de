@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Evaluate energy prices."""
 
 from pathlib import Path
@@ -27,11 +28,11 @@ def eval_capex(
     )
 
     title = metric.df.attrs["name"] + TITLE_SUFFIX
-    metric.cfg.excel.chart_title = title
-    metric.cfg.plotly.title = title
-    metric.cfg.plotly.chart = ESMBarChart
-    metric.cfg.plotly.file_name_template = "capex_{location}"
-    metric.cfg.plotly.cutoff = 0.1
+    metric.defaults.excel.chart_title = title
+    metric.defaults.plotly.title = title
+    metric.defaults.plotly.chart = ESMBarChart
+    metric.defaults.plotly.file_name_template = "capex_{location}"
+    metric.defaults.plotly.cutoff = 0.1
 
     output_path = make_evaluation_result_directories(result_path, subdir)
     metric.export_excel(output_path)
@@ -57,11 +58,11 @@ def eval_opex(
     )
 
     title = metric.df.attrs["name"] + TITLE_SUFFIX
-    metric.cfg.excel.chart_title = title
-    metric.cfg.plotly.title = title
-    metric.cfg.plotly.chart = ESMBarChart
-    metric.cfg.plotly.file_name_template = "opex_{location}"
-    metric.cfg.plotly.cutoff = 0.1
+    metric.defaults.excel.chart_title = title
+    metric.defaults.plotly.title = title
+    metric.defaults.plotly.chart = ESMBarChart
+    metric.defaults.plotly.file_name_template = "opex_{location}"
+    metric.defaults.plotly.cutoff = 0.1
 
     output_path = make_evaluation_result_directories(result_path, subdir)
     metric.export_excel(output_path)
@@ -87,11 +88,11 @@ def eval_market_value(
     )
 
     title = metric.df.attrs["name"] + TITLE_SUFFIX
-    metric.cfg.excel.chart_title = title
-    metric.cfg.plotly.title = title
-    metric.cfg.plotly.chart = ESMBarChart
-    metric.cfg.plotly.file_name_template = "market_value_{location}"
-    metric.cfg.plotly.cutoff = 0.1
+    metric.defaults.excel.chart_title = title
+    metric.defaults.plotly.title = title
+    metric.defaults.plotly.chart = ESMBarChart
+    metric.defaults.plotly.file_name_template = "market_value_{location}"
+    metric.defaults.plotly.cutoff = 0.1
 
     output_path = make_evaluation_result_directories(result_path, subdir)
     metric.export_excel(output_path)
@@ -117,11 +118,11 @@ def eval_revenue(
     )
 
     title = metric.df.attrs["name"] + TITLE_SUFFIX
-    metric.cfg.excel.chart_title = title
-    metric.cfg.plotly.title = title
-    metric.cfg.plotly.chart = ESMBarChart
-    metric.cfg.plotly.file_name_template = "revenue_{location}"
-    metric.cfg.plotly.cutoff = 0.1
+    metric.defaults.excel.chart_title = title
+    metric.defaults.plotly.title = title
+    metric.defaults.plotly.chart = ESMBarChart
+    metric.defaults.plotly.file_name_template = "revenue_{location}"
+    metric.defaults.plotly.cutoff = 0.1
 
     output_path = make_evaluation_result_directories(result_path, subdir)
     metric.export_excel(output_path)

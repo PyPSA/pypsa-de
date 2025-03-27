@@ -40,20 +40,15 @@ def view_heat_capacity(
     view_config = config["view"]
 
     metric = Metric(
-        metric_name=view_config["name"],
-        is_unit=heat_capacity.attrs["unit"],
-        to_unit=view_config["unit"],
         statistics=[heat_capacity],
+        statistics_unit=heat_capacity.attrs["unit"],
+        view_config=view_config,
     )
 
-    title = view_config["name"] + TITLE_SUFFIX
-    metric.cfg.mapping = view_config["categories"]
-    metric.cfg.excel.title = title
-    metric.cfg.plotly.title = title
-    metric.cfg.plotly.chart = ESMBarChart
-    metric.cfg.plotly.file_name_template = view_config["file_name"]
-    metric.cfg.plotly.cutoff = view_config["cutoff"]
-    metric.cfg.plotly.category_orders = (
+    # constant view specific settings:
+    metric.defaults.plotly.chart = ESMBarChart
+
+    metric.defaults.plotly.category_orders = (
         Group.storage_out,
         Group.solar_thermal,
         Group.ft,

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Module for methane evaluations."""
 
 from logging import getLogger
@@ -122,14 +123,14 @@ def eval_ch4_balance(
 
     title = metric.df.attrs["name"] + TITLE_SUFFIX
 
-    metric.cfg.mapping = "capacity"
-    metric.cfg.excel.chart_title = title
+    metric.defaults.mapping = "capacity"
+    metric.defaults.excel.chart_title = title
 
-    metric.cfg.plotly.title = title
-    metric.cfg.plotly.chart = ESMBarChart
-    metric.cfg.plotly.file_name_template = "methane_balance_{location}"
-    metric.cfg.plotly.cutoff = 0.1  # TWh
-    metric.cfg.plotly.pattern = dict.fromkeys(
+    metric.defaults.plotly.title = title
+    metric.defaults.plotly.chart = ESMBarChart
+    metric.defaults.plotly.file_name_template = "methane_balance_{location}"
+    metric.defaults.plotly.cutoff = 0.1  # TWh
+    metric.defaults.plotly.pattern = dict.fromkeys(
         [
             Group.export_european,
             Group.import_european,
@@ -139,7 +140,7 @@ def eval_ch4_balance(
         ],
         "/",
     )
-    metric.cfg.plotly.category_orders = (
+    metric.defaults.plotly.category_orders = (
         # order production from outside to zero
         Group.ch4_bio_processing,
         Group.import_european,
@@ -257,27 +258,29 @@ def eval_ch4_balance_ts(
         ],
     )
 
-    metric.cfg.mapping = "capacity"
-    metric.cfg.excel.chart = None
+    metric.defaults.mapping = "capacity"
+    metric.defaults.excel.chart = None
 
-    metric.cfg.plotly.title = metric.df.attrs["name"] + " {location} in {year}"
-    metric.cfg.plotly.file_name_template = "methane_prod_dem_time_{year}_{location}"
-    metric.cfg.plotly.chart = ESMTimeSeriesChart
-    metric.cfg.plotly.plotby = [DataModel.YEAR, DataModel.LOCATION]
-    metric.cfg.plotly.pivot_index = [
+    metric.defaults.plotly.title = metric.df.attrs["name"] + " {location} in {year}"
+    metric.defaults.plotly.file_name_template = (
+        "methane_prod_dem_time_{year}_{location}"
+    )
+    metric.defaults.plotly.chart = ESMTimeSeriesChart
+    metric.defaults.plotly.plotby = [DataModel.YEAR, DataModel.LOCATION]
+    metric.defaults.plotly.pivot_index = [
         DataModel.YEAR,
         DataModel.LOCATION,
         DataModel.CARRIER,
     ]
-    metric.cfg.plotly.xaxis_title = ""
-    metric.cfg.plotly.legend_header = "Production/Demand"
+    metric.defaults.plotly.xaxis_title = ""
+    metric.defaults.plotly.legend_header = "Production/Demand"
     # The Toolbox rounds values to second digit before clipping.
-    metric.cfg.plotly.cutoff = 0.001  # MWh
-    metric.cfg.plotly.pattern = dict.fromkeys(
+    metric.defaults.plotly.cutoff = 0.001  # MWh
+    metric.defaults.plotly.pattern = dict.fromkeys(
         [Group.export_net, Group.import_net, Group.import_global], "/"
     )
 
-    metric.cfg.plotly.category_orders = (
+    metric.defaults.plotly.category_orders = (
         # list production entries from outside to zero
         Group.import_net,
         Group.import_global,

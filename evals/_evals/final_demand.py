@@ -1,10 +1,10 @@
+# -*- coding: utf-8 -*-
 """Evaluate the Final Energy Demand."""
 
 from functools import partial
 from pathlib import Path
 
 import pandas as pd
-
 from constants import (
     TITLE_SUFFIX,
     BusCarrier,
@@ -12,11 +12,6 @@ from constants import (
     DataModel,
     Group,
     Mapping,
-)
-from evals.heat import get_heat_loss_factor, split_heat_hh_service_losses
-from evals.industry import (
-    INDUSTRY_BUS_CARRIER,
-    fetch_industry_demand_statistics,
 )
 from fileio import prepare_industry_demand, prepare_nodal_energy
 from metric import Metric
@@ -32,6 +27,12 @@ from utils import (
     insert_index_level,
     make_evaluation_result_directories,
     rename_aggregate,
+)
+
+from evals.heat import get_heat_loss_factor, split_heat_hh_service_losses
+from evals.industry import (
+    INDUSTRY_BUS_CARRIER,
+    fetch_industry_demand_statistics,
 )
 
 
@@ -61,29 +62,29 @@ def eval_fed(
     )
 
     title = metric.df.attrs["name"] + TITLE_SUFFIX
-    metric.cfg.mapping = Mapping.bus_carrier
+    metric.defaults.mapping = Mapping.bus_carrier
 
-    metric.cfg.excel.title = title
-    metric.cfg.excel.pivot_index = [
+    metric.defaults.excel.title = title
+    metric.defaults.excel.pivot_index = [
         DataModel.LOCATION,
         DataModel.BUS_CARRIER,
     ]
 
-    metric.cfg.plotly.title = title
-    metric.cfg.plotly.chart = ESMBarChart
-    metric.cfg.plotly.plot_category = DataModel.BUS_CARRIER
-    metric.cfg.plotly.pivot_index = [
+    metric.defaults.plotly.title = title
+    metric.defaults.plotly.chart = ESMBarChart
+    metric.defaults.plotly.plot_category = DataModel.BUS_CARRIER
+    metric.defaults.plotly.pivot_index = [
         DataModel.YEAR,
         DataModel.LOCATION,
         DataModel.BUS_CARRIER,
     ]
-    metric.cfg.plotly.file_name_template = "final_demand_{location}"
-    metric.cfg.plotly.legend_header = "Energy Carrier"
+    metric.defaults.plotly.file_name_template = "final_demand_{location}"
+    metric.defaults.plotly.legend_header = "Energy Carrier"
     # metric.cfg.plotly.footnotes = (
     #     "International aviation and navigation are not included.",
     #     "",
     # )
-    metric.cfg.plotly.category_orders = (
+    metric.defaults.plotly.category_orders = (
         Group.coal,
         Group.solar_thermal,
         Group.h2,
@@ -93,8 +94,8 @@ def eval_fed(
         Group.electrictiy,
         Group.heat_district,
     )
-    metric.cfg.plotly.xaxis_title = "<b>Years</b>"
-    metric.cfg.plotly.cutoff = 0.04
+    metric.defaults.plotly.xaxis_title = "<b>Years</b>"
+    metric.defaults.plotly.cutoff = 0.04
 
     output_path = make_evaluation_result_directories(result_path, subdir)
     metric.export_excel(output_path)
@@ -129,22 +130,25 @@ def eval_fed_sectoral(
     )
 
     title = metric.df.attrs["name"] + TITLE_SUFFIX
-    metric.cfg.mapping = Mapping.bus_carrier
+    metric.defaults.mapping = Mapping.bus_carrier
 
-    metric.cfg.excel.title = title
-    metric.cfg.excel.pivot_index = [DataModel.LOCATION, DataModel.BUS_CARRIER]
-    metric.cfg.excel.pivot_columns = [DataModel.BUS_CARRIER, DataModel.YEAR]
-    metric.cfg.excel.axis_labels = [DataModel.YEAR.title(), metric.df.attrs["unit"]]
+    metric.defaults.excel.title = title
+    metric.defaults.excel.pivot_index = [DataModel.LOCATION, DataModel.BUS_CARRIER]
+    metric.defaults.excel.pivot_columns = [DataModel.BUS_CARRIER, DataModel.YEAR]
+    metric.defaults.excel.axis_labels = [
+        DataModel.YEAR.title(),
+        metric.df.attrs["unit"],
+    ]
 
-    metric.cfg.plotly.title = title
-    metric.cfg.plotly.chart = ESMGroupedBarChart
-    metric.cfg.plotly.facet_column = DataModel.CARRIER  # sector subplots
-    metric.cfg.plotly.plot_category = DataModel.BUS_CARRIER  # categories
-    metric.cfg.plotly.file_name_template = "final_demand_sec_{location}"
-    metric.cfg.plotly.legend_header = "Energy Carrier"
-    metric.cfg.plotly.xaxis_title = ""  # skip to use sector names
-    metric.cfg.plotly.cutoff = 0.0  # None in original Toolbox
-    metric.cfg.plotly.category_orders = (
+    metric.defaults.plotly.title = title
+    metric.defaults.plotly.chart = ESMGroupedBarChart
+    metric.defaults.plotly.facet_column = DataModel.CARRIER  # sector subplots
+    metric.defaults.plotly.plot_category = DataModel.BUS_CARRIER  # categories
+    metric.defaults.plotly.file_name_template = "final_demand_sec_{location}"
+    metric.defaults.plotly.legend_header = "Energy Carrier"
+    metric.defaults.plotly.xaxis_title = ""  # skip to use sector names
+    metric.defaults.plotly.cutoff = 0.0  # None in original Toolbox
+    metric.defaults.plotly.category_orders = (
         Group.coal,
         Group.solar_thermal,
         Group.biomass,
@@ -225,22 +229,22 @@ def eval_fed_biomass(
 
     title = metric.df.attrs["name"] + TITLE_SUFFIX
 
-    metric.cfg.mapping = "biomass"
-    metric.cfg.excel.chart_title = title
+    metric.defaults.mapping = "biomass"
+    metric.defaults.excel.chart_title = title
 
-    metric.cfg.plotly.title = title
-    metric.cfg.plotly.chart = ESMBarChart
-    metric.cfg.plotly.legend_header = "Final Biomass Demand"
-    metric.cfg.plotly.file_name_template = "biomass_balance_{location}"
-    metric.cfg.plotly.cutoff = 0.02  # TWh
-    metric.cfg.plotly.category_orders = (
+    metric.defaults.plotly.title = title
+    metric.defaults.plotly.chart = ESMBarChart
+    metric.defaults.plotly.legend_header = "Final Biomass Demand"
+    metric.defaults.plotly.file_name_template = "biomass_balance_{location}"
+    metric.defaults.plotly.cutoff = 0.02  # TWh
+    metric.defaults.plotly.category_orders = (
         # order production from outside to zero
         Group.industry,
         Group.electrictiy,
         Group.heat_decentral,
         Group.heat_district,
     )
-    metric.cfg.plotly.footnotes = (
+    metric.defaults.plotly.footnotes = (
         "The use of biomass for heat and power in COP plants is calculated "
         "based on the respective efficiencies.",
         "",
@@ -273,30 +277,30 @@ def eval_fed_building_heat(
     )
 
     title = metric.df.attrs["name"] + TITLE_SUFFIX
-    metric.cfg.mapping = Mapping.bus_carrier
+    metric.defaults.mapping = Mapping.bus_carrier
 
-    metric.cfg.excel.title = title
-    metric.cfg.excel.pivot_index = [
+    metric.defaults.excel.title = title
+    metric.defaults.excel.pivot_index = [
         DataModel.LOCATION,
         DataModel.BUS_CARRIER,
     ]
 
-    metric.cfg.plotly.title = title
-    metric.cfg.plotly.chart = ESMBarChart
-    metric.cfg.plotly.plot_category = DataModel.BUS_CARRIER
-    metric.cfg.plotly.pivot_index = [
+    metric.defaults.plotly.title = title
+    metric.defaults.plotly.chart = ESMBarChart
+    metric.defaults.plotly.plot_category = DataModel.BUS_CARRIER
+    metric.defaults.plotly.pivot_index = [
         DataModel.YEAR,
         DataModel.LOCATION,
         DataModel.BUS_CARRIER,
     ]
-    metric.cfg.plotly.file_name_template = "building_sec_heat_{location}"
-    metric.cfg.plotly.legend_header = "Energy Carrier"
-    metric.cfg.plotly.cutoff = 0.04
+    metric.defaults.plotly.file_name_template = "building_sec_heat_{location}"
+    metric.defaults.plotly.legend_header = "Energy Carrier"
+    metric.defaults.plotly.cutoff = 0.04
     # metric.cfg.plotly.footnotes = (
     #     "International aviation and navigation are not included.",
     #     "",
     # )
-    metric.cfg.plotly.category_orders = (
+    metric.defaults.plotly.category_orders = (
         Group.coal,
         Group.solar_thermal,
         Group.h2,
@@ -331,30 +335,30 @@ def eval_fed_hh_services(
     )
 
     title = metric.df.attrs["name"] + TITLE_SUFFIX
-    metric.cfg.mapping = Mapping.bus_carrier
+    metric.defaults.mapping = Mapping.bus_carrier
 
-    metric.cfg.excel.title = title
-    metric.cfg.excel.pivot_index = [
+    metric.defaults.excel.title = title
+    metric.defaults.excel.pivot_index = [
         DataModel.LOCATION,
         DataModel.BUS_CARRIER,
     ]
 
-    metric.cfg.plotly.title = title
-    metric.cfg.plotly.chart = ESMBarChart
-    metric.cfg.plotly.plot_category = DataModel.BUS_CARRIER
-    metric.cfg.plotly.pivot_index = [
+    metric.defaults.plotly.title = title
+    metric.defaults.plotly.chart = ESMBarChart
+    metric.defaults.plotly.plot_category = DataModel.BUS_CARRIER
+    metric.defaults.plotly.pivot_index = [
         DataModel.YEAR,
         DataModel.LOCATION,
         DataModel.BUS_CARRIER,
     ]
-    metric.cfg.plotly.file_name_template = "building_sec_tot_{location}"
-    metric.cfg.plotly.legend_header = "Energy Carrier"
-    metric.cfg.plotly.cutoff = 0.04
+    metric.defaults.plotly.file_name_template = "building_sec_tot_{location}"
+    metric.defaults.plotly.legend_header = "Energy Carrier"
+    metric.defaults.plotly.cutoff = 0.04
     # metric.cfg.plotly.footnotes = (
     #     "International aviation and navigation are not included.",
     #     "",
     # )
-    metric.cfg.plotly.category_orders = (
+    metric.defaults.plotly.category_orders = (
         Group.coal,
         Group.solar_thermal,
         Group.h2,
@@ -654,5 +658,7 @@ def _fetch_fed_homes_and_trade(networks: dict) -> pd.Series | pd.DataFrame:
     """
     fed_homes_and_trade = collect_myopic_statistics(
         networks, statistic="ac_load_split", carrier=[Carrier.domestic_homes_and_trade]
-    ).mul(-1)  # plot demand upwards
+    ).mul(
+        -1
+    )  # plot demand upwards
     return rename_aggregate(fed_homes_and_trade, Group.hh_and_services)

@@ -1,9 +1,9 @@
+# -*- coding: utf-8 -*-
 """Industry Evaluations."""
 
 from pathlib import Path
 
 import pandas as pd
-
 from constants import TITLE_SUFFIX, DataModel, Group
 from fileio import prepare_industry_demand
 from metric import Metric
@@ -65,17 +65,17 @@ def eval_industry_total(
     )
 
     title = metric.df.attrs["name"] + TITLE_SUFFIX
-    metric.cfg.mapping = INDUSTRY_BUS_CARRIER
-    metric.cfg.excel.title = title
-    metric.cfg.plotly.title = title
-    metric.cfg.plotly.chart = ESMBarChart
-    metric.cfg.plotly.file_name_template = "ind_sec_tot_{location}"
-    metric.cfg.plotly.pivot_index = [
+    metric.defaults.mapping = INDUSTRY_BUS_CARRIER
+    metric.defaults.excel.title = title
+    metric.defaults.plotly.title = title
+    metric.defaults.plotly.chart = ESMBarChart
+    metric.defaults.plotly.file_name_template = "ind_sec_tot_{location}"
+    metric.defaults.plotly.pivot_index = [
         DataModel.YEAR,
         DataModel.LOCATION,
         DataModel.CARRIER,
     ]
-    metric.cfg.plotly.category_orders = (
+    metric.defaults.plotly.category_orders = (
         Group.oil,
         Group.ch4,
         Group.h2,
@@ -84,7 +84,7 @@ def eval_industry_total(
         Group.coal,
         Group.biomass,
     )
-    metric.cfg.plotly.footnotes = (
+    metric.defaults.plotly.footnotes = (
         "Methane demand includes additional demand for Carbon Capture if used "
         "by the model. <br>Industry demand includes energetic and non-energetic "
         "demands.",
@@ -127,19 +127,22 @@ def eval_industry_sectoral(
     )
 
     title = metric.df.attrs["name"] + TITLE_SUFFIX
-    metric.cfg.mapping = INDUSTRY_BUS_CARRIER
+    metric.defaults.mapping = INDUSTRY_BUS_CARRIER
 
-    metric.cfg.excel.chart_title = title
-    metric.cfg.excel.pivot_index = [DataModel.LOCATION, DataModel.CARRIER]
-    metric.cfg.excel.pivot_columns = [DataModel.BUS_CARRIER, DataModel.YEAR]
-    metric.cfg.excel.axis_labels = [DataModel.YEAR.title(), metric.df.attrs["unit"]]
+    metric.defaults.excel.chart_title = title
+    metric.defaults.excel.pivot_index = [DataModel.LOCATION, DataModel.CARRIER]
+    metric.defaults.excel.pivot_columns = [DataModel.BUS_CARRIER, DataModel.YEAR]
+    metric.defaults.excel.axis_labels = [
+        DataModel.YEAR.title(),
+        metric.df.attrs["unit"],
+    ]
 
-    metric.cfg.plotly.title = title
-    metric.cfg.plotly.chart = ESMGroupedBarChart
-    metric.cfg.plotly.file_name_template = "ind_sec_dem_{location}"
-    metric.cfg.plotly.cutoff = 0.0  # None in original Toolbox
-    metric.cfg.plotly.xaxis_title = ""
-    metric.cfg.plotly.category_orders = (
+    metric.defaults.plotly.title = title
+    metric.defaults.plotly.chart = ESMGroupedBarChart
+    metric.defaults.plotly.file_name_template = "ind_sec_dem_{location}"
+    metric.defaults.plotly.cutoff = 0.0  # None in original Toolbox
+    metric.defaults.plotly.xaxis_title = ""
+    metric.defaults.plotly.category_orders = (
         Group.oil,
         Group.ch4,
         Group.h2,
@@ -148,7 +151,7 @@ def eval_industry_sectoral(
         Group.heat_district,
         Group.coal,
     )
-    metric.cfg.plotly.footnotes = (
+    metric.defaults.plotly.footnotes = (
         "N.F. Metals = Non-ferrous Metals; N.M. Minerals = Non-metallic Minerals; "
         "Paper = Pulp, Paper and Printing; Textile = Textile and Leather; Transport"
         " = Transport Equipment; Wood = Wood and Wood Products",

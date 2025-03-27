@@ -1,9 +1,9 @@
+# -*- coding: utf-8 -*-
 """Module for heat evaluations."""
 
 from pathlib import Path
 
 import pandas as pd
-
 from constants import TITLE_SUFFIX, BusCarrier, Carrier, DataModel, Group
 from metric import Metric
 from plots.barchart import ESMBarChart
@@ -49,11 +49,11 @@ def eval_district_heat_balance(
         "Heat Balance", is_unit="MWh", to_unit="TWh", statistics=[heat.squeeze()]
     )
 
-    metric.cfg.mapping = "district_heat"
-    metric.cfg.plotly.title = metric.df.attrs["name"] + TITLE_SUFFIX
-    metric.cfg.plotly.chart = ESMBarChart
-    metric.cfg.plotly.file_name_template = "heat_balance_{location}"
-    metric.cfg.plotly.category_orders = (
+    metric.defaults.mapping = "district_heat"
+    metric.defaults.plotly.title = metric.df.attrs["name"] + TITLE_SUFFIX
+    metric.defaults.plotly.chart = ESMBarChart
+    metric.defaults.plotly.file_name_template = "heat_balance_{location}"
+    metric.defaults.plotly.category_orders = (
         Group.storage_out,
         Group.solar_thermal,
         Group.ft,
@@ -108,17 +108,17 @@ def eval_district_heat_balance_ts(
         statistics=[heat],
     )
 
-    metric.cfg.mapping = "district_heat"
-    metric.cfg.plotly.title = metric.df.attrs["name"] + TITLE_SUFFIX
-    metric.cfg.plotly.chart = ESMTimeSeriesChart
-    metric.cfg.plotly.plotby = [DataModel.LOCATION, DataModel.YEAR]
-    metric.cfg.plotly.pivot_index = [
+    metric.defaults.mapping = "district_heat"
+    metric.defaults.plotly.title = metric.df.attrs["name"] + TITLE_SUFFIX
+    metric.defaults.plotly.chart = ESMTimeSeriesChart
+    metric.defaults.plotly.plotby = [DataModel.LOCATION, DataModel.YEAR]
+    metric.defaults.plotly.pivot_index = [
         DataModel.YEAR,
         DataModel.LOCATION,
         DataModel.CARRIER,
     ]
-    metric.cfg.plotly.file_name_template = "heat_prod_dem_time_{year}_{location}"
-    metric.cfg.plotly.legend_header = "Production/Demand"
+    metric.defaults.plotly.file_name_template = "heat_prod_dem_time_{year}_{location}"
+    metric.defaults.plotly.legend_header = "Production/Demand"
 
     output_path = make_evaluation_result_directories(result_path, subdir)
     metric.export_plotly(output_path)

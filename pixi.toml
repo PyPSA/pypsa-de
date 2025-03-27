@@ -53,10 +53,7 @@ descartes = "*"
 rasterio = "==1.4.1"
 libgdal-core = "<3.10.0"
 
-[environments]
-dev = {features = ["dev"], solve-group = "prod"}
-
-[feature.dev.dependencies]
+# additional dependencies for pypsa-at
 pixi-pycharm="*"
 marimo="*"
 plotly="*"
@@ -72,6 +69,26 @@ mkdocs-material-extensions="*"
 Pygments="*"
 mkdocs-marimo="*"
 mknotebooks="*"
+
+#[environments]
+#dev = {features = ["dev"], solve-group = "prod"}
+#
+#[feature.dev.dependencies]
+#pixi-pycharm="*"
+#marimo="*"
+#plotly="*"
+#pytest="*"
+#click="*"
+#folium="*"
+#xlsxwriter="*"
+#frozendict="*"
+#mkdocs="*"
+#mkdocs-material= {version = "*"}  # , extras = ["imaging"]
+#mkdocstrings-python="*"  # {version = "*"}  # , extras = ["python"]
+#mkdocs-material-extensions="*"
+#Pygments="*"
+#mkdocs-marimo="*"
+#mknotebooks="*"
 
 [pypi-dependencies]
 gurobipy = "*"

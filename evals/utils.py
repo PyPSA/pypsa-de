@@ -758,6 +758,7 @@ def make_evaluation_result_directories(result_path: Path, subdir: Path | str) ->
     make_directory(output_path, "HTML")
     make_directory(output_path, "JSON")
     make_directory(output_path, "CSV")
+    make_directory(output_path, "XLSX")
 
     return output_path
 

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Module for primary energy evaluations."""
 
 from pathlib import Path
@@ -63,13 +64,13 @@ def eval_heat_primary_energy(
     )
 
     title = metric.df.attrs["name"] + TITLE_SUFFIX
-    metric.cfg.mapping = "district_heat"
-    metric.cfg.excel.chart_title = title
-    metric.cfg.excel.pivot_index = [DataModel.LOCATION, DataModel.BUS_CARRIER]
-    metric.cfg.plotly.title = title
-    metric.cfg.plotly.chart = ESMBarChart
-    metric.cfg.plotly.file_name_template = "heat_mix_{location}"
-    metric.cfg.plotly.pivot_index = [
+    metric.defaults.mapping = "district_heat"
+    metric.defaults.excel.chart_title = title
+    metric.defaults.excel.pivot_index = [DataModel.LOCATION, DataModel.BUS_CARRIER]
+    metric.defaults.plotly.title = title
+    metric.defaults.plotly.chart = ESMBarChart
+    metric.defaults.plotly.file_name_template = "heat_mix_{location}"
+    metric.defaults.plotly.pivot_index = [
         DataModel.YEAR,
         DataModel.LOCATION,
         DataModel.CARRIER,
