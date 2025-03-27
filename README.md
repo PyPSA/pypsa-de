@@ -83,7 +83,7 @@ This will run all analysis steps to reproduce results. If computational resource
 
 ## Differences to PyPSA-EUR
 
-PyPSA-DE is a softfork of PyPSA-EUR. As such, large parts of the functionality are similar, and the [documentation](https://pypsa-eur.readthedocs.io/en/latest/) of PyPSA-Eur is a good starting point to get acquainted with the model. On topf of that, PyPSA-DE adds several data sources and workflow steps that improve the representation of the German Energy System. Below is a non-conclusive list of the most important changes.
+PyPSA-DE is a softfork of PyPSA-EUR. As such, large parts of the functionality are similar, and the [documentation](https://pypsa-eur.readthedocs.io/en/latest/) of PyPSA-Eur is a good starting point to get acquainted with the model. On top of that, PyPSA-DE adds several data sources and workflow steps that improve the representation of the German Energy System. Below is a non-conclusive list of the most important changes.
 
 - Default resolution of 16 regions in Germany and 13 region for neighboring countries
 - 10 pre-defined scenarios (1 Current Policies, 3 Net-Zero Scenarios (Balanced, Focus H2, Focus Electricity), 2 Demand Variations based on the Balanced Scenario, 4 Demand Variations Based on the Current Policies Scenario)
