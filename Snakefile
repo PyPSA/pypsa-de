@@ -613,8 +613,14 @@ rule ariadne_all:
             RESULTS + "ariadne/report/elec_price_duration_curve.pdf",
             run=config_provider("run", "name"),
         ),
+        # expand(
+        #     RESULTS + "ariadne/pricing/elec_pdc_{lt_st}.png",
+        #     run=config_provider("run", "name"),
+        #     **config["scenario"],
+        #     allow_missing=True,
+        # ),
         expand(
-            RESULTS + "ariadne/pricing/elec_pdc_{lt_st}.png",
+            RESULTS + "postnetworks/base_s_{clusters}_l{ll}_{opts}_{sector_opts}_{planning_horizons}_st.nc",
             run=config_provider("run", "name"),
             **config["scenario"],
             allow_missing=True,
