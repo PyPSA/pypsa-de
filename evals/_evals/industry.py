@@ -176,7 +176,7 @@ def fetch_industry_demand_statistics(
     Parameters
     ----------
     networks
-        The loaded postnetworks.
+        The loaded networks.
     result_path
         The path to the results directory, needed to locate resource
         files.

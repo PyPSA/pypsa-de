@@ -383,7 +383,7 @@ def prepare_industry_demand(
         contains all model results. (typically ends with "results",
         or is a time-stamp).
     networks
-        The pypsa postnetworks, used to extract the methane amounts
+        The pypsa networks, used to extract the methane amounts
         including CC.
     sub_directory : optional
         The location of the CSV files relative to the results folder.

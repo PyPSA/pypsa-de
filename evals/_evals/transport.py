@@ -177,7 +177,7 @@ def _fetch_transport_statistics(networks: dict, result_path: Path) -> list:
     Parameters
     ----------
     networks
-        The loaded postnetworks.
+        The loaded networks.
     result_path
         The path to the results directory, needed to locate resource
         files.

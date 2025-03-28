@@ -342,7 +342,7 @@ if __name__ == "__main__":
     set_scenario_config(snakemake)
 
     n = pypsa.Network(snakemake.input.network)
-    # fn= "/home/julian-geis/repos/pypsa-ariadne/results/20240426plotH2Kernnetz/CurrentPolicies/postnetworks/elec_s_22_lvopt__none_2030.nc"
+    # fn= "/home/julian-geis/repos/pypsa-ariadne/results/20240426plotH2Kernnetz/CurrentPolicies/networks/elec_s_22_lvopt__none_2030.nc"
     # n = pypsa.Network(fn)
 
     regions = gpd.read_file(snakemake.input.regions).set_index("name")
