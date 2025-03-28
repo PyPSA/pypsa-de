@@ -42,19 +42,12 @@ def view_electricity_capacities(
     e_caps = [ac_generation_and_storage, ac_production]
     view_config = config["view"]
     metric = Metric(
-        metric_name=view_config["name"],
-        is_unit=e_caps[0].attrs["unit"],
-        to_unit=view_config["unit"],
+        statistics_unit=e_caps[0].attrs["unit"],
+        view_config=view_config,
         statistics=e_caps,
     )
-    title = view_config["name"] + TITLE_SUFFIX
-    metric.cfg.mapping = view_config["categories"]
-    metric.cfg.excel.title = title
-    metric.cfg.plotly.title = title
-    metric.cfg.plotly.chart = ESMBarChart
-    metric.cfg.plotly.file_name_template = view_config["file_name"]
-    metric.cfg.plotly.cutoff = view_config["cutoff"]
-    metric.cfg.plotly.category_orders = view_config["legend_order"]
+
+    metric.defaults.plotly.chart = ESMBarChart
 
     output_path = make_evaluation_result_directories(result_path, subdir)
     metric.export(output_path, view_config["export"])

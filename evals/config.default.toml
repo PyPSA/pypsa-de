@@ -69,8 +69,16 @@ name = "Optimal Capacity Electricity"
 unit = "GW"
 file_name  = "electricity_capacities_{location}"
 cutoff = 0.0
-legend_order = ["Battery Storage","Nuclear Power", "Thermal Powerplants", "Pumped Hydro Storage", "Reservoir",
-    "Run-of-River","Wind Power","Photovoltaics"]
+legend_order = [
+
+    "Nuclear Power",
+    "Thermal Powerplants",
+    "Pumped Hydro Storage",
+    "Reservoir",
+    "Run-of-River",
+    "Wind Power",
+
+]
 
 [view.capacity.electricity_capacity.export]
 plotly = true
@@ -81,6 +89,7 @@ excel = false
 all_categories_mapped = true
 no_superfluous_categories = true
 yearly_balances_almost_zero = false
+legend_entry_order = true
 
 [view.capacity.electricity_capacity.categories]
 
@@ -132,18 +141,9 @@ yearly_balances_almost_zero = false
 "offwind-dc" = "Offwind"
 "oil" = "Oil"
 "ror" = "Run of River"
-
-#"waste CHP CC" = "Waste CHP"
-
-# "urban central coal CHP CC heat" = "Coal CHP"
-# "urban central coal CHP heat" = "Coal CHP"
-#"urban central CHP" = "CHP"
-#"urban central gas CHP CC heat" = "Gas CHP"
-#"urban central gas CHP heat" = "Gas CHP"
 "urban central gas boiler" = "Gas Boiler"
 "urban central heat vent" = "Heat Vent"
 "urban central lignite CHP" = "Coal CHP"
-#"urban central lignite CHP heat" = "Coal CHP"
 "urban central resistive heater" = "Resistive Heater"
 "urban central solar thermal" = "Solar Thermal"
 "urban central solid biomass CHP" = "Biomass CHP"
