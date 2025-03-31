@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Collect statistics for ESM evaluations."""  # noqa: A005
+
 import logging
 from functools import partial
 from inspect import getmembers
@@ -15,6 +16,7 @@ from pypsa.statistics import (
     aggregate_timeseries,
     get_bus_and_carrier,
     get_operation,
+    get_transmission_branches,
     get_weightings,
     groupers,
     port_efficiency,
@@ -46,7 +48,8 @@ logger = logging.getLogger(__file__)
 def get_location(
     n: pypsa.Network, c: str, port: str = "", location_port: str = ""
 ) -> pd.Series:
-    """Return the grouper series for the location of a component.
+    """
+    Return the grouper series for the location of a component.
 
     The additional location port argument will swap the bus
     location to the specified bus port locations. The default
@@ -84,7 +87,8 @@ def get_location(
 def get_location_from_name_at_port(
     n: pypsa.Network, c: str, port: str = ""
 ) -> pd.Series:
-    """Return the location from the component name.
+    """
+    Return the location from the component name.
 
     Parameters
     ----------
@@ -109,7 +113,8 @@ def get_location_and_carrier_and_bus_carrier(
     nice_names: bool = False,
     location_port: str = "",
 ) -> list[pd.Series]:
-    """Get location, carrier, and bus carrier.
+    """
+    Get location, carrier, and bus carrier.
 
     Used in groupby statements to group statistics results.
 
@@ -144,14 +149,14 @@ def get_location_and_carrier_and_bus_carrier(
     bus, carrier = get_bus_and_carrier(n, c, port, nice_names=nice_names)
 
     if location_port and c in n.branch_components:
-        bus_location = n.df(c)[f"bus{location_port}"]
-        location = bus_location.map(n.df("Bus").location).rename(DataModel.LOCATION)
+        bus_location = n.static(c)[f"bus{location_port}"]
+        location = bus_location.map(n.static("Bus").location).rename(DataModel.LOCATION)
     else:
-        location = bus.map(n.df("Bus").location).rename(DataModel.LOCATION)
+        location = bus.map(n.static("Bus").location).rename(DataModel.LOCATION)
 
     # Note, that we still use the original bus carrier from 'bus' here,
     # even if location_port is being used.
-    bus_carrier = bus.map(n.df("Bus").carrier).rename(DataModel.BUS_CARRIER)
+    bus_carrier = bus.map(n.static("Bus").carrier).rename(DataModel.BUS_CARRIER)
 
     return [location, carrier, bus_carrier]
 
@@ -160,7 +165,8 @@ def get_location_and_carrier_and_bus_carrier(
 def get_buses_and_carrier_and_bus_carrier(
     n: pypsa.Network, c: str, port: str = "", nice_names: bool = True
 ) -> list[pd.Series]:
-    """Get src_bus, dst_bus, carrier, and bus carrier.
+    """
+    Get src_bus, dst_bus, carrier, and bus carrier.
 
     Used in groupby statements to group statistics results.
 
@@ -181,10 +187,10 @@ def get_buses_and_carrier_and_bus_carrier(
         A list of series to group statistics by.
     """
     pat = f"({Regex.region.pattern})"
-    bus0 = n.df(c)["bus0"].str.extract(pat, expand=False)
-    bus1 = n.df(c)["bus1"].str.extract(pat, expand=False)
+    bus0 = n.static(c)["bus0"].str.extract(pat, expand=False)
+    bus1 = n.static(c)["bus1"].str.extract(pat, expand=False)
     bus, carrier = get_bus_and_carrier(n, c, port, nice_names=nice_names)
-    bus_carrier = bus.map(n.df("Bus").carrier).rename(DataModel.BUS_CARRIER)
+    bus_carrier = bus.map(n.static("Bus").carrier).rename(DataModel.BUS_CARRIER)
     return [bus0, bus1, carrier, bus_carrier]
 
 
@@ -192,11 +198,12 @@ def collect_myopic_statistics(
     networks: dict,
     statistic: str,
     aggregate_components: str = "sum",
-    carrier: list | tuple = None,
-    # drop_zero_rows: bool = True,
+    # carrier: list | tuple = None,
+    drop_zero_rows: bool = True,
     **kwargs: object,
 ) -> pd.DataFrame | pd.Series:
-    """Build a myopic statistic from loaded networks.
+    """
+    Build a myopic statistic from loaded networks.
 
     This method calls ESMStatisticsAccessor methods. It calls the
     statistics method for every year and optionally aggregates
@@ -256,30 +263,25 @@ def collect_myopic_statistics(
     statistic = pd.concat(year_statistics, axis=0, sort=True)
 
     if aggregate_components and "component" in statistic.index.names:
-        _names = list(statistic.index.names)
-        _names.remove("component")
+        _names = statistic.index.droplevel("component").names
         statistic = statistic.groupby(_names).agg(aggregate_components)
-
-    if carrier:
-        statistic = filter_by(statistic, carrier=carrier)
 
     if kwargs.get("aggregate_time") is False:
         statistic.columns.name = DataModel.SNAPSHOTS
 
-    # todo: verify zeros are being dropped out of the box
-    # # drop entries with all zero rows. They only clutter results.
-    # if drop_zero_rows:
-    #     statistic = (
-    #         statistic.loc[statistic != 0]  # Series
-    #         if isinstance(statistic, pd.Series)
-    #         else statistic.loc[(statistic != 0).any(axis=1)]  # DataFrame
-    #     )
+    if drop_zero_rows:
+        statistic = (
+            statistic.loc[statistic != 0]  # Series
+            if isinstance(statistic, pd.Series)
+            else statistic.loc[(statistic != 0).any(axis=1)]  # DataFrame
+        )
 
     return statistic.sort_index()
 
 
 class ESMStatistics(StatisticsAccessor):
-    """Provides additional statistics for ESM evaluations.
+    """
+    Provides additional statistics for ESM evaluations.
 
     Extends the StatisticsAccessor with additional metrics.
 
@@ -307,13 +309,14 @@ class ESMStatistics(StatisticsAccessor):
         super().__init__(n)
         self.result_path = result_path
         self.set_parameters(nice_names=False)
-        self.set_parameters(remove_zeros=True)
+        self.set_parameters(drop_zero=True)
         groupers.add_grouper("location", get_location)
         groupers.add_grouper("bus0", partial(get_location_from_name_at_port, port="0"))
         groupers.add_grouper("bus1", partial(get_location_from_name_at_port, port="1"))
 
     def ac_load_split(self) -> pd.DataFrame:
-        """Split energy amounts for electricity Loads.
+        """
+        Split energy amounts for electricity Loads.
 
         The following AC loads can be distinguished:
           - industry,
@@ -366,8 +369,11 @@ class ESMStatistics(StatisticsAccessor):
                 f"demand. This happens if the combined electricity demand "
                 f"from Industry and Rail nodal energy files is larger than "
                 f"the electricity Loads in the network.\n"
-                f"{p[p[Carrier.domestic_homes_and_trade] > 0]
-                    [Carrier.domestic_homes_and_trade]}\n\n"
+                f"{
+                    p[p[Carrier.domestic_homes_and_trade] > 0][
+                        Carrier.domestic_homes_and_trade
+                    ]
+                }\n\n"
                 f"All values larger than zero will be set to zero. "
                 f"(Note that this is different to the Toolbox implementation "
                 f"where signs are flipped).\n"
@@ -390,7 +396,8 @@ class ESMStatistics(StatisticsAccessor):
         return df
 
     def bev_v2g(self, drop_v2g_withdrawal: bool = True) -> DataFrame:
-        """Calculate BEV and V2G energy amounts.
+        """
+        Calculate BEV and V2G energy amounts.
 
         Parameters
         ----------
@@ -483,14 +490,14 @@ class ESMStatistics(StatisticsAccessor):
         """
         n = self.n
 
-        idx = n.df("StorageUnit").index
+        idx = n.static("StorageUnit").index
         phs = pd.DataFrame(index=idx)
         for time_series in ("p_dispatch", "p_store", "spill", "inflow"):
             p = n.pnl("StorageUnit")[time_series].reindex(columns=idx, fill_value=0)
             weights = get_weightings(n, "StorageUnit")
             phs[time_series] = aggregate_timeseries(p, weights, agg=aggregate_time)
 
-        efficiency = phs["p_store"] * n.df("StorageUnit")["efficiency_dispatch"]
+        efficiency = phs["p_store"] * n.static("StorageUnit")["efficiency_dispatch"]
         part_inflow = phs["inflow"] / (phs["inflow"] + efficiency)
 
         phs["Dispatched Power from Inflow"] = phs["p_dispatch"] * part_inflow
@@ -557,7 +564,7 @@ class ESMStatistics(StatisticsAccessor):
 
         weights = get_weightings(n, "StorageUnit")
 
-        su = n.df("StorageUnit").query("carrier in ['PHS', 'hydro']")
+        su = n.static("StorageUnit").query("carrier in ['PHS', 'hydro']")
 
         results = []
         for time_series, efficiency, index_name, agg in ts_efficiency_name_agg:
@@ -602,7 +609,8 @@ class ESMStatistics(StatisticsAccessor):
         bus_carrier: str = None,
         aggregate_time: str = "sum",
     ) -> pd.DataFrame:
-        """Calculate energy amounts exchanged between locations.
+        """
+        Calculate energy amounts exchanged between locations.
 
         Returns positive values for 'import' (supply) and negative
         values for 'export' (withdrawal).
@@ -634,14 +642,14 @@ class ESMStatistics(StatisticsAccessor):
         n = self.n
         results_comp = []
 
-        buses = n.df("Bus").reset_index()
+        buses = n.static("Bus").reset_index()
         if bus_carrier:
             _bc = [bus_carrier] if isinstance(bus_carrier, str) else bus_carrier
             buses = buses.query("carrier in @_bc")
 
         for port, c in product((0, 1), ("Link", "Line")):
-            mask = trade_mask(n.df(c), scope).to_numpy()
-            comp = n.df(c)[mask].reset_index()
+            mask = trade_mask(n.static(c), scope).to_numpy()
+            comp = n.static(c)[mask].reset_index()
 
             p = buses.merge(
                 comp,
@@ -650,7 +658,10 @@ class ESMStatistics(StatisticsAccessor):
                 suffixes=("_bus", ""),
             ).merge(n.pnl(c).get(f"p{port}").T, on=c)
 
-            p = p.set_index([DataModel.LOCATION, DataModel.CARRIER, "carrier_bus"])
+            _location = (
+                DataModel.LOCATION + "_bus" if c == "Link" else DataModel.LOCATION
+            )
+            p = p.set_index([_location, DataModel.CARRIER, "carrier_bus"])
             p.index.names = DataModel.IDX_NAMES
             # branch components have reversed sign
             p = p.filter(n.snapshots, axis=1).mul(-1.0)
@@ -820,13 +831,13 @@ class ESMStatistics(StatisticsAccessor):
             eff_target = port_efficiency(n, comps, port=port)
             return eff_target / (eff_port_1 + eff_target)
 
-        buses = n.df("Bus").reset_index()
+        buses = n.static("Bus").reset_index()
         if bus_carrier:
             buses = buses.query("carrier in @bus_carrier")
 
-        comp = n.df(comps).reset_index()
+        comp = n.static(comps).reset_index()
 
-        ports = [col[3:] for col in n.df(comps).filter(like="bus")]
+        ports = [col[3:] for col in n.static(comps).filter(like="bus")]
 
         port_results = []
         for port in ports:
@@ -843,12 +854,12 @@ class ESMStatistics(StatisticsAccessor):
             # branch carriers to the bus_carrier of energy
             # withdrawal, i.e. the bus0 (=input) bus_carrier.
             bus = "bus0" if comps in n.branch_components else "bus"
-            p[DataModel.BUS_CARRIER] = p[bus].map(n.df("Bus")[DataModel.CARRIER])
+            p[DataModel.BUS_CARRIER] = p[bus].map(n.static("Bus")[DataModel.CARRIER])
 
             # support location switching from EU to country nodes
             if location_port and comps in n.branch_components:
                 p[DataModel.LOCATION] = p[f"bus{location_port}"].map(
-                    n.df("Bus")[DataModel.LOCATION]
+                    n.static("Bus")[DataModel.LOCATION]
                 )
 
             carrier_col = "type" if comps == "Line" else DataModel.CARRIER
@@ -981,7 +992,7 @@ class ESMStatistics(StatisticsAccessor):
             result = align_edge_directions(result)
 
         if append_grid:
-            result = add_grid_lines(n.df("Bus"), result)
+            result = add_grid_lines(n.static("Bus"), result)
 
         return result.sort_index()
 
@@ -1056,7 +1067,7 @@ class ESMStatistics(StatisticsAccessor):
 
         result.attrs["name"] = "Energy"
         result.attrs["unit"] = unit
-        result.name = f"{result.attrs['name']} " f"({result.attrs['unit']})"
+        result.name = f"{result.attrs['name']} ({result.attrs['unit']})"
 
         if append_grid:
             result = add_grid_lines(n, result)

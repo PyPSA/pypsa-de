@@ -61,3 +61,61 @@ excel = true
 "urban central solid biomass CHP" = "Biomass CHP"
 "urban central water tanks charger" = "Storage In"
 "urban central water tanks discharger" = "Storage Out"
+
+[view.balance.hydrogen_balance]
+name = "Hydrogen Energy Balance"
+unit = "TWh"
+file_name = "nodal_hydrogen_balance_{location}"
+cutoff = 0.001
+legend_order = [
+    # production ordered from zero to outside
+    "Electrolysis",
+    "SMR",
+    "H2 from Solid Biomass",
+    "Ammonia Cracking",
+    "Import Domestic",
+    "Import European",
+    # demand ordered from zero to outside:
+    "Methanolisation",
+    "Industry",
+    "Transport",
+    "Electricity",
+    "Haber-Bosch",
+    "Fischer-Tropsch",
+    "Sabatier",
+    "Synth. Fuels",
+    "Export Domestic",
+    "Export European",
+]
+
+[view.balance.hydrogen_balance.checks]
+all_categories_mapped = true
+no_superfluous_categories = true
+legend_entry_order = true
+yearly_balances_almost_zero = true
+
+[view.balance.hydrogen_balance.export]
+plotly = true
+csv = true
+excel = true
+
+[view.balance.hydrogen_balance.categories]
+"ammonia cracker" = "Ammonia Cracking"
+"Export European" = "Export European"
+'Export Domestic' = 'Export Domestic'
+"Fischer-Tropsch" = "Fischer-Tropsch"
+"H2 Electrolysis" = "Electrolysis"
+"H2 Fuel Cell" = "Electricity"
+"H2 OCGT" = "Electricity"
+"H2 for industry" = "Industry"
+"H2 turbine" = "Electricity"
+"Haber-Bosch" = "Haber-Bosch"
+"Import European" = "Import European"
+"Import Domestic" = "Import Domestic"
+"SMR" = "SMR"
+"SMR CC" = "SMR"
+"Sabatier" = "Sabatier"
+"electrobiofuels" = "Synth. Fuels"
+"land transport fuel cell" = "Transport"
+"methanolisation" = "Methanolisation"
+"solid biomass to hydrogen" = "H2 from Solid Biomass"

@@ -137,10 +137,11 @@ def run_tests() -> None:
 
 if __name__ == "__main__":
     # useful for debugging. Use run_eval command for production.
-    # args = ["../results/evals-dev"]  # this is the copied folder in local repo results
+    args = ["../results/evals-dev"]  # this is the copied folder in local repo results
     # cp -r /mnt/storage/pypsa-at-AT10-365H results/
-    args = ["/mnt/storage/pypsa-at-AT10-365H"]  # This is the folder on the file share
-    args.extend(["-n", "view_heat_capacity"])
+    # args = ["/mnt/storage/pypsa-at-AT10-365H"]  # This is the folder on the file share
+    # args.extend(["-n", "view_heat_capacity"])
+    args.extend(["-n", "view_hydrogen_balance"])
 
     # args.extend(["-c", "config.override.toml"])
     run_eval(args)
