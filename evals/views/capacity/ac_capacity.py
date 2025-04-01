@@ -1,14 +1,10 @@
 # -*- coding: utf-8 -*-
 from pathlib import Path
 
-import pandas as pd
-
-from evals.constants import TITLE_SUFFIX, BusCarrier, Carrier, DataModel, Group
+from evals.constants import BusCarrier, Carrier, DataModel
 from evals.fileio import Exporter
 from evals.plots.barchart import ESMBarChart
 from evals.statistic import collect_myopic_statistics
-
-# from evals.utils import make_evaluation_result_directories
 
 
 def view_electricity_capacities(
@@ -17,7 +13,8 @@ def view_electricity_capacities(
     config: dict,
     subdir: str | Path = "esm_run/evaluation",
 ) -> None:  # numpydoc ignore=PR01
-    """Evaluate the optimal capacity for AC technologies.
+    """
+    Evaluate the optimal capacity for AC technologies.
 
     Returns
     -------
@@ -45,10 +42,10 @@ def view_electricity_capacities(
     e_capas = [ac_generation_and_storage, ac_production]
     view_config = config["view"]
     metric = Exporter(
-        statistics_unit=e_capas[0].attrs["unit"],
-        view_config=view_config,
         statistics=e_capas,
+        statistics_unit=ac_production.attrs["unit"],
+        view_config=view_config,
     )
-    # constant view specific settings
+
     metric.defaults.plotly.chart = ESMBarChart
     metric.export(result_path, subdir)
