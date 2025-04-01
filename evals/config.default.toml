@@ -172,7 +172,7 @@ excel = false
 [view.capacity.ac_storage]
 name = "Power Storage Volumes"
 unit = "TWh"
-file_name = "capacity_ac_storage_{location}_{year}"
+file_name = "capacity_ac_storage_{location}"
 cutoff = 0.00001  # 1 MWh
 legend_order = []
 

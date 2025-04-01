@@ -9,7 +9,7 @@ technologies.
 from pathlib import Path
 
 from evals.constants import BusCarrier
-from evals.fileio import Metric
+from evals.fileio import Exporter
 from evals.plots.barchart import ESMBarChart
 from evals.statistic import collect_myopic_statistics
 
@@ -38,7 +38,7 @@ def view_capacity_heat(
         bus_carrier=BusCarrier.HEAT_URBAN_CENTRAL,
     ).clip(lower=0)
 
-    metric = Metric(
+    metric = Exporter(
         statistics=[heat_capacity],
         statistics_unit=heat_capacity.attrs["unit"],
         view_config=config["view"],

@@ -9,7 +9,7 @@ from evals.constants import (
     Group,
     TradeTypes,
 )
-from evals.fileio import Metric
+from evals.fileio import Exporter
 from evals.plots.timeseries import ESMTimeSeriesChart
 from evals.statistic import collect_myopic_statistics
 from evals.utils import rename_aggregate
@@ -63,7 +63,7 @@ def view_timeseries_hydrogen(
 
     trade_saldo = rename_aggregate(trade_saldo, trade_saldo.attrs["name"])
 
-    metric = Metric(
+    metric = Exporter(
         statistics=[h2_production, h2_demand, trade_saldo],
         statistics_unit="MWh",
         view_config=config["view"],

@@ -477,11 +477,11 @@ def prepare_industry_demand(
     return industry_demand
 
 
-class Metric:
+class Exporter:
     """
-    A class to build metrics from statistics.
+    A class to export statistics.
 
-    The metric data frame consists of multiple joined statistics,
+    The exporter data frame consists of multiple joined statistics,
     aggregated to countries and scaled to a specified unit. The
     data frame format is verified and expected by export functions.
 

@@ -9,7 +9,7 @@ from evals.constants import (
     Group,
     TradeTypes,
 )
-from evals.fileio import Metric
+from evals.fileio import Exporter
 from evals.plots.barchart import ESMBarChart
 from evals.statistic import collect_myopic_statistics
 from evals.utils import rename_aggregate
@@ -87,7 +87,7 @@ def view_balance_hydrogen(
     ).filter(like="pipeline", axis=0)
     h2_export_domestic = rename_aggregate(h2_export_domestic, Group.export_domestic)
 
-    metric = Metric(
+    metric = Exporter(
         statistics=[
             h2_production,
             h2_demand,

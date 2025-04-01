@@ -15,7 +15,8 @@ from evals.constants import ALIAS_LOCATION_REV, RUN_META_DATA
 
 
 class ESMChart:
-    """A base class for Energy System Modeling graphs using Plotly.
+    """
+    A base class for Energy System Modeling graphs using Plotly.
 
     Parameters
     ----------
@@ -41,7 +42,8 @@ class ESMChart:
 
     @property
     def empty_input(self) -> bool:
-        """Determine if the input DataFrame is empty or all NaN.
+        """
+        Determine if the input DataFrame is empty or all NaN.
 
         Returns
         -------
@@ -54,7 +56,8 @@ class ESMChart:
     def to_html(
         self, output_path: pathlib.Path, groupby: list[str], idx: typing.Hashable
     ) -> pathlib.Path:
-        """Serialize the Plotly figure to an HTML file.
+        """
+        Serialize the Plotly figure to an HTML file.
 
         Parameters
         ----------
@@ -100,7 +103,8 @@ class ESMChart:
     def to_json(
         self, output_path: pathlib.Path, groupby: list[str], idx: typing.Hashable
     ) -> pathlib.Path:
-        """Serialize the Plotly figure to a JSON file.
+        """
+        Serialize the Plotly figure to a JSON file.
 
         Parameters
         ----------
@@ -124,7 +128,8 @@ class ESMChart:
         return file_path
 
     def construct_file_name(self, groupby: list[str], idx: typing.Hashable) -> str:
-        """Construct the file name based on the provided template.
+        """
+        Construct the file name based on the provided template.
 
         Parameters
         ----------
@@ -149,7 +154,8 @@ class ESMChart:
     def custom_sort(
         df: pd.DataFrame, by: str, values: tuple, ascending: bool = False
     ) -> pd.DataFrame:
-        """Sort a data frame by first appearance in values.
+        """
+        Sort a data frame by first appearance in values.
 
         Sort a data frame by the given column and first appearance
         in a given iterable.
@@ -176,7 +182,8 @@ class ESMChart:
             return df
 
         def _custom_order(ser: pd.Series) -> pd.Series:
-            """Sort by first appearance in an iterable.
+            """
+            Sort by first appearance in an iterable.
 
             First, construct a dictionary from the input values with the
             series value as key and the position as value.
@@ -239,7 +246,8 @@ class ESMChart:
     def _append_footnote(
         self, footnote_text: str, y: float = -0.17, align: str = None
     ) -> None:
-        """Append a footnote at the bottom of the Figure.
+        """
+        Append a footnote at the bottom of the Figure.
 
         Parameters
         ----------
@@ -280,7 +288,8 @@ class ESMChart:
             self.fig.update_layout(xaxis_title=self.cfg.xaxis_title)
 
     def _count_footnote_lines(self) -> int:
-        """Count the number of lines in footnote texts.
+        """
+        Count the number of lines in footnote texts.
 
         Returns
         -------
@@ -292,7 +301,8 @@ class ESMChart:
 
 
 def empty_figure(title: str) -> go.Figure:
-    """Return an empty graph with explanation text.
+    """
+    Return an empty graph with explanation text.
 
     Parameters
     ----------
