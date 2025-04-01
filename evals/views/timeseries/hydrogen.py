@@ -12,7 +12,7 @@ from evals.constants import (
 from evals.fileio import Metric
 from evals.plots.timeseries import ESMTimeSeriesChart
 from evals.statistic import collect_myopic_statistics
-from evals.utils import make_evaluation_result_directories, rename_aggregate
+from evals.utils import rename_aggregate
 
 
 def view_timeseries_hydrogen(
@@ -85,5 +85,4 @@ def view_timeseries_hydrogen(
         [Group.export_net, Group.import_net, Group.import_global], "/"
     )
 
-    output_path = make_evaluation_result_directories(result_path, subdir)
-    metric.export(output_path)
+    metric.export(result_path, subdir)

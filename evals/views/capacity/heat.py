@@ -12,7 +12,6 @@ from evals.constants import BusCarrier
 from evals.fileio import Metric
 from evals.plots.barchart import ESMBarChart
 from evals.statistic import collect_myopic_statistics
-from evals.utils import make_evaluation_result_directories
 
 
 def view_capacity_heat(
@@ -20,7 +19,7 @@ def view_capacity_heat(
     networks: dict,
     config: dict,
     subdir: str | Path = "evaluation",
-) -> None:  # numpydoc ignore=PR01
+) -> None:
     """
     Evaluate the optimal heat capacities to produce heat.
 
@@ -48,5 +47,4 @@ def view_capacity_heat(
     # constant view specific settings
     metric.defaults.plotly.chart = ESMBarChart
 
-    output_path = make_evaluation_result_directories(result_path, subdir)
-    metric.export(output_path)
+    metric.export(result_path, subdir)

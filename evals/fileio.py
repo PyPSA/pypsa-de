@@ -617,20 +617,23 @@ class Metric:
         file_path = output_path / "CSV" / f"{file_name}_{NOW}.csv"
         self.df.to_csv(file_path, encoding="utf-8")
 
-    def export(self, output_path: Path) -> None:
+    def export(self, result_path: Path, subdir: str) -> None:
         """
         Export the metric to formats specified in the config.
 
         Parameters
         ----------
-        output_path
-            The path to the CSV folder with all the csv files are
-            stored.
+        result_path
+            The path to the results folder.
+        subdir
+            The subdirectory inside the results folder to store evaluation results under.
 
         Returns
         -------
         :
         """
+        output_path = self.make_evaluation_result_directories(result_path, subdir)
+
         if self.view_config["export"]["plotly"]:
             self.export_plotly(output_path)
         if self.view_config["export"]["excel"]:
@@ -708,3 +711,53 @@ class Metric:
         assert (
             not missing
         ), f"Some categories are not defined in legend order: {missing}"
+
+    def make_evaluation_result_directories(
+        self, result_path: Path, subdir: Path | str
+    ) -> Path:
+        """
+        Create all directories needed to store evaluations results.
+
+        Parameters
+        ----------
+        result_path
+            The path of the result folder.
+        subdir
+            A relative path inside the result folder.
+
+        Returns
+        -------
+        :
+            The joined path: result_dir / subdir.
+        """
+        output_path = self.make_directory(result_path, subdir)
+        self.make_directory(output_path, "HTML")
+        self.make_directory(output_path, "JSON")
+        self.make_directory(output_path, "CSV")
+        self.make_directory(output_path, "XLSX")
+
+        return output_path
+
+    @staticmethod
+    def make_directory(base: Path, subdir: Path | str) -> Path:
+        """
+        Create a directory and return its path.
+
+        Parameters
+        ----------
+        base
+            The path to base of the new folder.
+        subdir
+            A relative path inside the base folder.
+
+        Returns
+        -------
+        :
+            The joined path: result_dir / subdir / now.
+        """
+        base = Path(base).resolve()
+        assert base.is_dir(), f"Base path does not exist: {base}."
+        directory_path = base / subdir
+        directory_path.mkdir(parents=True, exist_ok=True)
+
+        return directory_path

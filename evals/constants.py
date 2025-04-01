@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Collect constant values and identifiers used for evaluations.
 
 Values in this module do not need to be changed during runtime.
@@ -48,7 +49,20 @@ class BusCarrier:
     HEAT_RURAL_RESIDENTIAL: str = "residential rural heat"
     LI_ION: str = "Li ion"
     BATTERY: str = "battery"
+    HOME_BATTERY: str = "home battery"
+    EV_BATTERY: str = "EV battery"
     SOLID_BIOMASS: str = "solid biomass"
+
+    @classmethod
+    def ac_stores(cls) -> list:
+        return [
+            cls.AC,
+            cls.DC,
+            cls.LI_ION,
+            cls.BATTERY,
+            cls.HOME_BATTERY,
+            cls.EV_BATTERY,
+        ]
 
 
 class Carrier:

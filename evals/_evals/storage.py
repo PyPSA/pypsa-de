@@ -18,7 +18,8 @@ def eval_gas_storage_capacities(
     networks: dict,
     subdir: str | Path = "esm_run/evaluation",
 ) -> None:  # numpydoc ignore=PR01
-    """Evaluate optimal storage capacities for CH4 and H2.
+    """
+    Evaluate optimal storage capacities for CH4 and H2.
 
     Returns
     -------
@@ -45,7 +46,8 @@ def eval_gas_storage_capacities(
     gas_stores = gas_stores.to_frame(f"{gas_stores.attrs['name']} (MWh)")
 
     def update_carrier_with_storage_type_suffix(df: pd.DataFrame) -> pd.DataFrame:
-        """Append the storage type to the carrier name.
+        """
+        Append the storage type to the carrier name.
 
         Every H2 bus has one store attached. The capital costs per
         energy unit of tube stores are much higher than the capital
@@ -112,7 +114,8 @@ def eval_phs_hydro_operation(
     networks: dict,
     subdir: str | Path = "esm_run/evaluation",
 ) -> None:  # numpydoc ignore=PR01
-    """Evaluate storage operation over time for PHS and hydro stores.
+    """
+    Evaluate storage operation over time for PHS and hydro stores.
 
     The evaluation shows accumulated time series for natural inflow,
     pumped inflow, power generation outflow and natural losses (spill)

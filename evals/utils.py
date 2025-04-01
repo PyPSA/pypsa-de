@@ -5,7 +5,6 @@ import logging
 import re
 from contextlib import contextmanager
 from decimal import ROUND_HALF_UP, Decimal, localcontext
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -756,55 +755,6 @@ def prettify_number(x: float) -> str:
         with localcontext() as ctx:
             ctx.rounding = ROUND_HALF_UP
             return str(round(round(Decimal(x), 2), 1))
-
-
-def make_evaluation_result_directories(result_path: Path, subdir: Path | str) -> Path:
-    """
-    Create all directories needed to store evaluations results.
-
-    Parameters
-    ----------
-    result_path
-        The path of the result folder.
-    subdir
-        A relative path inside the result folder.
-
-    Returns
-    -------
-    :
-        The joined path: result_dir / subdir.
-    """
-    output_path = make_directory(result_path, subdir)
-    make_directory(output_path, "HTML")
-    make_directory(output_path, "JSON")
-    make_directory(output_path, "CSV")
-    make_directory(output_path, "XLSX")
-
-    return output_path
-
-
-def make_directory(base: Path, subdir: Path | str) -> Path:
-    """
-    Create a directory and return its path.
-
-    Parameters
-    ----------
-    base
-        The path to base of the new folder.
-    subdir
-        A relative path inside the base folder.
-
-    Returns
-    -------
-    :
-        The joined path: result_dir / subdir / now.
-    """
-    base = Path(base).resolve()
-    assert base.is_dir(), f"Base path does not exist: {base}."
-    directory_path = base / subdir
-    directory_path.mkdir(parents=True, exist_ok=True)
-
-    return directory_path
 
 
 def add_grid_lines(buses: pd.DataFrame, statistic: pd.Series) -> pd.DataFrame:

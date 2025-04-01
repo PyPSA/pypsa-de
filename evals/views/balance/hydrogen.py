@@ -12,7 +12,7 @@ from evals.constants import (
 from evals.fileio import Metric
 from evals.plots.barchart import ESMBarChart
 from evals.statistic import collect_myopic_statistics
-from evals.utils import make_evaluation_result_directories, rename_aggregate
+from evals.utils import rename_aggregate
 
 
 def view_balance_hydrogen(
@@ -20,7 +20,7 @@ def view_balance_hydrogen(
     networks: dict,
     config: dict,
     subdir: str | Path = "evaluation",
-) -> None:  # numpydoc ignore=PR01
+) -> None:
     """
     Evaluate the Hydrogen balance.
 
@@ -111,5 +111,4 @@ def view_balance_hydrogen(
         "/",
     )
 
-    output_path = make_evaluation_result_directories(result_path, subdir)
-    metric.export(output_path)
+    metric.export(result_path, subdir)
