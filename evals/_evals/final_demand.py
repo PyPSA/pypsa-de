@@ -384,7 +384,7 @@ def final_energy_demand_statistics(networks: dict, result_path: Path) -> list:
     Parameters
     ----------
     networks
-        The loaded postnetworks.
+        The loaded networks.
     result_path
         The path to the results directory, needed to locate resource
         files.
@@ -410,7 +410,7 @@ def _fetch_fed_transport(networks: dict, result_path: Path) -> pd.Series | pd.Da
     Parameters
     ----------
     networks
-        The loaded postnetworks.
+        The loaded networks.
     result_path
         The path to the results directory, needed to locate resource
         files.
@@ -505,7 +505,7 @@ def _fetch_fed_industry(networks: dict, result_path: Path) -> pd.Series | pd.Dat
     Parameters
     ----------
     networks
-        The loaded postnetworks.
+        The loaded networks.
     result_path
         The path to the results directory, needed to locate resource
         files.
@@ -540,7 +540,7 @@ def _fetch_fed_decentral_heat(networks: dict) -> pd.Series | pd.DataFrame:
     Parameters
     ----------
     networks
-        The loaded postnetworks.
+        The loaded networks.
 
     Returns
     -------
@@ -593,7 +593,7 @@ def _fetch_fed_district_heat(networks: dict) -> pd.Series | pd.DataFrame:
     Parameters
     ----------
     networks
-        The loaded postnetworks.
+        The loaded networks.
 
     Returns
     -------
@@ -648,7 +648,7 @@ def _fetch_fed_homes_and_trade(networks: dict) -> pd.Series | pd.DataFrame:
     Parameters
     ----------
     networks
-        The loaded postnetworks.
+        The loaded networks.
 
     Returns
     -------

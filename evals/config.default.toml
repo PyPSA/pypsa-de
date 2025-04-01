@@ -58,6 +58,96 @@ excel = true
 "urban central water tanks charger" = "Storage In"
 "urban central water tanks discharger" = "Storage Out"
 
+
+[view.capacity.electricity_capacity]
+
+name = "Optimal Capacity Electricity"
+unit = "GW"
+file_name  = "electricity_capacities_{location}"
+cutoff = 0.0
+legend_order = [
+
+    "Nuclear Power",
+    "Thermal Powerplants",
+    "Pumped Hydro Storage",
+    "Reservoir",
+    "Run-of-River",
+    "Wind Power",
+
+]
+
+[view.capacity.electricity_capacity.export]
+plotly = true
+csv = true
+excel = false
+
+[view.capacity.electricity_capacity.checks]
+all_categories_mapped = true
+no_superfluous_categories = true
+yearly_balances_almost_zero = false
+legend_entry_order = true
+
+[view.capacity.electricity_capacity.categories]
+
+"DAC" = "Direct Air Capture"
+"Run-of-River" = "Run-of-River"
+"Reservoir" = "Reservoir"
+"Pumped Hydro Storage" = "Pumped Hydro Storage"
+"Thermal Powerplants" = "Thermal Powerplants"
+"urban central coal CHP" = "Coal CHP"
+"solar-hsat" = "Solar Power"
+"waste CHP" = "Waste CHP"
+"Biomass" = "Biomass"
+"waste CHP CC" = "Waste CHP"
+#hydrogen
+#hydrogen Turbine
+"CCGT" = "Gas CHP"
+"urban central gas CHP" = "Gas CHP"
+"urban central CHP" = "CHP"
+"urban central CHP CC" = "CHP"
+"solar" = "Solar Power"
+"onwind" = "Wind Power"
+"allam gas" = "Gas CHP"
+"Battery Storage" = "Battery Storage Output"
+
+"H2 Fuel Cell" = "Fuel Cell (electricity)"
+"methanolisation" = "Methanolisation (Heat)"
+"urban central air heat pump" = "Heat Pump"
+"H2 Electrolysis" = "Electrolysis (Heat)" #ToDO: why is H2 Electrolysis in this Index?
+
+#"urban central gas CHP" = "Gas CHP"
+"urban central oil CHP" = "Oil CHP"
+'H2 OCGT' =  "OCGT Electricity"
+'H2 pipeline' = 'H2 pipeline'
+'H2 pipeline (Kernnetz)' = 'H2 pipeline (Kernnetz)'
+'H2 turbine' =  "Accumulated Turbining"
+"Haber-Bosch" = "Haber-Bosch (Heat)" #ToDO: why is Haber Bosch in this Index?
+"OCGT" =  "OCGT Electricity"
+"PHS" = "PHS Out" #ToDO: Is out correct?
+"battery charger" = "Storage In" #ToDO: Is "in" right?
+'battery discharger' = "Storage Out"
+"biogas" = "Biogas"
+"coal" = "Coal"
+"electricity distribution grid" = "Electricity Distribution Grid"
+"gas pipeline" = "Gas Pipeline"
+"hydro" = "Storage Out"
+"lignite" = "Lignite"
+"nuclear" = "Nuclear Power"
+"offwind-ac" = "Offwind"
+"offwind-dc" = "Offwind"
+"oil" = "Oil"
+"ror" = "Run of River"
+"urban central gas boiler" = "Gas Boiler"
+"urban central heat vent" = "Heat Vent"
+"urban central lignite CHP" = "Coal CHP"
+"urban central resistive heater" = "Resistive Heater"
+"urban central solar thermal" = "Solar Thermal"
+"urban central solid biomass CHP" = "Biomass CHP"
+"urban central solid biomass CHP CC" = "Biomass CHP"
+"urban central water tanks charger" = "Storage In"
+"urban central water tanks discharger" = "Storage Out"
+"solid biomass" = "Solid Biomass"
+
 [view.balance.hydrogen]
 name = "Hydrogen Energy Balance"
 unit = "TWh"
