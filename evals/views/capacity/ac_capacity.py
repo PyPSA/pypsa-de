@@ -11,8 +11,8 @@ def view_electricity_capacities(
     result_path: str | Path,
     networks: dict,
     config: dict,
-    subdir: str | Path = "esm_run/evaluation",
-) -> None:  # numpydoc ignore=PR01
+    subdir: str | Path = "evaluation",
+) -> None:
     """
     Evaluate the optimal capacity for AC technologies.
 

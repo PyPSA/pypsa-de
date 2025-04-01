@@ -58,12 +58,10 @@ excel = true
 "urban central water tanks charger" = "Storage In"
 "urban central water tanks discharger" = "Storage Out"
 
-
-[view.capacity.electricity_capacity]
-
+[view.capacity.ac_capacity]
 name = "Optimal Capacity Electricity"
 unit = "GW"
-file_name  = "electricity_capacities_{location}"
+file_name = "capacity_ac_production_{location}"
 cutoff = 0.0
 legend_order = [
 
@@ -73,21 +71,20 @@ legend_order = [
     "Reservoir",
     "Run-of-River",
     "Wind Power",
-
 ]
 
-[view.capacity.electricity_capacity.export]
+[view.capacity.ac_capacity.export]
 plotly = true
 csv = true
 excel = false
 
-[view.capacity.electricity_capacity.checks]
+[view.capacity.ac_capacity.checks]
 all_categories_mapped = true
 no_superfluous_categories = true
 yearly_balances_almost_zero = false
 legend_entry_order = true
 
-[view.capacity.electricity_capacity.categories]
+[view.capacity.ac_capacity.categories]
 
 "DAC" = "Direct Air Capture"
 "Run-of-River" = "Run-of-River"
@@ -117,12 +114,12 @@ legend_entry_order = true
 
 #"urban central gas CHP" = "Gas CHP"
 "urban central oil CHP" = "Oil CHP"
-'H2 OCGT' =  "OCGT Electricity"
+'H2 OCGT' = "OCGT Electricity"
 'H2 pipeline' = 'H2 pipeline'
 'H2 pipeline (Kernnetz)' = 'H2 pipeline (Kernnetz)'
-'H2 turbine' =  "Accumulated Turbining"
+'H2 turbine' = "Accumulated Turbining"
 "Haber-Bosch" = "Haber-Bosch (Heat)" #ToDO: why is Haber Bosch in this Index?
-"OCGT" =  "OCGT Electricity"
+"OCGT" = "OCGT Electricity"
 "PHS" = "PHS Out" #ToDO: Is out correct?
 "battery charger" = "Storage In" #ToDO: Is "in" right?
 'battery discharger' = "Storage Out"
