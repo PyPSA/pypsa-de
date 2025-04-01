@@ -12,13 +12,13 @@ legend_order = [
     "Fischer-Tropsch",
     "Biomass CHP",
     "Oil CHP",
-    'Waste CHP',
-    'Electrolysis',
-    'Haber-Bosch',
-    'Direct Air Capture',
-    'CHP',
-    'Heat Vent',
-    'Methanolisation',
+    "Waste CHP",
+    "Electrolysis",
+    "Haber-Bosch",
+    "Direct Air Capture",
+    "CHP",
+    "Heat Vent",
+    "Methanolisation",
     "Fuel Cell",
     "Resistive Heater",
     "Gas Boiler",
@@ -103,7 +103,7 @@ excel = true
 [view.balance.hydrogen.categories]
 "ammonia cracker" = "Ammonia Cracking"
 "Export European" = "Export European"
-'Export Domestic' = 'Export Domestic'
+"Export Domestic" = "Export Domestic"
 "Fischer-Tropsch" = "Fischer-Tropsch"
 "H2 Electrolysis" = "Electrolysis"
 "H2 Fuel Cell" = "Electricity"
@@ -125,24 +125,25 @@ excel = true
 [view.timeseries.hydrogen]
 name = "Hydrogen Production and Demand"
 unit = "MWh"
-file_name = "timeseries_hydrogen_{location}"
+file_name = "timeseries_hydrogen_{location}_{year}"
 cutoff = 0.001
 legend_order = [
-## list production entries from outside to zero
-#Group.import_net,
-#Group.import_global,
-#Group.storage_out,
-#Group.smr,
-#Group.electrolysis,
-## list demand entries from outside to zero
-#Group.export_net,
-#Group.misc,
-#Group.storage_in,
-#Group.methanation,
-#Group.ft,
-#Group.fuel_cell,
-#Group.transport,
-#Group.industry,
+    "Synth. Fuels",
+    "Storage Out",
+    "Ammonia Cracking",
+    "Sabatier",
+    "Net Import",
+    "Haber-Bosch",
+    "Electricity",
+    "Electrolysis",
+    "Methanolisation",
+    "Net Export",
+    "H2 from Solid Biomass",
+    "SMR",
+    "Transport",
+    "Storage In",
+    "Industry",
+    "Fischer-Tropsch",
 ]
 
 [view.timeseries.hydrogen.checks]
@@ -158,4 +159,22 @@ csv = false
 excel = false
 
 [view.timeseries.hydrogen.categories]
-"" = ""
+"ammonia cracker" = "Ammonia Cracking"
+"Fischer-Tropsch" = "Fischer-Tropsch"
+"H2 Electrolysis" = "Electrolysis"
+"H2 Fuel Cell" = "Electricity"
+"H2 OCGT" = "Electricity"
+"H2 for industry" = "Industry"
+"H2 turbine" = "Electricity"
+"Haber-Bosch" = "Haber-Bosch"
+"SMR" = "SMR"
+"SMR CC" = "SMR"
+"Sabatier" = "Sabatier"
+"electrobiofuels" = "Synth. Fuels"
+"land transport fuel cell" = "Transport"
+"methanolisation" = "Methanolisation"
+"solid biomass to hydrogen" = "H2 from Solid Biomass"
+"Net Export" = "Net Export"
+"Net Import" = "Net Import"
+"Storage In" = "Storage In"
+"Storage Out" = "Storage Out"

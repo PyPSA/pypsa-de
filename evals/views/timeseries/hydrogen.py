@@ -33,18 +33,7 @@ def view_timeseries_hydrogen(
     )
     h2_production = h2_production.drop(pipelines, level=DataModel.CARRIER)
     h2_production = rename_aggregate(
-        h2_production,
-    )
-
-    h2_storage_out = collect_myopic_statistics(
-        networks,
-        statistic="supply",
-        comps="Store",
-        bus_carrier=BusCarrier.H2,
-        aggregate_time=False,
-    )
-    h2_storage_out = rename_aggregate(
-        h2_storage_out, Group.storage_out, level=DataModel.CARRIER
+        h2_production, {"H2 Store": Group.storage_out}, level=DataModel.CARRIER
     )
 
     h2_demand = (
@@ -57,16 +46,8 @@ def view_timeseries_hydrogen(
         .drop(pipelines, level=DataModel.CARRIER)
         .mul(-1.0)
     )
-
-    h2_storage_in = collect_myopic_statistics(
-        networks,
-        statistic="withdrawal",
-        comps="Store",
-        bus_carrier=BusCarrier.H2,
-        aggregate_time=False,
-    ).mul(-1.0)
-    h2_storage_in = rename_aggregate(
-        h2_storage_in, Group.storage_in, level=DataModel.CARRIER
+    h2_demand = rename_aggregate(
+        h2_demand, {"H2 Store": Group.storage_in}, level=DataModel.CARRIER
     )
 
     # import / export
@@ -83,10 +64,7 @@ def view_timeseries_hydrogen(
     metric = Metric(
         statistics=[
             h2_production,
-            # h2_generation,
-            h2_storage_out,
             h2_demand,
-            h2_storage_in,
             trade_saldo,
         ],
         statistics_unit="MWh",
@@ -108,23 +86,6 @@ def view_timeseries_hydrogen(
     metric.defaults.plotly.cutoff = 0.001  # MWh
     metric.defaults.plotly.pattern = dict.fromkeys(
         [Group.export_net, Group.import_net, Group.import_global], "/"
-    )
-    metric.defaults.plotly.category_orders = (
-        # list production entries from outside to zero
-        Group.import_net,
-        Group.import_global,
-        Group.storage_out,
-        Group.smr,
-        Group.electrolysis,
-        # list demand entries from outside to zero
-        Group.export_net,
-        Group.misc,
-        Group.storage_in,
-        Group.methanation,
-        Group.ft,
-        Group.fuel_cell,
-        Group.transport,
-        Group.industry,
     )
     metric.defaults.plotly.footnotes = (
         "<br><b>Miscellaneous</b> includes residential and "
