@@ -618,7 +618,7 @@ class Metric:
         file_path = output_path / "CSV" / f"{file_name}_{NOW}.csv"
         self.df.to_csv(file_path, encoding="utf-8")
 
-    def export(self, output_path: Path, export_config: dict) -> None:
+    def export(self, output_path: Path) -> None:
         """
         Export the metric to formats specified in the config.
 
@@ -627,21 +627,22 @@ class Metric:
         output_path
             The path to the CSV folder with all the csv files are
             stored.
-        export_config
-            The export configuration from the TOML file for this view.
 
         Returns
         -------
         :
         """
-        if export_config["plotly"]:
+        if self.view_config["export"]["plotly"]:
             self.export_plotly(output_path)
-        if export_config["excel"]:
+        if self.view_config["export"]["excel"]:
             self.export_excel(output_path)
-        if export_config["csv"]:
+        if self.view_config["export"]["csv"]:
             self.export_csv(output_path)
 
-    def consistency_checks(self, view_config: dict) -> None:
+        # always run tests after the export
+        self.consistency_checks()
+
+    def consistency_checks(self) -> None:
         """
         Run plausibility and consistency checks on a metric.
 
@@ -664,42 +665,12 @@ class Metric:
         AssertionError
             In case one of the checks fails.
         """
-        checks = view_config["checks"]
-        category = self.defaults.plotly.plot_category
-        categories = self.view_config["categories"]
+        self.default_checks()
 
-        if checks["all_categories_mapped"]:
-            assert self.df.index.unique(category).isin(categories.keys()).all(), (
-                f"Incomplete categories detected. There are technologies in the metric "
-                f"data frame, that are not assigned to a group (nice name)."
-                f"\nMissing items: "
-                f"{self.df.index.unique(category).difference(categories.keys())}"
-            )
-
-        if checks["no_superfluous_categories"]:
-            superfluous_categories = self.df.index.unique(category).difference(
-                categories.keys()
-            )
-            assert (
-                len(superfluous_categories) == 0
-            ), f"Superfluous categories found: {superfluous_categories}"
-
-        if checks["legend_entry_order"]:
-            a = set(self.view_config["legend_order"])
-            b = set(categories.values())
-            additional = a.difference(b)
-            assert (
-                not additional
-            ), f"Superfluous categories defined in legend order: {additional}"
-            missing = b.difference(a)
-            assert (
-                not missing
-            ), f"Some categories are not defined in legend order: {missing}"
-
-        if checks["balances_almost_zero"]:
+        if self.view_config["checks"]["balances_almost_zero"]:
             groups = [DataModel.YEAR, DataModel.LOCATION]
             yearly_sum = self.df.groupby(groups).sum().abs()
-            balanced = yearly_sum < view_config["cutoff"]
+            balanced = yearly_sum < self.view_config["cutoff"]
             if isinstance(balanced, pd.DataFrame):
                 assert (
                     balanced.all().all()
@@ -708,3 +679,33 @@ class Metric:
                 assert (
                     balanced.all().item()
                 ), f"Imbalances detected: {yearly_sum[balanced.squeeze() == False].squeeze().sort_values().tail()}"
+
+    def default_checks(self) -> None:
+        """"""
+        category = self.defaults.plotly.plot_category
+        categories = self.view_config["categories"]
+
+        assert self.df.index.unique(category).isin(categories.keys()).all(), (
+            f"Incomplete categories detected. There are technologies in the metric "
+            f"data frame, that are not assigned to a group (nice name)."
+            f"\nMissing items: "
+            f"{self.df.index.unique(category).difference(categories.keys())}"
+        )
+
+        superfluous_categories = self.df.index.unique(category).difference(
+            categories.keys()
+        )
+        assert (
+            len(superfluous_categories) == 0
+        ), f"Superfluous categories found: {superfluous_categories}"
+
+        a = set(self.view_config["legend_order"])
+        b = set(categories.values())
+        additional = a.difference(b)
+        assert (
+            not additional
+        ), f"Superfluous categories defined in legend order: {additional}"
+        missing = b.difference(a)
+        assert (
+            not missing
+        ), f"Some categories are not defined in legend order: {missing}"

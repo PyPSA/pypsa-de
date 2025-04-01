@@ -29,10 +29,10 @@ legend_order = [
 ]
 
 [view.capacity.heat.checks]
-all_categories_mapped = true
-no_superfluous_categories = true
-yearly_balances_almost_zero = false
-legend_entry_order = true
+# all_categories_mapped = true
+# no_superfluous_categories = true
+balances_almost_zero = false
+# legend_entry_order = true
 
 [view.capacity.heat.export]
 plotly = true
@@ -65,7 +65,7 @@ excel = true
 [view.balance.hydrogen]
 name = "Hydrogen Energy Balance"
 unit = "TWh"
-file_name = "nodal_hydrogen_balance_{location}"
+file_name = "nodal_balance_hydrogen_{location}"
 cutoff = 0.001
 legend_order = [
     # production ordered from zero to outside
@@ -90,9 +90,9 @@ legend_order = [
 ]
 
 [view.balance.hydrogen.checks]
-all_categories_mapped = true
-no_superfluous_categories = true
-legend_entry_order = true
+# all_categories_mapped = true
+# no_superfluous_categories = true
+# legend_entry_order = true
 balances_almost_zero = true
 
 [view.balance.hydrogen.export]
@@ -148,9 +148,9 @@ legend_order = [
 ]
 
 [view.timeseries.hydrogen.checks]
-all_categories_mapped = true
-no_superfluous_categories = true
-legend_entry_order = true
+# all_categories_mapped = true
+# no_superfluous_categories = true
+# legend_entry_order = true
 balances_almost_zero = true
 
 [view.timeseries.hydrogen.export]

@@ -25,7 +25,8 @@ from evals.constants import (
 
 
 def verify_metric_format(metric: pd.DataFrame) -> None:
-    """Ensure correct metric format.
+    """
+    Ensure correct metric format.
 
     Parameters
     ----------
@@ -38,9 +39,9 @@ def verify_metric_format(metric: pd.DataFrame) -> None:
     AssertionError
         If the metric does not comply with the data model.
     """
-    assert isinstance(metric, pd.DataFrame), (
-        f"Metric must be a DataFrame, " f"but {type(metric)} was passed."
-    )
+    assert isinstance(
+        metric, pd.DataFrame
+    ), f"Metric must be a DataFrame, but {type(metric)} was passed."
     assert set(metric.index.names).issubset(set(DataModel.YEAR_IDX_NAMES)), (
         f"Metric index levels must contain {DataModel.YEAR_IDX_NAMES}, "
         f"but {metric.index.names} is set."
@@ -73,7 +74,8 @@ def insert_index_level(
     axis: int = 0,
     pos: int = 0,
 ) -> pd.DataFrame | pd.Series:
-    """Add an index level to the data frame.
+    """
+    Add an index level to the data frame.
 
     Parameters
     ----------
@@ -106,7 +108,8 @@ def insert_index_level(
 
 
 def calculate_cost_annuity(n: float, r: float | pd.Series = 0.07) -> float | pd.Series:
-    """Calculate the annuity factor for an asset.
+    """
+    Calculate the annuity factor for an asset.
 
     Calculate the annuity factor for an asset with lifetime n years and
     discount rate of r, e.g. annuity(20,0.05)*20 = 1.6
@@ -137,7 +140,8 @@ def calculate_cost_annuity(n: float, r: float | pd.Series = 0.07) -> float | pd.
 
 
 def get_unit(s: str) -> str:
-    """Parse the unit from a string.
+    """
+    Parse the unit from a string.
 
     The unit must be inside round parentheses. If multiple
     parenthesis are found in the input string, returns the last one.
@@ -159,7 +163,8 @@ def get_unit(s: str) -> str:
 
 
 def get_trade_type(bus_a: str, bus_b: str) -> str:
-    """Determine the trade type between two buses.
+    """
+    Determine the trade type between two buses.
 
     Parameters
     ----------
@@ -189,7 +194,8 @@ def get_trade_type(bus_a: str, bus_b: str) -> str:
 def trade_mask(
     comp: pd.DataFrame, scopes: str | tuple, buses: tuple = ("bus0", "bus1")
 ) -> pd.Series:
-    """Get the mask for a given trade type.
+    """
+    Get the mask for a given trade type.
 
     The logic only compares bus0 and bus1 in a given component.
 
@@ -231,7 +237,8 @@ def trade_mask(
 def filter_by(
     df: pd.DataFrame | pd.Series, exclude: bool = False, **kwargs: object
 ) -> pd.DataFrame | pd.Series:
-    """Filter a data frame by key value pairs.
+    """
+    Filter a data frame by key value pairs.
 
     Constructs a pandas query using the pandas.Index.isin() method.
     Since the pandas query API is only available for data frames,
@@ -276,7 +283,8 @@ def filter_by(
 def expand_to_time_series(
     df: pd.DataFrame | pd.Series, snapshots: pd.Index, nhours: int = 8760
 ) -> pd.DataFrame:
-    """Convert time aggregated values into a time series.
+    """
+    Convert time aggregated values into a time series.
 
     Any column label will be dropped and replaced by the given
     snapshots. It is assumed, that the metric holds yearly values, as
@@ -321,7 +329,8 @@ def expand_to_time_series(
 
 
 def split_location_carrier(index: pd.MultiIndex, names: list) -> pd.MultiIndex:
-    r"""Split location and carrier in the index.
+    r"""
+    Split location and carrier in the index.
 
     The location must be encoded in the string and match the regex
     '^[A-Z]{2}\\d\\s\\d'. Subsequent characters become the carrier
@@ -357,7 +366,8 @@ def rename_aggregate(
     level: str = DataModel.CARRIER,
     agg: str = "sum",
 ) -> pd.Series | pd.DataFrame:
-    """Rename index values and aggregate duplicates.
+    """
+    Rename index values and aggregate duplicates.
 
     In case the supplied mapper is a string, all values in the
     supplied level are replaced by this string.
@@ -393,7 +403,8 @@ def rename_aggregate(
 
 
 def apply_cutoff(df: pd.DataFrame, limit: float, drop: bool = True) -> pd.DataFrame:
-    """Replace small absolute values with NaN.
+    """
+    Replace small absolute values with NaN.
 
     The limit boundary is not inclusive, i.e. the limit value itself
     will not be replaced by NaN.
@@ -419,7 +430,8 @@ def apply_cutoff(df: pd.DataFrame, limit: float, drop: bool = True) -> pd.DataFr
 
 
 def get_mapping(map_name: str, map_type: str = "external") -> dict:
-    """Extract a dictionary from the nested mapping definition.
+    """
+    Extract a dictionary from the nested mapping definition.
 
     Parameters
     ----------
@@ -458,7 +470,8 @@ def get_mapping(map_name: str, map_type: str = "external") -> dict:
 
 
 def aggregate_eu(df: pd.DataFrame, agg: str = "sum") -> pd.DataFrame:
-    """Calculate the EU region as the sum of all country regions.
+    """
+    Calculate the EU region as the sum of all country regions.
 
     The carrier 'import net', 'export net', 'Import European' and '
     Export European' need to be removed from the EU data set.
@@ -499,7 +512,8 @@ def aggregate_locations(
     keep_regions: tuple = ("AT",),
     nice_names: bool = True,
 ) -> pd.DataFrame:
-    """Aggregate to countries, including EU and keeping certain regions.
+    """
+    Aggregate to countries, including EU and keeping certain regions.
 
     The input data frame is expected to contain locations as regions,
     e.g. "AT0 1", "FR0 0", etc.
@@ -552,7 +566,8 @@ def aggregate_locations(
 
 
 def add_dummy_rows(df: pd.DataFrame, keep_regions: tuple) -> pd.DataFrame:
-    """Add rows for missing year - country combinations.
+    """
+    Add rows for missing year - country combinations.
 
     This is required to export empty figures. Empty figures
     are used in the VAMOS interface to show that a metric has
@@ -601,7 +616,8 @@ def add_dummy_rows(df: pd.DataFrame, keep_regions: tuple) -> pd.DataFrame:
 
 
 def scale(df: pd.DataFrame, to_unit: str) -> pd.DataFrame:
-    """Scale metric values to the specified target unit.
+    """
+    Scale metric values to the specified target unit.
 
     Multiplies all columns in the metric by a scaling factor.
     The scaling factor is calculated from the unit in the data frame
@@ -658,7 +674,8 @@ def scale(df: pd.DataFrame, to_unit: str) -> pd.DataFrame:
 def drop_from_multtindex_by_regex(
     df: pd.DataFrame, pattern: str, level: str = DataModel.CARRIER
 ) -> pd.DataFrame | pd.Series:
-    """Drop all rows that match the regex in the index level.
+    """
+    Drop all rows that match the regex in the index level.
 
     This function is needed, because pandas.DataFrame.filter cannot
     be applied to MultiIndexes.
@@ -683,7 +700,8 @@ def drop_from_multtindex_by_regex(
 
 @contextmanager
 def operations_override(networks: dict, component: str, operation: str) -> None:
-    """Patch the used operations time series.
+    """
+    Patch the used operations time series.
 
     Note, that monkeypatching does not work anymore since PyPSA
     >0.30, because the 'get_operations' function is not used
@@ -717,7 +735,8 @@ def operations_override(networks: dict, component: str, operation: str) -> None:
 
 
 def prettify_number(x: float) -> str:
-    """Format a float for display on trace hover actions.
+    """
+    Format a float for display on trace hover actions.
 
     Parameters
     ----------
@@ -740,7 +759,8 @@ def prettify_number(x: float) -> str:
 
 
 def make_evaluation_result_directories(result_path: Path, subdir: Path | str) -> Path:
-    """Create all directories needed to store evaluations results.
+    """
+    Create all directories needed to store evaluations results.
 
     Parameters
     ----------
@@ -764,7 +784,8 @@ def make_evaluation_result_directories(result_path: Path, subdir: Path | str) ->
 
 
 def make_directory(base: Path, subdir: Path | str) -> Path:
-    """Create a directory and return its path.
+    """
+    Create a directory and return its path.
 
     Parameters
     ----------
@@ -786,40 +807,9 @@ def make_directory(base: Path, subdir: Path | str) -> Path:
     return directory_path
 
 
-def swap_multiindex_values(
-    df: pd.DataFrame, lvl0: str | int, lvl1: str | int
-) -> pd.DataFrame:
-    """Swap values in two multiindex index levels.
-
-    Parameters
-    ----------
-    df
-        The inout data frame with the two index level in its MultiIndex.
-    lvl0
-        The first multiindex level name.
-    lvl1
-        The second multiindex level name.
-
-    Returns
-    -------
-    :
-        A data frame with the same MultiIndex levels as the input,
-        but the contained MultiIndex values are replaced by each other.
-    """
-    idx_names = list(df.index.names)
-    pos0, pos1 = idx_names.index(lvl0), idx_names.index(lvl1)
-    # idx_names[pos1], idx_names[pos0] = idx_names[pos0], idx_names[pos1]
-    # For the most curious and trust scattering reasons, this line
-    # needs to run twice.
-    # idx_names[pos1], idx_names[pos0] = idx_names[pos0], idx_names[pos1]
-    df_reversed_values = df.swaplevel(lvl0, lvl1)
-    df_reversed_values.index.names = idx_names
-
-    return df_reversed_values
-
-
 def add_grid_lines(buses: pd.DataFrame, statistic: pd.Series) -> pd.DataFrame:
-    """Add a column with gridlines to a statistic.
+    """
+    Add a column with gridlines to a statistic.
 
     Parameters
     ----------
@@ -844,7 +834,8 @@ def add_grid_lines(buses: pd.DataFrame, statistic: pd.Series) -> pd.DataFrame:
     ac_buses = filter_by(buses, carrier="AC")[["x", "y"]]
 
     def _get_bus_lines(_nodes: tuple[str]) -> np.ndarray:
-        """Draw a line between buses using AC bus coordinates.
+        """
+        Draw a line between buses using AC bus coordinates.
 
         Note, that only AC buses have coordinates assigned.
 
@@ -871,7 +862,8 @@ def add_grid_lines(buses: pd.DataFrame, statistic: pd.Series) -> pd.DataFrame:
 def align_edge_directions(
     df: pd.DataFrame, lvl0: str = "bus0", lvl1: str = "bus1"
 ) -> pd.DataFrame:
-    """Align the directionality of edges between two nodes.
+    """
+    Align the directionality of edges between two nodes.
 
     Parameters
     ----------
@@ -891,7 +883,8 @@ def align_edge_directions(
     seen = []
 
     def _reverse_values_if_seen(df_slice: pd.DataFrame) -> pd.DataFrame:
-        """Reverse index levels if they have a duplicated permutation.
+        """
+        Reverse index levels if they have a duplicated permutation.
 
         Parameters
         ----------
@@ -921,7 +914,8 @@ def align_edge_directions(
 
 
 def _split_trade_saldo_to_netted_import_export(df: pd.DataFrame) -> pd.DataFrame:
-    """Split the trade saldo carrier into import and export.
+    """
+    Split the trade saldo carrier into import and export.
 
     The splitting needs to happen after the location aggregation.
     Otherwise, resulting netted import/export values are incorrect
@@ -961,7 +955,8 @@ def combine_statistics(
     keep_regions: tuple = ("AT",),
     region_nice_names: bool = True,
 ) -> pd.DataFrame:
-    """Build the metric data frame from statistics.
+    """
+    Build the metric data frame from statistics.
 
     Parameters
     ----------

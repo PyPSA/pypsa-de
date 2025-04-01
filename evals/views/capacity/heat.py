@@ -49,5 +49,4 @@ def view_capacity_heat(
     metric.defaults.plotly.chart = ESMBarChart
 
     output_path = make_evaluation_result_directories(result_path, subdir)
-    metric.export(output_path, config["view"])
-    metric.consistency_checks(config["view"])
+    metric.export(output_path)

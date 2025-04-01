@@ -112,5 +112,4 @@ def view_balance_hydrogen(
     )
 
     output_path = make_evaluation_result_directories(result_path, subdir)
-    metric.export(output_path, config["view"]["export"])
-    metric.consistency_checks(config["view"])
+    metric.export(output_path)
