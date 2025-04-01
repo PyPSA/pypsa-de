@@ -93,7 +93,7 @@ legend_order = [
 all_categories_mapped = true
 no_superfluous_categories = true
 legend_entry_order = true
-yearly_balances_almost_zero = true
+balances_almost_zero = true
 
 [view.balance.hydrogen.export]
 plotly = true
@@ -128,30 +128,30 @@ unit = "MWh"
 file_name = "timeseries_hydrogen_{location}_{year}"
 cutoff = 0.001
 legend_order = [
-    "Synth. Fuels",
-    "Storage Out",
-    "Ammonia Cracking",
-    "Sabatier",
     "Net Import",
-    "Haber-Bosch",
-    "Electricity",
-    "Electrolysis",
-    "Methanolisation",
-    "Net Export",
+    "Sabatier",
+    "Storage Out",
     "H2 from Solid Biomass",
-    "SMR",
-    "Transport",
+    "Electrolysis",
+    # --- zero ---
     "Storage In",
-    "Industry",
+    "Net Export",
+    "Electricity",
+    "Haber-Bosch",
+    "Synth. Fuels",
+    "Ammonia Cracking",
+    "Methanolisation",
+    "SMR",
     "Fischer-Tropsch",
+    "Transport",
+    "Industry",
 ]
 
 [view.timeseries.hydrogen.checks]
 all_categories_mapped = true
 no_superfluous_categories = true
 legend_entry_order = true
-yearly_balances_almost_zero = false
-timestep_balances_almost_zero = true
+balances_almost_zero = true
 
 [view.timeseries.hydrogen.export]
 plotly = true

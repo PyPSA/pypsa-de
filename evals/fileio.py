@@ -2,7 +2,6 @@
 """Input - Output related functions."""  # noqa: A005
 
 import inspect
-import json
 import logging
 import re
 import tomllib
@@ -11,16 +10,13 @@ from importlib import resources
 from pathlib import Path
 from typing import Callable
 
-import deprecation
 import pandas as pd
 import pypsa
 from pydantic.v1.utils import deep_update
 
 from evals.configs import ViewDefaults
 from evals.constants import (
-    ALIAS_LOCATION,
     NOW,
-    RUN_META_DATA,
     TITLE_SUFFIX,
     DataModel,
     Regex,
@@ -36,7 +32,8 @@ from evals.utils import (
 
 
 def read_networks(result_path: str | Path, sub_directory: str = "networks") -> dict:
-    """Read postnetwork results from NetCDF (.nc) files.
+    """
+    Read postnetwork results from NetCDF (.nc) files.
 
     The function returns a dictionary of data frames. The planning
     horizon (year) is used as dictionary key and added to the network
@@ -82,35 +79,11 @@ def read_networks(result_path: str | Path, sub_directory: str = "networks") -> d
     return networks
 
 
-#
-# def read_model_config(result_path: str | Path, sub_directory: str = "configs") -> dict:
-#     """Read the run configuration from a YAML file.
-#
-#     Parameters
-#     ----------
-#     result_path
-#         Absolute or relative path to the run results folder that
-#         contains all model results (typically ends with "results",
-#         or is a time-stamp).
-#     sub_directory : optional
-#         The subdirectory name to read files from relative to the
-#         result folder.
-#
-#     Returns
-#     -------
-#     :
-#         The configuration items in a dictionary.
-#     """
-#     file_path = Path(result_path) / sub_directory / "config_customize.yaml"
-#     with file_path.open("r", encoding="utf-8") as config:
-#         return yaml.safe_load(config)
-#
-
-
 def read_views_config(
     func: Callable, config_override: str = "config.override.toml"
 ) -> dict:
-    """Return the configuration for a view function.
+    """
+    Return the configuration for a view function.
 
     The function reads the default configuration from the
     TOML file and optionally updates it using the config
@@ -162,7 +135,8 @@ def read_views_config(
 def read_csv_files(
     result_path: str | Path, glob: str, sub_directory: str
 ) -> pd.DataFrame:
-    """Read CSV files from disk.
+    """
+    Read CSV files from disk.
 
     Assumes, that if the file name ends with an underscore and 4
     digits, the 4 digits represent the year. The year is prepended
@@ -214,7 +188,8 @@ def prepare_costs(
     raw: bool = False,
     sub_directory: str = "esm_run/interpolated_data",
 ) -> pd.DataFrame:
-    """Read cost files and calculate fixed costs.
+    """
+    Read cost files and calculate fixed costs.
 
     Parameters
     ----------
@@ -263,7 +238,8 @@ def prepare_costs(
     costs = costs.fillna(default_costs)
 
     def _calculate_fixed_costs(row: pd.Series) -> pd.Series:
-        """Calculate the fixed costs per row.
+        """
+        Calculate the fixed costs per row.
 
         Parameters
         ----------
@@ -293,7 +269,8 @@ def prepare_co2_emissions(
     options: str | list[str],
     sub_directory: str = "../data",
 ) -> pd.DataFrame:
-    """Read emissions from file and calculate the country share.
+    """
+    Read emissions from file and calculate the country share.
 
     The function reads the emissions from file. It also uses the run
     configuration to determine the cluster settings. If the cluster is
@@ -370,7 +347,8 @@ def prepare_industry_demand(
     sub_directory: str = "interpolated_data",
     rename: bool = True,
 ) -> pd.Series:
-    """Read industry demand from resource file and correct methane.
+    """
+    Read industry demand from resource file and correct methane.
 
     The industry demand for methane must be increased by the carbon
     capture amounts. The 'gas for industry CC' Links have efficiencies
@@ -460,7 +438,8 @@ def prepare_industry_demand(
     )
 
     def increase_gas_demand_by_cc_share(ser: pd.Series) -> pd.Series:
-        """Correct the gas demand for industry by CC fraction.
+        """
+        Correct the gas demand for industry by CC fraction.
 
         The value in the resource file does not include energy for
         carbon capture. The sector values must be increased by
@@ -596,7 +575,8 @@ class Metric:
             chart.to_json(output_path, cfg.plotby, idx)
 
     def export_excel(self, output_path: Path) -> None:
-        """Export metrics to Excel files for countries and regions.
+        """
+        Export metrics to Excel files for countries and regions.
 
         Parameters
         ----------
@@ -620,7 +600,8 @@ class Metric:
             )
 
     def export_csv(self, output_path: Path) -> None:
-        """Encode the metric da frame to a CSV file.
+        """
+        Encode the metric da frame to a CSV file.
 
         Parameters
         ----------
@@ -638,7 +619,8 @@ class Metric:
         self.df.to_csv(file_path, encoding="utf-8")
 
     def export(self, output_path: Path, export_config: dict) -> None:
-        """Export the metric to formats specified in the config.
+        """
+        Export the metric to formats specified in the config.
 
         Parameters
         ----------
@@ -671,7 +653,7 @@ class Metric:
         Parameter
         ---------
         config_checks
-            A dictionary with flags for every test.
+            A dictionary with flags for every test to run.
 
         Returns
         -------
@@ -682,7 +664,6 @@ class Metric:
         AssertionError
             In case one of the checks fails.
         """
-        # todo: refactor mapping to categories in a new multiindex level used in plots package
         checks = view_config["checks"]
         category = self.defaults.plotly.plot_category
         categories = self.view_config["categories"]
@@ -715,10 +696,15 @@ class Metric:
                 not missing
             ), f"Some categories are not defined in legend order: {missing}"
 
-        if checks["yearly_balances_almost_zero"]:
+        if checks["balances_almost_zero"]:
             groups = [DataModel.YEAR, DataModel.LOCATION]
             yearly_sum = self.df.groupby(groups).sum().abs()
             balanced = yearly_sum < view_config["cutoff"]
-            assert (
-                balanced.all().item()
-            ), f"Imabalances detected: {yearly_sum[balanced.squeeze() == False].squeeze().sort_values().tail()}"
+            if isinstance(balanced, pd.DataFrame):
+                assert (
+                    balanced.all().all()
+                ), f"Imbalances detected: {yearly_sum[balanced == False].dropna(how='all').sort_values(by=balanced.columns[0], na_position='first').tail()}"
+            else:  # Series
+                assert (
+                    balanced.all().item()
+                ), f"Imbalances detected: {yearly_sum[balanced.squeeze() == False].squeeze().sort_values().tail()}"
