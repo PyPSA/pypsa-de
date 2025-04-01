@@ -28,7 +28,7 @@ def view_electricity_capacities(
         statistic="optimal_capacity",
         comps=("Generator", "Store", "StorageUnit"),
         bus_carrier=BusCarrier.AC,
-    ).drop("value of lost load", level=DataModel.CARRIER, errors="ignore")
+    )
 
     transmission_or_storage_links = ["", "DC", Carrier.v2g]
     ac_production = (
@@ -41,12 +41,12 @@ def view_electricity_capacities(
         .clip(lower=0)
         .drop(transmission_or_storage_links, level=DataModel.CARRIER, errors="ignore")
     )
-    e_caps = [ac_generation_and_storage, ac_production]
+    e_capas = [ac_generation_and_storage, ac_production]
     view_config = config["view"]
     metric = Metric(
-        statistics_unit=e_caps[0].attrs["unit"],
+        statistics_unit=e_capas[0].attrs["unit"],
         view_config=view_config,
-        statistics=e_caps,
+        statistics=e_capas,
     )
 
     metric.defaults.plotly.chart = ESMBarChart
