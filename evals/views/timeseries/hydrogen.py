@@ -12,7 +12,7 @@ from evals.constants import (
 from evals.fileio import Metric
 from evals.plots.timeseries import ESMTimeSeriesChart
 from evals.statistic import collect_myopic_statistics
-from evals.utils import make_evaluation_result_directories, rename_aggregate
+from evals.utils import rename_aggregate
 
 
 def view_timeseries_hydrogen(
@@ -50,7 +50,6 @@ def view_timeseries_hydrogen(
         h2_demand, {"H2 Store": Group.storage_in}, level=DataModel.CARRIER
     )
 
-    # import / export
     trade_saldo = collect_myopic_statistics(
         networks,
         statistic="trade_energy",
@@ -80,18 +79,10 @@ def view_timeseries_hydrogen(
         DataModel.CARRIER,
     ]
     metric.defaults.plotly.xaxis_title = ""
-    metric.defaults.plotly.legend_header = "Production/Demand"
-    # The Toolbox rounds values to second digit before clipping.
+    # metric.defaults.plotly.legend_header = "Production/Demand"
     metric.defaults.plotly.cutoff = 0.001  # MWh
     metric.defaults.plotly.pattern = dict.fromkeys(
         [Group.export_net, Group.import_net, Group.import_global], "/"
     )
-    metric.defaults.plotly.footnotes = (
-        "<br><b>Miscellaneous</b> includes residential and "
-        "services rural H2-powered PEMFC.",
-        "",
-    )
 
-    output_path = make_evaluation_result_directories(result_path, subdir)
-    metric.export(output_path, config["view"]["export"])
-    metric.consistency_checks(config["view"])
+    metric.export(result_path, subdir)

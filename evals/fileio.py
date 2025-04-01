@@ -566,7 +566,6 @@ class Metric:
         )
 
         df_plot = add_dummy_rows(df_plot, self.keep_regions)
-        df_plot = df_plot.drop(cfg.drop_years, level=DataModel.YEAR, errors="ignore")
 
         for idx, data in df_plot.groupby(cfg.plotby):
             chart = cfg.chart(data, cfg)
@@ -618,30 +617,34 @@ class Metric:
         file_path = output_path / "CSV" / f"{file_name}_{NOW}.csv"
         self.df.to_csv(file_path, encoding="utf-8")
 
-    def export(self, output_path: Path, export_config: dict) -> None:
+    def export(self, result_path: Path, subdir: str) -> None:
         """
         Export the metric to formats specified in the config.
 
         Parameters
         ----------
-        output_path
-            The path to the CSV folder with all the csv files are
-            stored.
-        export_config
-            The export configuration from the TOML file for this view.
+        result_path
+            The path to the results folder.
+        subdir
+            The subdirectory inside the results folder to store evaluation results under.
 
         Returns
         -------
         :
         """
-        if export_config["plotly"]:
+        output_path = self.make_evaluation_result_directories(result_path, subdir)
+
+        if self.view_config["export"]["plotly"]:
             self.export_plotly(output_path)
-        if export_config["excel"]:
+        if self.view_config["export"]["excel"]:
             self.export_excel(output_path)
-        if export_config["csv"]:
+        if self.view_config["export"]["csv"]:
             self.export_csv(output_path)
 
-    def consistency_checks(self, view_config: dict) -> None:
+        # always run tests after the export
+        self.consistency_checks()
+
+    def consistency_checks(self) -> None:
         """
         Run plausibility and consistency checks on a metric.
 
@@ -664,42 +667,12 @@ class Metric:
         AssertionError
             In case one of the checks fails.
         """
-        checks = view_config["checks"]
-        category = self.defaults.plotly.plot_category
-        categories = self.view_config["categories"]
+        self.default_checks()
 
-        if checks["all_categories_mapped"]:
-            assert self.df.index.unique(category).isin(categories.keys()).all(), (
-                f"Incomplete categories detected. There are technologies in the metric "
-                f"data frame, that are not assigned to a group (nice name)."
-                f"\nMissing items: "
-                f"{self.df.index.unique(category).difference(categories.keys())}"
-            )
-
-        if checks["no_superfluous_categories"]:
-            superfluous_categories = self.df.index.unique(category).difference(
-                categories.keys()
-            )
-            assert (
-                len(superfluous_categories) == 0
-            ), f"Superfluous categories found: {superfluous_categories}"
-
-        if checks["legend_entry_order"]:
-            a = set(self.view_config["legend_order"])
-            b = set(categories.values())
-            additional = a.difference(b)
-            assert (
-                not additional
-            ), f"Superfluous categories defined in legend order: {additional}"
-            missing = b.difference(a)
-            assert (
-                not missing
-            ), f"Some categories are not defined in legend order: {missing}"
-
-        if checks["balances_almost_zero"]:
+        if self.view_config["checks"]["balances_almost_zero"]:
             groups = [DataModel.YEAR, DataModel.LOCATION]
             yearly_sum = self.df.groupby(groups).sum().abs()
-            balanced = yearly_sum < view_config["cutoff"]
+            balanced = yearly_sum < self.view_config["cutoff"]
             if isinstance(balanced, pd.DataFrame):
                 assert (
                     balanced.all().all()
@@ -708,3 +681,83 @@ class Metric:
                 assert (
                     balanced.all().item()
                 ), f"Imbalances detected: {yearly_sum[balanced.squeeze() == False].squeeze().sort_values().tail()}"
+
+    def default_checks(self) -> None:
+        """"""
+        category = self.defaults.plotly.plot_category
+        categories = self.view_config["categories"]
+
+        assert self.df.index.unique(category).isin(categories.keys()).all(), (
+            f"Incomplete categories detected. There are technologies in the metric "
+            f"data frame, that are not assigned to a group (nice name)."
+            f"\nMissing items: "
+            f"{self.df.index.unique(category).difference(categories.keys())}"
+        )
+
+        superfluous_categories = self.df.index.unique(category).difference(
+            categories.keys()
+        )
+        assert (
+            len(superfluous_categories) == 0
+        ), f"Superfluous categories found: {superfluous_categories}"
+
+        a = set(self.view_config["legend_order"])
+        b = set(categories.values())
+        additional = a.difference(b)
+        assert (
+            not additional
+        ), f"Superfluous categories defined in legend order: {additional}"
+        missing = b.difference(a)
+        assert (
+            not missing
+        ), f"Some categories are not defined in legend order: {missing}"
+
+    def make_evaluation_result_directories(
+        self, result_path: Path, subdir: Path | str
+    ) -> Path:
+        """
+        Create all directories needed to store evaluations results.
+
+        Parameters
+        ----------
+        result_path
+            The path of the result folder.
+        subdir
+            A relative path inside the result folder.
+
+        Returns
+        -------
+        :
+            The joined path: result_dir / subdir.
+        """
+        output_path = self.make_directory(result_path, subdir)
+        self.make_directory(output_path, "HTML")
+        self.make_directory(output_path, "JSON")
+        self.make_directory(output_path, "CSV")
+        self.make_directory(output_path, "XLSX")
+
+        return output_path
+
+    @staticmethod
+    def make_directory(base: Path, subdir: Path | str) -> Path:
+        """
+        Create a directory and return its path.
+
+        Parameters
+        ----------
+        base
+            The path to base of the new folder.
+        subdir
+            A relative path inside the base folder.
+
+        Returns
+        -------
+        :
+            The joined path: result_dir / subdir / now.
+        """
+        base = Path(base).resolve()
+        assert base.is_dir(), f"Base path does not exist: {base}."
+        directory_path = base / subdir
+        directory_path.mkdir(parents=True, exist_ok=True)
+
+        return directory_path
