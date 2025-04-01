@@ -16,7 +16,6 @@ from pypsa.statistics import (
     aggregate_timeseries,
     get_bus_and_carrier,
     get_operation,
-    get_transmission_branches,
     get_weightings,
     groupers,
     port_efficiency,
@@ -197,7 +196,7 @@ def get_buses_and_carrier_and_bus_carrier(
 def collect_myopic_statistics(
     networks: dict,
     statistic: str,
-    aggregate_components: str = "sum",
+    aggregate_components: str | None = "sum",
     # carrier: list | tuple = None,
     drop_zero_rows: bool = True,
     **kwargs: object,
@@ -470,7 +469,8 @@ class ESMStatistics(StatisticsAccessor):
     def phs_split(
         self, aggregate_time: str = "sum", drop_hydro_cols: bool = True
     ) -> pd.DataFrame:
-        """Split energy amounts for StorageUnits.
+        """
+        Split energy amounts for StorageUnits.
 
         Parameters
         ----------
@@ -546,7 +546,8 @@ class ESMStatistics(StatisticsAccessor):
         return ser.sort_index()
 
     def phs_hydro_operation(self) -> pd.DataFrame:
-        """Calculate Hydro- and Pumped Hydro Storage unit statistics.
+        """
+        Calculate Hydro- and Pumped Hydro Storage unit statistics.
 
         Returns
         -------
@@ -693,7 +694,8 @@ class ESMStatistics(StatisticsAccessor):
         scope: str,
         bus_carrier: str = "",
     ) -> pd.DataFrame:
-        """Calculate exchange capacity between locations.
+        """
+        Calculate exchange capacity between locations.
 
         Parameters
         ----------
@@ -795,7 +797,8 @@ class ESMStatistics(StatisticsAccessor):
         n = self.n
 
         def _calculate_efficiency_share() -> float:
-            """Calculate the efficiency fraction for a branch port.
+            """
+            Calculate the efficiency fraction for a branch port.
 
             Separate energy needed to produce energy at the target
             branch port from energy needed to produce energy at
@@ -899,7 +902,8 @@ class ESMStatistics(StatisticsAccessor):
         heat_pump = energy_balance.filter(like="heat pump", axis=0)
 
         def _heat_minus_ac(ser: pd.Series) -> pd.Series:
-            """Return the sum of AC withdrawal and heat supply.
+            """
+            Return the sum of AC withdrawal and heat supply.
 
             Parameters
             ----------
@@ -942,7 +946,8 @@ class ESMStatistics(StatisticsAccessor):
         append_grid: bool = True,
         align_edges: bool = True,
     ) -> pd.DataFrame:
-        """Return transmission grid capacities.
+        """
+        Return transmission grid capacities.
 
         Parameters
         ----------
@@ -1004,7 +1009,8 @@ class ESMStatistics(StatisticsAccessor):
         aggregate_time: str = "sum",
         append_grid: bool = True,
     ) -> pd.DataFrame:
-        """Return the transmission grid energy flow.
+        """
+        Return the transmission grid energy flow.
 
         Parameters
         ----------
