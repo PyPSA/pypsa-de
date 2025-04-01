@@ -29,7 +29,6 @@ def view_electricity_capacities(
             statistic="optimal_capacity",
             comps=("Generator", "Link", "StorageUnit"),
             bus_carrier=BusCarrier.AC,
-            # aggregate_components=None,
         ).clip(lower=0)
         # drop Links connected to StorageUnits and DC Links
         .drop(
@@ -43,34 +42,11 @@ def view_electricity_capacities(
             errors="ignore",
         )
     )
-    ac_capacity = ac_capacity[ac_capacity > 0]
-
-    # solar-hsat: correct, map to PV
-    # lignite + coal + biogas + biomass: correct, produces AC from fuel
-    # carr = "OCGT"
-    # networks["2040"].static("Link").query("carrier == @carr").filter(like="bus").T
-    # networks["2040"].static("Link").query("carrier == @carr").filter(like="eff").T
-
-    # ac_capacity.to_frame().query("component == 'Link'")  # & carrier == 'AC'
-    # ac_capacity.to_frame().query("carrier == 'DC'")  # & carrier == 'AC'
-
-    #
-    # transmission_or_storage_links = ["", "DC", Carrier.v2g]
-    # ac_production = (
-    #     collect_myopic_statistics(
-    #         networks,
-    #         statistic="optimal_capacity",
-    #         comps="Link",
-    #         bus_carrier=BusCarrier.AC,
-    #     )
-    #     .clip(lower=0)
-    #     .drop(transmission_or_storage_links, level=DataModel.CARRIER, errors="ignore")
-    # )
+    ac_capacity = ac_capacity[ac_capacity > 0]  # drop zeros after clipping
 
     metric = Exporter(
-        # statistics=[ac_generation_and_storage, ac_production],
         statistics=[ac_capacity],
-        statistics_unit="MWh",
+        statistics_unit="MW",
         view_config=config["view"],
     )
 
