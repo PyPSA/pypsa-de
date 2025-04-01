@@ -7,7 +7,7 @@ from evals.views.capacity.heat import view_capacity_heat
 from evals.views.timeseries.hydrogen import view_timeseries_hydrogen
 
 __all__ = [
-    "view_heat_capacity",
+    "view_capacity_heat",
     "view_electricity_capacities",
     "view_balance_hydrogen",
     "view_timeseries_hydrogen",

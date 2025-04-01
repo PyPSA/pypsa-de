@@ -4,7 +4,7 @@ from pathlib import Path
 import pandas as pd
 
 from evals.constants import TITLE_SUFFIX, BusCarrier, Carrier, DataModel, Group
-from evals.metric import Metric
+from evals.fileio import Metric
 from evals.plots.barchart import ESMBarChart
 from evals.statistic import collect_myopic_statistics
 from evals.utils import make_evaluation_result_directories
@@ -53,4 +53,4 @@ def view_electricity_capacities(
 
     output_path = make_evaluation_result_directories(result_path, subdir)
     metric.export(output_path, view_config["export"])
-    metric.consistency_checks(view_config["checks"])
+    metric.consistency_checks(config["view"])
