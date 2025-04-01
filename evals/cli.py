@@ -143,7 +143,7 @@ if __name__ == "__main__":
     # args.extend(["-n", "view_heat_capacity"])
     # args.extend(["-n", "view_balance_hydrogen"])
     # args.extend(["-n", "view_timeseries_hydrogen"])
-    args.extend(["-n", "view_capacity_ac_storage"])
+    # args.extend(["-n", "view_capacity_ac_storage"])
 
     # args.extend(["-c", "config.override.toml"])
     run_eval(args)

@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 from pathlib import Path
 
-import pandas as pd
-
-from evals.constants import TITLE_SUFFIX, BusCarrier, Carrier, DataModel, Group
+from evals.constants import BusCarrier, Carrier, DataModel
 from evals.fileio import Metric
 from evals.plots.barchart import ESMBarChart
 from evals.statistic import collect_myopic_statistics
@@ -16,7 +14,8 @@ def view_electricity_capacities(
     config: dict,
     subdir: str | Path = "esm_run/evaluation",
 ) -> None:  # numpydoc ignore=PR01
-    """Evaluate the optimal capacity for AC technologies.
+    """
+    Evaluate the optimal capacity for AC technologies.
 
     Returns
     -------
