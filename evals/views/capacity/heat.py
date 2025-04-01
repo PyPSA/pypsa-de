@@ -15,7 +15,7 @@ from evals.statistic import collect_myopic_statistics
 from evals.utils import make_evaluation_result_directories
 
 
-def view_heat_capacity(
+def view_capacity_heat(
     result_path: str | Path,
     networks: dict,
     config: dict,

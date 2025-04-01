@@ -969,16 +969,9 @@ class Metric:
             ), f"Some categories are not defined in legend order: {missing}"
 
         if checks["yearly_balances_almost_zero"]:
-            yearly_sum = (
-                self.df.groupby([DataModel.YEAR, DataModel.LOCATION]).sum().abs()
-            )
+            groups = [DataModel.YEAR, DataModel.LOCATION]
+            yearly_sum = self.df.groupby(groups).sum().abs()
             balanced = yearly_sum < view_config["cutoff"]
             assert (
                 balanced.all().item()
             ), f"Imabalances detected: {yearly_sum[balanced.squeeze() == False].squeeze().sort_values().tail()}"
-
-            self.df.groupby(
-                [DataModel.YEAR, DataModel.LOCATION]
-            ).sum().abs().sort_values(by="Hydrogen Energy Balance (TWh)") > view_config[
-                "cutoff"
-            ]

@@ -1,7 +1,7 @@
 [global]
-subdirectory = "OS/tests"
+#subdirectory = "OS/tests"
 
-[view.capacity.heat_capacity]
+[view.capacity.heat]
 name = "District Heat Production Capacities"
 unit = "GW"
 file_name = "capacity_heat_{location}"
@@ -28,18 +28,18 @@ legend_order = [
     "Storage In",
 ]
 
-[view.capacity.heat_capacity.checks]
+[view.capacity.heat.checks]
 all_categories_mapped = true
 no_superfluous_categories = true
 yearly_balances_almost_zero = false
 legend_entry_order = true
 
-[view.capacity.heat_capacity.export]
+[view.capacity.heat.export]
 plotly = true
 csv = true
 excel = true
 
-[view.capacity.heat_capacity.categories]
+[view.capacity.heat.categories]
 "DAC" = "Direct Air Capture"
 "Fischer-Tropsch" = "Fischer-Tropsch"
 "Haber-Bosch" = "Haber-Bosch"
@@ -62,7 +62,7 @@ excel = true
 "urban central water tanks charger" = "Storage In"
 "urban central water tanks discharger" = "Storage Out"
 
-[view.balance.hydrogen_balance]
+[view.balance.hydrogen]
 name = "Hydrogen Energy Balance"
 unit = "TWh"
 file_name = "nodal_hydrogen_balance_{location}"
@@ -73,6 +73,7 @@ legend_order = [
     "SMR",
     "H2 from Solid Biomass",
     "Ammonia Cracking",
+    "Storage",
     "Import Domestic",
     "Import European",
     # demand ordered from zero to outside:
@@ -88,18 +89,18 @@ legend_order = [
     "Export European",
 ]
 
-[view.balance.hydrogen_balance.checks]
+[view.balance.hydrogen.checks]
 all_categories_mapped = true
 no_superfluous_categories = true
 legend_entry_order = true
 yearly_balances_almost_zero = true
 
-[view.balance.hydrogen_balance.export]
+[view.balance.hydrogen.export]
 plotly = true
 csv = true
 excel = true
 
-[view.balance.hydrogen_balance.categories]
+[view.balance.hydrogen.categories]
 "ammonia cracker" = "Ammonia Cracking"
 "Export European" = "Export European"
 'Export Domestic' = 'Export Domestic'
@@ -109,6 +110,7 @@ excel = true
 "H2 OCGT" = "Electricity"
 "H2 for industry" = "Industry"
 "H2 turbine" = "Electricity"
+"H2 Store" = "Storage"
 "Haber-Bosch" = "Haber-Bosch"
 "Import European" = "Import European"
 "Import Domestic" = "Import Domestic"
@@ -119,3 +121,41 @@ excel = true
 "land transport fuel cell" = "Transport"
 "methanolisation" = "Methanolisation"
 "solid biomass to hydrogen" = "H2 from Solid Biomass"
+
+[view.timeseries.hydrogen]
+name = "Hydrogen Production and Demand"
+unit = "MWh"
+file_name = "timeseries_hydrogen_{location}"
+cutoff = 0.001
+legend_order = [
+## list production entries from outside to zero
+#Group.import_net,
+#Group.import_global,
+#Group.storage_out,
+#Group.smr,
+#Group.electrolysis,
+## list demand entries from outside to zero
+#Group.export_net,
+#Group.misc,
+#Group.storage_in,
+#Group.methanation,
+#Group.ft,
+#Group.fuel_cell,
+#Group.transport,
+#Group.industry,
+]
+
+[view.timeseries.hydrogen.checks]
+all_categories_mapped = true
+no_superfluous_categories = true
+legend_entry_order = true
+yearly_balances_almost_zero = false
+timestep_balances_almost_zero = true
+
+[view.timeseries.hydrogen.export]
+plotly = true
+csv = false
+excel = false
+
+[view.timeseries.hydrogen.categories]
+"" = ""

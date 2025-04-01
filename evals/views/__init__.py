@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 """Expose view functions from inside the views package to the module."""
 
-from evals.views.balance.hydrogen_balance import view_hydrogen_balance
-from evals.views.capacity.heat_capacity import view_heat_capacity
+from evals.views.balance.hydrogen import view_balance_hydrogen
+from evals.views.capacity.heat import view_capacity_heat
+from evals.views.timeseries.hydrogen import view_timeseries_hydrogen
 
 __all__ = [
-    "view_heat_capacity",
-    "view_hydrogen_balance",
+    "view_capacity_heat",
+    "view_balance_hydrogen",
+    "view_timeseries_hydrogen",
 ]

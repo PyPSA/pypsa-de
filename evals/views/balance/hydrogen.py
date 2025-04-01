@@ -15,7 +15,7 @@ from evals.statistic import collect_myopic_statistics
 from evals.utils import make_evaluation_result_directories, rename_aggregate
 
 
-def view_hydrogen_balance(
+def view_balance_hydrogen(
     result_path: str | Path,
     networks: dict,
     config: dict,
@@ -35,7 +35,6 @@ def view_hydrogen_balance(
     h2_production = collect_myopic_statistics(
         networks,
         statistic="supply",
-        comps=["Link", "Generator"],
         bus_carrier=BusCarrier.H2,
     )
     pipelines = h2_production.filter(like="pipeline", axis=0).index.unique(
@@ -46,12 +45,9 @@ def view_hydrogen_balance(
     h2_demand = collect_myopic_statistics(
         networks,
         statistic="withdrawal",
-        comps=["Link", "Load"],
+        # comps=["Link", "Load"],
         bus_carrier=BusCarrier.H2,
     ).mul(-1)
-    pipelines = h2_demand.filter(like="pipeline", axis=0).index.unique(
-        DataModel.CARRIER
-    )
     h2_demand = h2_demand.drop(pipelines, level=DataModel.CARRIER)
 
     h2_import_foreign = collect_myopic_statistics(
