@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 from pathlib import Path
 
-from evals.constants import TITLE_SUFFIX, BusCarrier, Carrier, DataModel
+import pandas as pd
+
+from evals.constants import TITLE_SUFFIX, BusCarrier, Carrier, DataModel, Group
 from evals.metric import Metric
 from evals.plots.barchart import ESMBarChart
 from evals.statistic import collect_myopic_statistics
