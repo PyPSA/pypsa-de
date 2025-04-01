@@ -187,7 +187,7 @@ def get_heat_loss_factor(networks: dict) -> int:
     Parameters
     ----------
     networks
-        The loaded postnetworks.
+        The loaded networks.
 
     Returns
     -------

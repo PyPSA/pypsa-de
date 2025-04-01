@@ -703,7 +703,7 @@ def _fetch_electricity_trade_statistics(
     Parameters
     ----------
     networks
-        The loaded postnetworks in a dictionary.
+        The loaded networks in a dictionary.
     aggregate_time
         The time aggregation to apply. Pass False to return time series.
     net_trade
