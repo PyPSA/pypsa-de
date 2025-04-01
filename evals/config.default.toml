@@ -84,12 +84,13 @@ yearly_balances_almost_zero = false
 
 [view.capacity.electricity_capacity.categories]
 
+"DAC" = "Direct Air Capture"
 "Run-of-River" = "Run-of-River"
 "Reservoir" = "Reservoir"
 "Pumped Hydro Storage" = "Pumped Hydro Storage"
 "Thermal Powerplants" = "Thermal Powerplants"
 "urban central coal CHP" = "Coal CHP"
-#solar-hsat
+"solar-hsat" = "Solar Power"
 "waste CHP" = "Waste CHP"
 "Biomass" = "Biomass"
 "waste CHP CC" = "Waste CHP"
@@ -104,13 +105,33 @@ yearly_balances_almost_zero = false
 "allam gas" = "Gas CHP"
 "Battery Storage" = "Battery Storage Output"
 
-"H2 Fuel Cell" = "Fuel Cell (Heat)"
+"H2 Fuel Cell" = "Fuel Cell (electricity)"
 "methanolisation" = "Methanolisation (Heat)"
 "urban central air heat pump" = "Heat Pump"
+"H2 Electrolysis" = "Electrolysis (Heat)" #ToDO: why is H2 Electrolysis in this Index?
 
-
-"urban central gas CHP" = "Gas CHP"
+#"urban central gas CHP" = "Gas CHP"
 "urban central oil CHP" = "Oil CHP"
+'H2 OCGT' =  "OCGT Electricity"
+'H2 pipeline' = 'H2 pipeline'
+'H2 pipeline (Kernnetz)' = 'H2 pipeline (Kernnetz)'
+'H2 turbine' =  "Accumulated Turbining"
+"Haber-Bosch" = "Haber-Bosch (Heat)" #ToDO: why is Haber Bosch in this Index?
+"OCGT" =  "OCGT Electricity"
+"PHS" = "PHS Out" #ToDO: Is out correct?
+"battery charger" = "Storage In" #ToDO: Is "in" right?
+'battery discharger' = "Storage Out"
+"biogas" = "Biogas"
+"coal" = "Coal"
+"electricity distribution grid" = "Electricity Distribution Grid"
+"gas pipeline" = "Gas Pipeline"
+"hydro" = "Storage Out"
+"lignite" = "Lignite"
+"nuclear" = "Nuclear Power"
+"offwind-ac" = "Offwind"
+"offwind-dc" = "Offwind"
+"oil" = "Oil"
+"ror" = "Run of River"
 
 #"waste CHP CC" = "Waste CHP"
 
@@ -126,9 +147,10 @@ yearly_balances_almost_zero = false
 "urban central resistive heater" = "Resistive Heater"
 "urban central solar thermal" = "Solar Thermal"
 "urban central solid biomass CHP" = "Biomass CHP"
-#"urban central solid biomass CHP CC" = "Biomass CHP"
+"urban central solid biomass CHP CC" = "Biomass CHP"
 "urban central water tanks charger" = "Storage In"
 "urban central water tanks discharger" = "Storage Out"
+"solid biomass" = "Solid Biomass"
 
 [view.balance.hydrogen]
 name = "Hydrogen Energy Balance"
