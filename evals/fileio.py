@@ -566,7 +566,6 @@ class Metric:
         )
 
         df_plot = add_dummy_rows(df_plot, self.keep_regions)
-        df_plot = df_plot.drop(cfg.drop_years, level=DataModel.YEAR, errors="ignore")
 
         for idx, data in df_plot.groupby(cfg.plotby):
             chart = cfg.chart(data, cfg)

@@ -13,7 +13,7 @@ class PlotConfig:
     title: str = None
     chart = None  # ESMBarChart | ESMGroupedBarChart | ESMTimeSeriesChart
     file_name_template: str = "{metric}_{year}_{location}"
-    unit: str = ""  # instead of metric.df.attrs["unit"] if used
+    unit: str = ""  # default is metric.df.attrs["unit"]
 
     # the metric data frame is grouped this index level before plotting.
     # One html figure is created per resulting group.
@@ -31,9 +31,6 @@ class PlotConfig:
     # defines the subplots in GroupedBarChart
     facet_column: str = DataModel.BUS_CARRIER
 
-    # whether to write the VAMOS interface JSONs
-    export_vamos_jsons: bool = True
-
     category_orders: tuple = ()
     colors: dict = field(default_factory=lambda: COLOUR_SCHEME_BMK)
     pattern: dict = field(default_factory=dict)
@@ -48,7 +45,6 @@ class PlotConfig:
     footnotes: tuple = ("", "")
     cutoff: float = 0.0001  # needs update depending on unit
     cutoff_drop: bool = True  # only effective in BarCharts
-    drop_years: list = field(default_factory=lambda: ["2015"])
 
     legend_font_size: int = 20
     title_font_size: int = 30
@@ -79,7 +75,8 @@ class ExcelConfig:
 
 @dataclass()
 class ViewDefaults:
-    """Holds all configuration items needed to export Metrics.
+    """
+    Holds all configuration items needed to export Metrics.
 
     The 'excel' and 'plotly' fields are processed by the export_excel
     and export_plotly methods, respectively. Both configuration spaces

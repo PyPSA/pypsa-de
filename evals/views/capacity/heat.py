@@ -45,7 +45,7 @@ def view_capacity_heat(
         view_config=config["view"],
     )
 
-    # constant view specific settings:
+    # constant view specific settings
     metric.defaults.plotly.chart = ESMBarChart
 
     output_path = make_evaluation_result_directories(result_path, subdir)
