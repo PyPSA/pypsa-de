@@ -63,14 +63,6 @@ jobs:
       run: |
         echo "WEEK=$(date +'%Y%U')" >> $GITHUB_ENV # data and cutouts
   
-    # TODO Remove
-    - name: Create cutouts directory
-      run: mkdir -p cutouts
-    
-    - name: Download file
-      run: |
-        curl -L "https://tubcloud.tu-berlin.de/s/ADsbR4GHW5wdFMA/download/dach-03-2013-sarah3-era5.nc" -o cutouts/dach-03-2013-sarah3-era5.nc
-
     - uses: actions/cache@v4
       with:
         path: |
@@ -170,15 +162,6 @@ jobs:
             echo "pinned=false" >> $GITHUB_ENV
         fi
     
-    # TODO Remove
-    - name: Create cutouts directory
-      run: mkdir -p cutouts
-    
-    - name: Download file
-      run: |
-        curl -L "https://tubcloud.tu-berlin.de/s/ADsbR4GHW5wdFMA/download/dach-03-2013-sarah3-era5.nc" -o cutouts/dach-03-2013-sarah3-era5.nc
-
-
     - name: Setup cache keys
       if: env.pinned == 'false'
       run: |

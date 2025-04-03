@@ -136,7 +136,7 @@ if config["enable"]["retrieve"] and config["enable"].get("retrieve_cutout", True
     rule retrieve_cutout:
         input:
             storage(
-                "https://zenodo.org/records/14936211/files/{cutout}.nc",
+                "https://zenodo.org/records/15130997/files/{cutout}.nc",
             ),
         output:
             CDIR + "{cutout}.nc",
