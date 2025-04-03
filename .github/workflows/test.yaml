@@ -40,12 +40,14 @@ jobs:
     - name: Setup env file path (ubuntu)
       if: matrix.os == 'ubuntu'
       run: |
-        echo "env_file=envs/linux-pinned.yaml" >> $GITHUB_ENV
+        # echo "env_file=envs/linux-pinned.yaml" >> $GITHUB_ENV
+        echo "env_file=${{ env.BASE_ENV }}" >> $GITHUB_ENV # TODO Remove
 
     - name: Setup env file path (macos and windows)
       if: matrix.os != 'ubuntu'
       run: |
         echo "env_file=envs/${{ matrix.os }}-pinned.yaml" >> $GITHUB_ENV
+        echo "env_file=${{ env.BASE_ENV }}" >> $GITHUB_ENV # TODO Remove
 
     - name: Use base env file if it was changed
       run: |
@@ -60,6 +62,14 @@ jobs:
     - name: Setup cache keys
       run: |
         echo "WEEK=$(date +'%Y%U')" >> $GITHUB_ENV # data and cutouts
+  
+    # TODO Remove
+    - name: Create cutouts directory
+      run: mkdir -p cutouts
+    
+    - name: Download file
+      run: |
+        curl -L "https://tubcloud.tu-berlin.de/s/ADsbR4GHW5wdFMA/download/dach-03-2013-sarah3-era5.nc" -o cutouts/dach-03-2013-sarah3-era5.nc
 
     - uses: actions/cache@v4
       with:
@@ -71,7 +81,7 @@ jobs:
     - uses: conda-incubator/setup-miniconda@v3
       with:
         miniforge-version: latest
-        activate-environment: pypsa-eur
+        activate-environment: pypsa-de
         channel-priority: strict
 
     - name: Cache Conda env
@@ -84,13 +94,21 @@ jobs:
     - name: Update environment
       if: steps.cache-env.outputs.cache-hit != 'true'
       run: |
-        conda env update -n pypsa-eur -f ${{ env.env_file }}
+        conda env update -n pypsa-de -f ${{ env.env_file }}
         echo "Run conda list" && conda list
-
-    - name: Run pylint check on scripts
-      # check for undefined variables to reuse functions across scripts
+    
+    - name: Setup ixmp4 access
       run: |
-        pylint --disable=all --enable=E0601 --output-format=parseable scripts/add_* scripts/prepare_* scripts/solve_* 
+        mkdir -p ~/.local/share/ixmp4/
+        cat > ~/.local/share/ixmp4/credentials.toml << 'EOL'
+        ${{ secrets.IXMP4_ACCESS }}
+        EOL
+      shell: bash
+
+    # - name: Run pylint check on scripts
+    #   # check for undefined variables to reuse functions across scripts
+    #   run: |
+    #     pylint --disable=all --enable=E0601,E0606 --output-format=parseable scripts/add_* scripts/prepare_* scripts/solve_* 
 
     - name: Run snakemake test workflows
       run: |
@@ -138,7 +156,8 @@ jobs:
           echo "env_file=${{ env.BASE_ENV }}" >> $GITHUB_ENV
         else
           echo "Base env ${{ env.BASE_ENV }} not changed. Using pinned envs."
-          echo "env_file=envs/linux-pinned.yaml" >> $GITHUB_ENV
+          # echo "env_file=envs/linux-pinned.yaml" >> $GITHUB_ENV
+          echo "env_file=${{ env.BASE_ENV }}" >> $GITHUB_ENV # TODO Remove
         fi
 
     # Only run checks if package is not pinned
@@ -150,6 +169,15 @@ jobs:
         else
             echo "pinned=false" >> $GITHUB_ENV
         fi
+    
+    # TODO Remove
+    - name: Create cutouts directory
+      run: mkdir -p cutouts
+    
+    - name: Download file
+      run: |
+        curl -L "https://tubcloud.tu-berlin.de/s/ADsbR4GHW5wdFMA/download/dach-03-2013-sarah3-era5.nc" -o cutouts/dach-03-2013-sarah3-era5.nc
+
 
     - name: Setup cache keys
       if: env.pinned == 'false'
@@ -167,7 +195,7 @@ jobs:
     - uses: conda-incubator/setup-miniconda@v3
       if: env.pinned == 'false'
       with:
-        activate-environment: pypsa-eur
+        activate-environment: pypsa-de
 
     - name: Cache Conda env
       if: env.pinned == 'false'
@@ -180,8 +208,16 @@ jobs:
     - name: Update environment
       if: env.pinned == 'false' && steps.cache-env.outputs.cache-hit != 'true'
       run: |
-        conda env update -n pypsa-eur -f ${{ env.env_file }}
+        conda env update -n pypsa-de -f ${{ env.env_file }}
         echo "Run conda list" && conda list
+
+    - name: Setup ixmp4 access
+      run: |
+        mkdir -p ~/.local/share/ixmp4/
+        cat > ~/.local/share/ixmp4/credentials.toml << 'EOL'
+        ${{ secrets.IXMP4_ACCESS }}
+        EOL
+      shell: bash
 
     - name: Install inhouse packages from master
       if: env.pinned == 'false'

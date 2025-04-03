@@ -50,3 +50,8 @@ clustering:
 
 electricity:
   renewable_carriers: [solar, solar-hsat, onwind, offwind-ac, offwind-dc] # removed hydro, offwind-float
+
+solving:
+  solver:
+    name: highs
+    options: highs-simplex
