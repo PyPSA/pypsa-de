@@ -516,7 +516,7 @@ def add_chp_plants(n, grouping_years, costs, baseyear):
     chp["lifetime"] = (chp.DateOut - chp["grouping_year"] + 1).fillna(
         snakemake.params.costs["fill_values"]["lifetime"]
     )
-    chp = chp.loc[chp.grouping_year + chp.lifetime >= baseyear]
+    chp = chp.loc[chp.grouping_year + chp.lifetime > baseyear] # in add_brownfield this is build_year + lifetime <= baseyear
 
     # check if the CHPs were read in from MaStR for Germany
     if "Capacity_thermal" in chp.columns:
