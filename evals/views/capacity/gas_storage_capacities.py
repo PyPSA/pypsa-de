@@ -12,10 +12,10 @@ from evals.plots.timeseries import ESMTimeSeriesChart
 from evals.statistic import collect_myopic_statistics
 
 
-def eval_gas_storage_capacities(
+def view_gas_storage_capacities(
     result_path: str | Path,
     networks: dict,
-    subdir: str | Path = "esm_run/evaluation",
+    subdir: str | Path = "evaluation",
 ) -> None:  # numpydoc ignore=PR01
     """
     Evaluate optimal storage capacities for CH4 and H2.
@@ -36,7 +36,7 @@ def eval_gas_storage_capacities(
         statistic="optimal_capacity",
         storage=True,
         # include CH4 once CH4 stores are subject to optimization
-        bus_carrier=[BusCarrier.H2],
+        bus_carrier=[BusCarrier.H2, BusCarrier.CH4],
     )
 
     # The pypsa statistic wrongly returns MW as a unit in
