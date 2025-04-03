@@ -5780,6 +5780,11 @@ if __name__ == "__main__":
     if options["cluster_heat_buses"] and not first_year_myopic:
         cluster_heat_buses(n)
 
+    if not options["district_heating"]["add_subnodes"]:
+        maybe_adjust_costs_and_potentials(
+            n, snakemake.params["adjustments"], investment_year
+        )
+
     n.meta = dict(snakemake.config, **dict(wildcards=dict(snakemake.wildcards)))
 
     sanitize_carriers(n, snakemake.config)
