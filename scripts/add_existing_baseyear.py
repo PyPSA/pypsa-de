@@ -510,6 +510,9 @@ def add_chp_plants(n, grouping_years, costs, baseyear):
     # phase out date at the end of the year)
     chp.Fueltype = chp.Fueltype.map(rename_fuel)
 
+    chp["grouping_year"] = np.take(
+        grouping_years, np.digitize(chp.DateIn, grouping_years, right=True)
+    )
     chp["lifetime"] = (chp.DateOut - chp["grouping_year"] + 1).fillna(
         snakemake.params.costs["fill_values"]["lifetime"]
     )
