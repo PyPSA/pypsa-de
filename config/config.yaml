@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20250319-mergemastermarch
+  prefix: 20250403-chp_eop_conversion
   name:
   # - CurrentPolicies
   - KN2045_Bal_v4
