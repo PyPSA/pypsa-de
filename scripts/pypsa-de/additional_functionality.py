@@ -290,7 +290,10 @@ def h2_production_limits(n, investment_year, limits_volume_min, limits_volume_ma
 
 def electricity_import_limits(n, investment_year, limits_volume_max):
     for ct in limits_volume_max["electricity_import"]:
-        limit = limits_volume_max["electricity_import"][ct][investment_year] * 1e6
+        limit = limits_volume_max["electricity_import"][ct][investment_year] * 1e6 
+
+        if limit < 0:
+            limit *= n.snapshot_weightings.generators.sum() / 8760
 
         logger.info(f"limiting electricity imports in {ct} to {limit / 1e6} TWh/a")
 

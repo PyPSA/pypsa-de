@@ -839,8 +839,12 @@ def aladin_mobility_demand(n):
     # get aladin data
     aladin_demand = pd.read_csv(snakemake.input.aladin_demand, index_col=0)
 
+    simulation_period_correction_factor = (
+        n.snapshot_weightings.objective.sum() / 8760
+    ) 
+
     # oil demand
-    oil_demand = aladin_demand.Liquids
+    oil_demand = aladin_demand.Liquids * simulation_period_correction_factor
     oil_index = n.loads[
         (n.loads.carrier == "land transport oil") & (n.loads.index.str[:2] == "DE")
     ].index
@@ -853,7 +857,7 @@ def aladin_mobility_demand(n):
     )
 
     # hydrogen demand
-    h2_demand = aladin_demand.Hydrogen
+    h2_demand = aladin_demand.Hydrogen * simulation_period_correction_factor
     h2_index = n.loads[
         (n.loads.carrier == "land transport fuel cell")
         & (n.loads.index.str[:2] == "DE")
@@ -867,7 +871,7 @@ def aladin_mobility_demand(n):
     )
 
     # electricity demand
-    ev_demand = aladin_demand.Electricity
+    ev_demand = aladin_demand.Electricity * simulation_period_correction_factor
     ev_index = n.loads[
         (n.loads.carrier == "land transport EV") & (n.loads.index.str[:2] == "DE")
     ].index

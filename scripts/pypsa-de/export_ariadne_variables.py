@@ -386,7 +386,8 @@ def add_system_cost_rows(n):
 
     for component in ["lines", "links", "generators", "stores", "storage_units"]:
         df = getattr(n, component)
-
+        if df.empty:
+            continue
         decentral_idx = df.index[df.index.str.contains("decentral|rural|rooftop")]
         not_decentral_idx = df.index[~df.index.str.contains("decentral|rural|rooftop")]
 
@@ -1546,9 +1547,12 @@ def get_secondary_energy(n, region, _industry_demand):
         + var["Secondary Energy|Electricity|Biomass|w/ CCS"]
     )
 
-    var["Secondary Energy|Electricity|Hydro"] = electricity_supply.get(
-        "hydro"
-    ) + electricity_supply.get("ror")
+    var["Secondary Energy|Electricity|Hydro"] = electricity_supply.reindex(
+        [
+            "PHS",
+            "hydro",
+        ]
+    ).sum()
     # ! Neglecting PHS here because it is storage infrastructure
 
     var["Secondary Energy|Electricity|Nuclear"] = electricity_supply.filter(
@@ -2878,7 +2882,7 @@ def get_emissions(n, region, _energy_totals, industry_demand):
     # E and Biofuels with CC
     var["Carbon Sequestration|Other"] = co2_storage.mul(ccs_fraction)[
         ~co2_storage.index.str.contains("bio|process")
-    ].sum() + co2_storage.mul(ccs_fraction).get("process emissions CC") * (
+    ].sum() + co2_storage.mul(ccs_fraction).get("process emissions CC", 0) * (
         1 - pe_fossil_fraction
     )
 

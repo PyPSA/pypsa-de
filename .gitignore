@@ -34,7 +34,6 @@ config/config.yaml
 config/scenarios.yaml
 config/scenarios.automated.yaml
 
-config.yaml
 config/config.yaml
 
 dconf

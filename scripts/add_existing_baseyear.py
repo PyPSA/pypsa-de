@@ -39,9 +39,7 @@ cc = coco.CountryConverter()
 idx = pd.IndexSlice
 spatial = SimpleNamespace()
 
-from build_powerplants import add_custom_powerplants
-
-from build_powerplants import add_custom_powerplants
+from scripts.build_powerplants import add_custom_powerplants
 
 
 def add_build_year_to_new_assets(n: pypsa.Network, baseyear: int) -> None:
@@ -520,7 +518,9 @@ def add_chp_plants(n, grouping_years, costs, baseyear):
     chp["lifetime"] = (chp.DateOut - chp["grouping_year"] + 1).fillna(
         snakemake.params.costs["fill_values"]["lifetime"]
     )
-    chp = chp.loc[chp.grouping_year + chp.lifetime >= baseyear]
+    chp = chp.loc[
+        chp.grouping_year + chp.lifetime > baseyear
+    ]  # in add_brownfield this is build_year + lifetime <= baseyear
 
     # check if the CHPs were read in from MaStR for Germany
     if "Capacity_thermal" in chp.columns:
@@ -698,6 +698,9 @@ def add_chp_plants(n, grouping_years, costs, baseyear):
             if f"{bus} urban central heat" in n.buses.index:
                 bus2 = bus + " urban central heat"
             else:
+                logger.warning(
+                    f"Bus {bus} urban central heat not found. CHP is represented as EOP."
+                )
                 bus2 = ""
 
             if generator != "urban central solid biomass CHP":
@@ -1077,8 +1080,8 @@ if __name__ == "__main__":
 
         snakemake = mock_snakemake(
             "add_existing_baseyear",
-            configfiles="config/config.yaml",
-            clusters="27",
+            configfiles=["config/test/config.dach.yaml"],
+            clusters="5",
             ll="vopt",
             opts="",
             sector_opts="none",

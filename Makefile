@@ -54,11 +54,11 @@ install-pinned-macos: _conda_check
 # Run default tests
 test:
 	set -e
-	snakemake solve_elec_networks --configfile config/test/config.electricity.yaml
-	snakemake --configfile config/test/config.overnight.yaml
-	snakemake --configfile config/test/config.myopic.yaml
-	snakemake make_summary_perfect --configfile config/test/config.perfect.yaml
-	snakemake --configfile config/test/config.scenarios.yaml -n
+	echo "Running tests..."
+	echo "Build scenarios..."
+	snakemake build_scenarios
+	echo "Run DACH config..."
+	snakemake ariadne_all --configfile=config/test/config.dach.yaml
 	echo "All tests completed successfully."
 
 unit-test:

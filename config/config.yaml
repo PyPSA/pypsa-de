@@ -296,7 +296,10 @@ sector:
     osm_landcover_codes: [21, 23, 32, 33]
     max_groundwater_depth: -10
     ptes_potential_scalar: 1
-  central_heat_vent: true
+  heat_vent:
+    urban central: true
+    urban decentral: true
+    rural: true
   co2_spatial: true
   biomass_spatial: true
   #TBD what to include in config
