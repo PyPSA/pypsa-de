@@ -685,13 +685,13 @@ rule plot_ariadne_report:
             **config["scenario"],
             allow_missing=True,
         ),
+        exported_variables_full=RESULTS + "ariadne/exported_variables_full.xlsx",
     output:
         elec_price_duration_curve=RESULTS
         + "ariadne/report/elec_price_duration_curve.pdf",
         elec_price_duration_hist=RESULTS + "ariadne/report/elec_price_duration_hist.pdf",
         backup_capacity=RESULTS + "ariadne/report/backup_capacity.pdf",
         backup_generation=RESULTS + "ariadne/report/backup_generation.pdf",
-        elec_prices_spatial_de=RESULTS + "ariadne/report/elec_prices_spatial_de.pdf",
         results=directory(RESULTS + "ariadne/report"),
         elec_transmission=directory(RESULTS + "ariadne/report/elec_transmission"),
         h2_transmission=directory(RESULTS + "ariadne/report/h2_transmission"),
@@ -700,7 +700,7 @@ rule plot_ariadne_report:
         heat_balances=directory(RESULTS + "ariadne/report/heat_balance_timeseries"),
         nodal_balances=directory(RESULTS + "ariadne/report/balance_timeseries_2045"),
     resources:
-        mem_mb=30000,
+        mem_mb=32000,
     log:
         RESULTS + "logs/plot_ariadne_report.log",
     script:
