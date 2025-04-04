@@ -15,6 +15,7 @@ from evals.statistic import collect_myopic_statistics
 def view_gas_storage_capacities(
     result_path: str | Path,
     networks: dict,
+    config: dict,
     subdir: str | Path = "evaluation",
 ) -> None:  # numpydoc ignore=PR01
     """
@@ -86,23 +87,13 @@ def view_gas_storage_capacities(
     )
 
     metric = Exporter(
-        metric_name="Hydrogen Store Volume",  # change once CH4 is added
-        is_unit="MWh",
-        to_unit="TWh",
         statistics=[gas_stores.squeeze()],
+        statistics_unit="MWh",
+        view_config=config["view"],
     )
 
-    title = metric.df.attrs["name"] + TITLE_SUFFIX
-
-    metric.defaults.excel.chart_title = title
-    metric.defaults.plotly.title = title
     metric.defaults.plotly.chart = ESMBarChart
-    metric.defaults.plotly.file_name_template = "StoreVol_{location}"
-
-    metric.defaults.plotly.cutoff = 0.005  # TWh
+    # prevent dropping empty years
     metric.defaults.plotly.cutoff_drop = False
 
-    output_path = make_evaluation_result_directories(result_path, subdir)
-    metric.export_excel(output_path)
-    metric.export_csv(output_path)
-    metric.export_plotly(output_path)
+    metric.export(result_path, subdir)
