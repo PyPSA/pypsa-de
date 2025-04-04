@@ -21,10 +21,6 @@ from networkx.algorithms.connectivity.edge_augmentation import k_edge_augmentati
 from pypsa.geo import haversine_pts
 from scipy.stats import beta
 
-import sys
-
-sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
-
 from scripts._helpers import (
     configure_logging,
     get,
@@ -2204,7 +2200,7 @@ def add_EVs(
     # temperature corrected efficiency
     efficiency = get_temp_efficency(
         car_efficiency,
-        temperature[spatial.nodes],
+        temperature,
         options["transport_heating_deadband_lower"],
         options["transport_heating_deadband_upper"],
         options["EV_lower_degree_factor"],
@@ -2284,7 +2280,7 @@ def add_fuel_cell_cars(n, p_set, fuel_cell_share, temperature):
     # temperature corrected efficiency
     efficiency = get_temp_efficency(
         car_efficiency,
-        temperature[spatial.nodes],
+        temperature,
         options["transport_heating_deadband_lower"],
         options["transport_heating_deadband_upper"],
         options["ICE_lower_degree_factor"],
@@ -2311,7 +2307,7 @@ def add_ice_cars(n, p_set, ice_share, temperature):
     # temperature corrected efficiency
     efficiency = get_temp_efficency(
         car_efficiency,
-        temperature[spatial.nodes],
+        temperature,
         options["transport_heating_deadband_lower"],
         options["transport_heating_deadband_upper"],
         options["ICE_lower_degree_factor"],
@@ -2442,7 +2438,7 @@ def add_land_transport(
     p_set = transport[nodes]
 
     # temperature for correction factor for heating/cooling
-    temperature = xr.open_dataarray(temp_air_total_file).to_pandas()
+    temperature = xr.open_dataarray(temp_air_total_file).to_pandas()[spatial.nodes]
 
     if shares["electric"] > 0:
         add_EVs(
@@ -3465,7 +3461,9 @@ def add_biomass(
     if options["solid_biomass_import"].get("enable", False):
         biomass_import_price = options["solid_biomass_import"]["price"]
         # convert TWh in MWh
-        biomass_import_max_amount = options["solid_biomass_import"]["max_amount"] * 1e6 * nyears
+        biomass_import_max_amount = (
+            options["solid_biomass_import"]["max_amount"] * 1e6 * nyears
+        )
         biomass_import_upstream_emissions = options["solid_biomass_import"][
             "upstream_emissions_factor"
         ]
@@ -5117,7 +5115,7 @@ def cluster_heat_buses(n):
         return agg
 
     logger.info("Cluster residential and service heat buses.")
-    components = ["Bus", "Carrier", "Generator", "Link", "Load", "Store", "StorageUnit"]
+    components = ["Bus", "Carrier", "Generator", "Link", "Load", "Store"]
 
     for c in n.iterate_components(components):
         df = c.df
@@ -5514,9 +5512,6 @@ def add_enhanced_geothermal(
 if __name__ == "__main__":
     if "snakemake" not in globals():
         from scripts._helpers import mock_snakemake
-
-        # Change directory to this script
-        os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
         snakemake = mock_snakemake(
             "prepare_sector_network",
