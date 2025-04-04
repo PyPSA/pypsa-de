@@ -1,17 +1,23 @@
-# SPDX-FileCopyrightText: : 2017-2024 The PyPSA-Eur Authors
+# SPDX-FileCopyrightText: Contributors to PyPSA-Eur <https://github.com/pypsa/pypsa-eur>
 #
 # SPDX-License-Identifier: MIT
 
 from pathlib import Path
 import yaml
 import sys
-from os.path import normpath, exists
+from os.path import normpath, exists, join
 from shutil import copyfile, move, rmtree, unpack_archive
 from snakemake.utils import min_version
 
 min_version("8.11")
 
-from scripts._helpers import path_provider, copy_default_files, get_scenarios, get_rdir
+from scripts._helpers import (
+    path_provider,
+    copy_default_files,
+    get_scenarios,
+    get_rdir,
+    get_shadow,
+)
 
 
 copy_default_files(workflow)
@@ -25,6 +31,7 @@ configfile: "config/config.personal.yaml"
 run = config["run"]
 scenarios = get_scenarios(run)
 RDIR = get_rdir(run)
+shadow_config = get_shadow(run)
 
 policy = run["shared_resources"]["policy"]
 exclude = run["shared_resources"]["exclude"]
@@ -35,12 +42,8 @@ logs = path_provider("logs/", RDIR, shared_resources, exclude_from_shared)
 benchmarks = path_provider("benchmarks/", RDIR, shared_resources, exclude_from_shared)
 resources = path_provider("resources/", RDIR, shared_resources, exclude_from_shared)
 
-# logs = path_provider("logs/", RDIR, policy, exclude)
-# benchmarks = path_provider("benc€€hmarks/", RDIR, policy, exclude)
-# resources = path_provider("resources/", RDIR, policy, exclude)
-
-
-CDIR = "" if run["shared_cutouts"] else RDIR
+cutout_dir = config["atlite"]["cutout_directory"]
+CDIR = join(cutout_dir, ("" if run["shared_cutouts"] else RDIR))
 RESULTS = "results/" + RDIR
 
 
@@ -49,10 +52,11 @@ localrules:
 
 
 wildcard_constraints:
-    clusters="[0-9]+(m|c)?|all",
+    clusters="[0-9]+(m|c)?|all|adm",
     ll=r"(v|c)([0-9\.]+|opt)",
     opts=r"[-+a-zA-Z0-9\.]*",
     sector_opts=r"[-+a-zA-Z0-9\.\s]*",
+    planning_horizons=r"[0-9]{4}",
 
 
 include: "rules/common.smk"
@@ -91,7 +95,7 @@ rule create_scenarios:
     output:
         config["run"]["scenarios"]["file"],
     conda:
-        "envs/retrieve.yaml"
+        "envs/environment.yaml"
     script:
         "config/create_scenarios.py"
 
@@ -147,6 +151,18 @@ rule sync:
         rsync -uvarh --no-g {params.cluster}/resources . || echo "No resources directory, skipping rsync"
         rsync -uvarh --no-g {params.cluster}/results . || echo "No results directory, skipping rsync"
         rsync -uvarh --no-g {params.cluster}/logs . || echo "No logs directory, skipping rsync"
+        """
+
+
+rule sync_dry:
+    params:
+        cluster=f"{config['remote']['ssh']}:{config['remote']['path']}",
+    shell:
+        """
+        rsync -uvarh --ignore-missing-args --files-from=.sync-send . {params.cluster} -n
+        rsync -uvarh --no-g {params.cluster}/resources . -n || echo "No resources directory, skipping rsync"
+        rsync -uvarh --no-g {params.cluster}/results . -n || echo "No results directory, skipping rsync"
+        rsync -uvarh --no-g {params.cluster}/logs . -n || echo "No logs directory, skipping rsync"
         """
 
 
@@ -316,11 +332,10 @@ rule modify_prenetwork:
         scale_capacity=config_provider("scale_capacity"),
     input:
         costs_modifications="ariadne-data/costs_{planning_horizons}-modifications.csv",
-        network=RESULTS
-        + "prenetworks-brownfield/base_s_{clusters}_l{ll}_{opts}_{sector_opts}_{planning_horizons}.nc",
-        wkn=(
+        network=resources("networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_brownfield.nc"),
+        wkn=lambda w: (
             resources("wasserstoff_kernnetz_base_s_{clusters}.csv")
-            if config_provider("wasserstoff_kernnetz", "enable")
+            if config_provider("wasserstoff_kernnetz", "enable")(w)
             else []
         ),
         costs=resources("costs_{planning_horizons}.csv"),
@@ -343,12 +358,12 @@ rule modify_prenetwork:
         offshore_connection_points="ariadne-data/offshore_connection_points.csv",
     output:
         network=RESULTS
-        + "prenetworks-final/base_s_{clusters}_l{ll}_{opts}_{sector_opts}_{planning_horizons}.nc",
+        + "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_final.nc",
     resources:
         mem_mb=4000,
     log:
         RESULTS
-        + "logs/modify_prenetwork_base_s_{clusters}_l{ll}_{opts}_{sector_opts}_{planning_horizons}.log",
+        + "logs/modify_prenetwork_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.log",
     script:
         "scripts/pypsa-de/modify_prenetwork.py"
 
@@ -510,7 +525,7 @@ rule export_ariadne_variables:
         ),
         networks=expand(
             RESULTS
-            + "postnetworks/base_s_{clusters}_l{ll}_{opts}_{sector_opts}_{planning_horizons}.nc",
+            + "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
             **config["scenario"],
             allow_missing=True,
         ),
@@ -537,8 +552,7 @@ rule export_ariadne_variables:
         exported_variables=RESULTS + "ariadne/exported_variables.xlsx",
         exported_variables_full=RESULTS + "ariadne/exported_variables_full.xlsx",
     resources:
-        # A heuristic to assign more memory for larger networks. Should probably be quadratic??
-        mem_mb=(lambda w: 400 * int(config_provider("scenario", "clusters")(w)[0])),
+        mem_mb=16000,
     log:
         RESULTS + "logs/export_ariadne_variables.log",
     script:
@@ -602,7 +616,7 @@ rule ariadne_all:
         ),
         expand(
             RESULTS
-            + "maps/base_s_{clusters}_l{ll}_{opts}_{sector_opts}-h2_network_incl_kernnetz_{planning_horizons}.pdf",
+            + "maps/base_s_{clusters}_{opts}_{sector_opts}-h2_network_incl_kernnetz_{planning_horizons}.pdf",
             run=config_provider("run", "name"),
             **config["scenario"],
             allow_missing=True,
@@ -637,21 +651,21 @@ rule plot_hydrogen_network_incl_kernnetz:
         foresight=config_provider("foresight"),
     input:
         network=RESULTS
-        + "postnetworks/base_s_{clusters}_l{ll}_{opts}_{sector_opts}_{planning_horizons}.nc",
+        + "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
         regions=resources("regions_onshore_base_s_{clusters}.geojson"),
     output:
         map=RESULTS
-        + "maps/base_s_{clusters}_l{ll}_{opts}_{sector_opts}-h2_network_incl_kernnetz_{planning_horizons}.pdf",
+        + "maps/base_s_{clusters}_{opts}_{sector_opts}-h2_network_incl_kernnetz_{planning_horizons}.pdf",
     threads: 2
     resources:
         mem_mb=10000,
     log:
         RESULTS
-        + "logs/plot_hydrogen_network_incl_kernnetz/base_s_{clusters}_l{ll}_{opts}_{sector_opts}_{planning_horizons}.log",
+        + "logs/plot_hydrogen_network_incl_kernnetz/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.log",
     benchmark:
         (
             RESULTS
-            + "benchmarks/plot_hydrogen_network_incl_kernnetz/base_s_{clusters}_l{ll}_{opts}_{sector_opts}_{planning_horizons}"
+            + "benchmarks/plot_hydrogen_network_incl_kernnetz/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}"
         )
     script:
         "scripts/pypsa-de/plot_hydrogen_network_incl_kernnetz.py"
@@ -671,7 +685,7 @@ rule plot_ariadne_report:
     input:
         networks=expand(
             RESULTS
-            + "postnetworks/base_s_{clusters}_l{ll}_{opts}_{sector_opts}_{planning_horizons}.nc",
+            + "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
             **config["scenario"],
             allow_missing=True,
         ),

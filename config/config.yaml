@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20250130-morefinalfixes
+  prefix: 20250403-chp_eop_conversion
   name:
   # - CurrentPolicies
   - KN2045_Bal_v4
@@ -30,10 +30,6 @@ run:
     - build_industry_sector_ratios   # This is necessary to save build_industry_sector_ratios_data.log in the correct folder
     - modify_existing_heating
   disable_progressbar: true
-  debug_co2_limit: false
-  debug_h2deriv_limit: false
-  debug_unravel_oilbus: false
-  debug_unravel_gasbus: false
 
 iiasa_database:
   db_name: ariadne2_intern
@@ -281,6 +277,8 @@ costs:
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#sector
 sector:
+  chp:
+    enable: false # This should only deactivate the CHPs from prepare_sector_network, not those from add_existing_baseyear
   v2g: false
   solar_thermal: false
   district_heating:
@@ -293,7 +291,10 @@ sector:
       2040: 0.6
       2045: 0.8
       2050: 1.0
-  central_heat_vent: true
+  heat_vent:
+    urban central: true
+    urban decentral: true
+    rural: true
   co2_spatial: true
   biomass_spatial: true
   #TBD what to include in config

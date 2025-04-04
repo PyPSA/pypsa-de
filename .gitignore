@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: : 2017-2024 The PyPSA-Eur Authors
+# SPDX-FileCopyrightText: Contributors to PyPSA-Eur <https://github.com/pypsa/pypsa-eur>
 #
 # SPDX-License-Identifier: CC0-1.0
 
@@ -11,6 +11,7 @@ __pycache__
 gurobi.log
 .vscode
 *.orig
+.idea
 
 /bak
 /resources
@@ -33,7 +34,6 @@ config/config.yaml
 config/scenarios.yaml
 config/scenarios.automated.yaml
 
-config.yaml
 config/config.yaml
 
 dconf
@@ -88,3 +88,5 @@ cutouts
 
 # custom local files
 local
+# private dev folder
+dev/*

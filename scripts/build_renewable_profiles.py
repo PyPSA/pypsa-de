@@ -1,7 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
-# SPDX-FileCopyrightText: : 2017-2024 The PyPSA-Eur Authors
+# SPDX-FileCopyrightText: Contributors to PyPSA-Eur <https://github.com/pypsa/pypsa-eur>
 #
 # SPDX-License-Identifier: MIT
 """
@@ -12,37 +9,6 @@ from the node for onshore wind, AC-connected offshore wind, DC-connected
 offshore wind and solar PV generators.
 
 .. note:: Hydroelectric profiles are built in script :mod:`build_hydro_profiles`.
-
-Relevant settings
------------------
-
-.. code:: yaml
-
-    snapshots:
-
-    atlite:
-        nprocesses:
-
-    renewable:
-        {technology}:
-            cutout: capacity_per_sqkm: correction_factor: min_p_max_pu:
-            clip_p_max_pu: resource:
-
-.. seealso::
-    Documentation of the configuration file ``config/config.yaml`` at
-    :ref:`snapshots_cf`, :ref:`atlite_cf`, :ref:`renewable_cf`
-
-Inputs
-------
-
-- ``resources/availability_matrix_{clusters}_{technology}.nc``: see :mod:`determine_availability_matrix`
-- ``resources/offshore_shapes.geojson``: confer :ref:`shapes`
-- ``resources/regions_onshore_base_s_{clusters}.geojson``: (if not offshore
-  wind), confer :ref:`busregions`
-- ``resources/regions_offshore_base_s_{clusters}.geojson``: (if offshore wind),
-  :ref:`busregions`
-- ``"cutouts/" + params["renewable"][{technology}]['cutout']``: :ref:`cutout`
-- ``networks/_base_s_{clusters}.nc``: :ref:`base`
 
 Outputs
 -------

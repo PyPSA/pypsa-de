@@ -24,7 +24,7 @@ from matplotlib.ticker import FuncFormatter
 from pypsa.plot import add_legend_circles, add_legend_lines, add_legend_patches
 
 from scripts._helpers import configure_logging, mock_snakemake, set_scenario_config
-from scripts.plot_power_network import load_projection
+from scripts.plot_power_network import load_projection, assign_location
 from scripts.plot_summary import preferred_order, rename_techs
 from scripts.prepare_sector_network import prepare_costs
 
@@ -400,7 +400,6 @@ def plot_nodal_elec_balance(
     ylabel="total electricity balance [GW]",
     title="Electricity balance",
 ):
-
     if resample == "D" and network.snapshots.size < 365:
         # code is not working at low resolution!
         logger.error(
@@ -408,11 +407,6 @@ def plot_nodal_elec_balance(
         )
         return
 
-    carriers = carriers
-    loads = loads
-    start_date = start_date
-    end_date = end_date
-    regions = regions
     period = network.generators_t.p.index[
         (network.generators_t.p.index >= start_date)
         & (network.generators_t.p.index <= end_date)
@@ -421,7 +415,7 @@ def plot_nodal_elec_balance(
     rename = {}
 
     mask = nodal_balance.index.get_level_values("bus_carrier").isin(carriers)
-    nb = balance[mask].groupby("carrier").sum().div(1e3).T.loc[period]
+    nb = nodal_balance[mask].groupby("carrier").sum().div(1e3).T.loc[period]
     if plot_loads:
         df_loads = abs(nb[loads].sum(axis=1))
     # condense groups (summarise carriers to groups)
@@ -532,9 +526,15 @@ def plot_nodal_elec_balance(
 
     fig, ax = plt.subplots(figsize=(14, 12))
     # Reorder the DataFrame columns based on the preferred order
-    df_pos["Stromimport"] = (
-        df["Electricity trade"].where(df["Electricity trade"] > 0).fillna(0)
-    )
+    try:
+        df_pos["Stromimport"] = (
+            df["Electricity trade"].where(df["Electricity trade"] > 0).fillna(0)
+        )
+        df_neg["Stromexport"] = (
+            df["Electricity trade"].where(df["Electricity trade"] < 0).fillna(0)
+        )
+    except KeyError:
+        print("Skipping Electricity trade because it is too small")
     df_pos = df_pos.drop(columns=["Electricity trade"], errors="ignore")
     df_pos = df_pos.rename(columns={"urban central H2 CHP": "H2 CHP"})
     df_pos["other"] = df_pos.drop(columns=preferred_order_pos, errors="ignore").sum(
@@ -548,9 +548,6 @@ def plot_nodal_elec_balance(
     f = lambda c: "out_" + c
     cols = [f(c) if (c in df_pos.columns) else c for c in df_neg.columns]
     cols_map = dict(zip(df_neg.columns, cols))
-    df_neg["Stromexport"] = (
-        df["Electricity trade"].where(df["Electricity trade"] < 0).fillna(0)
-    )
     df_neg = df_neg.drop(columns=["Electricity trade"], errors="ignore")
     df_neg["Sonstige"] = df_neg.drop(columns=preferred_order_neg, errors="ignore").sum(
         axis=1
@@ -583,9 +580,10 @@ def plot_nodal_elec_balance(
         ax2.set_ylim(
             [
                 -1.5
-                * lmps.max()
-                * abs(df_neg.sum(axis=1).min())
-                / df_pos.sum(axis=1).max(),
+                * lmps.max(),
+                # TODO rescale
+                # * abs(df_neg.sum(axis=1).min())
+                # / df_pos.sum(axis=1).max(),
                 1.5 * lmps.max(),
             ]
         )
@@ -723,7 +721,7 @@ def plot_nodal_heat_balance(
     rename = {}
 
     mask = nodal_balance.index.get_level_values("bus_carrier").isin(carriers)
-    nb = balance[mask].groupby("carrier").sum().div(1e3).T.loc[period]
+    nb = nodal_balance[mask].groupby("carrier").sum().div(1e3).T.loc[period]
     if plot_loads:
         df_loads = abs(nb[loads].sum(axis=1))
     # condense groups (summarise carriers to groups)
@@ -1232,7 +1230,7 @@ def plot_backup_capacity(
 ):
 
     kwargs = {
-        "groupby": networks[2020].statistics.groupers.get_name_bus_and_carrier,
+        "groupby": ["name", "bus", "carrier"],
         "nice_names": False,
     }
 
@@ -1354,7 +1352,7 @@ def plot_backup_generation(
     tech_colors["coal"] = "black"
 
     kwargs = {
-        "groupby": networks[2020].statistics.groupers.get_name_bus_and_carrier,
+        "groupby": ["name", "bus", "carrier"],
         "nice_names": False,
     }
 
@@ -1587,17 +1585,6 @@ def plot_elec_prices_spatial(
     # plt.show()
 
     fig.savefig(savepath, bbox_inches="tight")
-
-
-def assign_location(n):
-    for c in n.iterate_components(n.one_port_components | n.branch_components):
-        ifind = pd.Series(c.df.index.str.find(" ", start=4), c.df.index)
-        for i in ifind.value_counts().index:
-            # these have already been assigned defaults
-            if i == -1:
-                continue
-            names = ifind.index[ifind == i]
-            c.df.loc[names, "location"] = names.str[:i]
 
 
 def group_pipes(df, drop_direction=False):
@@ -2923,7 +2910,7 @@ if __name__ == "__main__":
             network.statistics.energy_balance(
                 aggregate_time=False,
                 nice_names=False,
-                groupby=network.statistics.groupers.get_bus_and_carrier_and_bus_carrier,
+                groupby=["bus", "carrier", "bus_carrier"],
             )
             .loc[:, buses, :, :]
             .droplevel("bus")
@@ -3174,15 +3161,13 @@ if __name__ == "__main__":
         lambda x: x.strftime("%Y-%m")
     )
 
-    balance = n.statistics.energy_balance(aggregate_time=False)
-
     # only DE
     ct = "DE"
     buses = n.buses.index[(n.buses.index.str[:2] == ct)].drop("DE")
     balance = (
         n.statistics.energy_balance(
             aggregate_time=False,
-            groupby=n.statistics.groupers.get_bus_and_carrier_and_bus_carrier,
+            groupby=["bus", "carrier", "bus_carrier"],
         )
         .loc[:, buses, :, :]
         .droplevel("bus")

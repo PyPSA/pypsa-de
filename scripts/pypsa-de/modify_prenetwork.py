@@ -9,7 +9,11 @@ import pandas as pd
 import pypsa
 from shapely.geometry import Point
 
-from scripts._helpers import configure_logging, mock_snakemake
+from scripts._helpers import (
+    configure_logging, 
+    mock_snakemake,
+    sanitize_custom_columns
+)
 from scripts.add_electricity import load_costs
 from scripts.prepare_sector_network import lossy_bidirectional_links, prepare_costs
 
@@ -199,8 +203,8 @@ def add_wasserstoff_kernnetz(n, wkn, costs):
 
         # capital_costs = np.where(
         #     wkn_new.retrofitted == False,
-        #     costs.at["H2 (g) pipeline", "fixed"] * wkn_new.length.values,
-        #     costs.at["H2 (g) pipeline repurposed", "fixed"] * wkn_new.length.values,
+        #     costs.at["H2 (g) pipeline", "capital_cost"] * wkn_new.length.values,
+        #     costs.at["H2 (g) pipeline repurposed", "capital_cost"] * wkn_new.length.values,
         # )
 
         # overnight_costs = np.where(
@@ -215,8 +219,8 @@ def add_wasserstoff_kernnetz(n, wkn, costs):
         # reconstruct average Kernnetz invest (250€/MW*km) from our costs data
 
         capital_costs = (
-            0.7 * costs.at["H2 (g) pipeline", "fixed"]
-            + 0.3 * costs.at["H2 (g) pipeline repurposed", "fixed"]
+            0.7 * costs.at["H2 (g) pipeline", "capital_cost"]
+            + 0.3 * costs.at["H2 (g) pipeline repurposed", "capital_cost"]
         ) * wkn_new.length.values
         overnight_costs = (
             0.7 * costs.at["H2 (g) pipeline", "investment"]
@@ -318,20 +322,18 @@ def unravel_carbonaceous_fuels(n):
     n.add("Carrier", "renewable oil")
 
     n.add("Bus", "DE", x=10.5, y=51.2, carrier="none")
-    n.add("Bus", "DE oil", x=10.5, y=51.2, carrier="oil")
-    n.add("Bus", "DE oil primary", x=10.5, y=51.2, carrier="oil primary")
+    n.add("Bus", "DE oil", location="DE", carrier="oil")
+    n.add("Bus", "DE oil primary", location="DE", carrier="oil primary")
     n.add(
         "Bus",
         "DE renewable oil",
-        x=10.5,
-        y=51.2,
+        location="DE",
         carrier="renewable oil",
     )
     n.add(
         "Bus",
         "EU renewable oil",
-        x=n.buses.loc["EU", "x"],
-        y=n.buses.loc["EU", "y"],
+        location="EU",
         carrier="renewable oil",
     )
 
@@ -461,8 +463,7 @@ def unravel_carbonaceous_fuels(n):
     n.add(
         "Bus",
         "DE methanol",
-        x=n.buses.loc["DE", "x"],
-        y=n.buses.loc["DE", "y"],
+        location="DE",
         carrier="methanol",
     )
 
@@ -514,8 +515,7 @@ def unravel_carbonaceous_fuels(n):
             "Bus",
             "DE industry methanol",
             carrier="industry methanol",
-            x=n.buses.loc["DE", "x"],
-            y=n.buses.loc["DE", "y"],
+            location="DE",
             unit="MWh_LHV",
         )
         industrial_demand = (
@@ -593,8 +593,7 @@ def unravel_carbonaceous_fuels(n):
             "Bus",
             "DE shipping methanol",
             carrier="shipping methanol",
-            x=n.buses.loc["DE", "x"],
-            y=n.buses.loc["DE", "y"],
+            location="DE",
             unit="MWh_LHV",
         )
         n.add(
@@ -616,20 +615,21 @@ def unravel_gasbus(n, costs):
     """
     logger.info("Unraveling gas bus")
 
+    if not "DE" in n.buses:
+        n.add("Bus", "DE", location="DE", x=10.5, y=51.2, carrier="none")
+
     ### create DE gas bus/generator/store
     n.add(
         "Bus",
         "DE gas",
-        x=10.5,
-        y=51.2,
+        location="DE",
         carrier="gas",
     )
 
     n.add(
         "Bus",
         "DE gas primary",
-        x=10.5,
-        y=51.2,
+        location="DE",
         carrier="gas primary",
     )
 
@@ -640,7 +640,7 @@ def unravel_gasbus(n, costs):
         carrier="gas",
         e_nom_extendable=True,
         e_cyclic=True,
-        capital_cost=costs.at["gas storage", "fixed"],
+        capital_cost=costs.at["gas storage", "capital_cost"],
         overnight_cost=costs.at["gas storage", "investment"],
         lifetime=costs.at["gas storage", "lifetime"],
     )
@@ -675,14 +675,12 @@ def unravel_gasbus(n, costs):
         "Bus",
         "DE renewable gas",
         carrier="renewable gas",
-        x=10.5,
-        y=51.2,
+        location="DE",
     )
     n.add(
         "Bus",
         "EU renewable gas",
-        x=n.buses.loc["EU", "x"],
-        y=n.buses.loc["EU", "y"],
+        location="EU",
         carrier="renewable gas",
     )
 
@@ -841,8 +839,12 @@ def aladin_mobility_demand(n):
     # get aladin data
     aladin_demand = pd.read_csv(snakemake.input.aladin_demand, index_col=0)
 
+    simulation_period_correction_factor = (
+        n.snapshot_weightings.objective.sum() / 8760
+    ) 
+
     # oil demand
-    oil_demand = aladin_demand.Liquids
+    oil_demand = aladin_demand.Liquids * simulation_period_correction_factor
     oil_index = n.loads[
         (n.loads.carrier == "land transport oil") & (n.loads.index.str[:2] == "DE")
     ].index
@@ -855,7 +857,7 @@ def aladin_mobility_demand(n):
     )
 
     # hydrogen demand
-    h2_demand = aladin_demand.Hydrogen
+    h2_demand = aladin_demand.Hydrogen * simulation_period_correction_factor
     h2_index = n.loads[
         (n.loads.carrier == "land transport fuel cell")
         & (n.loads.index.str[:2] == "DE")
@@ -869,7 +871,7 @@ def aladin_mobility_demand(n):
     )
 
     # electricity demand
-    ev_demand = aladin_demand.Electricity
+    ev_demand = aladin_demand.Electricity * simulation_period_correction_factor
     ev_index = n.loads[
         (n.loads.carrier == "land transport EV") & (n.loads.index.str[:2] == "DE")
     ].index
@@ -1326,17 +1328,14 @@ if __name__ == "__main__":
 
     first_technology_occurrence(n)
 
-    if not snakemake.config["run"]["debug_unravel_oilbus"]:
-        unravel_carbonaceous_fuels(n)
+    unravel_carbonaceous_fuels(n)
 
-    if not snakemake.config["run"]["debug_unravel_gasbus"]:
-        unravel_gasbus(n, costs)
+    unravel_gasbus(n, costs)
 
     if snakemake.params.enable_kernnetz:
         fn = snakemake.input.wkn
         wkn = pd.read_csv(fn, index_col=0)
         add_wasserstoff_kernnetz(n, wkn, costs)
-        n.links.reversed = n.links.reversed.astype(float)
 
     costs_loaded = load_costs(
         snakemake.input.costs,
@@ -1374,5 +1373,7 @@ if __name__ == "__main__":
     force_connection_nep_offshore(n, current_year)
 
     scale_capacity(n, snakemake.params.scale_capacity)
+
+    sanitize_custom_columns(n)
 
     n.export_to_netcdf(snakemake.output.network)
