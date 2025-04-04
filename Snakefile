@@ -709,7 +709,6 @@ rule plot_ariadne_report:
         backup_capacity=RESULTS + "ariadne/report/backup_capacity.pdf",
         backup_generation=RESULTS + "ariadne/report/backup_generation.pdf",
         elec_prices_spatial_de=RESULTS + "ariadne/report/elec_prices_spatial_de.pdf",
-        elec_prices_spatial_de_eng=RESULTS + "ariadne/report/elec_prices_spatial_de_eng.pdf",
         results=directory(RESULTS + "ariadne/report"),
         elec_transmission=directory(RESULTS + "ariadne/report/elec_transmission"),
         h2_transmission=directory(RESULTS + "ariadne/report/h2_transmission"),

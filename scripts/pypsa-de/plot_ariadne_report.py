@@ -1610,6 +1610,10 @@ def plot_elec_prices_spatial(
     plt.subplots_adjust(right=0.75, bottom=0.22)
     # plt.show()
 
+    if lang == "eng":
+        savepath = savepath[:-4]
+        savepath += "_eng.pdf"
+
     fig.savefig(savepath, bbox_inches="tight")
 
 
