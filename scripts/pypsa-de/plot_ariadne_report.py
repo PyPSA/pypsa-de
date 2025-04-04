@@ -1481,7 +1481,13 @@ def plot_backup_generation(
 
 
 def plot_elec_prices_spatial(
-    network, tech_colors, savepath, onshore_regions, year="2045", region="DE", lang="ger"
+    network,
+    tech_colors,
+    savepath,
+    onshore_regions,
+    year="2045",
+    region="DE",
+    lang="ger",
 ):
     # onshore_regions = gpd.read_file("/home/julian-geis/repos/pypsa-ariadne-1/resources/20241203-force-onwind-south-49cl-disc/KN2045_Bal_v4/regions_onshore_base_s_49.geojson")
     # onshore_regions = onshore_regions.set_index('name')
@@ -1865,11 +1871,11 @@ def plot_h2_map(n, regions, savepath, only_de=False):
 
 
 def plot_h2_map_de(
-        n, regions, tech_colors, savepath, specify_buses=None, german_carriers=True
-    ):
+    n, regions, tech_colors, savepath, specify_buses=None, german_carriers=True
+):
     assign_location(n)
 
-    legend_label = "hydrogen storage [TWh]"        
+    legend_label = "hydrogen storage [TWh]"
     production_title = "Hydrogen infrastructure (production)"
     consumption_title = "Hydrogen infrastructure (consumption)"
 
