@@ -143,8 +143,8 @@ class CentralHeatingCopApproximator(BaseCopApproximator):
         """
         Calculate the coefficient of performance (COP) for the system.
 
-        Notes:
-        ------
+        Notes
+        -----
         Returns 0 where the source inlet temperature is greater than the sink outlet temperature.
 
         Returns
