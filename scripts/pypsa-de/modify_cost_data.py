@@ -76,7 +76,7 @@ if __name__ == "__main__":
         new_year = matched_year
     elif snakemake.params.cost_horizon == "pessimist":
         logger.info(f"Pessimistic cost scenario for {matched_year}.")
-        new_year = matched_year + 5
+        new_year = min(matched_year + 5, 2050)
     elif snakemake.params.cost_horizon == "optimist":
         logger.info(f"Optimistic cost scenario for {matched_year}.")
         new_year = matched_year - 5
