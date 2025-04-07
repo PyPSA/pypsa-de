@@ -54,8 +54,9 @@ from functools import partial
 
 import country_converter as coco
 import pandas as pd
-from scripts._helpers import configure_logging, set_scenario_config
 from tqdm import tqdm
+
+from scripts._helpers import configure_logging, set_scenario_config
 
 logger = logging.getLogger(__name__)
 

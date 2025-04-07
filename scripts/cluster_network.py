@@ -74,7 +74,6 @@ import pandas as pd
 import pypsa
 import tqdm
 import xarray as xr
-from scripts._helpers import configure_logging, set_scenario_config
 from packaging.version import Version, parse
 from pypsa.clustering.spatial import (
     busmap_by_greedy_modularity,
@@ -85,6 +84,8 @@ from pypsa.clustering.spatial import (
 from scipy.sparse.csgraph import connected_components
 from shapely.algorithms.polylabel import polylabel
 from shapely.geometry import MultiPolygon, Polygon
+
+from scripts._helpers import configure_logging, set_scenario_config
 
 PD_GE_2_2 = parse(pd.__version__) >= Version("2.2")
 

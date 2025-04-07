@@ -35,6 +35,7 @@ The unit of the production is kt/a.
 import logging
 
 import pandas as pd
+
 from scripts._helpers import configure_logging, set_scenario_config
 from scripts.prepare_sector_network import get
 

@@ -332,7 +332,9 @@ rule modify_prenetwork:
         scale_capacity=config_provider("scale_capacity"),
     input:
         costs_modifications="ariadne-data/costs_{planning_horizons}-modifications.csv",
-        network=resources("networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_brownfield.nc"),
+        network=resources(
+            "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_brownfield.nc"
+        ),
         wkn=lambda w: (
             resources("wasserstoff_kernnetz_base_s_{clusters}.csv")
             if config_provider("wasserstoff_kernnetz", "enable")(w)

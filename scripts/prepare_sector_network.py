@@ -41,11 +41,7 @@ from scripts.build_energy_totals import (
 from scripts.build_transport_demand import transport_degree_factor
 from scripts.definitions.heat_sector import HeatSector
 from scripts.definitions.heat_system import HeatSystem
-from networkx.algorithms import complement
-from networkx.algorithms.connectivity.edge_augmentation import k_edge_augmentation
 from scripts.prepare_network import maybe_adjust_costs_and_potentials
-from pypsa.geo import haversine_pts
-from scipy.stats import beta
 
 spatial = SimpleNamespace()
 logger = logging.getLogger(__name__)
@@ -2239,7 +2235,6 @@ def add_EVs(
         efficiency=options["bev_charge_efficiency"],
     )
 
-
     if options["bev_dsm"] and options["bev_dsm"] <= investment_year:
         e_nom = (
             number_cars
@@ -2415,7 +2410,7 @@ def add_land_transport(
     demand_factor = get(options["land_transport_demand_factor"], investment_year)
     if demand_factor != 1:
         logger.warning(
-            f"Changing land transport demand by {demand_factor*100-100:+.2f}%."
+            f"Changing land transport demand by {demand_factor * 100 - 100:+.2f}%."
         )
 
     transport = demand_factor * transport
@@ -3380,7 +3375,9 @@ def add_biomass(
     if options["solid_biomass_import"].get("enable", False):
         biomass_import_price = options["solid_biomass_import"]["price"]
         # convert TWh in MWh
-        biomass_import_max_amount = options["solid_biomass_import"]["max_amount"] * 1e6 * nyears
+        biomass_import_max_amount = (
+            options["solid_biomass_import"]["max_amount"] * 1e6 * nyears
+        )
         biomass_import_upstream_emissions = options["solid_biomass_import"][
             "upstream_emissions_factor"
         ]
@@ -3437,10 +3434,6 @@ def add_biomass(
             marginal_cost=costs.at["biogas", "fuel"],
             e_sum_min=unsustainable_biogas_potentials_spatial,
             e_sum_max=unsustainable_biogas_potentials_spatial,
-        )
-
-        e_max_pu = pd.DataFrame(
-            1, index=n.snapshots, columns=spatial.biomass.nodes_unsustainable
         )
 
         n.add(

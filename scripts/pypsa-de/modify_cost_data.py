@@ -1,11 +1,7 @@
-# -*- coding: utf-8 -*-
-
 import logging
 import os
 import re
-import sys
 
-import numpy as np
 import pandas as pd
 
 from scripts._helpers import configure_logging, mock_snakemake
@@ -30,7 +26,7 @@ def carbon_component_fossils(costs, co2_price):
     for c in carriers:
         carbon_add_on = specific_emisisons[c] * co2_price
         costs.at[(c, "fuel"), "value"] += carbon_add_on
-        add_str = f" (added carbon component of {round(carbon_add_on,4)} €/MWh according to co2 price of {co2_price} €/t co2 and carbon intensity of {specific_emisisons[c]} t co2/MWh)"
+        add_str = f" (added carbon component of {round(carbon_add_on, 4)} €/MWh according to co2 price of {co2_price} €/t co2 and carbon intensity of {specific_emisisons[c]} t co2/MWh)"
         if pd.isna(costs.at[(c, "fuel"), "further description"]):
             costs.at[(c, "fuel"), "further description"] = add_str
         else:
@@ -123,7 +119,7 @@ if __name__ == "__main__":
         costs = carbon_component_fossils(costs, co2_price)
 
     logger.info(
-        f"Scaling onwind costs towards Fh-ISE for Germany: {costs.loc["onwind", "investment"].value} {costs.loc['onwind', 'investment'].unit}."
+        f"Scaling onwind costs towards Fh-ISE for Germany: {costs.loc['onwind', 'investment'].value} {costs.loc['onwind', 'investment'].unit}."
     )
     # https://github.com/PyPSA/pypsa-ariadne/issues/179
     # https://www.ise.fraunhofer.de/de/veroeffentlichungen/studien/studie-stromgestehungskosten-erneuerbare-energien.html
@@ -147,7 +143,7 @@ if __name__ == "__main__":
     # increase central gas CHP lifetime to 40 years
     costs.at[("central gas CHP", "lifetime"), "value"] = 40
     logger.info(
-        f"Setting lifetime of central gas CHP to {costs.at[("central gas CHP" , "lifetime") , "value"]} {costs.at[("central gas CHP" , "lifetime") , "unit"]}."
+        f"Setting lifetime of central gas CHP to {costs.at[('central gas CHP', 'lifetime'), 'value']} {costs.at[('central gas CHP', 'lifetime'), 'unit']}."
     )
 
     # decrease Fischer-Tropsch efficiency
@@ -161,7 +157,7 @@ if __name__ == "__main__":
     )
 
     # increase FOM of offshore wind connection (fix for costs.csv)
-    logger.info(f"Setting FOM of offshore wind connections to 0.35 %.")
+    logger.info("Setting FOM of offshore wind connections to 0.35 %.")
     costs.loc[("offwind-dc-connection-submarine", "FOM"), "value"] = 0.35
     costs.loc[("offwind-dc-connection-submarine", "FOM"), "unit"] = costs.at[
         ("offwind", "FOM"), "unit"
@@ -179,7 +175,7 @@ if __name__ == "__main__":
         ("offwind", "FOM"), "unit"
     ]
 
-    logger.info(f"Setting investment cost of hydrogen storage to 0.55 EUR/kWh.")
+    logger.info("Setting investment cost of hydrogen storage to 0.55 EUR/kWh.")
     costs.loc[("hydrogen storage underground", "investment"), "value"] = 0.55
 
     costs.to_csv(snakemake.output[0])

@@ -9,9 +9,10 @@ import logging
 
 import atlite
 import geopandas as gpd
-from scripts._helpers import configure_logging, get_snapshots, set_scenario_config
 from atlite.aggregate import aggregate_matrix
 from dask.distributed import Client
+
+from scripts._helpers import configure_logging, get_snapshots, set_scenario_config
 
 logger = logging.getLogger(__name__)
 

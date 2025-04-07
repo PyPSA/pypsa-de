@@ -60,7 +60,7 @@ jobs:
     - name: Setup cache keys
       run: |
         echo "WEEK=$(date +'%Y%U')" >> $GITHUB_ENV # data and cutouts
-  
+
     - uses: actions/cache@v4
       with:
         path: |
@@ -86,7 +86,7 @@ jobs:
       run: |
         conda env update -n pypsa-de -f ${{ env.env_file }}
         echo "Run conda list" && conda list
-    
+
     - name: Setup ixmp4 access
       run: |
         mkdir -p ~/.local/share/ixmp4/
@@ -158,7 +158,7 @@ jobs:
         else
             echo "pinned=false" >> $GITHUB_ENV
         fi
-    
+
     - name: Setup cache keys
       if: env.pinned == 'false'
       run: |
