@@ -160,7 +160,14 @@ unit = "TWh"
 file_name = "nodal_energy_heat_primary_{location}"
 cutoff = 0.001
 legend_order = [
-    "",
+    "Methane",
+    "Coal",
+    "Oil",
+    "Waste",
+    "Solid Biomass",
+    "Electricity",
+    "Solar Power",
+    "Hydrogen"
 ]
 checks = []
 exports = ["excel"]
@@ -170,14 +177,15 @@ exports = ["excel"]
 "H2" = "Hydrogen"
 "coal" = "Coal"
 "gas" = "Methane"
-"lignite" = "Lignite"
+"renewable gas" = "Methane"
+"lignite" = "Coal"
 "low voltage" = "Electricity"
 "non-sequestered HVC" = "Waste"
 "oil" = "Oil"
-"rural heat" = "Solar"
-"solid biomass" = "Biomass"
-"urban central heat" = "Solar"
-"urban decentral heat" = "Solar"
+"rural heat" = "Solar Power"
+"solid biomass" = "Solid Biomass"
+"urban central heat" = "Solar Power"
+"urban decentral heat" = "Solar Power"
 
 [view.timeseries.hydrogen]
 name = "Hydrogen Production and Demand"

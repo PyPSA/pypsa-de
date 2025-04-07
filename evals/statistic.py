@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Collect statistics for ESM evaluations."""  # noqa: A005
 
 import logging
@@ -831,6 +830,8 @@ class ESMStatistics(StatisticsAccessor):
         def _heat_minus_ac(ser: pd.Series) -> pd.Series:
             """
             Return the sum of AC withdrawal and heat supply.
+
+            This function assumes, that 1 MWh (electricity) is 1 MWh (thermal).
 
             Parameters
             ----------

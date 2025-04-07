@@ -32,21 +32,6 @@ def view_heat_primary_energy(
     -----
     See eval docstring for parameter description.
     """
-    # we might be able to drop the input_energy statistics as a whole:
-    # collect_myopic_statistics(networks, comps="Link", statistic="energy_balance").filter(like="methanolisation")
-    # Out[11]:
-    # year  location  carrier          bus_carrier
-    # 2045  XK        methanolisation
-    # AC                   -160316.433175
-    # H2                   -673358.210901
-    # co2 stored           -146742.357560
-    # methanol              591679.859919
-    # urban central heat     14792.579326
-    #
-    # do this and filter for carrier, that have one of the heat buses in the bus_carrier
-    # index level. é voila, we should have everything we need?
-
-    # for location_port in ("0", "1"):
     link_energy_port0 = collect_myopic_statistics(
         networks,
         comps="Link",
@@ -55,7 +40,7 @@ def view_heat_primary_energy(
             partial(get_location, location_port="0"),
             "carrier",
             "bus_carrier",
-            "unit",
+            # "unit",
         ],
     )
     eu_carrier_port_0 = filter_by(link_energy_port0, location="EU").index.unique(
@@ -70,7 +55,7 @@ def view_heat_primary_energy(
             partial(get_location, location_port="1"),
             "carrier",
             "bus_carrier",
-            "unit",
+            # "unit",
         ],
     )
     eu_carrier_port_1 = filter_by(link_energy_port1, location="EU").index.unique(
@@ -87,9 +72,11 @@ def view_heat_primary_energy(
     eu_carrier = eu_carrier_port_0.union(eu_carrier_port_1)
     assert not any(eu_carrier.difference(link_energy.index.unique("carrier")))
 
-    # drop non energy rows, such as CO2
-    energy_units = [u for u in link_energy.index.unique("unit") if u.startswith("MWh")]
-    link_energy = filter_by(link_energy, unit=energy_units).droplevel("unit")
+    # # drop non energy rows, such as CO2
+    # fixme: wrongly drops oil
+    # energy_units = [u for u in link_energy.index.unique("unit") if u.startswith("MWh")]
+    # link_energy = filter_by(link_energy, unit=energy_units).droplevel("unit")
+    link_energy = link_energy.drop(["co2", "co2 stored"], level="bus_carrier")
 
     # only keep Links that have at least one heat bus_carrier connected at one of their branches
     carrier_with_heat_buses = []
@@ -99,69 +86,30 @@ def view_heat_primary_energy(
             carrier_with_heat_buses.append(carrier)
     heat_links = filter_by(link_energy, carrier=carrier_with_heat_buses)
 
-    # drop storage technology Links
-    heat_production = drop_from_multtindex_by_regex(heat_links, "water tanks")
+    # drop storage technology Links and DAC (direct air capture withdraws heat)
+    heat_production = drop_from_multtindex_by_regex(heat_links, "DAC|water tanks")
 
-    # # need to drop bus_carrier with non energy units, e.g. CO2, to prevent mixing them with MWh
-    # heat_production = drop_from_multtindex_by_regex(
-    #     heat_production, "co2", level=DataModel.BUS_CARRIER
-    # )
-
-    # # collect excluded carrier to assert no energies are lost in the final result.
-    # eu_carrier.update(
-    #     set(filter_by(heat_production, location="EU").index.unique("carrier"))
-    # )
-
-    # assert "EU" not in heat_production.index.unique("location"), (
-    #     f"Must localize energy withdrawal for bus_carriers: {filter_by(heat_production, location='EU').index.unique('carrier')}"
-    # )
-
-    # assert all(c in link_energy.index.unique("carrier") for c in eu_carrier), (
-    #     "Some carrier were included with EU location, but are missing in the result: ..."
-    # )
-
-    # for every nodal Link that has heat supply, calculate the share of withdrawal carrier energies
-    # todo: refactor to apply(func) for performance
-    to_concat = []
-    for idx, df in heat_production.groupby(["year", "location", "carrier"]):
-        # cases:
-        # one input -> multiple outputs:
-        #       * calculate efficiency share for outputs (for heat)
-        #       * multiply by input. done
-        # multiple inputs -> multiple outputs:
-        #       * calculate efficiency share for outputs (for heat)
-        #       * multiply by all inputs. done
+    def _fuel_split(df):
         withdrawal = df[df.lt(0)]
         supply = df[df.ge(0)]
+        heat_supply = filter_by(supply, bus_carrier=heat_buses).sum()
+        return withdrawal * heat_supply / supply.sum()
 
-        if len(supply.index.unique("bus_carrier").intersection(heat_buses)):
-            heat_supply = filter_by(supply, bus_carrier=heat_buses)
-            heat_share = heat_supply.item() / supply.sum()
-            withdrawal_for_heat = withdrawal * heat_share
-            to_concat.append(withdrawal_for_heat)
+    fuel_withdrawal = heat_production.groupby(
+        ["year", "location", "carrier"], group_keys=False
+    ).apply(_fuel_split)
 
-    primary_energy = pd.concat(to_concat)
+    assert "EU" not in fuel_withdrawal.index.unique("location")
 
-    assert not ("EU" in primary_energy.index.unique("location"))
-
-    # link_input = collect_myopic_statistics(
-    #     networks,
-    #     comps="Link",
-    #     statistic="energy_input",
-    #     bus_carrier=BusCarrier.heat_buses(),
-    # )
-    # link_input = drop_from_multtindex_by_regex(link_input, "DAC|water tanks")
-
-    generator_input = collect_myopic_statistics(
+    generator_supply = collect_myopic_statistics(
         networks,
-        statistic="energy_input",
+        statistic="supply",
         comps="Generator",
         bus_carrier=BusCarrier.heat_buses(),
     )
-    generator_input = drop_from_multtindex_by_regex(generator_input, "heat vent")
 
     exporter = Exporter(
-        statistics=[heat_production, generator_input],
+        statistics=[fuel_withdrawal.mul(-1), generator_supply],
         statistics_unit="MWh",
         view_config=config["view"],
     )
