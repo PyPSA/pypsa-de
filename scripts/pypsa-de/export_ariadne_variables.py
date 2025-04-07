@@ -1551,6 +1551,7 @@ def get_secondary_energy(n, region, _industry_demand):
         [
             "PHS",
             "hydro",
+            "ror",
         ]
     ).sum()
     # ! Neglecting PHS here because it is storage infrastructure
@@ -1655,7 +1656,7 @@ def get_secondary_energy(n, region, _industry_demand):
     assert isclose(
         electricity_supply[
             ~electricity_supply.index.str.contains(
-                "PHS" "|battery discharger" "|home battery discharger" "|V2G"
+                "battery discharger" "|home battery discharger" "|V2G"
             )
         ].sum(),
         var["Secondary Energy|Electricity"],
