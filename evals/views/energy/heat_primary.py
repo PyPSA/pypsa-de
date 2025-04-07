@@ -32,46 +32,21 @@ def view_heat_primary_energy(
     -----
     See eval docstring for parameter description.
     """
-    to_concat = []
-    eu_carrier = set()
-    for location_port in ("0", "1"):
-        # some Links draw from buses with EU location at port 0, others
-        # from port 1. We calculate both, drop EU from both results, merge
-        # the results and drop duplicates.
-        # todo: shouldn't this be done most of the time or always even?
-        #   idea -> grouper that returns the location but with EU fixed to localized locations
-        _link_energy_at_location_port = collect_myopic_statistics(
-            networks,
-            comps="Link",
-            statistic="energy_balance",
-            groupby=[
-                partial(get_location, location_port=location_port),
-                "carrier",
-                "bus_carrier",
-            ],
-        )
-        to_concat.append(_link_energy_at_location_port)
-        _eu_carrier_at_location_port = filter_by(
-            _link_energy_at_location_port, location="EU"
-        ).index.unique("carrier")
-        eu_carrier.union(_eu_carrier_at_location_port)
-
-    link_energy = (
-        pd.concat(to_concat).drop_duplicates().drop("EU", level=DataModel.LOCATION)
+    link_energy = collect_myopic_statistics(
+        networks,
+        comps="Link",
+        statistic="energy_balance",
     )
 
-    # test if some carrier were lost by dropping EU previously
-    # eu_carrier = eu_carrier_port_0.union(eu_carrier_port_1)
-    assert not any(eu_carrier.difference(link_energy.index.unique("carrier")))
-
     # drop non energy CO2 rows because they have mass unit and not energy
-    link_energy = link_energy.drop(["co2", "co2 stored"], level="bus_carrier")
+    # todo: is this really justified?
+    link_energy = link_energy.drop(["co2", "co2 stored"], level=DataModel.BUS_CARRIER)
 
     # only keep Links that have at least one heat bus_carrier connected at one of their branches
     carrier_with_heat_buses = []
     heat_buses = BusCarrier.heat_buses()
-    for carrier, data in link_energy.groupby("carrier"):
-        if len(data.index.unique("bus_carrier").intersection(heat_buses)):
+    for carrier, data in link_energy.groupby(DataModel.CARRIER):
+        if len(data.index.unique(DataModel.BUS_CARRIER).intersection(heat_buses)):
             carrier_with_heat_buses.append(carrier)
     heat_links = filter_by(link_energy, carrier=carrier_with_heat_buses)
 

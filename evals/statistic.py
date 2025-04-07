@@ -12,10 +12,8 @@ from pandas import DataFrame
 from pypsa.statistics import (
     StatisticsAccessor,
     aggregate_timeseries,
-    get_operation,
     get_weightings,
     groupers,
-    port_efficiency,
 )
 
 from evals.constants import (
@@ -42,7 +40,11 @@ logger = logging.getLogger(__file__)
 
 
 def get_location(
-    n: pypsa.Network, c: str, port: str = "", location_port: str = ""
+    n: pypsa.Network,
+    c: str,
+    port: str = "",
+    location_port: str = "",
+    avoid_eu_locations: bool = True,
 ) -> pd.Series:
     """
     Return the grouper series for the location of a component.
@@ -67,15 +69,33 @@ def get_location(
     location_port
         Use the specified port bus for the location, defaults to
         using the location of the 'port' bus.
+    avoid_eu_locations
+        Look into the port 0 and port 1 location in branch components
+        and prefer locations that are not 'EU'.
 
     Returns
     -------
     :
         A list of series to group statistics by.
     """
+    if avoid_eu_locations and c in n.branch_components:
+        bus0 = n.static(c)["bus0"].map(n.static("Bus").location).rename("loc0")
+        bus1 = n.static(c)["bus1"].map(n.static("Bus").location).rename("loc1")
+        buses = pd.concat([bus0, bus1], axis=1)
+
+        def _select_location(row) -> str:
+            if row.loc0 != "EU" or pd.isna(row.loc1):
+                return row.loc0
+            return row.loc1
+
+        return buses.apply(_select_location, axis=1).rename("location")
+
+        # selection order: country code > EU > NaN
+
+    # todo: probably obsolete?
     if location_port and c in n.branch_components:
-        bus_location = n.static(c)[f"bus{location_port}"]
-        return bus_location.map(n.static("Bus").location).rename(DataModel.LOCATION)
+        buses = n.static(c)[f"bus{location_port}"]
+        return buses.map(n.static("Bus").location).rename(DataModel.LOCATION)
 
     return n.static(c)[f"bus{port}"].map(n.buses.location).rename("location")
 
@@ -287,7 +307,7 @@ class ESMStatistics(StatisticsAccessor):
                 f"where signs are flipped).\n"
             )
             # fixme: just a note. There is a bug in the old Toolbox that
-            #  counts the a aforementioned amounts as demand (although
+            #  counts the aforementioned amounts as demand (although
             #  the amounts should be clipped.)
             p[Carrier.domestic_homes_and_trade] = p[
                 Carrier.domestic_homes_and_trade
@@ -485,7 +505,7 @@ class ESMStatistics(StatisticsAccessor):
                 df = df / su[efficiency]
             elif efficiency == "efficiency_store":
                 df = df * su[efficiency]
-            # The actual bus carrier in "AC" for both, PHS and hydro.
+            # The actual bus carrier is "AC" for both, PHS and hydro.
             # Since only PHS and hydro are considered, we can use the
             # bus_carrier level.
             result = insert_index_level(df, index_name, DataModel.BUS_CARRIER, axis=1)

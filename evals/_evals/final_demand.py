@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Evaluate the Final Energy Demand."""
 
 from functools import partial
@@ -268,8 +267,7 @@ def eval_fed_building_heat(
 
     metric = Metric(
         metric_name=(
-            "Final Energy Demand for Room Heat and "
-            "Warm Water Households and Services"
+            "Final Energy Demand for Room Heat and Warm Water Households and Services"
         ),
         is_unit="MWh",
         to_unit="TWh",
@@ -376,7 +374,8 @@ def eval_fed_hh_services(
 
 
 def final_energy_demand_statistics(networks: dict, result_path: Path) -> list:
-    """Return all final energy demand statistics.
+    """
+    Return all final energy demand statistics.
 
     The same energy demand statistics are used in the total
     and in the sectoral final energy demand evaluations.
@@ -405,7 +404,8 @@ def final_energy_demand_statistics(networks: dict, result_path: Path) -> list:
 
 
 def _fetch_fed_transport(networks: dict, result_path: Path) -> pd.Series | pd.DataFrame:
-    """Calculate the final energy demand for transport technologies.
+    """
+    Calculate the final energy demand for transport technologies.
 
     Parameters
     ----------
@@ -500,7 +500,8 @@ def _fetch_fed_transport(networks: dict, result_path: Path) -> pd.Series | pd.Da
 
 
 def _fetch_fed_industry(networks: dict, result_path: Path) -> pd.Series | pd.DataFrame:
-    """Calculate the final energy demand for the industry sector.
+    """
+    Calculate the final energy demand for the industry sector.
 
     Parameters
     ----------
@@ -532,7 +533,8 @@ def _fetch_fed_industry(networks: dict, result_path: Path) -> pd.Series | pd.Dat
 
 
 def _fetch_fed_decentral_heat(networks: dict) -> pd.Series | pd.DataFrame:
-    """Calculate the final energy demand for the decentral heat.
+    """
+    Calculate the final energy demand for the decentral heat.
 
     Heat from Generator coomponents is assumend to be solar thermal
     technologies. This assumption is checked using an assert statement.
@@ -585,7 +587,8 @@ def _fetch_fed_decentral_heat(networks: dict) -> pd.Series | pd.DataFrame:
 
 
 def _fetch_fed_district_heat(networks: dict) -> pd.Series | pd.DataFrame:
-    """Calculate the final energy demand for central (district) heat.
+    """
+    Calculate the final energy demand for central (district) heat.
 
     Grid losses and low temperature heat for industry parts are
     excluded.
@@ -643,7 +646,8 @@ def _fetch_fed_district_heat(networks: dict) -> pd.Series | pd.DataFrame:
 
 
 def _fetch_fed_homes_and_trade(networks: dict) -> pd.Series | pd.DataFrame:
-    """Calculate the final energy demand for domestic homes and trade.
+    """
+    Calculate the final energy demand for domestic homes and trade.
 
     Parameters
     ----------
