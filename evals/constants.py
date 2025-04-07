@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-"""Collect constant values and identifiers used for evaluations.
+"""
+Collect constant values and identifiers used for evaluations.
 
 Values in this module do not need to be changed during runtime.
 """
@@ -43,10 +44,13 @@ class BusCarrier:
     FT_1: str = "Fischer-Tropsch 1"
     FT_2: str = "Fischer-Tropsch 2"
     HEAT_URBAN_CENTRAL: str = "urban central heat"
-    HEAT_URBAN_SERVICES: str = "services urban decentral heat"
-    HEAT_URBAN_RESIDENTIAL: str = "residential urban decentral heat"
-    HEAT_RURAL_SERVICES: str = "services rural heat"
-    HEAT_RURAL_RESIDENTIAL: str = "residential rural heat"
+    HEAT_URBAN_DECENTRAL: str = "urban decentral heat"
+    HEAT_RURAL: str = "rural heat"
+    # ESM heat buses:
+    # HEAT_URBAN_SERVICES: str = "services urban decentral heat"
+    # HEAT_URBAN_RESIDENTIAL: str = "residential urban decentral heat"
+    # HEAT_RURAL_SERVICES: str = "services rural heat"
+    # HEAT_RURAL_RESIDENTIAL: str = "residential rural heat"
     LI_ION: str = "Li ion"
     BATTERY: str = "battery"
     HOME_BATTERY: str = "home battery"
@@ -63,6 +67,10 @@ class BusCarrier:
             cls.HOME_BATTERY,
             cls.EV_BATTERY,
         ]
+
+    @classmethod
+    def heat_buses(cls) -> list:
+        return [cls.HEAT_URBAN_CENTRAL, cls.HEAT_URBAN_DECENTRAL, cls.HEAT_RURAL]
 
 
 class Carrier:

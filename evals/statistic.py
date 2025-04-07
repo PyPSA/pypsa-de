@@ -9,12 +9,10 @@ from pathlib import Path
 
 import pandas as pd
 import pypsa
-from deprecation import deprecated
 from pandas import DataFrame
 from pypsa.statistics import (
     StatisticsAccessor,
     aggregate_timeseries,
-    get_bus_and_carrier,
     get_operation,
     get_weightings,
     groupers,
@@ -104,102 +102,12 @@ def get_location_from_name_at_port(
     return n.static(c)[f"bus{port}"].str.extract(pat, expand=False)
 
 
-@deprecated("Will be removed during migration.")
-def get_location_and_carrier_and_bus_carrier(
-    n: pypsa.Network,
-    c: str,
-    port: str = "",
-    nice_names: bool = False,
-    location_port: str = "",
-) -> list[pd.Series]:
-    """
-    Get location, carrier, and bus carrier.
-
-    Used in groupby statements to group statistics results.
-
-    The additional location port argument will swap the bus
-    location to the specified bus port locations. The default
-    location is the location from buses at the "port" argument.
-    But be careful, the location override will happen for all
-    ports of the component.
-
-    Note, that the bus_carrier will still be the bus_carrier
-    from the "port" argument, i.e. only the location is swapped.
-
-    Parameters
-    ----------
-    n
-        The network to evaluate.
-    c
-        The component name, e.g. 'Load', 'Generator', 'Link', etc.
-    port
-        Limit results to this branch port.
-    nice_names
-        Whether to return the carrier alias.
-    location_port
-        Use the specified port bus for the location, defaults to
-        using the location of the 'port' bus.
-
-    Returns
-    -------
-    :
-        A list of series to group statistics by.
-    """
-    bus, carrier = get_bus_and_carrier(n, c, port, nice_names=nice_names)
-
-    if location_port and c in n.branch_components:
-        bus_location = n.static(c)[f"bus{location_port}"]
-        location = bus_location.map(n.static("Bus").location).rename(DataModel.LOCATION)
-    else:
-        location = bus.map(n.static("Bus").location).rename(DataModel.LOCATION)
-
-    # Note, that we still use the original bus carrier from 'bus' here,
-    # even if location_port is being used.
-    bus_carrier = bus.map(n.static("Bus").carrier).rename(DataModel.BUS_CARRIER)
-
-    return [location, carrier, bus_carrier]
-
-
-@deprecated("Will be removed during migration.")
-def get_buses_and_carrier_and_bus_carrier(
-    n: pypsa.Network, c: str, port: str = "", nice_names: bool = True
-) -> list[pd.Series]:
-    """
-    Get src_bus, dst_bus, carrier, and bus carrier.
-
-    Used in groupby statements to group statistics results.
-
-    Parameters
-    ----------
-    n
-        The network to evaluate.
-    c
-        The component name, e.g. 'Load', 'Generator', 'Link', etc.
-    port
-        Limit results to this port.
-    nice_names
-        Whether to return the carrier alias, defaults to True.
-
-    Returns
-    -------
-    :
-        A list of series to group statistics by.
-    """
-    pat = f"({Regex.region.pattern})"
-    bus0 = n.static(c)["bus0"].str.extract(pat, expand=False)
-    bus1 = n.static(c)["bus1"].str.extract(pat, expand=False)
-    bus, carrier = get_bus_and_carrier(n, c, port, nice_names=nice_names)
-    bus_carrier = bus.map(n.static("Bus").carrier).rename(DataModel.BUS_CARRIER)
-    return [bus0, bus1, carrier, bus_carrier]
-
-
 def collect_myopic_statistics(
     networks: dict,
     statistic: str,
     aggregate_components: str | None = "sum",
-    # carrier: list | tuple = None,
     drop_zero_rows: bool = True,
-    **kwargs: object,
+    **kwargs: dict,
 ) -> pd.DataFrame | pd.Series:
     """
     Build a myopic statistic from loaded networks.
@@ -216,9 +124,6 @@ def collect_myopic_statistics(
         The name of the metric to build.
     aggregate_components
         The aggregation function to combine components by.
-    carrier
-        A list of carrier names used to filter the statistic. Only
-        carrier in the input will be returned. Returns all by default.
     drop_zero_rows
         Whether to drop rows from the returned statistic that have
         only zeros as values.
@@ -239,27 +144,29 @@ def collect_myopic_statistics(
 
     pypsa_statistics = [m[0] for m in getmembers(pypsa.statistics.StatisticsAccessor)]
 
-    # groupby custom function by default to reduce visual noise
-    if statistic in pypsa_statistics:
-        # PyPSA 0.32 support registering grouper functions
-        # https://github.com/PyPSA/PyPSA/pull/1078
-        # kwargs.setdefault("groupby", get_location_and_carrier_and_bus_carrier)
+    if statistic in pypsa_statistics:  # register a default to reduce verbosity
         kwargs.setdefault("groupby", ["location", "carrier", "bus_carrier"])
 
     year_statistics = []
     for year, n in networks.items():
-        statistic_func = getattr(n.statistics, statistic)
-        if not statistic_func:
-            raise ValueError(
-                f"Statistic '{statistic}' not found. "
-                f"Available statistics are: "
-                f"'{[m[0] for m in getmembers(n.statistics)]}'."
-            )
-        year_statistic = statistic_func(**kwargs)
+        func = getattr(n.statistics, statistic)
+        assert func, (
+            f"Statistic '{statistic}' not found. "
+            f"Available statistics are: "
+            f"'{[m[0] for m in getmembers(n.statistics)]}'."
+        )
+        year_statistic = func(**kwargs)
         year_statistic = insert_index_level(year_statistic, year, DataModel.YEAR)
         year_statistics.append(year_statistic)
 
     statistic = pd.concat(year_statistics, axis=0, sort=True)
+
+    if "EU" in statistic.index.unique(DataModel.LOCATION):
+        logger.debug(
+            f"EU node found in statistic:\n"
+            f"{filter_by(statistic, location='EU')}"
+            f"\n\nPlease check if this is intentional!"
+        )
 
     if aggregate_components and "component" in statistic.index.names:
         _names = statistic.index.droplevel("component").names

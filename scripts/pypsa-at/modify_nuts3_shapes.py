@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Modify the NUTS3 shapefile to lift NUTS regions."""
+"""Modify the NUTS3 shapefile for custom administrative clustering."""
 
 import logging
 
@@ -11,7 +11,8 @@ logger = logging.getLogger(__name__)
 
 
 def override_nuts(nuts_code: str | tuple, override: str, level: str = "level1") -> None:
-    """Update the NUTS codes.
+    """
+    Update the NUTS codes.
 
     Parameters
     ----------
@@ -32,7 +33,8 @@ def override_nuts(nuts_code: str | tuple, override: str, level: str = "level1") 
 
 
 def assert_expected_number_of_entries(nuts_code: str, expected: int, lvl: int = 1):
-    """Ensure that a specific number of entries are present for a NUTS code.
+    """
+    Ensure that a specific number of entries are present for a NUTS code.
 
     Parameters
     ----------

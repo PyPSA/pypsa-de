@@ -169,6 +169,36 @@ excel = true
 "methanolisation" = "Methanolisation"
 "solid biomass to hydrogen" = "H2 from Solid Biomass"
 
+[view.energy.heat_primary]
+name = "Primary Energy Demand for Heat Production"
+unit = "TWh"
+file_name = "nodal_energy_heat_primary_{location}"
+cutoff = 0.001
+legend_order = [
+    "",
+]
+
+[view.energy.heat_primary.checks]
+
+[view.energy.heat_primary.export]
+plotly = true
+csv = false
+excel = true
+
+[view.energy.heat_primary.categories]
+"AC" = "Electricity"
+"H2" = "Hydrogen"
+"coal" = "Coal"
+"gas" = "Methane"
+"lignite" = "Lignite"
+"low voltage" = "Electricity"
+"non-sequestered HVC" = "Waste"
+"oil" = "Oil"
+"rural heat" = "Solar"
+"solid biomass" = "Biomass"
+"urban central heat" = "Solar"
+"urban decentral heat" = "Solar"
+
 [view.timeseries.hydrogen]
 name = "Hydrogen Production and Demand"
 unit = "MWh"

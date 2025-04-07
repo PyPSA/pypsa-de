@@ -54,7 +54,8 @@ logger = logging.getLogger(__name__)
 def run_eval(
     result_path: click.Path, sub_directory: str, names: list, config_override: str
 ) -> None:
-    r"""Execute evaluation functions from the evals module.
+    r"""
+    Execute evaluation functions from the evals module.
 
     Find evaluation functions must be registered under
     evals.\__init__.\__all__ to be exposed and ultimately be found
