@@ -25,7 +25,7 @@ def view_gas_storage_capacities(
         networks,
         statistic="optimal_capacity",
         storage=True,
-        bus_carrier=[BusCarrier.H2, BusCarrier.CH4],
+        bus_carrier=[BusCarrier.H2],
     )
 
     metric = Exporter(
