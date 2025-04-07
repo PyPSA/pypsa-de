@@ -880,7 +880,7 @@ class Exporter:
         """
         self.default_checks()
 
-        if self.view_config["checks"]["balances_almost_zero"]:
+        if "balances_almost_zero" in self.view_config.get("checks", []):
             groups = [DataModel.YEAR, DataModel.LOCATION]
             yearly_sum = self.df.groupby(groups).sum().abs()
             balanced = yearly_sum < self.view_config["cutoff"]
@@ -897,31 +897,38 @@ class Exporter:
         """"""
         category = self.defaults.plotly.plot_category
         categories = self.view_config["categories"]
+        if "all_categories_mapped" not in self.view_config.get(
+            "disable_default_checks", []
+        ):
+            assert self.df.index.unique(category).isin(categories.keys()).all(), (
+                f"Incomplete categories detected. There are technologies in the metric "
+                f"data frame, that are not assigned to a group (nice name)."
+                f"\nMissing items: "
+                f"{self.df.index.unique(category).difference(categories.keys())}"
+            )
+        if "no_superfluous_categories" not in self.view_config.get(
+            "disable_default_checks", []
+        ):
+            superfluous_categories = self.df.index.unique(category).difference(
+                categories.keys()
+            )
+            assert (
+                len(superfluous_categories) == 0
+            ), f"Superfluous categories found: {superfluous_categories}"
 
-        assert self.df.index.unique(category).isin(categories.keys()).all(), (
-            f"Incomplete categories detected. There are technologies in the metric "
-            f"data frame, that are not assigned to a group (nice name)."
-            f"\nMissing items: "
-            f"{self.df.index.unique(category).difference(categories.keys())}"
-        )
-
-        superfluous_categories = self.df.index.unique(category).difference(
-            categories.keys()
-        )
-        assert (
-            len(superfluous_categories) == 0
-        ), f"Superfluous categories found: {superfluous_categories}"
-
-        a = set(self.view_config["legend_order"])
-        b = set(categories.values())
-        additional = a.difference(b)
-        assert (
-            not additional
-        ), f"Superfluous categories defined in legend order: {additional}"
-        missing = b.difference(a)
-        assert (
-            not missing
-        ), f"Some categories are not defined in legend order: {missing}"
+        if "legend_entry_order" not in self.view_config.get(
+            "disable_default_checks", []
+        ):
+            a = set(self.view_config["legend_order"])
+            b = set(categories.values())
+            additional = a.difference(b)
+            assert (
+                not additional
+            ), f"Superfluous categories defined in legend order: {additional}"
+            missing = b.difference(a)
+            assert (
+                not missing
+            ), f"Some categories are not defined in legend order: {missing}"
 
     def make_evaluation_result_directories(
         self, result_path: Path, subdir: Path | str

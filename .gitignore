@@ -92,3 +92,6 @@ cutouts
 local
 # private dev folder
 dev/*
+
+#folder quick marimo evals
+.marimo/JM_marimo_bs

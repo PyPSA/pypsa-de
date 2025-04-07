@@ -26,9 +26,9 @@ legend_order = [
     "Heat Pump",
     "Storage In",
 ]
+disable_default_checks = [] #"legend_entry_order" , "no_superfluous_categories", "all_categories_mapped"
+checks = [] #"balances_almost_zero"
 
-[view.capacity.heat.checks]
-balances_almost_zero = false
 
 [view.capacity.heat.export]
 plotly = true
@@ -71,17 +71,13 @@ legend_order = [
     "Run-of-River",
     "Wind Power",
 ]
+disable_default_checks = [] #"legend_entry_order" , "no_superfluous_categories", "all_categories_mapped"
+checks = [] #"balances_almost_zero"
 
 [view.capacity.ac_production.export]
 plotly = true
 csv = true
 excel = false
-
-[view.capacity.ac_production.checks]
-all_categories_mapped = true
-no_superfluous_categories = true
-yearly_balances_almost_zero = false
-legend_entry_order = true
 
 [view.capacity.ac_production.categories]
 "CCGT" = "Gas Turbine"
@@ -138,9 +134,8 @@ legend_order = [
     "Export Domestic",
     "Export European",
 ]
-
-[view.balance.hydrogen.checks]
-balances_almost_zero = true
+disable_default_checks = [] #"legend_entry_order" , "no_superfluous_categories", "all_categories_mapped"
+checks = ["balances_almost_zero"] #"balances_almost_zero"
 
 [view.balance.hydrogen.export]
 plotly = true
@@ -177,8 +172,8 @@ cutoff = 0.001
 legend_order = [
     "",
 ]
-
-[view.energy.heat_primary.checks]
+disable_default_checks = [] #"legend_entry_order" , "no_superfluous_categories", "all_categories_mapped"
+checks = [] #"balances_almost_zero"
 
 [view.energy.heat_primary.export]
 plotly = true
@@ -223,9 +218,8 @@ legend_order = [
     "Transport",
     "Industry",
 ]
-
-[view.timeseries.hydrogen.checks]
-balances_almost_zero = true
+disable_default_checks = [] #"legend_entry_order" , "no_superfluous_categories", "all_categories_mapped"
+checks = ["balances_almost_zero"] #"balances_almost_zero"
 
 [view.timeseries.hydrogen.export]
 plotly = true
@@ -259,8 +253,8 @@ unit = "TWh"
 file_name = "capacity_ac_storage_{location}"
 cutoff = 0.00001  # 1 MWh
 legend_order = []
-
-[view.capacity.ac_storage.checks]
+disable_default_checks = [] #"legend_entry_order" , "no_superfluous_categories", "all_categories_mapped"
+checks = [] #"balances_almost_zero"
 
 [view.capacity.ac_storage.export]
 plotly = true
@@ -278,9 +272,8 @@ cutoff = 0.00001  # 1 MWh
 legend_order = [
     "Methane Store",
     "Hydrogen Store"]
-
-[view.capacity.gas_storage.checks]
-balances_almost_zero = false
+disable_default_checks = []
+checks = ["balances_almost_zero"]
 
 [view.capacity.gas_storage.export]
 plotly = true
