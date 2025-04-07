@@ -667,11 +667,15 @@ class ESMStatistics(StatisticsAccessor):
         in the form of the input branch carrier, i.e. the bus0
         bus_carrier, needed to produce the energy at the branch.
 
+        todo: broken for branch components with multiple inputs:
+            This is not enough for Links that draw from multiple buses, such
+            as 'methanolisation' which has bus0 = 'H2', Bus2 = 'AC' and
+            bus3 = 'CO2' with efficiencies of 0.8787, -0.238085 and -0.217926
+            respectively.
+
         The bus0 branch is also referred to the source branch, and the
         branch with the requested bus_carrier energies is referred to
         as the target branch.
-
-        Beware, that this statistic may not be correct for CO2?
 
         Parameters
         ----------
@@ -718,8 +722,7 @@ class ESMStatistics(StatisticsAccessor):
 
             If include_losses is True, the efficiency fraction is
             skipped for port "1" branches and the full amount of energy
-            needed to produce energy of branch "1" will ultimately be
-            returned.
+            needed to produce energy of branch "1" is returned.
 
             Returns
             -------
@@ -739,6 +742,7 @@ class ESMStatistics(StatisticsAccessor):
             elif port == "1" and not include_losses:
                 return port_efficiency(n, comps, port=port)
 
+            # else: calculate the share relative to branch 1
             eff_port_1 = port_efficiency(n, comps, port="1")
             eff_target = port_efficiency(n, comps, port=port)
             return eff_target / (eff_port_1 + eff_target)
@@ -747,14 +751,17 @@ class ESMStatistics(StatisticsAccessor):
         if bus_carrier:
             buses = buses.query("carrier in @bus_carrier")
 
-        comp = n.static(comps).reset_index()
+        c = n.static(comps).reset_index()
 
-        ports = [col[3:] for col in n.static(comps).filter(like="bus")]
+        component_ports = sorted(
+            [col[3:] for col in n.static(comps).filter(like="bus")]
+        )
 
         port_results = []
-        for port in ports:
+        for port in component_ports:
             time_series = get_operation(n, comps).T
             efficiency_share = _calculate_efficiency_share()
+            # fixme: port1 should div?
             time_series = time_series.mul(efficiency_share, axis=0)
 
             bus_comp = buses.merge(
@@ -768,14 +775,19 @@ class ESMStatistics(StatisticsAccessor):
             bus = "bus0" if comps in n.branch_components else "bus"
             p[DataModel.BUS_CARRIER] = p[bus].map(n.static("Bus")[DataModel.CARRIER])
 
+            # Links also have a location column that is emtpy by default
+            _location = (
+                DataModel.LOCATION + "_bus" if "location" in c else DataModel.LOCATION
+            )
+
             # support location switching from EU to country nodes
             if location_port and comps in n.branch_components:
-                p[DataModel.LOCATION] = p[f"bus{location_port}"].map(
+                p[_location] = p[f"bus{location_port}"].map(
                     n.static("Bus")[DataModel.LOCATION]
                 )
 
             carrier_col = "type" if comps == "Line" else DataModel.CARRIER
-            p = p.set_index([DataModel.LOCATION, carrier_col, DataModel.BUS_CARRIER])
+            p = p.set_index([_location, carrier_col, DataModel.BUS_CARRIER])
             p.index.names = DataModel.IDX_NAMES
             p = p.filter(n.snapshots, axis=1)
 
