@@ -259,7 +259,7 @@ class ESMStatistics(StatisticsAccessor):
 
         p = self.energy_balance(
             comps="Load",
-            groupby=get_location_and_carrier_and_bus_carrier,
+            groupby=["location", "carrier", "bus_carrier"],
             bus_carrier=BusCarrier.AC,
             nice_names=False,
         )
@@ -334,14 +334,14 @@ class ESMStatistics(StatisticsAccessor):
         carrier = [Carrier.bev, Carrier.bev_charger, Carrier.v2g]
         supply = self.supply(
             comps="Link",
-            groupby=get_location_and_carrier_and_bus_carrier,
+            groupby=["location", "carrier", "bus_carrier"],
             bus_carrier=[BusCarrier.AC, BusCarrier.LI_ION],
         )
         supply = filter_by(supply, carrier=carrier)
 
         withdrawal = self.withdrawal(
             comps="Link",
-            groupby=get_location_and_carrier_and_bus_carrier,
+            groupby=["location", "carrier", "bus_carrier"],
             bus_carrier=[BusCarrier.AC, BusCarrier.LI_ION],
         )
         withdrawal = filter_by(withdrawal, carrier=carrier)
@@ -628,7 +628,7 @@ class ESMStatistics(StatisticsAccessor):
         capacity = self.optimal_capacity(
             comps=n.branch_components,
             bus_carrier=bus_carrier,
-            groupby=get_buses_and_carrier_and_bus_carrier,
+            groupby=["bus0", "bus1", "carrier", "bus_carrier"],
             nice_names=False,
         ).to_frame()
         trade_type = capacity.apply(
@@ -771,7 +771,7 @@ class ESMStatistics(StatisticsAccessor):
             time_series = time_series.mul(efficiency_share, axis=0)
 
             bus_comp = buses.merge(
-                comp, left_on="Bus", right_on=f"bus{port}", suffixes=("_bus", "")
+                c, left_on="Bus", right_on=f"bus{port}", suffixes=("_bus", "")
             )
             p = bus_comp.merge(time_series, on=comps)
 
@@ -824,7 +824,7 @@ class ESMStatistics(StatisticsAccessor):
                 "urban central heat",
                 "AC",
             ],
-            groupby=get_location_and_carrier_and_bus_carrier,
+            groupby=["location", "carrier", "bus_carrier"],
         )
         heat_pump = energy_balance.filter(like="heat pump", axis=0)
 
@@ -912,7 +912,7 @@ class ESMStatistics(StatisticsAccessor):
         capacities = n.statistics.optimal_capacity(
             comps=comps or n.branch_components,
             bus_carrier=bus_carrier,
-            groupby=get_buses_and_carrier_and_bus_carrier,
+            groupby=["bus0", "bus1", "carrier", "bus_carrier"],
         )
         result = filter_by(capacities, carrier=carrier)
 
@@ -966,7 +966,7 @@ class ESMStatistics(StatisticsAccessor):
 
         energy_transmission = n.statistics.transmission(
             comps=comps,
-            groupby=get_buses_and_carrier_and_bus_carrier,
+            groupby=["bus0", "bus1", "carrier", "bus_carrier"],
             bus_carrier=bus_carrier,
             aggregate_time=False,
         )

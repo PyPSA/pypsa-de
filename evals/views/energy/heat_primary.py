@@ -43,24 +43,24 @@ def view_heat_primary_energy(
     #
     # do this and filter for carrier, that have one of the heat buses in the bus_carrier
     # index level. é voila, we should have everything we need?
-    a = collect_myopic_statistics(
+    link_energy = collect_myopic_statistics(
         networks,
         comps="Link",
         statistic="energy_balance",
-        groupby=[partial(get_location, location_port=1), "carrier", "bus_carrier"],
+        groupby=[partial(get_location, location_port=2), "carrier", "bus_carrier"],
     )
 
     carrier_with_heat_buses = []
     heat_buses = BusCarrier.heat_buses()
-    for carrier, data in a.groupby("carrier"):
+    for carrier, data in link_energy.groupby("carrier"):
         if len(data.index.unique("bus_carrier").intersection(heat_buses)):
             carrier_with_heat_buses.append(carrier)
 
-    a = filter_by(a, carrier=carrier_with_heat_buses)
+    heat_links = filter_by(link_energy, carrier=carrier_with_heat_buses)
 
-    for idx, _ in a.groupby(["year", "location", "carrier"]):
-        if idx[3] in heat_buses:
-            print(idx)
+    heat_production = drop_from_multtindex_by_regex(heat_links, "DAC|water tanks")
+
+    filter_by(heat_production, year="2045", location="EU").index.unique("carrier")
 
     link_input = collect_myopic_statistics(
         networks,
