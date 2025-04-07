@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Export Electricity production capacities."""
 
 from pathlib import Path
@@ -9,7 +8,7 @@ from evals.plots.barchart import ESMBarChart
 from evals.statistic import collect_myopic_statistics
 
 
-def view_electricity_capacities(
+def view_electricity_production_capacities(
     result_path: str | Path,
     networks: dict,
     config: dict,
@@ -46,9 +45,11 @@ def view_electricity_capacities(
 
     metric = Exporter(
         statistics=[ac_capacity],
-        statistics_unit="MW",
+        statistics_unit=ac_capacity.attrs["unit"],
         view_config=config["view"],
     )
 
+    # view specific constant settings
     metric.defaults.plotly.chart = ESMBarChart
+
     metric.export(result_path, subdir)

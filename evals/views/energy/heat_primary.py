@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Module for primary energy evaluations."""
 
 from functools import partial
@@ -8,7 +7,7 @@ from evals.constants import BusCarrier, DataModel
 from evals.fileio import Exporter
 from evals.plots.barchart import ESMBarChart
 from evals.statistic import collect_myopic_statistics, get_location
-from evals.utils import drop_from_multtindex_by_regex
+from evals.utils import drop_from_multtindex_by_regex, filter_by
 
 
 def view_heat_primary_energy(
@@ -50,6 +49,18 @@ def view_heat_primary_energy(
         statistic="energy_balance",
         groupby=[partial(get_location, location_port=1), "carrier", "bus_carrier"],
     )
+
+    carrier_with_heat_buses = []
+    heat_buses = BusCarrier.heat_buses()
+    for carrier, data in a.groupby("carrier"):
+        if len(data.index.unique("bus_carrier").intersection(heat_buses)):
+            carrier_with_heat_buses.append(carrier)
+
+    a = filter_by(a, carrier=carrier_with_heat_buses)
+
+    for idx, _ in a.groupby(["year", "location", "carrier"]):
+        if idx[3] in heat_buses:
+            print(idx)
 
     link_input = collect_myopic_statistics(
         networks,
