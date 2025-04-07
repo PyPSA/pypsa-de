@@ -90,16 +90,19 @@ def get_location_from_name_at_port(
     Parameters
     ----------
     n
+        The network to evaluate.
     c
+        The component name, e.g. 'Load', 'Generator', 'Link', etc.
     port
+        Limit results to this branch port.
 
     Returns
     -------
     :
 
     """
-    pat = f"({Regex.region.pattern})"
-    return n.static(c)[f"bus{port}"].str.extract(pat, expand=False)
+    group = f"({Regex.region.pattern})"
+    return n.static(c)[f"bus{port}"].str.extract(group, expand=False)
 
 
 def collect_myopic_statistics(
@@ -107,7 +110,7 @@ def collect_myopic_statistics(
     statistic: str,
     aggregate_components: str | None = "sum",
     drop_zero_rows: bool = True,
-    **kwargs: dict,
+    **kwargs: object,
 ) -> pd.DataFrame | pd.Series:
     """
     Build a myopic statistic from loaded networks.
@@ -128,17 +131,17 @@ def collect_myopic_statistics(
         Whether to drop rows from the returned statistic that have
         only zeros as values.
     **kwargs
-        Any key word argument accepted by the metric method.
+        Any key word argument accepted by the statistics function.
 
     Returns
     -------
     :
-        The built metric with the year as the outermost index level.
+        The built statistic with the year as the outermost index level.
 
     Raises
     ------
     ValueError
-        In case a non-existent metric was requested.
+        In case a non-existent statistics function was requested.
     """
     kwargs = kwargs or {}
 
