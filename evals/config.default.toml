@@ -270,25 +270,23 @@ excel = false
 [view.capacity.ac_storage.categories]
 "" = ""
 
-[view.capacity.gas_storage_capacities]
+[view.capacity.gas_storage]
 name = "Gas Storage Volumes"
 unit = "TWh"
 file_name = "capacity_gas_storage_{location}"
 cutoff = 0.00001  # 1 MWh
-legend_order = ['Methane Store',
-                'H2 Store']
+legend_order = [
+    "Methane Store",
+    "Hydrogen Store"]
 
-[view.capacity.gas_storage_capacities.checks]
-all_categories_mapped = true
-no_superfluous_categories = true
+[view.capacity.gas_storage.checks]
 balances_almost_zero = false
-legend_entry_order = true
 
-[view.capacity.gas_storage_capacities.export]
+[view.capacity.gas_storage.export]
 plotly = true
 csv = false
 excel = false
 
-[view.capacity.gas_storage_capacities.categories]
-"H2 Store" = "H2 Store"
+[view.capacity.gas_storage.categories]
+"H2 Store" = "Hydrogen Store"
 "gas" = "Methane Store"
