@@ -1242,11 +1242,11 @@ class Mapping:
             BusCarrier.FT_1: Group.oil,
             BusCarrier.FT_2: Group.oil,
             BusCarrier.SOLID_BIOMASS: Group.biomass,
-            BusCarrier.HEAT_RURAL_SERVICES: Group.heat,
-            BusCarrier.HEAT_RURAL_RESIDENTIAL: Group.industry,
-            BusCarrier.HEAT_URBAN_CENTRAL: Group.heat_district,
-            BusCarrier.HEAT_URBAN_SERVICES: Group.heat_district,
-            BusCarrier.HEAT_URBAN_RESIDENTIAL: Group.heat_district,
+            # BusCarrier.HEAT_RURAL_SERVICES: Group.heat,
+            # BusCarrier.HEAT_RURAL_RESIDENTIAL: Group.industry,
+            # BusCarrier.HEAT_URBAN_CENTRAL: Group.heat_district,
+            # BusCarrier.HEAT_URBAN_SERVICES: Group.heat_district,
+            # BusCarrier.HEAT_URBAN_RESIDENTIAL: Group.heat_district,
         }
     )
 

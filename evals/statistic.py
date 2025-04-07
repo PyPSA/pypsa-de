@@ -567,7 +567,9 @@ class ESMStatistics(StatisticsAccessor):
             ).merge(n.pnl(c).get(f"p{port}").T, on=c)
 
             _location = (
-                DataModel.LOCATION + "_bus" if c == "Link" else DataModel.LOCATION
+                DataModel.LOCATION + "_bus"
+                if "location" in comp
+                else DataModel.LOCATION
             )
             p = p.set_index([_location, DataModel.CARRIER, "carrier_bus"])
             p.index.names = DataModel.IDX_NAMES
