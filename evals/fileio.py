@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Input - Output related functions."""  # noqa: A005
 
 import inspect
@@ -15,12 +14,7 @@ import pypsa
 from pydantic.v1.utils import deep_update
 
 from evals.configs import ViewDefaults
-from evals.constants import (
-    NOW,
-    TITLE_SUFFIX,
-    DataModel,
-    Regex,
-)
+from evals.constants import COLOUR_SCHEME_BMK, NOW, TITLE_SUFFIX, DataModel, Regex
 from evals.excel import export_excel_countries, export_excel_regions_at
 from evals.utils import (
     add_dummy_rows,
@@ -929,6 +923,11 @@ class Exporter:
             assert (
                 not missing
             ), f"Some categories are not defined in legend order: {missing}"
+
+        no_color = [c for c in categories.values() if c not in COLOUR_SCHEME_BMK]
+        assert (
+            len(no_color) == 0
+        ), f"Some categories used in the view do not have a color assigned: {no_color}"
 
     def make_evaluation_result_directories(
         self, result_path: Path, subdir: Path | str
