@@ -26,13 +26,8 @@ legend_order = [
     "Heat Pump",
     "Storage In",
 ]
-disable_default_checks = [] #"legend_entry_order" , "no_superfluous_categories", "all_categories_mapped"
 checks = [] #"balances_almost_zero"
-
-[view.capacity.heat.export]
-plotly = true
-csv = true
-excel = true
+exports = ['csv','excel'] # 'csv', 'excel'
 
 [view.capacity.heat.categories]
 "DAC" = "Direct Air Capture"
@@ -76,13 +71,8 @@ legend_order = [
     "Biogas",
     "Oil",
 ]
-disable_default_checks = [] #"legend_entry_order" , "no_superfluous_categories", "all_categories_mapped"
 checks = [] #"balances_almost_zero"
-
-[view.capacity.ac_production.export]
-plotly = true
-csv = true
-excel = false
+exports = ['csv'] # 'csv', 'excel'
 
 [view.capacity.ac_production.categories]
 "CCGT" = "Thermal Powerplants"
@@ -139,13 +129,9 @@ legend_order = [
     "Export Domestic",
     "Export European",
 ]
-disable_default_checks = [] #"legend_entry_order" , "no_superfluous_categories", "all_categories_mapped"
 checks = ["balances_almost_zero"] #"balances_almost_zero"
-
-[view.balance.hydrogen.export]
-plotly = true
-csv = true
-excel = true
+#plotly always enabled
+exports = ['csv','excel'] # 'csv', 'excel'
 
 [view.balance.hydrogen.categories]
 "ammonia cracker" = "Ammonia Cracking"
@@ -177,13 +163,9 @@ cutoff = 0.001
 legend_order = [
     "",
 ]
-disable_default_checks = [] #"legend_entry_order" , "no_superfluous_categories", "all_categories_mapped"
 checks = [] #"balances_almost_zero"
-
-[view.energy.heat_primary.export]
-plotly = true
-csv = false
-excel = true
+#plotly always enabled
+exports = ['excel'] # 'csv', 'excel'
 
 [view.energy.heat_primary.categories]
 "AC" = "Electricity"
@@ -223,13 +205,9 @@ legend_order = [
     "Transport",
     "Industry",
 ]
-disable_default_checks = [] #"legend_entry_order" , "no_superfluous_categories", "all_categories_mapped"
 checks = ["balances_almost_zero"] #"balances_almost_zero"
-
-[view.timeseries.hydrogen.export]
-plotly = true
-csv = false
-excel = false
+#plotly always enabled
+exports = [] # 'csv', 'excel'
 
 [view.timeseries.hydrogen.categories]
 "ammonia cracker" = "Ammonia Cracking"
@@ -258,13 +236,9 @@ unit = "TWh"
 file_name = "capacity_ac_storage_{location}"
 cutoff = 0.00001  # 1 MWh
 legend_order = []
-disable_default_checks = [] #"legend_entry_order" , "no_superfluous_categories", "all_categories_mapped"
 checks = [] #"balances_almost_zero"
-
-[view.capacity.ac_storage.export]
-plotly = true
-csv = false
-excel = false
+#plotly always enabled
+exports = [] # 'csv', 'excel'
 
 [view.capacity.ac_storage.categories]
 "" = ""
@@ -277,13 +251,9 @@ cutoff = 0.00001  # 1 MWh
 legend_order = [
     "Methane Store",
     "Hydrogen Store"]
-disable_default_checks = []
 checks = ["balances_almost_zero"]
-
-[view.capacity.gas_storage.export]
-plotly = true
-csv = false
-excel = false
+#plotly always enabled
+exports = [] # 'csv', 'excel'
 
 [view.capacity.gas_storage.categories]
 "H2 Store" = "Hydrogen Store"
