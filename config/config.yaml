@@ -4,17 +4,17 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20250327-Pricing
+  prefix: 20250407-Pricing
 
   name:
   - KN2045_Bal_v4
-  # - KN2045_Bal_v4_voll
-  # - KN2045_Bal_v4_voll_1H 
+  - KN2045_Bal_v4_voll
+  - KN2045_Bal_v4_voll_1H 
   # - KN2045_Bal_v4_24H
   # - KN2045_Bal_v4_365H
   # - KN2045_Bal_v4_elastic5GW
-  # - KN2045_Bal_v4_elasticAll
-  # - KN2045_Bal_v4_elasticPWL
+  - KN2045_Bal_v4_elasticAll
+  - KN2045_Bal_v4_elasticPWL
   # - KN2045_Bal_v4_upstream
 
   scenarios:
@@ -562,8 +562,71 @@ solving:
         2035: 25
         2040: 30
         2045: 35
+
   solver:
-    options: gurobi-default  # gurobi-numeric-focus  
+    name: gurobi
+    options: gurobi-default
+
+  solver_options:
+      gurobi-elastic: # elastic cases still getting suboptimal solutions but making sense
+        method: 2
+        crossover: 1
+        BarConvTol: 1.e-8
+        BarQCPConvTol: 1.e-8 # 1.e-8 also fine
+        NumericFocus: 1 # 0 also fine
+        ScaleFlag: 2
+        Presolve: 1 # 2 lets code crash
+        PreDual: 1
+        AggFill: -1 # default
+        BarHomogeneous: 1
+        threads: 8 # not sure if that makes a difference
+      gurobi-default:
+        threads: 8
+        method: 2 # barrier
+        crossover: 0
+        BarConvTol: 1.e-6
+        Seed: 123
+        AggFill: 0
+        PreDual: 0
+        GURO_PAR_BARDENSETHRESH: 200
+      gurobi-numeric-focus:
+        NumericFocus: 3       # Favour numeric stability over speed
+        method: 2             # barrier
+        crossover: 0          # do not use crossover
+        BarHomogeneous: 1     # Use homogeneous barrier if standard does not converge
+        BarConvTol: 1.e-5
+        FeasibilityTol: 1.e-4
+        OptimalityTol: 1.e-4
+        ObjScale: -0.5
+        threads: 8
+        Seed: 123
+      gurobi-fallback:        # Use gurobi defaults
+        crossover: 0
+        method: 2             # barrier
+        BarHomogeneous: 1     # Use homogeneous barrier if standard does not converge
+        BarConvTol: 1.e-5
+        FeasibilityTol: 1.e-5
+        OptimalityTol: 1.e-5
+        Seed: 123
+        threads: 8
+
+  # Pricing Paper Fabian
+  # solver_options:
+  #   gurobi-default:
+  #     method: 2
+  #     crossover: 0
+  #     BarConvTol: 1.e-8
+  #     Seed: 123
+  #     AggFill: 0
+  #     PreDual: 0
+  #     seed: 10
+  #   gurobi-numeric:
+  #     method: 2
+  #     crossover: 0
+  #     BarConvTol: 1.e-8
+  #     NumericFocus: 1
+  #     AggFill: 0
+  #     PreDual: 0
 
 plotting:
   tech_colors:

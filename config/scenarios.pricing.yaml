@@ -302,7 +302,8 @@ KN2045_Bal_v4_elasticAll:
     elastic_load: 5000 # MW
 
   solver:
-    options: gurobi-numeric-focus
+    name: gurobi
+    options: gurobi-elastic
 
 KN2045_Bal_v4_elasticPWL:
 # Ausgewogener Mix an Technologien zur Dekarbonisierung der Sektoren
@@ -392,6 +393,10 @@ KN2045_Bal_v4_elasticPWL:
         intercept: [4000, 200, 100]
         slope: [40, 20, 10]
         nominal: [95, 5, 10]
+
+  solver:
+    name: gurobi
+    options: gurobi-elastic
 
 KN2045_Bal_v4_upstream:
 # Ausgewogener Mix an Technologien zur Dekarbonisierung der Sektoren

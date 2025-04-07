@@ -118,7 +118,7 @@ def get_supply_demand(n, buses, timestep, co2_add_on=False):
 
         if n.generators.loc[gen].carrier in ["load-shedding", "load"]: # alter values for load shedding
             volume_bid = p
-            mc = p * n.generators.loc[gen].marginal_cost_quadratic + n.generators.loc[gen].marginal_cost
+            mc = p * max(n.generators.loc[gen].marginal_cost_quadratic, n.generators_t.marginal_cost_quadratic.loc[timestep, gen]) + n.generators.loc[gen].marginal_cost
             mc_final = mc   
         
         supply.loc[gen] = [mc, capex_add_on, p_nom_opt, p, volume_bid, mc_final, carrier]
@@ -709,11 +709,19 @@ if __name__ == "__main__":
         ask = {}
         bid = {}
 
+        # # with parallelisation
+        # for year in planning_horizons:
+        #     logger.info(f"Calculating supply and demand prices for year {year}")
+        #     n = networks[year]
+        #     ask[year] = get_all_supply_prices_parallel(n, bus, processes=nprocesses)
+        #     bid[year] = get_all_demand_prices_parallel(n, bus, processes=nprocesses) 
+        
+        # without parallelisation
         for year in planning_horizons:
-                logger.info(f"Calculating supply and demand prices for year {year}")
-                n = networks[year]
-                ask[year] = get_all_supply_prices_parallel(n, bus, processes=nprocesses)
-                bid[year] = get_all_demand_prices_parallel(n, bus, processes=nprocesses) 
+            logger.info(f"Calculating supply and demand prices for year {year}")
+            n = networks[year]
+            bid[year] = get_all_supply_prices(n, bus)
+            ask[year] = get_all_demand_prices(n, bus)
         
         with open(snakemake.output.pricing + "ask.pkl", 'wb') as file:
             pickle.dump(ask, file)
