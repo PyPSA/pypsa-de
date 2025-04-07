@@ -26,8 +26,8 @@ legend_order = [
     "Heat Pump",
     "Storage In",
 ]
-checks = [] #"balances_almost_zero"
-exports = ['csv','excel'] # 'csv', 'excel'
+checks = []
+exports = ["csv","excel"]
 
 [view.capacity.heat.categories]
 "DAC" = "Direct Air Capture"
@@ -71,8 +71,8 @@ legend_order = [
     "Biogas",
     "Oil",
 ]
-checks = [] #"balances_almost_zero"
-exports = ['csv'] # 'csv', 'excel'
+checks = []
+exports = ["csv"]
 
 [view.capacity.ac_production.categories]
 "CCGT" = "Thermal Powerplants"
@@ -129,9 +129,8 @@ legend_order = [
     "Export Domestic",
     "Export European",
 ]
-checks = ["balances_almost_zero"] #"balances_almost_zero"
-#plotly always enabled
-exports = ['csv','excel'] # 'csv', 'excel'
+checks = ["balances_almost_zero"]
+exports = ["csv","excel"]
 
 [view.balance.hydrogen.categories]
 "ammonia cracker" = "Ammonia Cracking"
@@ -163,9 +162,8 @@ cutoff = 0.001
 legend_order = [
     "",
 ]
-checks = [] #"balances_almost_zero"
-#plotly always enabled
-exports = ['excel'] # 'csv', 'excel'
+checks = []
+exports = ["excel"]
 
 [view.energy.heat_primary.categories]
 "AC" = "Electricity"
@@ -205,9 +203,8 @@ legend_order = [
     "Transport",
     "Industry",
 ]
-checks = ["balances_almost_zero"] #"balances_almost_zero"
-#plotly always enabled
-exports = [] # 'csv', 'excel'
+checks = ["balances_almost_zero"]
+exports = []
 
 [view.timeseries.hydrogen.categories]
 "ammonia cracker" = "Ammonia Cracking"
@@ -236,9 +233,8 @@ unit = "TWh"
 file_name = "capacity_ac_storage_{location}"
 cutoff = 0.00001  # 1 MWh
 legend_order = []
-checks = [] #"balances_almost_zero"
-#plotly always enabled
-exports = [] # 'csv', 'excel'
+checks = []
+exports = []
 
 [view.capacity.ac_storage.categories]
 "" = ""
@@ -248,12 +244,9 @@ name = "Gas Storage Volumes"
 unit = "TWh"
 file_name = "capacity_gas_storage_{location}"
 cutoff = 0.00001  # 1 MWh
-legend_order = [
-    "Methane Store",
-    "Hydrogen Store"]
+legend_order = ["Methane Store", "Hydrogen Store"]
 checks = ["balances_almost_zero"]
-#plotly always enabled
-exports = [] # 'csv', 'excel'
+exports = []
 
 [view.capacity.gas_storage.categories]
 "H2 Store" = "Hydrogen Store"
