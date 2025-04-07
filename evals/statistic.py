@@ -650,6 +650,9 @@ class ESMStatistics(StatisticsAccessor):
 
         return trade_capacity.squeeze()
 
+    def primary_energy(self, bus_carrier):
+        """"""
+
     def energy_input(
         self,
         comps: str,

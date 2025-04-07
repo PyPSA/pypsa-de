@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Export time series views for hydrogen."""
 
 from pathlib import Path

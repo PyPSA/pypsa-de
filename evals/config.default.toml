@@ -64,17 +64,23 @@ legend_order = [
     "Reservoir",
     "Run-of-River",
     "Wind Power",
+    "Coal",
+    "Hydrogen",
+    "Solar Power",
+    "Solid Biomass",
+    "Biogas",
+    "Oil",
 ]
 checks = [] #"balances_almost_zero"
 exports = ['csv'] # 'csv', 'excel'
 
 [view.capacity.ac_production.categories]
-"CCGT" = "Gas Turbine"
-"H2 OCGT" = "H2 Turbine"
-"H2 turbine" = "H2 Turbine"
-"OCGT" = "Gas Turbine"
+"CCGT" = "Thermal Powerplants"
+"H2 OCGT" = "Hydrogen"
+"H2 turbine" = "Hydrogen"
+"OCGT" = "Thermal Powerplants"
 "PHS" = "Pumped Hydro Storage"
-"allam gas" = "Gas Turbine"
+"allam gas" = "Thermal Powerplants"
 "biogas" = "Biogas"
 "coal" = "Coal"
 "hydro" = "Reservoir"
@@ -85,10 +91,10 @@ exports = ['csv'] # 'csv', 'excel'
 "oil" = "Oil"
 "onwind" = "Wind Power"
 "ror" = "Run-of-River"
-"solar" = "PV"
-"solar-hsat" = "PV"
-"solid biomass" = "Biomass"
-"urban central CHP" = "Thermal Powerplants"  # duplicate of gas CHP
+"solar" = "Solar Power"
+"solar-hsat" = "Solar Power"
+"solid biomass" = "Solid Biomass"
+"urban central CHP" = "Thermal Powerplants"
 "urban central coal CHP" = "Thermal Powerplants"
 "urban central gas CHP" = "Thermal Powerplants"
 "urban central lignite CHP" = "Thermal Powerplants"
