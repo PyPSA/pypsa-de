@@ -32,50 +32,39 @@ def view_heat_primary_energy(
     -----
     See eval docstring for parameter description.
     """
-    link_energy_port0 = collect_myopic_statistics(
-        networks,
-        comps="Link",
-        statistic="energy_balance",
-        groupby=[
-            partial(get_location, location_port="0"),
-            "carrier",
-            "bus_carrier",
-            # "unit",
-        ],
-    )
-    eu_carrier_port_0 = filter_by(link_energy_port0, location="EU").index.unique(
-        "carrier"
-    )
-
-    link_energy_port1 = collect_myopic_statistics(
-        networks,
-        comps="Link",
-        statistic="energy_balance",
-        groupby=[
-            partial(get_location, location_port="1"),
-            "carrier",
-            "bus_carrier",
-            # "unit",
-        ],
-    )
-    eu_carrier_port_1 = filter_by(link_energy_port1, location="EU").index.unique(
-        "carrier"
-    )
+    to_concat = []
+    eu_carrier = set()
+    for location_port in ("0", "1"):
+        # some Links draw from buses with EU location at port 0, others
+        # from port 1. We calculate both, drop EU from both results, merge
+        # the results and drop duplicates.
+        # todo: shouldn't this be done most of the time or always even?
+        #   idea -> grouper that returns the location but with EU fixed to localized locations
+        _link_energy_at_location_port = collect_myopic_statistics(
+            networks,
+            comps="Link",
+            statistic="energy_balance",
+            groupby=[
+                partial(get_location, location_port=location_port),
+                "carrier",
+                "bus_carrier",
+            ],
+        )
+        to_concat.append(_link_energy_at_location_port)
+        _eu_carrier_at_location_port = filter_by(
+            _link_energy_at_location_port, location="EU"
+        ).index.unique("carrier")
+        eu_carrier.union(_eu_carrier_at_location_port)
 
     link_energy = (
-        pd.concat([link_energy_port0, link_energy_port1])
-        .drop_duplicates()
-        .drop("EU", level=DataModel.LOCATION)
+        pd.concat(to_concat).drop_duplicates().drop("EU", level=DataModel.LOCATION)
     )
 
     # test if some carrier were lost by dropping EU previously
-    eu_carrier = eu_carrier_port_0.union(eu_carrier_port_1)
+    # eu_carrier = eu_carrier_port_0.union(eu_carrier_port_1)
     assert not any(eu_carrier.difference(link_energy.index.unique("carrier")))
 
-    # # drop non energy rows, such as CO2
-    # fixme: wrongly drops oil
-    # energy_units = [u for u in link_energy.index.unique("unit") if u.startswith("MWh")]
-    # link_energy = filter_by(link_energy, unit=energy_units).droplevel("unit")
+    # drop non energy CO2 rows because they have mass unit and not energy
     link_energy = link_energy.drop(["co2", "co2 stored"], level="bus_carrier")
 
     # only keep Links that have at least one heat bus_carrier connected at one of their branches
@@ -86,7 +75,7 @@ def view_heat_primary_energy(
             carrier_with_heat_buses.append(carrier)
     heat_links = filter_by(link_energy, carrier=carrier_with_heat_buses)
 
-    # drop storage technology Links and DAC (direct air capture withdraws heat)
+    # drop storage technologies and DAC (direct air capture withdraws heat)
     heat_production = drop_from_multtindex_by_regex(heat_links, "DAC|water tanks")
 
     def _fuel_split(df):
@@ -96,10 +85,10 @@ def view_heat_primary_energy(
         return withdrawal * heat_supply / supply.sum()
 
     fuel_withdrawal = heat_production.groupby(
-        ["year", "location", "carrier"], group_keys=False
+        [DataModel.YEAR, DataModel.LOCATION, DataModel.CARRIER], group_keys=False
     ).apply(_fuel_split)
 
-    assert "EU" not in fuel_withdrawal.index.unique("location")
+    assert "EU" not in fuel_withdrawal.index.unique(DataModel.LOCATION)
 
     generator_supply = collect_myopic_statistics(
         networks,

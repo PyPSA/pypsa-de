@@ -160,9 +160,9 @@ unit = "TWh"
 file_name = "nodal_energy_heat_primary_{location}"
 cutoff = 0.001
 legend_order = [
-    "Methane",
-    "Coal",
     "Oil",
+    "Coal",
+    "Methane",
     "Waste",
     "Solid Biomass",
     "Electricity",
