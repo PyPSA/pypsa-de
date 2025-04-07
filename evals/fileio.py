@@ -845,11 +845,10 @@ class Exporter:
         """
         output_path = self.make_evaluation_result_directories(result_path, subdir)
 
-        if self.view_config["export"]["plotly"]:
-            self.export_plotly(output_path)
-        if self.view_config["export"]["excel"]:
+        self.export_plotly(output_path)
+        if "excel" in self.view_config.get("exports", []):
             self.export_excel(output_path)
-        if self.view_config["export"]["csv"]:
+        if "csv" in self.view_config.get("exports", []):
             self.export_csv(output_path)
 
         # always run tests after the export
@@ -897,38 +896,31 @@ class Exporter:
         """"""
         category = self.defaults.plotly.plot_category
         categories = self.view_config["categories"]
-        if "all_categories_mapped" not in self.view_config.get(
-            "disable_default_checks", []
-        ):
-            assert self.df.index.unique(category).isin(categories.keys()).all(), (
-                f"Incomplete categories detected. There are technologies in the metric "
-                f"data frame, that are not assigned to a group (nice name)."
-                f"\nMissing items: "
-                f"{self.df.index.unique(category).difference(categories.keys())}"
-            )
-        if "no_superfluous_categories" not in self.view_config.get(
-            "disable_default_checks", []
-        ):
-            superfluous_categories = self.df.index.unique(category).difference(
-                categories.keys()
-            )
-            assert (
-                len(superfluous_categories) == 0
-            ), f"Superfluous categories found: {superfluous_categories}"
 
-        if "legend_entry_order" not in self.view_config.get(
-            "disable_default_checks", []
-        ):
-            a = set(self.view_config["legend_order"])
-            b = set(categories.values())
-            additional = a.difference(b)
-            assert (
-                not additional
-            ), f"Superfluous categories defined in legend order: {additional}"
-            missing = b.difference(a)
-            assert (
-                not missing
-            ), f"Some categories are not defined in legend order: {missing}"
+        assert self.df.index.unique(category).isin(categories.keys()).all(), (
+            f"Incomplete categories detected. There are technologies in the metric "
+            f"data frame, that are not assigned to a group (nice name)."
+            f"\nMissing items: "
+            f"{self.df.index.unique(category).difference(categories.keys())}"
+        )
+
+        superfluous_categories = self.df.index.unique(category).difference(
+            categories.keys()
+        )
+        assert (
+            len(superfluous_categories) == 0
+        ), f"Superfluous categories found: {superfluous_categories}"
+
+        a = set(self.view_config["legend_order"])
+        b = set(categories.values())
+        additional = a.difference(b)
+        assert (
+            not additional
+        ), f"Superfluous categories defined in legend order: {additional}"
+        missing = b.difference(a)
+        assert (
+            not missing
+        ), f"Some categories are not defined in legend order: {missing}"
 
     def make_evaluation_result_directories(
         self, result_path: Path, subdir: Path | str
