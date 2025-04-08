@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-# SPDX-FileCopyrightText: : 2020-2024 The PyPSA-Eur Authors
+# SPDX-FileCopyrightText: Contributors to PyPSA-Eur <https://github.com/pypsa/pypsa-eur>>
 #
 # SPDX-License-Identifier: MIT
 """
@@ -15,7 +14,7 @@ import pandas as pd
 import pypsa
 from pypsa.plot import add_legend_circles, add_legend_lines
 
-from scripts._helpers import configure_logging, set_scenario_config
+from scripts._helpers import configure_logging, retry, set_scenario_config
 from scripts.plot_power_network import (
     assign_location,
     load_projection,
@@ -26,6 +25,7 @@ from scripts.plot_summary import preferred_order
 logger = logging.getLogger(__name__)
 
 
+@retry
 def plot_map_perfect(
     n,
     components=["Link", "Store", "StorageUnit", "Generator"],
@@ -173,6 +173,7 @@ def plot_map_perfect(
         )
 
         fig.savefig(snakemake.output[f"map_{year}"], bbox_inches="tight")
+        plt.close(fig)
 
 
 if __name__ == "__main__":

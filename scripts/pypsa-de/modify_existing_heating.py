@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import logging
 
 import pandas as pd
@@ -32,7 +31,7 @@ if __name__ == "__main__":
     new_values = pd.Series()
 
     logger.warning(
-        f"Adjusting heating stock towards hard coded values from a previous REMod run. This is only a hotfix."
+        "Adjusting heating stock towards hard coded values from a previous REMod run. This is only a hotfix."
     )  # Because REMod is not consistent and a better solution takes too long.
 
     new_values["gas boiler"] = 11.44  # million

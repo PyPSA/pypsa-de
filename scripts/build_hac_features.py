@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-# SPDX-FileCopyrightText: : 2024 The PyPSA-Eur Authors
+# SPDX-FileCopyrightText: Contributors to PyPSA-Eur <https://github.com/pypsa/pypsa-eur>
 #
 # SPDX-License-Identifier: MIT
 """
@@ -13,7 +12,7 @@ import geopandas as gpd
 from atlite.aggregate import aggregate_matrix
 from dask.distributed import Client
 
-from scripts._helpers import get_snapshots, set_scenario_config
+from scripts._helpers import configure_logging, get_snapshots, set_scenario_config
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +21,7 @@ if __name__ == "__main__":
         from scripts._helpers import mock_snakemake
 
         snakemake = mock_snakemake("build_hac_features")
+    configure_logging(snakemake)
     set_scenario_config(snakemake)
 
     params = snakemake.params

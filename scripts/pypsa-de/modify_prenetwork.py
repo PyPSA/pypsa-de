@@ -1,7 +1,4 @@
-# -*- coding: utf-8 -*-
 import logging
-import os
-import sys
 
 import geopandas as gpd
 import numpy as np
@@ -12,7 +9,10 @@ from shapely.geometry import Point
 sys.path.insert(0, os.path.abspath("../scripts"))
 sys.path.insert(0, os.path.abspath("../.."))
 
-from scripts._helpers import configure_logging, mock_snakemake
+sys.path.insert(0, os.path.abspath("../scripts"))
+sys.path.insert(0, os.path.abspath("../.."))
+
+from scripts._helpers import configure_logging, mock_snakemake, sanitize_custom_columns
 from scripts.add_electricity import load_costs
 from scripts.prepare_sector_network import lossy_bidirectional_links, prepare_costs
 
@@ -190,7 +190,7 @@ def add_wasserstoff_kernnetz(n, wkn, costs):
     # get previous planning horizon
     planning_horizons = snakemake.params.planning_horizons
     i = planning_horizons.index(int(snakemake.wildcards.planning_horizons))
-    previous_investment_year = int(planning_horizons[i - 1]) if i != 0 else 2015
+    previous_investment_year = int(planning_horizons[i - 1]) if i != 0 else 2015  # noqa
 
     # use only pipes added since the previous investment period
     wkn_new = wkn.query(
@@ -202,8 +202,8 @@ def add_wasserstoff_kernnetz(n, wkn, costs):
 
         # capital_costs = np.where(
         #     wkn_new.retrofitted == False,
-        #     costs.at["H2 (g) pipeline", "fixed"] * wkn_new.length.values,
-        #     costs.at["H2 (g) pipeline repurposed", "fixed"] * wkn_new.length.values,
+        #     costs.at["H2 (g) pipeline", "capital_cost"] * wkn_new.length.values,
+        #     costs.at["H2 (g) pipeline repurposed", "capital_cost"] * wkn_new.length.values,
         # )
 
         # overnight_costs = np.where(
@@ -218,8 +218,8 @@ def add_wasserstoff_kernnetz(n, wkn, costs):
         # reconstruct average Kernnetz invest (250€/MW*km) from our costs data
 
         capital_costs = (
-            0.7 * costs.at["H2 (g) pipeline", "fixed"]
-            + 0.3 * costs.at["H2 (g) pipeline repurposed", "fixed"]
+            0.7 * costs.at["H2 (g) pipeline", "capital_cost"]
+            + 0.3 * costs.at["H2 (g) pipeline repurposed", "capital_cost"]
         ) * wkn_new.length.values
         overnight_costs = (
             0.7 * costs.at["H2 (g) pipeline", "investment"]
@@ -321,20 +321,18 @@ def unravel_carbonaceous_fuels(n):
     n.add("Carrier", "renewable oil")
 
     n.add("Bus", "DE", x=10.5, y=51.2, carrier="none")
-    n.add("Bus", "DE oil", x=10.5, y=51.2, carrier="oil")
-    n.add("Bus", "DE oil primary", x=10.5, y=51.2, carrier="oil primary")
+    n.add("Bus", "DE oil", location="DE", carrier="oil")
+    n.add("Bus", "DE oil primary", location="DE", carrier="oil primary")
     n.add(
         "Bus",
         "DE renewable oil",
-        x=10.5,
-        y=51.2,
+        location="DE",
         carrier="renewable oil",
     )
     n.add(
         "Bus",
         "EU renewable oil",
-        x=n.buses.loc["EU", "x"],
-        y=n.buses.loc["EU", "y"],
+        location="EU",
         carrier="renewable oil",
     )
 
@@ -464,8 +462,7 @@ def unravel_carbonaceous_fuels(n):
     n.add(
         "Bus",
         "DE methanol",
-        x=n.buses.loc["DE", "x"],
-        y=n.buses.loc["DE", "y"],
+        location="DE",
         carrier="methanol",
     )
 
@@ -517,8 +514,7 @@ def unravel_carbonaceous_fuels(n):
             "Bus",
             "DE industry methanol",
             carrier="industry methanol",
-            x=n.buses.loc["DE", "x"],
-            y=n.buses.loc["DE", "y"],
+            location="DE",
             unit="MWh_LHV",
         )
         industrial_demand = (
@@ -596,8 +592,7 @@ def unravel_carbonaceous_fuels(n):
             "Bus",
             "DE shipping methanol",
             carrier="shipping methanol",
-            x=n.buses.loc["DE", "x"],
-            y=n.buses.loc["DE", "y"],
+            location="DE",
             unit="MWh_LHV",
         )
         n.add(
@@ -619,20 +614,21 @@ def unravel_gasbus(n, costs):
     """
     logger.info("Unraveling gas bus")
 
+    if "DE" not in n.buses:
+        n.add("Bus", "DE", location="DE", x=10.5, y=51.2, carrier="none")
+
     ### create DE gas bus/generator/store
     n.add(
         "Bus",
         "DE gas",
-        x=10.5,
-        y=51.2,
+        location="DE",
         carrier="gas",
     )
 
     n.add(
         "Bus",
         "DE gas primary",
-        x=10.5,
-        y=51.2,
+        location="DE",
         carrier="gas primary",
     )
 
@@ -643,7 +639,7 @@ def unravel_gasbus(n, costs):
         carrier="gas",
         e_nom_extendable=True,
         e_cyclic=True,
-        capital_cost=costs.at["gas storage", "fixed"],
+        capital_cost=costs.at["gas storage", "capital_cost"],
         overnight_cost=costs.at["gas storage", "investment"],
         lifetime=costs.at["gas storage", "lifetime"],
     )
@@ -678,14 +674,12 @@ def unravel_gasbus(n, costs):
         "Bus",
         "DE renewable gas",
         carrier="renewable gas",
-        x=10.5,
-        y=51.2,
+        location="DE",
     )
     n.add(
         "Bus",
         "EU renewable gas",
-        x=n.buses.loc["EU", "x"],
-        y=n.buses.loc["EU", "y"],
+        location="EU",
         carrier="renewable gas",
     )
 
@@ -844,8 +838,10 @@ def aladin_mobility_demand(n):
     # get aladin data
     aladin_demand = pd.read_csv(snakemake.input.aladin_demand, index_col=0)
 
+    simulation_period_correction_factor = n.snapshot_weightings.objective.sum() / 8760
+
     # oil demand
-    oil_demand = aladin_demand.Liquids
+    oil_demand = aladin_demand.Liquids * simulation_period_correction_factor
     oil_index = n.loads[
         (n.loads.carrier == "land transport oil") & (n.loads.index.str[:2] == "DE")
     ].index
@@ -858,7 +854,7 @@ def aladin_mobility_demand(n):
     )
 
     # hydrogen demand
-    h2_demand = aladin_demand.Hydrogen
+    h2_demand = aladin_demand.Hydrogen * simulation_period_correction_factor
     h2_index = n.loads[
         (n.loads.carrier == "land transport fuel cell")
         & (n.loads.index.str[:2] == "DE")
@@ -872,7 +868,7 @@ def aladin_mobility_demand(n):
     )
 
     # electricity demand
-    ev_demand = aladin_demand.Electricity
+    ev_demand = aladin_demand.Electricity * simulation_period_correction_factor
     ev_index = n.loads[
         (n.loads.carrier == "land transport EV") & (n.loads.index.str[:2] == "DE")
     ].index
@@ -1095,9 +1091,9 @@ def force_connection_nep_offshore(n, current_year):
 
     if int(snakemake.params.offshore_nep_force["delay_years"]) != 0:
         # Modify 'Inbetriebnahmejahr' by adding the delay years for rows where 'Inbetriebnahmejahr' > 2025
-        offshore.loc[
-            offshore["Inbetriebnahmejahr"] > 2025, "Inbetriebnahmejahr"
-        ] += int(snakemake.params.offshore_nep_force["delay_years"])
+        offshore.loc[offshore["Inbetriebnahmejahr"] > 2025, "Inbetriebnahmejahr"] += (
+            int(snakemake.params.offshore_nep_force["delay_years"])
+        )
         logger.info(
             f"Delaying NEP offshore connection points by {snakemake.params.offshore_nep_force['delay_years']} years."
         )
@@ -1155,7 +1151,7 @@ def force_connection_nep_offshore(n, current_year):
         for node in dc_power.index:
             node_off = f"{node} offwind-dc-{current_year}"
 
-            if not node_off in n.generators.index:
+            if node_off not in n.generators.index:
                 logger.info(f"Adding generator {node_off}")
                 n.generators.loc[node_off] = n.generators.loc[nordsee_duck_off]
                 n.generators.at[node_off, "bus"] = node
@@ -1224,7 +1220,7 @@ def force_connection_nep_offshore(n, current_year):
         for node in ac_power.index:
             node_off = f"{node} offwind-ac-{current_year}"
 
-            if not node_off in n.generators.index:
+            if node_off not in n.generators.index:
                 logger.error(
                     f"Assuming all AC projects are connected at locations where other generators exists. That is not the case for {node_off}. Terminating"
                 )
@@ -1251,7 +1247,8 @@ def scale_capacity(n, scaling):
     """
     Scale the output capacity of energy system links based on predefined scaling limits.
 
-    Parameters:
+    Parameters
+    ----------
     - n: The network/model object representing the energy system.
     - scaling: A dictionary with scaling limits structured as
                {year: {region: {carrier: limit}}}.
@@ -1413,17 +1410,14 @@ if __name__ == "__main__":
 
     first_technology_occurrence(n)
 
-    if not snakemake.config["run"]["debug_unravel_oilbus"]:
-        unravel_carbonaceous_fuels(n)
+    unravel_carbonaceous_fuels(n)
 
-    if not snakemake.config["run"]["debug_unravel_gasbus"]:
-        unravel_gasbus(n, costs)
+    unravel_gasbus(n, costs)
 
     if snakemake.params.enable_kernnetz:
         fn = snakemake.input.wkn
         wkn = pd.read_csv(fn, index_col=0)
         add_wasserstoff_kernnetz(n, wkn, costs)
-        n.links.reversed = n.links.reversed.astype(float)
 
     costs_loaded = load_costs(
         snakemake.input.costs,
@@ -1465,6 +1459,8 @@ if __name__ == "__main__":
 
     if snakemake.params.scale_capacity is not None:
         scale_capacity(n, snakemake.params.scale_capacity)
+
+    sanitize_custom_columns(n)
 
     if snakemake.params.demand_modelling["enable"]:
         adapt_demand_modelling(n, snakemake.params.demand_modelling)

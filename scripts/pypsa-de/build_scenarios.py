@@ -1,11 +1,9 @@
-# -*- coding: utf-8 -*-
 # SPDX-FileCopyrightText: : 2024- The PyPSA-Eur Authors
 #
 # SPDX-License-Identifier: MIT
 
 # This script reads in data from the IIASA database to create the scenario.yaml file
 import logging
-import os
 from pathlib import Path
 
 import pandas as pd

@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-# SPDX-FileCopyrightText: : 2017-2024 The PyPSA-Eur Authors
+# SPDX-FileCopyrightText: Contributors to PyPSA-Eur <https://github.com/pypsa/pypsa-eur>
 #
 # SPDX-License-Identifier: MIT
 
@@ -8,25 +7,6 @@
 Gets the transmission projects defined in the config file, concatenates and
 deduplicates them. Projects are later included in :mod:`add_electricity.py`.
 
-Relevant Settings
------------------
-
-.. code:: yaml
-
-transmission_projects:
-  include:
-    #tyndp: true # For later, when other TYNDP projects are combined with new version
-    nep: true
-  status:
-  - confirmed
-  - in_permitting
-  - under_construction
-    #- under_consideration
-  link_under_construction: zero
-
-.. seealso::
-    Documentation of the configuration file ``config/config.yaml`` at
-    :ref:`transmission_projects`
 Inputs
 ------
 
@@ -46,7 +26,6 @@ Outputs
 """
 
 import logging
-import os
 from pathlib import Path
 
 import geopandas as gpd
@@ -164,12 +143,14 @@ def get_branch_coords_from_geometry(linestring, reversed=False):
     Reduces a linestring to its start and end points. Used to simplify the
     linestring which can have more than two points.
 
-    Parameters:
+    Parameters
+    ----------
     linestring: Shapely linestring
     reversed (bool, optional): If True, returns the end and start points instead of the start and end points.
                                Defaults to False.
 
-    Returns:
+    Returns
+    -------
     numpy.ndarray: Flattened array of start and end coordinates.
     """
     coords = np.asarray(linestring.coords)
@@ -182,12 +163,14 @@ def get_branch_coords_from_buses(line):
     """
     Gets line string for branch component in an pypsa network.
 
-    Parameters:
+    Parameters
+    ----------
     linestring: shapely linestring
     reversed (bool, optional): If True, returns the end and start points instead of the start and end points.
                                Defaults to False.
 
-    Returns:
+    Returns
+    -------
     numpy.ndarray: Flattened array of start and end coordinates.
     """
     start_coords = n.buses.loc[line.bus0, ["x", "y"]].values
@@ -199,11 +182,13 @@ def get_bus_coords_from_port(linestring, port=0):
     """
     Extracts the coordinates of a specified port from a given linestring.
 
-    Parameters:
+    Parameters
+    ----------
     linestring: The shapely linestring.
     port (int): The index of the port to extract coordinates from. Default is 0.
 
-    Returns:
+    Returns
+    -------
     tuple: The coordinates of the specified port as a tuple (x, y).
     """
     coords = np.asarray(linestring.coords)
@@ -217,12 +202,14 @@ def find_closest_lines(lines, new_lines, distance_upper_bound=0.1, type="new"):
     """
     Find the closest lines in the existing set of lines to a set of new lines.
 
-    Parameters:
+    Parameters
+    ----------
     lines (pandas.DataFrame): DataFrame of the existing lines.
     new_lines (pandas.DataFrame): DataFrame with column geometry containing the new lines.
     distance_upper_bound (float, optional): Maximum distance to consider a line as a match. Defaults to 0.1 which corresponds to approximately 15 km.
 
-    Returns:
+    Returns
+    -------
     pandas.Series: Series containing with index the new lines and values providing closest existing line.
     """
 
@@ -248,19 +235,23 @@ def find_closest_lines(lines, new_lines, distance_upper_bound=0.1, type="new"):
     )
     if type == "new":
         if len(found_i) != 0:
+            # compare if attribute of new line and existing line is similar
             attr = "p_nom" if "p_nom" in lines else "v_nom"
+            # potential duplicates
             duplicated = line_map["existing_line"]
-            to_ignore = is_similar(
+            # only if lines are similar in terms of p_nom or v_nom they are kept as duplicates
+            to_keep = is_similar(
                 new_lines.loc[duplicated.index, attr],
                 duplicated.map(lines[attr]),
                 percentage=10,
             )
-            line_map = line_map[to_ignore]
-            logger.warning(
-                "Found new lines similar to existing lines:\n"
-                + str(line_map["existing_line"].to_dict())
-                + "\n Lines are assumed to be duplicated and will be ignored."
-            )
+            line_map = line_map[to_keep]
+            if not line_map.empty:
+                logger.warning(
+                    "Found new lines similar to existing lines:\n"
+                    + str(line_map["existing_line"].to_dict())
+                    + "\n Lines are assumed to be duplicated and will be ignored."
+                )
     elif type == "upgraded":
         if len(found_i) < len(new_lines):
             not_found = new_lines.index.difference(line_map.index)
@@ -473,7 +464,7 @@ if __name__ == "__main__":
     if "snakemake" not in globals():
         from scripts._helpers import mock_snakemake
 
-        snakemake = mock_snakemake("build_transmission_projects", run="all")
+        snakemake = mock_snakemake("build_transmission_projects")
     configure_logging(snakemake)
     set_scenario_config(snakemake)
 

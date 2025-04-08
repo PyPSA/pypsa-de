@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-# SPDX-FileCopyrightText: : 2020-2024 The PyPSA-Eur Authors
+# SPDX-FileCopyrightText: Contributors to PyPSA-Eur <https://github.com/pypsa/pypsa-eur>
 #
 # SPDX-License-Identifier: MIT
 """
@@ -13,7 +12,6 @@ import pandas as pd
 import pypsa
 import xarray as xr
 from add_existing_baseyear import add_build_year_to_new_assets
-from pypsa.clustering.spatial import normed_or_uniform
 
 from scripts._helpers import (
     configure_logging,
@@ -26,7 +24,32 @@ logger = logging.getLogger(__name__)
 idx = pd.IndexSlice
 
 
-def add_brownfield(n, n_p, year):
+def add_brownfield(
+    n,
+    n_p,
+    year,
+    h2_retrofit=False,
+    h2_retrofit_capacity_per_ch4=None,
+    capacity_threshold=None,
+):
+    """
+    Add brownfield capacity from previous network.
+
+    Parameters
+    ----------
+    n : pypsa.Network
+        Network to add brownfield to
+    n_p : pypsa.Network
+        Previous network to get brownfield from
+    year : int
+        Planning year
+    h2_retrofit : bool
+        Whether to allow hydrogen pipeline retrofitting
+    h2_retrofit_capacity_per_ch4 : float
+        Ratio of hydrogen to methane capacity for pipeline retrofitting
+    capacity_threshold : float
+        Threshold for removing assets with low capacity
+    """
     logger.info(f"Preparing brownfield for the year {year}")
 
     # electric transmission grid set optimised capacities of previous as minimum
@@ -53,11 +76,9 @@ def add_brownfield(n, n_p, year):
             & c.df.index.str.contains("heat")
         ]
 
-        threshold = snakemake.params.threshold_capacity
-
         if not chp_heat.empty:
             threshold_chp_heat = (
-                threshold
+                capacity_threshold
                 * c.df.efficiency[chp_heat.str.replace("heat", "electric")].values
                 * c.df.p_nom_ratio[chp_heat.str.replace("heat", "electric")].values
                 / c.df.efficiency[chp_heat].values
@@ -71,7 +92,7 @@ def add_brownfield(n, n_p, year):
             c.name,
             c.df.index[
                 (c.df[f"{attr}_nom_extendable"] & ~c.df.index.isin(chp_heat))
-                & (c.df[f"{attr}_nom_opt"] < threshold)
+                & (c.df[f"{attr}_nom_opt"] < capacity_threshold)
             ],
         )
 
@@ -89,7 +110,7 @@ def add_brownfield(n, n_p, year):
             n.import_series_from_dataframe(c.pnl[tattr], c.name, tattr)
 
     # deal with gas network
-    if snakemake.params.H2_retrofit:
+    if h2_retrofit:
         # subtract the already retrofitted from the maximum capacity
         h2_retrofitted_fixed_i = n.links[
             (n.links.carrier == "H2 pipeline retrofitted")
@@ -122,7 +143,7 @@ def add_brownfield(n, n_p, year):
             pipe_capacity = n.links.loc[gas_pipes_i, "p_nom"]
             fr = "H2 pipeline retrofitted"
             to = "gas pipeline"
-            CH4_per_H2 = 1 / snakemake.params.H2_retrofit_capacity_per_CH4
+            CH4_per_H2 = 1 / h2_retrofit_capacity_per_ch4
             already_retrofitted.index = already_retrofitted.index.str.replace(fr, to)
             remaining_capacity = (
                 pipe_capacity
@@ -243,9 +264,14 @@ def update_heat_pump_efficiency(n: pypsa.Network, n_p: pypsa.Network, year: int)
         This function updates the efficiency in place and does not return a value.
     """
 
-    # get names of heat pumps in previous iteration
+    # get names of heat pumps in previous iteration that cannot be replaced by direct utilisation in this iteration
     heat_pump_idx_previous_iteration = n_p.links.index[
         n_p.links.index.str.contains("heat pump")
+        & n_p.links.index.str[:-4].isin(
+            n.links_t.efficiency.columns.str.rstrip(  # sources that can be directly used are no longer represented by heat pumps in the dynamic efficiency dataframe
+                str(year)
+            )
+        )
     ]
     # construct names of same-technology heat pumps in the current iteration
     corresponding_idx_this_iteration = heat_pump_idx_previous_iteration.str[:-4] + str(
@@ -256,6 +282,17 @@ def update_heat_pump_efficiency(n: pypsa.Network, n_p: pypsa.Network, year: int)
         n.links_t["efficiency"].loc[:, corresponding_idx_this_iteration].values
     )
 
+    # Change efficiency2 for heat pumps that use an explicitly modelled heat source
+    previous_iteration_columns = heat_pump_idx_previous_iteration.intersection(
+        n_p.links_t["efficiency2"].columns
+    )
+    current_iteration_columns = corresponding_idx_this_iteration.intersection(
+        n.links_t["efficiency2"].columns
+    )
+    n_p.links_t["efficiency2"].loc[:, previous_iteration_columns] = (
+        n.links_t["efficiency2"].loc[:, current_iteration_columns].values
+    )
+
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
@@ -263,11 +300,11 @@ if __name__ == "__main__":
 
         snakemake = mock_snakemake(
             "add_brownfield",
-            clusters="37",
+            clusters="39",
             opts="",
-            ll="v1.0",
-            sector_opts="168H-T-H-B-I-dist1",
-            planning_horizons=2030,
+            ll="vopt",
+            sector_opts="",
+            planning_horizons=2050,
         )
 
     configure_logging(snakemake)
@@ -289,7 +326,14 @@ if __name__ == "__main__":
 
     update_heat_pump_efficiency(n, n_p, year)
 
-    add_brownfield(n, n_p, year)
+    add_brownfield(
+        n,
+        n_p,
+        year,
+        h2_retrofit=snakemake.params.H2_retrofit,
+        h2_retrofit_capacity_per_ch4=snakemake.params.H2_retrofit_capacity_per_CH4,
+        capacity_threshold=snakemake.params.threshold_capacity,
+    )
 
     disable_grid_expansion_if_limit_hit(n)
 

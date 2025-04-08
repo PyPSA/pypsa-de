@@ -1,4 +1,6 @@
 # Changelog
+- CHP plants located in onshore regions without district heating are represented as EOP plants
+- updating technology cost data to v0.11.0
 - add option for Offhsore NEP to delay projects by x years (CurPol and KN2045minus_WorstCase are delayed by one year)
 - Force onwind south by increasing minimum capacity and decreasing capacity per sqkm
 - Adjusting aviation demand (from Aladin) and emission accounting (only domestic aviation for national target)

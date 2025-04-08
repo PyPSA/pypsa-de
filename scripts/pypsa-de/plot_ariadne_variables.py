@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-import os
-
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -190,10 +187,6 @@ def plot_Kernnetz(df, savepath=None, currency_year=2020):
 
     # Set up the plot
     fig, ax = plt.subplots(1, 2, figsize=(10, 6))
-
-    # Create bars
-    bar_width = 0.35
-    x = np.arange(2)  # Three groups
 
     group1 = [
         "Kernnetz-Zubau",
@@ -470,7 +463,7 @@ def plot_NEP(df, savepath=None, gleichschaltung=True, currency_year=2020):
     plt.text(
         1.05,
         0.95,
-        f"NEP: {round(plotframe.loc["Onshore","NEP-Total"] + plotframe.loc["Offshore","NEP-Total"],1)}",
+        f"NEP: {round(plotframe.loc['Onshore', 'NEP-Total'] + plotframe.loc['Offshore', 'NEP-Total'], 1)}",
         transform=plt.gca().transAxes,
         fontsize=12,
         verticalalignment="top",
@@ -479,7 +472,7 @@ def plot_NEP(df, savepath=None, gleichschaltung=True, currency_year=2020):
     plt.text(
         1.05,
         0.85,
-        f"PyPSA: {round(plotframe.loc["Onshore","PyPSA-Total"] + plotframe.loc["Offshore","PyPSA-Total"],1)}",
+        f"PyPSA: {round(plotframe.loc['Onshore', 'PyPSA-Total'] + plotframe.loc['Offshore', 'PyPSA-Total'], 1)}",
         transform=plt.gca().transAxes,
         fontsize=12,
         verticalalignment="top",
