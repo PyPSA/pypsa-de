@@ -154,12 +154,13 @@ exports = ["csv","excel"]
 "methanolisation" = "Methanolisation"
 "solid biomass to hydrogen" = "H2 from Solid Biomass"
 
-[view.energy.heat_primary]
-name = "Primary Energy Demand for Heat Production"
+[view.demand.heat_production]
+name = "Energy Demand for Heat Production"
 unit = "TWh"
-file_name = "nodal_energy_heat_primary_{location}"
+file_name = "nodal_demand_heat_production_{location}"
 cutoff = 0.001
 legend_order = [
+    # from zero upwards:
     "Oil",
     "Coal",
     "Methane",
@@ -172,7 +173,7 @@ legend_order = [
 checks = []
 exports = ["excel"]
 
-[view.energy.heat_primary.categories]
+[view.demand.heat_production.categories]
 "AC" = "Electricity"
 "H2" = "Hydrogen"
 "coal" = "Coal"

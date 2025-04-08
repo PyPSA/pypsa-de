@@ -1,4 +1,4 @@
-"""Module for primary energy evaluations."""
+"""Module for primary energy heat demand."""
 
 from pathlib import Path
 
@@ -39,24 +39,24 @@ def view_heat_primary_energy(
     link_energy = link_energy.drop(["co2", "co2 stored"], level=DataModel.BUS_CARRIER)
     # todo: is this really justified? Discussions needed, or disclaimer in graph.
 
-    # only keep Links that have at least one heat bus_carrier connected at one of their branches
-    carrier_with_heat_buses = []
+    # only keep Links that have at least one heat bus_carrier connected to one of their branches
+    carrier_with_heat_supply = []
     heat_buses = BusCarrier.heat_buses()
     for carrier, data in link_energy.groupby(DataModel.CARRIER):
-        if len(data.index.unique(DataModel.BUS_CARRIER).intersection(heat_buses)):
-            carrier_with_heat_buses.append(carrier)
-    heat_links = filter_by(link_energy, carrier=carrier_with_heat_buses)
+        if data.filter(like="heat").gt(0).any():
+            carrier_with_heat_supply.append(carrier)
+    heat_supply = filter_by(link_energy, carrier=carrier_with_heat_supply)
 
-    # drop storage technologies and DAC (direct air capture withdraws heat)
-    heat_production = drop_from_multtindex_by_regex(heat_links, "DAC|water tanks")
+    # drop heat storage technologies
+    heat_supply = drop_from_multtindex_by_regex(heat_supply, "water tanks")
 
     def _fuel_split(df):
         withdrawal = df[df.lt(0)]
         supply = df[df.ge(0)]
-        heat_supply = filter_by(supply, bus_carrier=heat_buses).sum()
-        return withdrawal * heat_supply / supply.sum()
+        heat_sum = filter_by(supply, bus_carrier=heat_buses).sum()
+        return withdrawal * heat_sum / supply.sum()
 
-    fuel_withdrawal = heat_production.groupby(
+    fuel_withdrawal = heat_supply.groupby(
         [DataModel.YEAR, DataModel.LOCATION, DataModel.CARRIER], group_keys=False
     ).apply(_fuel_split)
 
