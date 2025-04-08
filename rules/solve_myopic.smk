@@ -166,7 +166,7 @@ rule solve_operations_network_myopic:
         network=RESULTS
         + "postnetworks/base_s_{clusters}_l{ll}_{opts}_{sector_opts}_{planning_horizons}_lt.nc",
     output:
-        network=RESULTS 
+        network=RESULTS
         + "postnetworks/base_s_{clusters}_l{ll}_{opts}_{sector_opts}_{planning_horizons}_st.nc",
     log:
         solver=RESULTS

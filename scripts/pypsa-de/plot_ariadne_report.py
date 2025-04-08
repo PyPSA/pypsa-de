@@ -3,7 +3,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
-from itertools import compress, islice
+from itertools import compress
 from multiprocessing import Pool
 
 import cartopy
@@ -14,7 +14,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pypsa
-from export_ariadne_variables import process_postnetworks
 from matplotlib.patches import Patch
 from matplotlib.ticker import FuncFormatter
 from pypsa.plot import add_legend_circles, add_legend_lines, add_legend_patches
@@ -1108,7 +1107,6 @@ def plot_price_duration_curve(
     y_lim_values=[-50, 300],
     language="english",
 ):
-
     # # only plot 2030 onwards
     # years = years[2:]
     # networks = dict(islice(networks.items(), 2, None))
@@ -1174,7 +1172,6 @@ def plot_price_duration_hist(
     regions=["DE"],
     x_lim_values=[-50, 300],
 ):
-
     # # only plot 2030 onwards
     # years = years[2:]
     # networks = dict(islice(networks.items(), 2, None))
@@ -2697,10 +2694,12 @@ if __name__ == "__main__":
     _networks = [pypsa.Network(fn) for fn in snakemake.input.networks]
     modelyears = snakemake.params.planning_horizons
 
-    if snakemake.params.transmission_projects != "zero":   
+    if snakemake.params.transmission_projects != "zero":
         # Hack the transmission projects
         networks = [
-            hack_transmission_projects(n.copy(), _networks[0], int(my), snakemake, costs)
+            hack_transmission_projects(
+                n.copy(), _networks[0], int(my), snakemake, costs
+            )
             for n, my in zip(_networks, modelyears)
         ]
     else:
@@ -2712,7 +2711,6 @@ if __name__ == "__main__":
             network.lines["reversed"] = False
         if "reversed" not in network.links.columns:
             network.links["reversed"] = False
-    
 
     # # for running with explicit networks not within repo structure (comment out load data and load regions)
     # diry = "postnetworks-folder"

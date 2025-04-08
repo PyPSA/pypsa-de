@@ -95,11 +95,11 @@ def add_existing_renewables(
 
     # Define the configuration dictionary
     config_data = {
-        'IRENA': {
-            'net_capacity': True,
-            'aggregated_units': True,
-            'fn': 'IRENASTAT_capacities_2000-2023.csv',
-            'url': 'https://zenodo.org/records/10952917/files/IRENASTAT_capacities_2000-2023.csv'
+        "IRENA": {
+            "net_capacity": True,
+            "aggregated_units": True,
+            "fn": "IRENASTAT_capacities_2000-2023.csv",
+            "url": "https://zenodo.org/records/10952917/files/IRENASTAT_capacities_2000-2023.csv",
         }
     }
 

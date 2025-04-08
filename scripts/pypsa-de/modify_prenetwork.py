@@ -918,13 +918,15 @@ def remove_downstream_constraint(n):
     """
     Delete current downstream constraint and save global co2 limit in n.meta.
 
-    Parameters:
+    Parameters
+    ----------
         n (pypsa.Network): The PyPSA network object.
 
-    Returns:
+    Returns
+    -------
         None
     """
-    logger.info(f"Remove global downstream co2 constraint.")
+    logger.info("Remove global downstream co2 constraint.")
     n.meta["_global_co2_limit"] = n.global_constraints.loc["CO2Limit", "constant"]
     n.remove("GlobalConstraint", "CO2Limit")
 
@@ -1300,15 +1302,20 @@ def scale_capacity(n, scaling):
                     links_i_current, "p_nom"
                 ]
 
+
 def adapt_demand_modelling(n, params):
-    
     bus = n.buses[n.buses.carrier == "AC"].index[0]
     loads_temporal_i = n.loads[(n.loads.bus == bus) & (n.loads.p_set == 0)].index
     loads_static_i = n.loads[(n.loads.bus == bus) & (n.loads.p_set > 0)].index
-    loads_temporal = n.loads_t.p_set[loads_temporal_i].sum(axis=1) + n.loads.p_set[loads_static_i].sum()
+    loads_temporal = (
+        n.loads_t.p_set[loads_temporal_i].sum(axis=1)
+        + n.loads.p_set[loads_static_i].sum()
+    )
 
     if params["voll"]:
-        logger.info(f"Adding VOLL Generator with marginal cost of {params["voll_price"]} €/Mwh.")
+        logger.info(
+            f"Adding VOLL Generator with marginal cost of {params['voll_price']} €/Mwh."
+        )
         n.add(
             "Generator",
             "load-shedding",
@@ -1317,23 +1324,28 @@ def adapt_demand_modelling(n, params):
             marginal_cost=params["voll_price"],
             p_nom=loads_temporal.max(),
         )
-    
+
     if params["elastic_capa"]:
-        logger.info(f"Adding elastic demand generator with capacity of {params["elastic_load"]} and intercept of {params["elastic_intercept"]}.")
+        logger.info(
+            f"Adding elastic demand generator with capacity of {params['elastic_load']} and intercept of {params['elastic_intercept']}."
+        )
 
         n.add(
             "Generator",
             "load-shedding",
             bus=bus,
             carrier="load",
-            marginal_cost_quadratic=params["elastic_intercept"] / (2 * params["elastic_load"]),
+            marginal_cost_quadratic=params["elastic_intercept"]
+            / (2 * params["elastic_load"]),
             marginal_cost=0,
             p_nom=params["elastic_load"],
             p_nom_extendable=False,
         )
 
     if params["elastic_all"]:
-        logger.info(f"Adding elastic demand generator with capacity equal to complete load and intercept of {params["elastic_intercept"]}.")
+        logger.info(
+            f"Adding elastic demand generator with capacity equal to complete load and intercept of {params['elastic_intercept']}."
+        )
 
         n.add(
             "Generator",
@@ -1343,16 +1355,16 @@ def adapt_demand_modelling(n, params):
             marginal_cost_quadratic=params["elastic_intercept"] / (2 * loads_temporal),
             marginal_cost=0,
             p_nom=loads_temporal.max(),
-            p_max_pu = loads_temporal / loads_temporal.max(),
+            p_max_pu=loads_temporal / loads_temporal.max(),
             p_nom_extendable=False,
         )
 
     if param_set := params["elastic_pwl"]:
         logger.info(f"Adding piecewise linear elastic demand with set '{param_set}'.")
         pwl = params["elastic_pwl_params"][param_set]
-        assert (
-            len(pwl["intercept"]) == len(pwl["slope"]) == len(pwl["nominal"])
-        ), "Piecewise linear demand must have same number of points for intercept, slope, and nominal."
+        assert len(pwl["intercept"]) == len(pwl["slope"]) == len(pwl["nominal"]), (
+            "Piecewise linear demand must have same number of points for intercept, slope, and nominal."
+        )
 
         scaling = params["elastic_pwl_load"] / sum(pwl["nominal"])
         for i, (intercept, slope, nominal) in enumerate(
@@ -1363,10 +1375,10 @@ def adapt_demand_modelling(n, params):
                 f"load-shedding-segment-{i}",
                 bus=bus,
                 carrier="load-shedding",
-                marginal_cost= intercept - slope * nominal,
-                marginal_cost_quadratic= (slope / 2 ) / scaling,
+                marginal_cost=intercept - slope * nominal,
+                marginal_cost_quadratic=(slope / 2) / scaling,
                 p_nom=nominal * scaling,
-                p_nom_extendable=False,   
+                p_nom_extendable=False,
             )
 
 

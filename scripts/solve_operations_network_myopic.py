@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # SPDX-FileCopyrightText: : 2017-2024 The PyPSA-Eur Authors
 #
 # SPDX-License-Identifier: MIT
@@ -8,16 +7,17 @@ previous capacity expansion in rule :mod:`solve_network`.
 """
 
 import logging
+import os
+import sys
 
 import numpy as np
 import pypsa
-import logging
-import os
-import sys
 from _benchmark import memory_logger
 
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))  # Adds 'scripts/' to path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))  # Adds repo root
+sys.path.append(
+    os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+)  # Adds repo root
 
 from solve_network import prepare_network, solve_network
 
@@ -50,7 +50,7 @@ if __name__ == "__main__":
     set_scenario_config(snakemake)
     update_config_from_wildcards(snakemake.config, snakemake.wildcards)
 
-    logger.info(f"Solving again with fixed capacities")
+    logger.info("Solving again with fixed capacities")
 
     solve_opts = snakemake.params.options
 
@@ -59,7 +59,7 @@ if __name__ == "__main__":
     n = pypsa.Network(snakemake.input.network)
 
     # co2 constraint can become infeasible bc of numerical issues (2 ways to handle it)
-    
+
     # (1) round co2 constraint to make feasible (rounding with <= softens the constraint)
     # n.global_constraints.loc["CO2Limit" , "constant"] = round(n.global_constraints.loc["CO2Limit" , "constant"])
 
@@ -67,8 +67,18 @@ if __name__ == "__main__":
     n.stores.loc[n.stores.carrier == "co2", "e_nom_opt"] *= 2
 
     # gas for industry load cannot be satisfied bc of numerical issues
-    if  round(n.loads[n.loads.carrier == "gas for industry"].p_set.iloc[0], 5) > n.links[n.links.carrier.isin(["gas for industry" , "gas for industry CC"])].p_nom_opt.sum():
-        n.links.loc[n.links.carrier == "gas for industry", "p_nom_opt"] += n.loads[n.loads.carrier == "gas for industry"].p_set.iloc[0]- n.links[n.links.carrier.isin(["gas for industry" , "gas for industry CC"])].p_nom_opt.sum()
+    if (
+        round(n.loads[n.loads.carrier == "gas for industry"].p_set.iloc[0], 5)
+        > n.links[
+            n.links.carrier.isin(["gas for industry", "gas for industry CC"])
+        ].p_nom_opt.sum()
+    ):
+        n.links.loc[n.links.carrier == "gas for industry", "p_nom_opt"] += (
+            n.loads[n.loads.carrier == "gas for industry"].p_set.iloc[0]
+            - n.links[
+                n.links.carrier.isin(["gas for industry", "gas for industry CC"])
+            ].p_nom_opt.sum()
+        )
 
     n.optimize.fix_optimal_capacities()
 
@@ -98,4 +108,3 @@ if __name__ == "__main__":
 
     n.meta = dict(snakemake.config, **dict(wildcards=dict(snakemake.wildcards)))
     n.export_to_netcdf(snakemake.output.network)
-    

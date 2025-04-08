@@ -557,7 +557,6 @@ def get_capacity_additions_nstat(n, region):
 
 
 def _get_capacities(n, region, cap_func, cap_string="Capacity|"):
-
     kwargs = {
         "groupby": ["bus", "carrier"],
         "at_port": True,
@@ -1920,7 +1919,6 @@ def get_secondary_energy(n, region, _industry_demand):
 def get_final_energy(
     n, region, _industry_demand, _energy_totals, _sector_ratios, _industry_production
 ):
-
     var = pd.Series()
 
     kwargs = {
@@ -3040,8 +3038,10 @@ def get_emissions(n, region, _energy_totals, industry_demand):
     ) + var["Emissions|Gross Fossil CO2|Energy|Supply|Gases"]
 
     var["Emissions|CO2|Supply|Non-Renewable Waste"] = (
-        (co2_emissions.get("HVC to air").sum() if "HVC to air" in co2_emissions.index else 0) + waste_CHP_emissions.sum()
-    )
+        co2_emissions.get("HVC to air").sum()
+        if "HVC to air" in co2_emissions.index
+        else 0
+    ) + waste_CHP_emissions.sum()
 
     var["Emissions|Gross Fossil CO2|Energy|Supply|Liquids"] = co2_emissions.get(
         "oil refining", 0
@@ -3100,8 +3100,10 @@ def get_emissions(n, region, _energy_totals, industry_demand):
     )
 
     # necessary if you run with (waste_to_energy: false; waste_to_energy_cc: false)
-    if "waste CHP" not in  n.carriers.index.unique():
-        var["Emissions|CO2|Energy and Industrial Processes"] += co2_emissions.get("naphtha for industry", 0)
+    if "waste CHP" not in n.carriers.index.unique():
+        var["Emissions|CO2|Energy and Industrial Processes"] += co2_emissions.get(
+            "naphtha for industry", 0
+        )
 
     emission_difference = var["Emissions|CO2"] - (
         var["Emissions|CO2|Energy and Industrial Processes"]
@@ -3332,7 +3334,6 @@ def get_weighted_costs_links(carriers, n, region):
 
 
 def get_weighted_costs(costs, flows):
-
     cleaned_costs = []
     cleaned_flows = []
 
@@ -3390,7 +3391,7 @@ def get_prices(n, region):
     )
 
     # co2 additions
-    co2_price = -n.global_constraints.loc[n_glob_co2, "mu"] - co2_limit_de 
+    co2_price = -n.global_constraints.loc[n_glob_co2, "mu"] - co2_limit_de
     # specific emissions in tons CO2/MWh according to n.links[n.links.carrier =="your_carrier].efficiency2.unique().item()
     specific_emissions = {
         "oil": 0.2571,
@@ -3936,7 +3937,6 @@ def get_prices(n, region):
 
 
 def get_discretized_value(value, disc_int, build_threshold=0.3):
-
     if value == 0.0:
         return value
 
@@ -4363,7 +4363,6 @@ def get_policy(n, investment_year):
 
 
 def get_economy(n, region):
-
     var = pd.Series()
 
     s = n.statistics
@@ -4660,7 +4659,6 @@ def get_trade(n, region):
 
 
 def get_production(region, year):
-
     var = pd.Series()
     # read in the industrial production data
     years = [
@@ -4906,7 +4904,6 @@ def get_operational_and_capital_costs(year):
 
 
 def get_grid_capacity(n, region, year):
-
     var = pd.Series()
     ### Total Capacity
     ## Transmission Grid
@@ -5119,7 +5116,6 @@ def get_grid_capacity(n, region, year):
 
 
 def hack_DC_projects(n, p_nom_start, p_nom_planned, model_year, snakemake, costs):
-
     logger.info(f"Hacking DC projects for year {model_year}")
 
     logger.info("Assuming all indices of DC projects start with 'DC' or 'TYNDP'")
@@ -5306,7 +5302,6 @@ def get_ariadne_var(
     region,
     year,
 ):
-
     var = pd.concat(
         [
             get_capacities(n, region),
@@ -5352,7 +5347,6 @@ def get_data(
     version="0.10",
     scenario="test",
 ):
-
     var = get_ariadne_var(
         n,
         industry_demand,
@@ -5495,11 +5489,13 @@ if __name__ == "__main__":
         )
     )
     modelyears = [fn[-7:-3] for fn in snakemake.input.networks]
-     
-    if snakemake.params.transmission_projects != "zero":   
+
+    if snakemake.params.transmission_projects != "zero":
         # Hack the transmission projects
         networks = [
-            hack_transmission_projects(n.copy(), _networks[0], int(my), snakemake, costs)
+            hack_transmission_projects(
+                n.copy(), _networks[0], int(my), snakemake, costs
+            )
             for n, my in zip(_networks, modelyears)
         ]
     else:

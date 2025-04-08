@@ -1324,7 +1324,9 @@ def add_co2limit(n, options, co2_totals_file, countries, nyears, limit):
     co2_limit *= limit * nyears
 
     # set DE limit globally
-    limit_countries = snakemake.params.constraints["co2_budget_national"][investment_year]
+    limit_countries = snakemake.params.constraints["co2_budget_national"][
+        investment_year
+    ]
     nhours = n.snapshot_weightings.generators.sum()
     nyears = nhours / 8760
     co2_totals = 1e6 * pd.read_csv(snakemake.input.co2_totals_name, index_col=0)
