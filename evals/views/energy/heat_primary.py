@@ -1,14 +1,11 @@
 """Module for primary energy evaluations."""
 
-from functools import partial
 from pathlib import Path
-
-import pandas as pd
 
 from evals.constants import BusCarrier, DataModel
 from evals.fileio import Exporter
 from evals.plots.barchart import ESMBarChart
-from evals.statistic import collect_myopic_statistics, get_location
+from evals.statistic import collect_myopic_statistics
 from evals.utils import drop_from_multtindex_by_regex, filter_by
 
 
@@ -39,8 +36,8 @@ def view_heat_primary_energy(
     )
 
     # drop non energy CO2 rows because they have mass unit and not energy
-    # todo: is this really justified?
     link_energy = link_energy.drop(["co2", "co2 stored"], level=DataModel.BUS_CARRIER)
+    # todo: is this really justified? Discussions needed, or disclaimer in graph.
 
     # only keep Links that have at least one heat bus_carrier connected at one of their branches
     carrier_with_heat_buses = []
