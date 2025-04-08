@@ -320,7 +320,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/lzo-2.10-hd590300_1001.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/mako-1.3.9-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/mapclassify-2.8.1-pyhd8ed1ab_1.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/marimo-0.11.28-py312h76ec4c3_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/marimo-0.12.4-py312h5936eb9_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/markdown-3.6-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/markdown-it-py-3.0.0-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/markupsafe-3.0.2-py312h178313f_1.conda
@@ -5028,9 +5028,9 @@ packages:
   - pkg:pypi/mapclassify?source=hash-mapping
   size: 56772
   timestamp: 1733731193211
-- conda: https://conda.anaconda.org/conda-forge/linux-64/marimo-0.11.28-py312h76ec4c3_0.conda
-  sha256: df0659fe1a10a66c653a4e675b7ef53c8821e5814e1ab3deb0206f3caf1d5fb0
-  md5: 1adb3f6ed897ff877de22019a7325a74
+- conda: https://conda.anaconda.org/conda-forge/linux-64/marimo-0.12.4-py312h5936eb9_0.conda
+  sha256: 94ccd8a52b7b47e5fdfa79c4c7599a2a54146197a84034634cc37468e2eec94d
+  md5: badeca2d96c0338d179192001880b5b6
   depends:
   - python
   - click >=8.0,<9
@@ -5052,10 +5052,11 @@ packages:
   - packaging
   - python_abi 3.12.* *_cp312
   license: Apache-2.0
+  license_family: APACHE
   purls:
   - pkg:pypi/marimo?source=hash-mapping
-  size: 7224979
-  timestamp: 1743017828370
+  size: 7272438
+  timestamp: 1743749558619
 - conda: https://conda.anaconda.org/conda-forge/noarch/markdown-3.6-pyhd8ed1ab_0.conda
   sha256: fce1fde00359696983989699c00f9891194c4ebafea647a8d21b7e2e3329b56e
   md5: 06e9bebf748a0dea03ecbe1f0e27e909
@@ -7679,6 +7680,8 @@ packages:
   - python >=3.11.0,<4.0.0
   - snakemake-interface-common >=1.16.0,<2.0.0
   license: MIT
+  purls:
+  - pkg:pypi/snakemake-interface-report-plugins?source=hash-mapping
   size: 13269
   timestamp: 1728055589409
 - conda: https://conda.anaconda.org/bioconda/noarch/snakemake-interface-storage-plugins-3.5.0-pyhdfd78af_0.tar.bz2

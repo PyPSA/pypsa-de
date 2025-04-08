@@ -188,6 +188,21 @@ exports = ["excel"]
 "urban central heat" = "Solar Power"
 "urban decentral heat" = "Solar Power"
 
+[view.fed.total]
+name = "Final Energy Demand"
+unit = "TWh"
+file_name = "nodal_fed_total_{location}"
+cutoff = 0.001
+legend_order = [
+    # from zero upwards:
+    ""
+]
+checks = []
+exports = ["excel"]
+
+[view.fed.total.categories]
+"" = ""
+
 [view.timeseries.hydrogen]
 name = "Hydrogen Production and Demand"
 unit = "MWh"

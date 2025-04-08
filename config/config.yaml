@@ -200,7 +200,6 @@ clustering:
   # fw = fw.div(fw.min()).round()
   # fw["ES"] = 1
   # print(fw.div(fw.sum()).subtract(5e-5).round(4).to_dict().__repr__().replace(",","\n"))
-  # todo: use administrative clustering
   mode: administrative
   administrative:
     level: 0 # countries
@@ -282,7 +281,7 @@ clustering:
 #    "SK": 0.0163
 #    "XK": 0.0163
   temporal:
-    resolution_sector: 3H
+    resolution_sector: 365H
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#co2-budget
 co2_budget:
@@ -677,8 +676,8 @@ solving:
 #      2050:
 #        AT: 0
   solver:
-    name: xpress
-    options: xpress-default
+    name: highs
+    options: highs-default
   solver_options:
     xpress-default:
       THREADS: 8

@@ -56,6 +56,12 @@ logger = logging.getLogger(__name__)
 pypsa.pf.logger.setLevel(logging.WARNING)
 
 
+# # disable unknown buses checks:
+# def patch():
+#     return None
+# pypsa.consistency.check_for_unknown_buses = patch
+
+
 class ObjectiveValueError(Exception):
     pass
 

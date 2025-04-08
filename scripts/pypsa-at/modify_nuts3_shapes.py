@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Modify the NUTS3 shapefile for custom administrative clustering."""
 
 import logging
