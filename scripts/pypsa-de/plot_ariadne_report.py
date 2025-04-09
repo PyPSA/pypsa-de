@@ -1481,7 +1481,14 @@ def plot_backup_generation(
 
 
 def plot_elec_prices_spatial(
-    network, tech_colors, savepath, onshore_regions, exported_variables, year="2045", region="DE", lang="ger"
+    network,
+    tech_colors,
+    savepath,
+    onshore_regions,
+    exported_variables,
+    year="2045",
+    region="DE",
+    lang="ger",
 ):
     # onshore_regions = gpd.read_file("/home/julian-geis/repos/pypsa-ariadne-1/resources/20241203-force-onwind-south-49cl-disc/KN2045_Bal_v4/regions_onshore_base_s_49.geojson")
     # onshore_regions = onshore_regions.set_index('name')
@@ -1506,25 +1513,29 @@ def plot_elec_prices_spatial(
 
     # Netzentgelte, Annuität NEP 2045 - Annuität PyPSA 2045 / Stromverbrauch Pypsa 2045
 
-    pypsa_annuität = pd.Series({
-        2020: 3.90 + 13.64,
-        2025: 4.28 + 21.92,
-        2030: 4.64 + 27.51,
-        2035: 4.27 + 27.51,
-        2040: 5.60 + 27.51,
-        2045: 6.53 + 27.51,
-    })
-    nep_annuität = pd.Series({
-        2020: 4.68 + 13.64,
-        2025: 8.31 + 21.92,
-        2030: 12.52 + 27.51,
-        2035: 13.05 + 27.51,
-        2040: 15.39 + 27.51,
-        2045: 15.82 + 27.51,   
-    })
-    electricity_demand = exported_variables.loc["Demand|Electricity"].iloc[0,:] / 1000 
+    pypsa_annuität = pd.Series(
+        {
+            2020: 3.90 + 13.64,
+            2025: 4.28 + 21.92,
+            2030: 4.64 + 27.51,
+            2035: 4.27 + 27.51,
+            2040: 5.60 + 27.51,
+            2045: 6.53 + 27.51,
+        }
+    )
+    nep_annuität = pd.Series(
+        {
+            2020: 4.68 + 13.64,
+            2025: 8.31 + 21.92,
+            2030: 12.52 + 27.51,
+            2035: 13.05 + 27.51,
+            2040: 15.39 + 27.51,
+            2045: 15.82 + 27.51,
+        }
+    )
+    electricity_demand = exported_variables.loc["Demand|Electricity"].iloc[0, :] / 1000
     pypsa_netzentgelt = pypsa_annuität[year] / electricity_demand[year]
-    nep_netzentgelt = nep_annuität[year] / electricity_demand[year] 
+    nep_netzentgelt = nep_annuität[year] / electricity_demand[year]
     elec_price_de = df["elec_price"][df.index.str.contains("DE")]
 
     # Calculate the difference from the mean_with_netzentgelt
