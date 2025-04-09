@@ -660,9 +660,10 @@ def _fetch_fed_homes_and_trade(networks: dict) -> pd.Series | pd.DataFrame:
         AC demand for heat from domestic homes and trade with the sector
         name "Households & Services".
     """
-    fed_homes_and_trade = collect_myopic_statistics(
-        networks, statistic="ac_load_split", carrier=[Carrier.domestic_homes_and_trade]
-    ).mul(
-        -1
+    return (
+        collect_myopic_statistics(networks, statistic="ac_load_split")
+        .pipe(filter_by, carrier=Carrier.domestic_homes_and_trade)
+        .pipe(rename_aggregate, Group.hh_and_service)
+        .mul(-1)
     )  # plot demand upwards
-    return rename_aggregate(fed_homes_and_trade, Group.hh_and_services)
+    # return rename_aggregate(fed_homes_and_trade, Group.hh_and_services)

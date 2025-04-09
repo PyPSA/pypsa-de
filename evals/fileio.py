@@ -259,10 +259,7 @@ def prepare_costs(
 
 
 def prepare_co2_emissions(
-    result_path: str | Path,
     n: pypsa.Network,
-    options: str | list[str],
-    sub_directory: str = "../../resources",
 ) -> pd.DataFrame:
     """
     Read emissions from file and calculate the country share.
@@ -275,18 +272,8 @@ def prepare_co2_emissions(
 
     Parameters
     ----------
-    result_path
-        Absolute or relative path to the run results folder that
-        contains all model results (typically ends with "results",
-        or is a time-stamp).
     n
         The Notwork with the meta attribute to obtain the config.
-    options : {'T', 'H', 'I'}
-        Specify 'T', 'H', and/or 'I' to include transport,
-        household, and/or industry emissions, respectively.
-    sub_directory
-        The location of the costs files relative to the results folder
-        (Only required during testing).
 
     Returns
     -------
@@ -299,12 +286,7 @@ def prepare_co2_emissions(
     for Austrian NUTS2 regions shares, that are not accurate otherwise.
     """
     run = n.meta["run"]
-    res = path_provider(
-        "../resources/",  # assuming CWD is evals/cli.py
-        get_rdir(run),
-        run["shared_resources"]["policy"],
-        run["shared_resources"]["exclude"],
-    )
+    res = get_resources_directory(n)
     co2 = read_csv_files(res(""), "co2_totals.csv", "")
 
     options = n.meta["wildcards"]["sector_opts"]
@@ -978,3 +960,14 @@ class Exporter:
         directory_path.mkdir(parents=True, exist_ok=True)
 
         return directory_path
+
+
+def get_resources_directory(n: pypsa.Network) -> Callable:
+    """Return a path provider to the resources directory for a network."""
+    run = n.meta["run"]
+    return path_provider(
+        "../resources/",  # assuming CWD is evals/cli.py
+        get_rdir(run),
+        run["shared_resources"]["policy"],
+        run["shared_resources"]["exclude"],
+    )

@@ -161,7 +161,7 @@ class Carrier:
     road_freight_ac: str = "electricity road freight"
     industry: str = "industry"
     industry_new_electricity: str = "industry new electricity"
-    grid_losses: str = "grid losses"
+    grid_losses: str = "urban central heat losses"
     electricity_rail: str = "electricity rail"
     phev_short: str = "PHEV short"
     phev_long: str = "PHEV long"
