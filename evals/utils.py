@@ -673,7 +673,6 @@ def scale(df: pd.DataFrame, to_unit: str) -> pd.DataFrame:
 def calculate_input_share(
     df: pd.DataFrame | pd.Series,
     bus_carrier: str | list,
-    idx: tuple = (DataModel.YEAR, DataModel.LOCATION, DataModel.CARRIER),
 ) -> pd.DataFrame | pd.Series:
     """
     Calculate the withdrawal necessary to supply energy for requested bus_carrier.
@@ -695,31 +694,38 @@ def calculate_input_share(
         withdrawal = _df[_df.lt(0)]
         supply = _df[_df.ge(0)]
         bus_carrier_supply = filter_by(supply, bus_carrier=bus_carrier).sum()
+        in_out_factor = (
+            withdrawal.sum() / supply.sum()
+        )  # take into account that Link inputs and outputs are not equally large
+        input_share = (
+            bus_carrier_supply / supply.sum()
+        )  # the fraction for input if there are multiple outputs
         # fixme: is suspect this is wrong for heat pumps and CHPs with sum(efficiency > 1). The problem is, that 100%
         #  of heat generation is called "low voltage", but this is not correct. It should label 100% of
         #  electricity demand as low voltage and the rest as ambient heat
-        return withdrawal * bus_carrier_supply / supply.sum()
+        return withdrawal / in_out_factor * input_share
 
-    return df.groupby(list(idx), group_keys=False).apply(_input_share)
+    return df.groupby(
+        [DataModel.YEAR, DataModel.LOCATION, DataModel.CARRIER], group_keys=False
+    ).apply(_input_share)
 
 
 def filter_for_carrier_connected_to(
     df: pd.DataFrame, bus_carrier: str | list, kind: str = None
 ):
     """"""
-    if kind == "supply":
-        func = pd.Series.gt if isinstance(df, pd.Series) else pd.DataFrame.gt
-    elif kind == "withdrawal":
-        func = pd.Series.lt if isinstance(df, pd.Series) else pd.DataFrame.lt
-
     carrier_connected_to_bus_carrier = []
-    for carrier, data in df.groupby(DataModel.CARRIER):
-        if func and filter_by(data, bus_carrier=bus_carrier).pipe(func, 0).any():
+    locations_connected_to_bus_carrier = []
+    for (loc, carrier), data in df.groupby([DataModel.LOCATION, DataModel.CARRIER]):
+        if filter_by(data, bus_carrier=bus_carrier).any():
             carrier_connected_to_bus_carrier.append(carrier)
-        elif filter_by(data, bus_carrier=bus_carrier).any():
-            carrier_connected_to_bus_carrier.append(carrier)
+            locations_connected_to_bus_carrier.append(loc)
 
-    return filter_by(df, carrier=carrier_connected_to_bus_carrier)
+    return filter_by(
+        df,
+        carrier=carrier_connected_to_bus_carrier,
+        location=locations_connected_to_bus_carrier,
+    )
 
 
 def split_urban_heat_losses_and_consumption(
