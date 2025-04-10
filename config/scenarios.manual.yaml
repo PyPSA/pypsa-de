@@ -292,7 +292,7 @@ KN2045plus_EasyRide:
       2035: 0.25
       2040: 0.34
       2045: 0.43
-      2050: 0.43
+      2050: 0.50
 
 KN2045plus_LowDemand:
 # Im Vergleich zu Easy Ride eher knappe EE Erzeugung
@@ -365,7 +365,7 @@ KN2045plus_LowDemand:
       2035: 0.25
       2040: 0.34
       2045: 0.43
-      2050: 0.43
+      2050: 0.50
 
 KN2045minus_WorstCase:
 # Nachfrage nach Endenergie ist höher als in den Szenarien 1-3
@@ -478,7 +478,7 @@ KN2045minus_WorstCase:
       2035: 0.18
       2040: 0.24
       2045: 0.29
-      2050: 0.29
+      2050: 0.33
   offshore_nep_force:
     cutin_year: 2025
     cutout_year: 2035 # Hackily reduced to 2030 if delay_years: 1
@@ -549,7 +549,7 @@ KN2045minus_SupplyFocus:
       2035: 0.18
       2040: 0.24
       2045: 0.29
-      2050: 0.29
+      2050: 0.33
 
 KN2045_Bal_LowDemand:
 # Ausgewogener Mix an Technologien zur Dekarbonisierung der Sektoren
@@ -598,7 +598,7 @@ KN2045_Bal_LowDemand:
       2035: 0.25
       2040: 0.34
       2045: 0.43
-      2050: 0.43
+      2050: 0.50
 
 KN2045_Bal_HighDemand:
 # Ausgewogener Mix an Technologien zur Dekarbonisierung der Sektoren
@@ -647,4 +647,4 @@ KN2045_Bal_HighDemand:
       2035: 0.18
       2040: 0.24
       2045: 0.29
-      2050: 0.29
+      2050: 0.33
