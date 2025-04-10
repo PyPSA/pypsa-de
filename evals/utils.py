@@ -694,20 +694,25 @@ def calculate_input_share(
         withdrawal = _df[_df.lt(0)]
         supply = _df[_df.ge(0)]
         bus_carrier_supply = filter_by(supply, bus_carrier=bus_carrier).sum()
-        in_out_factor = (
-            withdrawal.sum() / supply.sum()
-        )  # take into account that Link inputs and outputs are not equally large
-        input_share = (
-            bus_carrier_supply / supply.sum()
-        )  # the fraction for input if there are multiple outputs
+        # factor takes into account that Link inputs and outputs are not equally large
+        factor = withdrawal.sum() / supply.sum()
+        # share takes multiple outputs into account
+        share = bus_carrier_supply / supply.sum()
         # fixme: is suspect this is wrong for heat pumps and CHPs with sum(efficiency > 1). The problem is, that 100%
         #  of heat generation is called "low voltage", but this is not correct. It should label 100% of
         #  electricity demand as low voltage and the rest as ambient heat
-        return withdrawal / in_out_factor * input_share
+        if factor < 1.0 and "heat pump" in _df.index.unique("carrier")[0]:
+            print("heat pumps")
+        if (
+            factor < 1.0
+            and share != 0
+            and "heat pump" not in _df.index.unique("carrier")[0]
+        ):
+            print(_df)
+        return withdrawal / factor * share
 
-    return df.groupby(
-        [DataModel.YEAR, DataModel.LOCATION, DataModel.CARRIER], group_keys=False
-    ).apply(_input_share)
+    groups = [DataModel.YEAR, DataModel.LOCATION, DataModel.CARRIER]
+    return df.groupby(groups, group_keys=False).apply(_input_share)
 
 
 def filter_for_carrier_connected_to(
