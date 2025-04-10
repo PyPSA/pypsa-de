@@ -830,6 +830,7 @@ class Exporter:
         output_path = self.make_evaluation_result_directories(result_path, subdir)
 
         self.export_plotly(output_path)
+
         if "excel" in self.view_config.get("exports", []):
             self.export_excel(output_path)
         if "csv" in self.view_config.get("exports", []):
