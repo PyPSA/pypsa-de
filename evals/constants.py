@@ -1405,6 +1405,7 @@ COLOUR_SCHEME_BMK: dict = {
     "Resistive Heater": COLOUR.blue_persian,
     "Heat Pump": COLOUR.blue_celestial,
     "Fuel Cell (Heat)": COLOUR.blue_pastel,
+    "Demand": COLOUR.grey_neutral,
     # yellow - solar
     "Solar Power": COLOUR.yellow_bright,
     "Photovoltaics": COLOUR.yellow_bright,

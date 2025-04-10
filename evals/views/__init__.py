@@ -1,5 +1,6 @@
 """Expose view functions from inside the views package to the module."""
 
+from evals.views.balance.heat import view_balance_heat
 from evals.views.balance.hydrogen import view_balance_hydrogen
 from evals.views.capacity.ac_production import view_electricity_production_capacities
 from evals.views.capacity.ac_storage import view_capacity_ac_storage
@@ -14,6 +15,7 @@ __all__ = [
     "view_capacity_ac_storage",
     "view_electricity_production_capacities",
     "view_balance_hydrogen",
+    "view_balance_heat",
     "view_heat_production",
     "view_timeseries_hydrogen",
     "view_gas_storage_capacities",

@@ -676,25 +676,28 @@ def calculate_input_share(
     idx: tuple = (DataModel.YEAR, DataModel.LOCATION, DataModel.CARRIER),
 ) -> pd.DataFrame | pd.Series:
     """
-    Calulcate the withdrawal neccessary to supply energy for requested bus_carrier.
+    Calculate the withdrawal necessary to supply energy for requested bus_carrier.
 
     Parameters
     ----------
     df
-        The input DataFrame or Sieries with a MultiIndex.
+        The input DataFrame or Series with a MultiIndex.
     bus_carrier
         Calculates the input energy for this bus_carrier.
 
     Returns
     -------
     :
-        The withdrawal amounts neccessary to produce energy of `bus_carrier`.
+        The withdrawal amounts necessary to produce energy of `bus_carrier`.
     """
 
     def _input_share(_df):
         withdrawal = _df[_df.lt(0)]
         supply = _df[_df.ge(0)]
         bus_carrier_supply = filter_by(supply, bus_carrier=bus_carrier).sum()
+        # fixme: is suspect this is wrong for heat pumps and CHPs with sum(efficiency > 1). The problem is, that 100%
+        #  of heat generation is called "low voltage", but this is not correct. It should label 100% of
+        #  electricity demand as low voltage and the rest as ambient heat
         return withdrawal * bus_carrier_supply / supply.sum()
 
     return df.groupby(list(idx), group_keys=False).apply(_input_share)
@@ -703,17 +706,30 @@ def calculate_input_share(
 def filter_for_carrier_connected_to(
     df: pd.DataFrame, bus_carrier: str | list, kind: str = None
 ):
-    """"""
+    """
+
+    Parameters
+    ----------
+    df
+    bus_carrier
+    kind
+
+    Returns
+    -------
+    :
+    """
+    # fixme: kind argument does not seem to do anything?
+    func = None
     if kind == "supply":
         func = pd.Series.gt if isinstance(df, pd.Series) else pd.DataFrame.gt
     elif kind == "withdrawal":
         func = pd.Series.lt if isinstance(df, pd.Series) else pd.DataFrame.lt
-    else:
-        raise ValueError(f"Unknown kind: {kind}")
 
     carrier_connected_to_bus_carrier = []
     for carrier, data in df.groupby(DataModel.CARRIER):
-        if filter_by(data, bus_carrier=bus_carrier).pipe(func, 0).any():
+        if func and filter_by(data, bus_carrier=bus_carrier).pipe(func, 0).any():
+            carrier_connected_to_bus_carrier.append(carrier)
+        elif filter_by(data, bus_carrier=bus_carrier).any():
             carrier_connected_to_bus_carrier.append(carrier)
 
     return filter_by(df, carrier=carrier_connected_to_bus_carrier)
