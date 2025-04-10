@@ -38,6 +38,20 @@ def view_balance_heat(
     # from evals.fileio import read_networks
     # from evals.utils import filter_by
     #
+    # collect_myopic_statistics(
+    #     networks=networks,
+    #     statistic="energy_balance",
+    #     bus_carrier="urban central heat",
+    #     groupby=["location", "carrier", "bus_carrier", "unit"]
+    # ).pipe(filter_by, location="FR0", year="2030").sum()
+    #
+    # n = networks["2030"]
+    # n.statistics.energy_balance(
+    #     bus_carrier="urban central heat",
+    #     groupby=["location", "carrier", "bus_carrier", "unit"],
+    # ).groupby("location").sum()
+    # fixme: how can it be that buses are not balanced?
+    #
     # networks = read_networks(
     #     result_path="/IdeaProjects/pypsa-at/results/20240627public_db/8Gt_Bal_v3"
     # )
@@ -83,7 +97,6 @@ def view_balance_heat(
     #
     # # I think it will never be possible to fetch input energies without unit conversions.
     #
-    # too small amounts yielded:
     link_energy_balance = collect_myopic_statistics(
         networks,
         comps="Link",
@@ -139,13 +152,13 @@ def view_balance_heat(
     For example, Electrolsyis needs AC and H2. Therefore it is not possible to
     show Electricity or Hydrogen in the supply side of this view.
     """
-    # heat_supply = [
-    #     collect_myopic_statistics(
-    #         networks,
-    #         statistic="supply",
-    #         bus_carrier=BusCarrier.heat_buses(),
-    #     ).pipe(rename_aggregate, {"urban central water tanks discharger": "Storage"})
-    # ]
+    heat_supply = [
+        collect_myopic_statistics(
+            networks,
+            statistic="supply",
+            bus_carrier=BusCarrier.heat_buses(),
+        )  # .pipe(rename_aggregate, {"urban central water tanks discharger": "Storage"})
+    ]
 
     heat_loss_factor = get_heat_loss_factor(networks)
     heat_demand = (
@@ -172,6 +185,8 @@ def view_balance_heat(
     # static view settings:
     exporter.defaults.plotly.chart = ESMGroupedBarChart
     exporter.defaults.plotly.xaxis_title = ""
-    exporter.defaults.plotly.pattern = {"Demand": "/"}
+    exporter.defaults.plotly.pattern = {
+        "Demand": "/"
+    }  # todo: not applied in grouped bar charts
 
     exporter.export(result_path, subdir)
