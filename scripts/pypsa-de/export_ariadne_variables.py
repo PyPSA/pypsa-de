@@ -1546,7 +1546,6 @@ def get_secondary_energy(n, region, _industry_demand):
 
     var["Secondary Energy|Electricity|Hydro"] = electricity_supply.reindex(
         [
-            "PHS",
             "hydro",
             "ror",
         ]
@@ -1653,7 +1652,7 @@ def get_secondary_energy(n, region, _industry_demand):
     assert isclose(
         electricity_supply[
             ~electricity_supply.index.str.contains(
-                "battery discharger|home battery discharger|V2G"
+                "PHS|battery discharger|home battery discharger|V2G"
             )
         ].sum(),
         var["Secondary Energy|Electricity"],
