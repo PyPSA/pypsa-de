@@ -706,20 +706,7 @@ def calculate_input_share(
 def filter_for_carrier_connected_to(
     df: pd.DataFrame, bus_carrier: str | list, kind: str = None
 ):
-    """
-
-    Parameters
-    ----------
-    df
-    bus_carrier
-    kind
-
-    Returns
-    -------
-    :
-    """
-    # fixme: kind argument does not seem to do anything? write a unit test.
-    func = None
+    """"""
     if kind == "supply":
         func = pd.Series.gt if isinstance(df, pd.Series) else pd.DataFrame.gt
     elif kind == "withdrawal":
