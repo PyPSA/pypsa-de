@@ -743,7 +743,6 @@ sector:
     max_amount: 1390 # TWh
     upstream_emissions_factor: .1 #share of solid biomass CO2 emissions at full combustion
 
-
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#industry
 industry:
   St_primary_fraction:

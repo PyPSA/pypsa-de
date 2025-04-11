@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ESM bar charts."""
 
 from functools import cached_property
@@ -14,7 +13,8 @@ from evals.utils import apply_cutoff, prettify_number
 
 
 class ESMBarChart(ESMChart):
-    """The ESM Bar Chart exports metrics as plotly HTML file.
+    """
+    The ESM Bar Chart exports metrics as plotly HTML file.
 
     Parameters
     ----------
@@ -34,7 +34,8 @@ class ESMBarChart(ESMChart):
 
     @cached_property
     def barmode(self) -> str:
-        """Determine the barmode for the bar chart.
+        """
+        Determine the barmode for the bar chart.
 
         Returns
         -------
@@ -48,7 +49,8 @@ class ESMBarChart(ESMChart):
 
     @cached_property
     def df(self) -> pd.DataFrame:
-        """Plot data formatted for bar charts.
+        """
+        Plot data formatted for bar charts.
 
         Returns
         -------
@@ -116,7 +118,8 @@ class ESMBarChart(ESMChart):
         name_trace: str,
         orientation: str = None,
     ) -> None:
-        """Create a scatter trace for total sum labels.
+        """
+        Create a scatter trace for total sum labels.
 
         The label will show the total sum as text at the end of the bar
         trace. The label will not be part of the legend.
@@ -173,7 +176,8 @@ class ESMBarChart(ESMChart):
         )
 
     def _set_legend_rank(self, trace: go.Bar) -> go.Bar:
-        """Set the legendrank attribute for bar traces.
+        """
+        Set the legendrank attribute for bar traces.
 
         Only traces listed in the category_order
         configuration item are considered.

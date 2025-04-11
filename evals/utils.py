@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Collect package helper functions."""
 
 import logging
@@ -14,6 +13,7 @@ from evals.constants import (
     ALIAS_LOCATION,
     ALIAS_REGION,
     UNITS,
+    BusCarrier,
     Carrier,
     DataModel,
     Group,
@@ -495,8 +495,8 @@ def aggregate_eu(df: pd.DataFrame, agg: str = "sum") -> pd.DataFrame:
     excluded = [
         Group.import_net,  # required for CH4 and H2!
         Group.export_net,
-        Group.import_european,
-        Group.export_european,
+        Group.import_foreign,
+        Group.export_foreign,
         # exclude domestic trade for EU region
         Group.import_domestic,
         Group.export_domestic,
@@ -668,6 +668,131 @@ def scale(df: pd.DataFrame, to_unit: str) -> pd.DataFrame:
     result.attrs["unit"] = to_unit
 
     return result
+
+
+def calculate_input_share(
+    df: pd.DataFrame | pd.Series,
+    bus_carrier: str | list,
+) -> pd.DataFrame | pd.Series:
+    """
+    Calculate the withdrawal necessary to supply energy for requested bus_carrier.
+
+    Parameters
+    ----------
+    df
+        The input DataFrame or Series with a MultiIndex.
+    bus_carrier
+        Calculates the input energy for this bus_carrier.
+
+    Returns
+    -------
+    :
+        The withdrawal amounts necessary to produce energy of `bus_carrier`.
+    """
+
+    def _input_share(_df):
+        withdrawal = _df[_df.lt(0)]
+        supply = _df[_df.ge(0)]
+        bus_carrier_supply = filter_by(supply, bus_carrier=bus_carrier).sum()
+        # factor takes into account that Link inputs and outputs are not equally large
+        factor = withdrawal.sum() / supply.sum()
+        # share takes multiple outputs into account
+        share = bus_carrier_supply / supply.sum()
+        # fixme: is suspect this is wrong for heat pumps and CHPs with sum(efficiency > 1). The problem is, that 100%
+        #  of heat generation is called "low voltage", but this is not correct. It should label 100% of
+        #  electricity demand as low voltage and the rest as ambient heat
+        # if factor < 1.0 and "heat pump" in _df.index.unique("carrier")[0]:
+        #     print("heat pumps")
+        # if (
+        #     factor < 1.0
+        #     and share != 0
+        #     and "heat pump" not in _df.index.unique("carrier")[0]
+        # ):
+        #     print(_df)
+        return withdrawal / factor * share
+
+    groups = [DataModel.YEAR, DataModel.LOCATION, DataModel.CARRIER]
+    return df.groupby(groups, group_keys=False).apply(_input_share)
+
+
+def filter_for_carrier_connected_to(
+    df: pd.DataFrame, bus_carrier: str | list, kind: str = None
+):
+    """"""
+    carrier_connected_to_bus_carrier = []
+    locations_connected_to_bus_carrier = []
+    for (loc, carrier), data in df.groupby([DataModel.LOCATION, DataModel.CARRIER]):
+        if filter_by(data, bus_carrier=bus_carrier).any():
+            carrier_connected_to_bus_carrier.append(carrier)
+            locations_connected_to_bus_carrier.append(loc)
+
+    return filter_by(
+        df,
+        carrier=carrier_connected_to_bus_carrier,
+        location=locations_connected_to_bus_carrier,
+    )
+
+
+def split_urban_heat_losses_and_consumption(
+    df: pd.DataFrame | pd.Series, heat_loss: int
+) -> pd.DataFrame:
+    """
+    Split urban heat amounts by a heat loss factor.
+
+    Amounts for urban central heat contain distribution losses.
+    However, the evaluation shows final demands
+    in the results. Therefore, heat network distribution losses need
+    to be separated from the total amounts because grid distribution
+    losses do not arrive at the metering endpoint.
+
+    Parameters
+    ----------
+    df
+        The input data frame with values for urban central heat
+        technologies.
+    heat_loss
+        The heat loss factor from the configuration file.
+
+    Returns
+    -------
+    :
+        The data frame with split heat amounts for end user demand
+        (urban dentral heat), distribution grid losses (urban dentral
+        heat losses) and anything else from the input data frame
+        (not urban central heat).
+    """
+    loss_factor = heat_loss / (1 + heat_loss)
+    urban_heat_bus_carrier = [BusCarrier.HEAT_URBAN_CENTRAL]
+
+    urban_heat = filter_by(df, bus_carrier=urban_heat_bus_carrier)
+    rest = filter_by(df, bus_carrier=urban_heat_bus_carrier, exclude=True)
+    consumption = urban_heat.mul(1 - loss_factor)
+    losses = urban_heat.mul(loss_factor)
+    losses_mapper = dict.fromkeys(urban_heat_bus_carrier, Carrier.grid_losses)
+    losses = losses.rename(losses_mapper, level=DataModel.CARRIER)
+
+    return pd.concat([rest, consumption, losses]).sort_index()
+
+
+def get_heat_loss_factor(networks: dict) -> int:
+    """
+    Return the heat loss factor for district heating from the config.
+
+    Parameters
+    ----------
+    networks
+        The loaded networks.
+
+    Returns
+    -------
+    The heat loss factor for district heating networks.
+    """
+    heat_loss_factors = {
+        n.meta["sector"]["district_heating"]["district_heating_loss"]
+        for n in networks.values()
+    }
+    assert len(heat_loss_factors) == 1, "Varying loss factors are not supported."
+    return heat_loss_factors.pop()
 
 
 def drop_from_multtindex_by_regex(

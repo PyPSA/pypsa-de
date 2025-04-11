@@ -1,4 +1,4 @@
-"""Input - Output related functions."""  # noqa: A005
+"""Input - Output related functions."""
 
 import inspect
 import logging
@@ -23,11 +23,12 @@ from evals.utils import (
     insert_index_level,
     rename_aggregate,
 )
+from scripts._helpers import get_rdir, path_provider
 
 
 def read_networks(result_path: str | Path, sub_directory: str = "networks") -> dict:
     """
-    Read postnetwork results from NetCDF (.nc) files.
+    Read network results from NetCDF (.nc) files.
 
     The function returns a dictionary of data frames. The planning
     horizon (year) is used as dictionary key and added to the network
@@ -58,11 +59,11 @@ def read_networks(result_path: str | Path, sub_directory: str = "networks") -> d
         year from the end of the file name as keys.
     """
     # delayed import to prevent circular dependency error
-    from statistic import ESMStatistics
+    from evals.statistic import ESMStatistics
 
     input_path = Path(result_path) / sub_directory
     networks = {}
-    for file_path in input_path.glob("*.nc"):
+    for file_path in input_path.glob(r"*[0-9].nc"):
         year = re.search(r"\d{4}$", file_path.stem).group()
         n = pypsa.Network(file_path)
         n.statistics = ESMStatistics(n, result_path)
@@ -258,10 +259,7 @@ def prepare_costs(
 
 
 def prepare_co2_emissions(
-    result_path: str | Path,
     n: pypsa.Network,
-    options: str | list[str],
-    sub_directory: str = "../data",
 ) -> pd.DataFrame:
     """
     Read emissions from file and calculate the country share.
@@ -274,18 +272,8 @@ def prepare_co2_emissions(
 
     Parameters
     ----------
-    result_path
-        Absolute or relative path to the run results folder that
-        contains all model results (typically ends with "results",
-        or is a time-stamp).
     n
         The Notwork with the meta attribute to obtain the config.
-    options : {'T', 'H', 'I'}
-        Specify 'T', 'H', and/or 'I' to include transport,
-        household, and/or industry emissions, respectively.
-    sub_directory
-        The location of the costs files relative to the results folder
-        (Only required during testing).
 
     Returns
     -------
@@ -297,16 +285,17 @@ def prepare_co2_emissions(
     This function needs to be updated for Agriculture emissions and
     for Austrian NUTS2 regions shares, that are not accurate otherwise.
     """
-    scenario_path = Path(result_path) / sub_directory / n.meta["scenario"]["name"]
-    co2 = read_csv_files(scenario_path, "co2_totals.csv", "general")
-    co2 = co2.drop("EU28")  # The EU value distorts the sum
+    run = n.meta["run"]
+    res = get_resources_directory(n)
+    co2 = read_csv_files(res(""), "co2_totals.csv", "")
 
+    options = n.meta["wildcards"]["sector_opts"]
     cols = ["electricity"]
-    if "T" in options:  # Transport
+    if "T" in options or options == "none":  # Transport
         cols.extend(["rail non-elec", "road non-elec"])
-    if "H" in options:  # Households
+    if "H" in options or options == "none":  # Households
         cols.extend(["residential non-elec", "services non-elec"])
-    if "I" in options:  # Industry
+    if "I" in options or options == "none":  # Industry
         cols.extend(
             [
                 "industrial non-elec",
@@ -315,23 +304,26 @@ def prepare_co2_emissions(
                 "domestic navigation",
             ]
         )
+    if "A" in options or options == "none":  # Agriculture
+        cols.extend(["agriculture"])
 
     co2 = co2[cols].sum(axis=1)
     co2_dist = co2 / co2.sum()
-    cluster = n.meta["scenario"]["clusters"][0]
-    if cluster != "adm":
-        return co2_dist  # .to_frame(metric_name)
+    cluster = n.meta["wildcards"]["clusters"]
+    # disaggregate country emissions by nodal population share
+    pop = read_csv_files(
+        res(run["prefix"]), f"pop_layout_base_s_{cluster}.csv", run["name"][0]
+    )
 
-    # disaggregate AT cluster emissions by population share
-    pop_at = read_csv_files(scenario_path, "custom_urban_pop_share_AT10.csv", cluster)
-    pop_dist_at = pop_at["region_pop"] / pop_at["region_pop"].sum()
-    co2_dist_at = pop_dist_at * co2_dist["AT"]
+    def population_fraction(ct):
+        return ct["fraction"] * co2_dist[ct.name]
 
-    co2_dist = pd.concat([co2_dist, co2_dist_at], axis=0, sort=True)
-    co2_dist = co2_dist.drop("AT")
-    co2_dist.index = co2_dist.index.set_names(DataModel.LOCATION)
+    co2_dist_pop = pop.groupby("ct", group_keys=False).apply(
+        population_fraction, include_groups=False
+    )  # .droplevel("ct")
+    co2_dist_pop.index = co2_dist_pop.index.set_names(DataModel.LOCATION)
 
-    return co2_dist
+    return co2_dist_pop
 
 
 def prepare_industry_demand(
@@ -504,8 +496,6 @@ def prepare_nodal_energy(
     The result does not contain bus_carrier information. This should
     be added here
     """
-    statistic_name = "Energy Totals"
-    statistic_unit = "MWh"
     try:
         nodal_energy = read_csv_files(
             result_path, "nodal_energy_totals_*.csv", sub_directory=sub_directory
@@ -521,7 +511,7 @@ def prepare_nodal_energy(
     nodal_energy.index.names = DataModel.YEAR_IDX_NAMES[:3]
     nodal_energy = nodal_energy * 1e6  # hard cast to MWh
 
-    carrier_bus_carrier_map = {
+    carrier_to_bus_carrier = {
         "BEV road freight LNF": "AC",
         "BEV road freight Lkw<12t": "AC",
         "BEV road freight Lkw>12t": "AC",
@@ -672,12 +662,12 @@ def prepare_nodal_energy(
 
     carrier = nodal_energy.index.get_level_values("carrier")
     nodal_energy = nodal_energy.to_frame()
-    nodal_energy["bus_carrier"] = carrier.map(carrier_bus_carrier_map)
+    nodal_energy["bus_carrier"] = carrier.map(carrier_to_bus_carrier)
     nodal_energy = nodal_energy.set_index("bus_carrier", append=True, drop=True)
     nodal_energy = nodal_energy.squeeze()
 
-    nodal_energy.attrs["name"] = statistic_name
-    nodal_energy.attrs["unit"] = statistic_unit
+    nodal_energy.attrs["name"] = "Energy Totals"
+    nodal_energy.attrs["unit"] = "MWh"
 
     return nodal_energy
 
@@ -840,6 +830,7 @@ class Exporter:
         output_path = self.make_evaluation_result_directories(result_path, subdir)
 
         self.export_plotly(output_path)
+
         if "excel" in self.view_config.get("exports", []):
             self.export_excel(output_path)
         if "csv" in self.view_config.get("exports", []):
@@ -970,3 +961,14 @@ class Exporter:
         directory_path.mkdir(parents=True, exist_ok=True)
 
         return directory_path
+
+
+def get_resources_directory(n: pypsa.Network) -> Callable:
+    """Return a path provider to the resources directory for a network."""
+    run = n.meta["run"]
+    return path_provider(
+        "../resources/",  # assuming CWD is evals/cli.py
+        get_rdir(run),
+        run["shared_resources"]["policy"],
+        run["shared_resources"]["exclude"],
+    )

@@ -55,7 +55,6 @@ libgdal-core = "<3.10.0"
 
 # additional dependencies for pypsa-at
 pixi-pycharm="*"
-marimo="*"
 plotly="*"
 pytest="*"
 click="*"
@@ -69,6 +68,8 @@ mkdocs-material-extensions="*"
 Pygments="*"
 mkdocs-marimo="*"
 mknotebooks="*"
+markdown = ">=3.6,<4"
+pymdown-extensions = ">=10.14.3,<11"
 
 #[environments]
 #dev = {features = ["dev"], solve-group = "prod"}

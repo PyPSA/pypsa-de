@@ -161,7 +161,7 @@ class Carrier:
     road_freight_ac: str = "electricity road freight"
     industry: str = "industry"
     industry_new_electricity: str = "industry new electricity"
-    grid_losses: str = "grid losses"
+    grid_losses: str = "urban central heat losses"
     electricity_rail: str = "electricity rail"
     phev_short: str = "PHEV short"
     phev_long: str = "PHEV long"
@@ -323,7 +323,7 @@ class Group:
     electrolysis: str = "Electrolysis"
     electrolysis_ht: str = "Electrolysis HT"
     export_domestic: str = "Export Domestic"
-    export_european: str = "Export European"
+    export_foreign: str = "Export Foreign"
     ft: str = "Fischer-Tropsch"
     ft_1: str = "Fischer-Tropsch 1"
     ft_2: str = "Fischer-Tropsch 2"
@@ -354,7 +354,7 @@ class Group:
     ice_short: str = "ICE short"
     import_biofuels: str = "Import Biofuels"
     import_domestic: str = "Import Domestic"
-    import_european: str = "Import European"
+    import_foreign: str = "Import Foreign"
     import_global: str = "Import Global"
     industry: str = "Industry"
     industry_cc: str = "Industry CC"
@@ -440,11 +440,11 @@ class Regex:
 
     # matches: startswith 2 capital letters, followed by up to 3 digits,
     # 1 space, and any number of digits for optional subnets.
-    region: re.Pattern = re.compile(r"^[A-Z]{2}[\d,A-G]{0,3}\s\d*")
+    region: re.Pattern = re.compile(r"^[A-Z]{2}[\d,A-G]{0,3}\s*\d*")
 
     # matches: startswith 2 capital letters, followed by up to 3 digits,
     # groups: only the first 2 letters that are the country code
-    country: re.Pattern = re.compile(r"^([A-Z]{2})[\d,A-G]{0,3}\s")
+    country: re.Pattern = re.compile(r"^([A-Z]{2})[\d,A-G]{0,3}\s*")
 
     # match anything inside parenthesis.
     unit: re.Pattern = re.compile(r"\([^()]*\)")
@@ -717,8 +717,8 @@ class Mapping:
                 "internal": Group.road_freight,
                 "external": Group.transport,
             },
-            Carrier.export_foreign: Group.export_european,
-            Carrier.import_foreign: Group.import_european,
+            Carrier.export_foreign: Group.export_foreign,
+            Carrier.import_foreign: Group.import_foreign,
             Carrier.ch4_store: {
                 "internal": {
                     "default": Group.storage_in,
@@ -1405,6 +1405,7 @@ COLOUR_SCHEME_BMK: dict = {
     "Resistive Heater": COLOUR.blue_persian,
     "Heat Pump": COLOUR.blue_celestial,
     "Fuel Cell (Heat)": COLOUR.blue_pastel,
+    "Demand": COLOUR.grey_neutral,
     # yellow - solar
     "Solar Power": COLOUR.yellow_bright,
     "Photovoltaics": COLOUR.yellow_bright,
@@ -1439,8 +1440,8 @@ COLOUR_SCHEME_BMK: dict = {
     "Losses": COLOUR.grey_silver,
     "Storage": COLOUR.grey_light,
     "co2 vent": COLOUR.grey_silver,
-    "Import European": COLOUR.grey_silver,
-    "Export European": COLOUR.grey_silver,
+    Group.import_foreign: COLOUR.grey_silver,
+    Group.export_foreign: COLOUR.grey_silver,
     Group.import_domestic: COLOUR.blue_lavender,
     Group.export_domestic: COLOUR.orange_mellow,
     Group.power_disconnect: COLOUR.grey_dark,
@@ -1466,6 +1467,13 @@ COLOUR_SCHEME_BMK: dict = {
     "Accumulated Outflow Spill": COLOUR.grey_silver,
     "Accumulated Natural Inflow": COLOUR.blue_cerulean,
     "Residualload": COLOUR.red_fire,
+    "Waste": COLOUR.raspberry,
+    "Methanolisation": COLOUR.salmon,
+    "Methane Compression": COLOUR.brown,
+    "Hydrogen Compression": COLOUR.blue_pastel,
+    "Haber-Bosch": COLOUR.red,
+    "Agriculture": COLOUR.green_light,
+    "Distribution Grid": COLOUR.grey_silver,
 }
 
 ALIAS_COUNTRY: frozendict = frozendict(

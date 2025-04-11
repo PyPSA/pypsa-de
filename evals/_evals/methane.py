@@ -77,7 +77,7 @@ def eval_ch4_balance(
         direction="import",
         bus_carrier=BusCarrier.CH4,
     )
-    ch4_import_foreign = rename_aggregate(ch4_import_foreign, Group.import_european)
+    ch4_import_foreign = rename_aggregate(ch4_import_foreign, Group.import_foreign)
 
     ch4_export_foreign = collect_myopic_statistics(
         networks,
@@ -86,7 +86,7 @@ def eval_ch4_balance(
         direction="export",
         bus_carrier=BusCarrier.CH4,
     )
-    ch4_export_foreign = rename_aggregate(ch4_export_foreign, Group.export_european)
+    ch4_export_foreign = rename_aggregate(ch4_export_foreign, Group.export_foreign)
 
     ch4_import_domestic = collect_myopic_statistics(
         networks,
@@ -132,8 +132,8 @@ def eval_ch4_balance(
     metric.defaults.plotly.cutoff = 0.1  # TWh
     metric.defaults.plotly.pattern = dict.fromkeys(
         [
-            Group.export_european,
-            Group.import_european,
+            Group.export_foreign,
+            Group.import_foreign,
             Group.global_market,
             Group.import_domestic,
             Group.export_domestic,
@@ -143,7 +143,7 @@ def eval_ch4_balance(
     metric.defaults.plotly.category_orders = (
         # order production from outside to zero
         Group.ch4_bio_processing,
-        Group.import_european,
+        Group.import_foreign,
         Group.global_market,
         # --- zero ---
         # demand ordered from zero to outside:
@@ -154,7 +154,7 @@ def eval_ch4_balance(
         Group.ocgt_electricity,
         Group.transport,
         Group.smr,
-        Group.export_european,
+        Group.export_foreign,
     )
 
     output_path = make_evaluation_result_directories(result_path, subdir)

@@ -14,17 +14,18 @@ R|package manager|pixi|.tools-badge|
 
 # pypsa-at Documentation
 
-This site hosts the documentation for `esmtools`, a Python module
-designed to evaluate energy system model results based on
-[PyPSA](https://pypsa.readthedocs.io/en/latest/).
-The goal of this project is to provide a framework for
-analyzing and visualizing energy model outputs,
-using Python. The `esmtools` pacakge heavily relies on
-[pypsa.statistics](https://pypsa.readthedocs.io/en/latest/api/statistics.html)
-to extract views from solved network files.
-The plotting library used for visualizations is [Plotly](https://plotly.com/python/)
-and results may be exported in other formats such as Excel, CSV or JSON files.
+This site hosts the documentation for `pypsa-at`
 
+
+first, build the scenarios using the public DB access
+``` sh
+snakemake build_scenarios --configfile=config/config.public.yaml -f
+```
+
+Start the analysis:
+``` sh
+snakemake ariadne_all --configfile=config/config.public.yaml -f
+```
 
 ## Table Of Contents
 

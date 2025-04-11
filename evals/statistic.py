@@ -25,7 +25,7 @@ from evals.constants import (
     Group,
     Regex,
 )
-from evals.fileio import read_csv_files
+from evals.fileio import get_resources_directory, read_csv_files
 from evals.utils import (
     add_grid_lines,
     align_edge_directions,
@@ -267,49 +267,65 @@ class ESMStatistics(StatisticsAccessor):
         -------
         :
             The data series with split AC loads.
+
+        Notes
+        -----
+        Currently broken: Energy demands only exist for historical years and
+        industry and rail demands probably are not substracted from the correct
+        series.
         """
-        year = self.n.meta["wildcards"]["planning_horizon"]
+        year = self.n.meta["wildcards"]["planning_horizons"]
+        clusters = self.n.meta["wildcards"]["clusters"]
+        run = self.n.meta["run"]
+        res = get_resources_directory(self.n)(run["prefix"])
 
         indu = read_csv_files(
-            self.result_path,
-            glob="industrial_demand_elec*.csv",
-            sub_directory="esm_run/interpolated_data",
+            res,
+            glob=f"industrial_energy_demand_base_s_{clusters}_*.csv",
+            sub_directory=run["name"][0],
         )
         indu = indu.loc[year, "current electricity"] * UNITS["TW"]  # to MWH
 
-        rail = read_csv_files(
-            self.result_path,
-            glob="nodal_energy_totals_*.csv",
-            sub_directory="esm_run/resources",
-        )
-        rail = rail.loc[year, "electricity rail"] * UNITS["TW"]  # to MWH
+        rail = (
+            read_csv_files(
+                res,
+                glob="pop_weighted_energy_totals_s_adm.csv",
+                sub_directory=run["name"][0],
+            )["electricity rail"]
+            * UNITS["TW"]
+        )  # fixme: data for 2019 only
 
-        p = self.energy_balance(
-            comps="Load",
-            groupby=["location", "carrier", "bus_carrier"],
-            bus_carrier=BusCarrier.AC,
-            nice_names=False,
+        # read_csv_files(
+        #     res(run["prefix"]),
+        #     glob="pop_weighted_energy_totals_s_adm.csv",
+        #     sub_directory=run["name"][0],
+        # ).filter(regex="electricity residential|electricity services").sum(axis=1)
+
+        p = (
+            self.energy_balance(
+                comps="Load",
+                groupby=["location", "carrier", "bus_carrier"],
+                bus_carrier="low voltage",
+            )
+            .droplevel(DataModel.BUS_CARRIER)
+            .unstack()
         )
-        p = p.droplevel(DataModel.BUS_CARRIER).unstack()
 
         # load p is negative, because it is demand (withdrawal), but csv
         # data (industry, transport) has positive values only. Must
         # reverse the sign for industry and rail demands.
+        homes_and_trade = Carrier.domestic_homes_and_trade
         p[Carrier.industry] = indu.mul(-1)
         p[Carrier.electricity_rail] = rail.mul(-1)
-        p[Carrier.domestic_homes_and_trade] = p["electricity"] + indu + rail
+        p[homes_and_trade] = p["electricity"] + indu + rail
 
-        if any(p[Carrier.domestic_homes_and_trade] > 0):
+        if any(p[homes_and_trade] > 0):
             logger.warning(
-                msg=f"Positive values found for {Carrier.domestic_homes_and_trade} "
+                msg=f"Positive values found for {homes_and_trade} "
                 f"demand. This happens if the combined electricity demand "
                 f"from Industry and Rail nodal energy files is larger than "
                 f"the electricity Loads in the network.\n"
-                f"{
-                    p[p[Carrier.domestic_homes_and_trade] > 0][
-                        Carrier.domestic_homes_and_trade
-                    ]
-                }\n\n"
+                f"{p[p[homes_and_trade] > 0][homes_and_trade]}\n\n"
                 f"All values larger than zero will be set to zero. "
                 f"(Note that this is different to the Toolbox implementation "
                 f"where signs are flipped).\n"
@@ -317,16 +333,15 @@ class ESMStatistics(StatisticsAccessor):
             # fixme: just a note. There is a bug in the old Toolbox that
             #  counts the aforementioned amounts as demand (although
             #  the amounts should be clipped.)
-            p[Carrier.domestic_homes_and_trade] = p[
-                Carrier.domestic_homes_and_trade
-            ].clip(upper=0)
+            p[homes_and_trade] = p[homes_and_trade].clip(upper=0)
 
+        # rename to avoid mixing up electricity with
         p = p.rename({"electricity": "industry + hh & services load"}, axis=1)
 
-        df = insert_index_level(p.stack(), BusCarrier.AC, DataModel.BUS_CARRIER)
+        df = insert_index_level(p.stack(), "low voltage", DataModel.BUS_CARRIER)
         df = df.reorder_levels(DataModel.IDX_NAMES)
 
-        df.attrs["name"] = "Energy "
+        df.attrs["name"] = "Electricity split "
         df.attrs["unit"] = "MWh"
 
         return df
@@ -681,13 +696,8 @@ class ESMStatistics(StatisticsAccessor):
         """Calculate ambient heat energy amounts used by heat pumps."""
         energy_balance = self.n.statistics.energy_balance(
             comps="Link",
-            bus_carrier=[
-                "residential rural heat",
-                "services rural heat",
-                "urban central heat",
-                "AC",
-            ],
-            groupby=["location", "carrier", "bus_carrier"],
+            bus_carrier=BusCarrier.heat_buses() + ["low voltage"],
+            groupby=DataModel.IDX_NAMES,
         )
         heat_pump = energy_balance.filter(like="heat pump", axis=0)
 
@@ -714,16 +724,49 @@ class ESMStatistics(StatisticsAccessor):
             """
             hp = ser.unstack(DataModel.BUS_CARRIER)
             assert hp.shape[1] == 2, f"Unexpected number of bus_carrier: {hp.columns}."
-            assert "AC" in hp.columns, f"AC missing in bus_carrier: {hp.columns}."
+            assert (
+                "low voltage" in hp.columns
+            ), f"AC missing in bus_carrier: {hp.columns}."
             return hp.T.sum()
 
         ambient_heat = heat_pump.groupby(DataModel.CARRIER, group_keys=False).apply(
             _heat_minus_ac
         )
 
-        ambient_heat = insert_index_level(
-            ambient_heat, "ambient heat", DataModel.BUS_CARRIER, pos=2
+        new_index_items = []
+        for loc, carr in ambient_heat.index:
+            if carr.startswith("rural"):
+                new_index_items.append((loc, carr, BusCarrier.HEAT_RURAL))
+            elif carr.startswith("urban decentral"):
+                new_index_items.append((loc, carr, BusCarrier.HEAT_URBAN_DECENTRAL))
+            elif carr.startswith("urban central"):
+                new_index_items.append((loc, carr, BusCarrier.HEAT_URBAN_CENTRAL))
+            else:
+                raise ValueError(f"Carrier {carr} not recognized.")
+        ambient_heat.index = pd.MultiIndex.from_tuples(
+            new_index_items, names=DataModel.IDX_NAMES
         )
+
+        # def _add_bus_carrier_from_carrier_name(idx):
+        #     """"""
+        #     loc, carr = idx
+        #     if carr.startswith("rural"):
+        #         bus_carr = BusCarrier.HEAT_RURAL
+        #     elif carr.startswith("urban decentral"):
+        #         bus_carr = BusCarrier.HEAT_URBAN_DECENTRAL
+        #     elif carr.startswith("urban central"):
+        #         bus_carr = BusCarrier.HEAT_URBAN_CENTRAL
+        #     else:
+        #         raise ValueError(f"Carrier {carr} not recognized.")
+        #     # return (loc, carr, bus_carr)
+        #     return bus_carr
+        #
+        # bus_carrier = ambient_heat.index.map(_add_bus_carrier_from_carrier_name)
+        # bus_carrier.name = DataModel.BUS_CARRIER
+        #
+        # ambient_heat = insert_index_level(
+        #     ambient_heat, "ambient heat", DataModel.BUS_CARRIER, pos=2
+        # )
 
         ambient_heat.attrs["name"] = "Ambient Heat"
         ambient_heat.attrs["unit"] = "MWh"

@@ -507,8 +507,8 @@ def eval_electricity_balance(
     metric.defaults.plotly.cutoff = 0.0001
     metric.defaults.plotly.pattern = dict.fromkeys(
         [
-            Group.import_european,
-            Group.export_european,
+            Group.import_foreign,
+            Group.export_foreign,
             Group.import_domestic,
             Group.export_domestic,
         ],
@@ -523,7 +523,7 @@ def eval_electricity_balance(
         Group.phs_inflow,
         Group.ror,
         Group.import_domestic,
-        Group.import_european,
+        Group.import_foreign,
         # --- zero ---
         Group.industry,
         Group.hh_and_services,
@@ -533,7 +533,7 @@ def eval_electricity_balance(
         Group.heat_district,
         Group.transport,
         Group.export_domestic,
-        Group.export_european,
+        Group.export_foreign,
     )
     metric.defaults.plotly.footnotes = (  # fixme: Footnote not displayed
         "Balance does not include grid losses due to storage technologies.",
@@ -723,7 +723,7 @@ def _fetch_electricity_trade_statistics(
         bus_carrier=BusCarrier.AC,
         aggregate_time=aggregate_time,
     )
-    alias = Group.import_net if net_trade else Group.import_european
+    alias = Group.import_net if net_trade else Group.import_foreign
     ac_import_foreign = rename_aggregate(ac_import_foreign, alias)
 
     ac_import_domestic = collect_myopic_statistics(
@@ -745,7 +745,7 @@ def _fetch_electricity_trade_statistics(
         bus_carrier=BusCarrier.AC,
         aggregate_time=aggregate_time,
     )
-    alias = Group.export_net if net_trade else Group.export_european
+    alias = Group.export_net if net_trade else Group.export_foreign
     ac_export_foreign = rename_aggregate(ac_export_foreign, alias)
 
     ac_export_domestic = collect_myopic_statistics(

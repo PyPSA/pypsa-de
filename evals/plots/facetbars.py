@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ESM grouped barcharts."""
 
 from functools import cached_property
@@ -16,7 +15,8 @@ from evals.utils import apply_cutoff, prettify_number
 
 
 class ESMGroupedBarChart(ESMChart):
-    """A class that produces multiple bar charts in subplots.
+    """
+    A class that produces multiple bar charts in subplots.
 
     Parameters
     ----------
@@ -42,7 +42,8 @@ class ESMGroupedBarChart(ESMChart):
 
     @cached_property
     def df(self) -> pd.DataFrame:
-        """Plot data formatted for grouped bar charts.
+        """
+        Plot data formatted for grouped bar charts.
 
         Returns
         -------
@@ -92,12 +93,19 @@ class ESMGroupedBarChart(ESMChart):
             self.fig = empty_figure(title)
             return
 
+        pattern = {
+            col: self.cfg.pattern.get(col, "")
+            for col in self.df[self.cfg.plot_category].unique()
+        }
+
         self.fig = px.bar(
             self.df,
             x=self.cfg.plot_xaxis,
             y=self.col_values,
             facet_col=self.cfg.facet_column,
             facet_col_spacing=0.04,
+            pattern_shape=self.cfg.plot_category,
+            pattern_shape_map=pattern,
             color=self.cfg.plot_category,
             color_discrete_map=self.cfg.colors,
             text=self.cfg.facet_column,  # needed to rename xaxis and dropped afterward
@@ -116,7 +124,8 @@ class ESMGroupedBarChart(ESMChart):
         self.fig.for_each_xaxis(self._style_inner_xaxis_labels)
 
     def _rename_xaxis(self, xaxis: go.XAxis) -> None:
-        """Update the xaxis labels.
+        """
+        Update the xaxis labels.
 
         The function iterates over subplot columns and looks for the
         sector name in the figure data where the xaxis index matches
@@ -144,7 +153,8 @@ class ESMGroupedBarChart(ESMChart):
                 break
 
     def _style_inner_xaxis_labels(self, xaxis: go.XAxis) -> None:
-        """Set the font size for the inner xaxis labels.
+        """
+        Set the font size for the inner xaxis labels.
 
         Parameters
         ----------
@@ -168,7 +178,8 @@ class ESMGroupedBarChart(ESMChart):
         )
 
     def _add_total_sum_subplot_traces(self, xaxis: go.XAxis) -> None:
-        """Add traces for total sum labels in every subplot.
+        """
+        Add traces for total sum labels in every subplot.
 
         The Xaxis is needed to parse the subplot position dynamically.
         The method adds text annotations with the total amount of
@@ -181,22 +192,61 @@ class ESMGroupedBarChart(ESMChart):
         """
         idx = xaxis["anchor"].lstrip("y")
         sector = xaxis["title"]["text"].lstrip("<b>")
-        values = self.df.query(f"{self.cfg.facet_column} == '{sector}'")
+        values = self.df.query(f"{self.cfg.facet_column} == '{sector}'").copy()
+
+        values["pos"] = values[self.col_values].where(values[self.col_values].gt(0))
+        values["neg"] = values[self.col_values].where(values[self.col_values].le(0))
+
         totals = values.groupby(self.cfg.plot_xaxis).sum(numeric_only=True)
-        totals["display_value"] = totals[self.col_values].apply(prettify_number)
-        y_offset = totals[self.col_values].abs().max() / 100
+        totals["pos_display"] = totals["pos"].apply(prettify_number)
+        totals["neg_display"] = totals["neg"].apply(prettify_number)
 
-        scatter = go.Scatter(
-            x=totals.index,
-            y=totals[self.col_values] + y_offset,
-            text=totals["display_value"],
-            texttemplate="<b>%{text}</b>",
-            mode="text",
-            textposition="top center",
-            showlegend=False,
-            name="Sum",
-            textfont={"size": 18},
-            hoverinfo="skip",
-        )
+        if totals["pos"].sum() > 0:
+            scatter = go.Scatter(
+                x=totals.index,
+                y=totals["pos"] + totals["pos"].abs().max() / 100,
+                text=totals["pos_display"],
+                texttemplate="<b>%{text}</b>",
+                mode="text",
+                textposition="top center",
+                showlegend=False,
+                name="Sum",
+                textfont={"size": 18},
+                hoverinfo="skip",
+            )
 
-        self.fig.add_trace(scatter, col=int(idx) if idx else 1, row=1)
+            self.fig.add_trace(scatter, col=int(idx) if idx else 1, row=1)
+
+        if totals["neg"].sum() < 0:
+            scatter = go.Scatter(
+                x=totals.index,
+                y=totals["neg"] - totals["neg"].abs().max() / 100,
+                text=totals["neg_display"],
+                texttemplate="<b>%{text}</b>",
+                mode="text",
+                textposition="bottom center",
+                showlegend=False,
+                name="Sum",
+                textfont={"size": 18},
+                hoverinfo="skip",
+            )
+            self.fig.add_trace(scatter, col=int(idx) if idx else 1, row=1)
+
+        # totals = values.groupby(self.cfg.plot_xaxis).sum(numeric_only=True)
+        # totals["display_value"] = totals[self.col_values].apply(prettify_number)
+        # y_offset = totals[self.col_values].abs().max() / 100
+        #
+        # scatter = go.Scatter(
+        #     x=totals.index,
+        #     y=totals[self.col_values] + y_offset,
+        #     text=totals["display_value"],
+        #     texttemplate="<b>%{text}</b>",
+        #     mode="text",
+        #     textposition="top center",
+        #     showlegend=False,
+        #     name="Sum",
+        #     textfont={"size": 18},
+        #     hoverinfo="skip",
+        # )
+        #
+        # self.fig.add_trace(scatter, col=int(idx) if idx else 1, row=1)
