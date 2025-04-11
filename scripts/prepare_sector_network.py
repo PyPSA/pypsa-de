@@ -1624,6 +1624,9 @@ def insert_electricity_distribution_grid(n, costs):
     )
 
 
+
+
+
 def insert_gas_distribution_costs(n, costs):
     # TODO options?
 

@@ -719,6 +719,7 @@ def adapt_nuclear_output(n):
     )
 
 
+
 def additional_functionality(n, snapshots, snakemake):
     logger.info("Adding Ariadne-specific functionality")
 

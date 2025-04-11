@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20250414-NEP-flex
+  prefix: 20250414-NEP-gas
   name:
   # - CurrentPolicies
   - KN2045_Bal_v4
@@ -287,13 +287,13 @@ sector:
   EV_lower_degree_factor: 0.98
   EV_upper_degree_factor: 0.63
   bev_dsm: 2030
-  bev_dsm_availability: 0.5
+  bev_dsm_availability: 0.0
   bev_energy: 0.05
   bev_charge_efficiency: 0.9
   bev_charge_rate: 0.011
   bev_avail_max: 0.95
   bev_avail_mean: 0.8
-  heat_pump_flexibility: true  # Set to false to disable flexibility
+  heat_pump_flexibility: false  # Set to false to disable flexibility
   heat_pump_avail_max: 1.0      # Set to 1.0 for full capacity
   heat_pump_avail_min: 0.3      # Only used when flexibility is enabled
   heat_pump_peak_hours: [ 7, 8, 17, 18, 19 ]
@@ -699,7 +699,7 @@ solving:
             urban decentral air heat pump: { min: 13150, max: 13150 }
 
     storage_capacity_limits:
-      apply_constraints: false
+      apply_constraints: true
 
       # List of carriers to consider for each battery type
       battery_types:
