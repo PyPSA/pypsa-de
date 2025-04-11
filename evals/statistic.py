@@ -101,7 +101,7 @@ def get_location(
 
 
 def get_location_from_name_at_port(
-    n: pypsa.Network, c: str, port: str = ""
+    n: pypsa.Network, c: str, location_port: str = ""
 ) -> pd.Series:
     """
     Return the location from the component name.
@@ -112,7 +112,7 @@ def get_location_from_name_at_port(
         The network to evaluate.
     c
         The component name, e.g. 'Load', 'Generator', 'Link', etc.
-    port
+    location_port
         Limit results to this branch port.
 
     Returns
@@ -121,7 +121,11 @@ def get_location_from_name_at_port(
 
     """
     group = f"({Regex.region.pattern})"
-    return n.static(c)[f"bus{port}"].str.extract(group, expand=False)
+    return (
+        n.static(c)[f"bus{location_port}"]
+        .str.extract(group, expand=False)
+        .rename(str("bus" + location_port))
+    )
 
 
 def collect_myopic_statistics(
@@ -239,8 +243,12 @@ class ESMStatistics(StatisticsAccessor):
         self.set_parameters(nice_names=False)
         self.set_parameters(drop_zero=True)
         groupers.add_grouper("location", get_location)
-        groupers.add_grouper("bus0", partial(get_location_from_name_at_port, port="0"))
-        groupers.add_grouper("bus1", partial(get_location_from_name_at_port, port="1"))
+        groupers.add_grouper(
+            "bus0", partial(get_location_from_name_at_port, location_port="0")
+        )
+        groupers.add_grouper(
+            "bus1", partial(get_location_from_name_at_port, location_port="1")
+        )
 
     def ac_load_split(self) -> pd.DataFrame:
         """

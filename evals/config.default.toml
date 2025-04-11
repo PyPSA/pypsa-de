@@ -259,3 +259,15 @@ exports = []
 [view.capacity.gas_storage.categories]
 "H2 Store" = "Hydrogen Store"
 "gas" = "Methane Store"
+
+[view.transmissions.transmission]
+name = "Transmission_test"
+unit = "TWh"
+file_name = "grid_test_{location}"
+cutoff = 0.00001  # 1 MWh
+legend_order = []
+checks = []
+exports = []
+
+[view.transmissions.transmission.categories]
+"" = ""
