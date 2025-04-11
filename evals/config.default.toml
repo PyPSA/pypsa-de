@@ -154,6 +154,100 @@ exports = ["csv", "excel"]
 "methanolisation" = "Methanolisation"
 "solid biomass to hydrogen" = "H2 from Solid Biomass"
 
+[view.balance.electricity]
+name = "Electricity Energy Balance"
+unit = "TWh"
+file_name = "nodal_balance_electricity_{location}"
+cutoff = 0.01  # TWh
+legend_order = [
+    # production ordered from zero to outside
+    "Hydro Power",
+    "Nuclear Power",
+    "Wind Power",
+    "Distribution Grid",  # demand and production!
+    "Solar Power",
+    "Solid Biomass",
+    "Waste",
+    "Coal",
+    "Methane",
+    "Hydrogen",
+    "Oil",
+    "Import Domestic",
+    "Import Foreign",
+
+    # demand ordered from zero to outside
+
+    "Base Load",
+    "Agriculture",
+    "Industry",
+    "Transport",
+    "Hydrogen",
+    "Heat",
+    "Hydrogen Compression",
+    "Methane Compression",
+    "Methanolisation",
+    "Haber-Bosch",
+    "Electrolysis",
+    "Direct Air Capture",
+    "Pumped Hydro Storage",
+    "Export Domestic",
+    "Export Foreign"
+
+]
+checks = ["balances_almost_zero"]
+exports = []  # "csv", "excel"
+
+[view.balance.electricity.categories]
+"BEV charger" = "Transport"
+"CCGT" = "Methane"
+"DAC" = "Direct Air Capture"
+"Export Domestic" = "Export Domestic"
+"Export Foreign" = "Export Foreign"
+"H2 Electrolysis" = "Electrolysis"
+"H2 OCGT" = "Hydrogen"
+"H2 pipeline" = "Hydrogen Compression"
+"H2 pipeline (Kernnetz)" = "Hydrogen Compression"
+"Haber-Bosch" = "Haber-Bosch"
+"Import Domestic" = "Import Domestic"
+"Import Foreign" = "Import Foreign"
+"OCGT" = "Methane"
+"PHS" = "Pumped Hydro Storage"
+"V2G" = "Transport"
+"agriculture electricity" = "Agriculture"
+"coal" = "Coal"
+"electricity" = "Base Load"
+"electricity distribution grid" = "Distribution Grid"
+"gas pipeline" = "Methane Compression"
+"hydro" = "Hydro Power"
+"industry electricity" = "Industry"
+"lignite" = "Coal"
+"methanolisation" = "Methanolisation"
+"nuclear" = "Nuclear Power"
+"offwind-ac" = "Wind Power"
+"offwind-dc" = "Wind Power"
+"onwind" = "Wind Power"
+"ror" = "Hydro Power"
+"rural air heat pump" = "Heat"
+"rural ground heat pump" = "Heat"
+"rural resistive heater" = "Heat"
+"solar" = "Solar Power"
+"solar rooftop" = "Solar Power"
+"solar-hsat" = "Solar Power"
+"solid biomass" = "Solid Biomass"
+"urban central CHP" = "Methane"
+"urban central air heat pump" = "Heat"
+"urban central coal CHP" = "Coal"
+"urban central gas CHP" = "Methane"
+"urban central lignite CHP" = "Coal"
+"urban central oil CHP" = "Oil"
+"urban central resistive heater" = "Heat"
+"urban central solid biomass CHP" = "Solid Biomass"
+"urban decentral air heat pump" = "Heat"
+"urban decentral resistive heater" = "Heat"
+"waste CHP" = "Waste"
+"waste CHP CC" = "Waste"
+
+
 [view.balance.heat]
 name = "Heat Energy Balance"
 unit = "TWh"
@@ -187,63 +281,62 @@ legend_order = [
     "Heat Ventilation"
 ]
 checks = ["balances_almost_zero"]
-exports = ["csv", "excel"]
+exports = []  # "csv", "excel"
 
 [view.balance.heat.categories]
-"AC" = "Electricity"
-"H2" = "Hydrogen"
-"co2 stored" = "CO2"
-"coal" = "Coal"
-"gas" = "Methane"
-"lignite" = "Coal"
-"low voltage" = "Electricity (low voltage)"
-"non-sequestered HVC" = "Waste"
-"oil" = "Oil"
-"solid biomass" = "Solid Biomass"
-
-
-"DAC" = "Direct Air Capture"
-"Fischer-Tropsch" = "Fischer-Tropsch"
-"H2 Electrolysis" = "Electrolysis"
-"Haber-Bosch" = "Haber-Bosch"
-"Sabatier" = "Sabatier"
-"agriculture heat" = "Agriculture"
-"low-temperature heat for industry" = "Industry"
-"methanolisation" = "Methanolisation"
-"rural air heat pump" = "Electricity"
-"rural biomass boiler" = "Biomass"
-"rural gas boiler" = "Methane"
-"rural ground heat pump" = "Electricity"
-"rural heat" = "Demand"
-"rural heat vent" = "Heat Ventilation"
-"rural oil boiler" = "Oil"
-"rural resistive heater" = "Electricity"
-"rural solar thermal" = "Solar Power"
-"urban central CHP" = "Methane"  # connected to gas bus
-"urban central air heat pump" = "Electricity"
-"urban central coal CHP" = "Coal"
-"urban central gas CHP" = "Methane"
-"urban central gas boiler" = "Methane"
-"urban central heat" = "Demand"
-"urban central heat losses" = "Distribution Losses"
-"urban central heat vent" = "Heat Ventilation"
-"urban central lignite CHP" = "Coal"
-"urban central oil CHP" = "Oil"
-"urban central resistive heater" = "Electricity"
-"urban central solid biomass CHP" = "Biomass"
-"urban central water tanks" = "Storage"
-#"urban central water tanks charger" = ""
-#"urban central water tanks discharger" = ""
-"urban decentral air heat pump" = "Electricity"
-"urban decentral biomass boiler" = "Biomass"
-"urban decentral gas boiler" = "Methane"
-"urban decentral heat" = "Demand"
-"urban decentral heat vent" = "Heat Ventilation"
-"urban decentral oil boiler" = "Oil"
-"urban decentral resistive heater" = "Electricity"
-"urban decentral solar thermal" = "Solar Power"
-"waste CHP" = "Waste"
-"waste CHP CC" = "Waste"
+#"AC" = "Electricity"
+#"H2" = "Hydrogen"
+#"co2 stored" = "CO2"
+#"coal" = "Coal"
+#"gas" = "Methane"
+#"lignite" = "Coal"
+#"low voltage" = "Electricity (low voltage)"
+#"non-sequestered HVC" = "Waste"
+#"oil" = "Oil"
+#"solid biomass" = "Solid Biomass"
+#
+#"DAC" = "Direct Air Capture"
+#"Fischer-Tropsch" = "Fischer-Tropsch"
+#"H2 Electrolysis" = "Electrolysis"
+#"Haber-Bosch" = "Haber-Bosch"
+#"Sabatier" = "Sabatier"
+#"agriculture heat" = "Agriculture"
+#"low-temperature heat for industry" = "Industry"
+#"methanolisation" = "Methanolisation"
+#"rural air heat pump" = "Electricity"
+#"rural biomass boiler" = "Biomass"
+#"rural gas boiler" = "Methane"
+#"rural ground heat pump" = "Electricity"
+#"rural heat" = "Demand"
+#"rural heat vent" = "Heat Ventilation"
+#"rural oil boiler" = "Oil"
+#"rural resistive heater" = "Electricity"
+#"rural solar thermal" = "Solar Power"
+#"urban central CHP" = "Methane"  # connected to gas bus
+#"urban central air heat pump" = "Electricity"
+#"urban central coal CHP" = "Coal"
+#"urban central gas CHP" = "Methane"
+#"urban central gas boiler" = "Methane"
+#"urban central heat" = "Demand"
+#"urban central heat losses" = "Distribution Losses"
+#"urban central heat vent" = "Heat Ventilation"
+#"urban central lignite CHP" = "Coal"
+#"urban central oil CHP" = "Oil"
+#"urban central resistive heater" = "Electricity"
+#"urban central solid biomass CHP" = "Biomass"
+#"urban central water tanks" = "Storage"
+##"urban central water tanks charger" = ""
+##"urban central water tanks discharger" = ""
+#"urban decentral air heat pump" = "Electricity"
+#"urban decentral biomass boiler" = "Biomass"
+#"urban decentral gas boiler" = "Methane"
+#"urban decentral heat" = "Demand"
+#"urban decentral heat vent" = "Heat Ventilation"
+#"urban decentral oil boiler" = "Oil"
+#"urban decentral resistive heater" = "Electricity"
+#"urban decentral solar thermal" = "Solar Power"
+#"waste CHP" = "Waste"
+#"waste CHP CC" = "Waste"
 
 
 [view.demand.heat_production]

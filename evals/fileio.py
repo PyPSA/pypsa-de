@@ -862,6 +862,8 @@ class Exporter:
         AssertionError
             In case one of the checks fails.
         """
+        self.default_checks()
+
         if "balances_almost_zero" in self.view_config.get("checks", []):
             groups = [DataModel.YEAR, DataModel.LOCATION]
             yearly_sum = self.df.groupby(groups).sum().abs()
@@ -874,7 +876,6 @@ class Exporter:
                 assert (
                     balanced.all().item()
                 ), f"Imbalances detected: {yearly_sum[balanced.squeeze() == False].squeeze().sort_values().tail()}"
-        self.default_checks()
 
     def default_checks(self) -> None:
         """"""

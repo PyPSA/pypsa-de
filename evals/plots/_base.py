@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Common graph bases and emtpy figures."""
 
 import pathlib
@@ -218,6 +217,9 @@ class ESMChart:
         self.fig.update_yaxes(
             showgrid=self.cfg.yaxes_showgrid, visible=self.cfg.yaxes_visible
         )
+        # draw zero xaxis line
+        self.fig.add_hline(y=0.0)
+
         self.fig.update_xaxes(
             showgrid=False,
             tickprefix="<b>",

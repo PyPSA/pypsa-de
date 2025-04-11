@@ -60,7 +60,7 @@ def view_balance_hydrogen(
             bus_carrier=BusCarrier.H2,
         )
         .filter(like="pipeline", axis=0)
-        .pipe(rename_aggregate, Group.import_european)
+        .pipe(rename_aggregate, Group.import_foreign)
     )
 
     h2_export_foreign = (
@@ -72,7 +72,7 @@ def view_balance_hydrogen(
             bus_carrier=BusCarrier.H2,
         )
         .filter(like="pipeline", axis=0)
-        .pipe(rename_aggregate, Group.export_european)
+        .pipe(rename_aggregate, Group.export_foreign)
     )
 
     h2_import_domestic = (
@@ -115,8 +115,8 @@ def view_balance_hydrogen(
     metric.defaults.plotly.chart = ESMBarChart
     metric.defaults.plotly.pattern = dict.fromkeys(
         [
-            Group.export_european,
-            Group.import_european,
+            Group.export_foreign,
+            Group.import_foreign,
             Group.import_domestic,
             Group.export_domestic,
         ],

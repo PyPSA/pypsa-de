@@ -495,8 +495,8 @@ def aggregate_eu(df: pd.DataFrame, agg: str = "sum") -> pd.DataFrame:
     excluded = [
         Group.import_net,  # required for CH4 and H2!
         Group.export_net,
-        Group.import_european,
-        Group.export_european,
+        Group.import_foreign,
+        Group.export_foreign,
         # exclude domestic trade for EU region
         Group.import_domestic,
         Group.export_domestic,
