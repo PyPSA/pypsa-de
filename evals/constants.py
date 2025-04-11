@@ -1474,6 +1474,11 @@ COLOUR_SCHEME_BMK: dict = {
     "Haber-Bosch": COLOUR.red,
     "Agriculture": COLOUR.green_light,
     "Distribution Grid": COLOUR.grey_silver,
+    "Ammonia Cracking": COLOUR.red_chestnut,
+    "Sabatier": COLOUR.yellow_canary,
+    "Synth. Fuels": COLOUR.red,
+    "Methanol Steam Reforming": COLOUR.salmon,
+    "H2 from Solid Biomass": COLOUR.green_mint,
 }
 
 ALIAS_COUNTRY: frozendict = frozendict(

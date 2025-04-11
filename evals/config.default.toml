@@ -116,9 +116,10 @@ legend_order = [
     "Ammonia Cracking",
     "Storage",
     "Import Domestic",
-    "Import European",
+    "Import Foreign",
     # demand ordered from zero to outside:
     "Methanolisation",
+    "Methanol Steam Reforming",
     "Industry",
     "Transport",
     "Electricity",
@@ -127,14 +128,14 @@ legend_order = [
     "Sabatier",
     "Synth. Fuels",
     "Export Domestic",
-    "Export European",
+    "Export Foreign",
 ]
 checks = ["balances_almost_zero"]
-exports = ["csv", "excel"]
+exports = []
 
 [view.balance.hydrogen.categories]
 "ammonia cracker" = "Ammonia Cracking"
-"Export European" = "Export European"
+"Export Foreign" = "Export Foreign"
 "Export Domestic" = "Export Domestic"
 "Fischer-Tropsch" = "Fischer-Tropsch"
 "H2 Electrolysis" = "Electrolysis"
@@ -144,7 +145,7 @@ exports = ["csv", "excel"]
 "H2 turbine" = "Electricity"
 "H2 Store" = "Storage"
 "Haber-Bosch" = "Haber-Bosch"
-"Import European" = "Import European"
+"Import Foreign" = "Import Foreign"
 "Import Domestic" = "Import Domestic"
 "SMR" = "SMR"
 "SMR CC" = "SMR"
@@ -152,6 +153,7 @@ exports = ["csv", "excel"]
 "electrobiofuels" = "Synth. Fuels"
 "land transport fuel cell" = "Transport"
 "methanolisation" = "Methanolisation"
+"Methanol steam reforming" = "Methanol Steam Reforming"
 "solid biomass to hydrogen" = "H2 from Solid Biomass"
 
 [view.balance.electricity]
@@ -246,7 +248,6 @@ exports = []  # "csv", "excel"
 "urban decentral resistive heater" = "Heat"
 "waste CHP" = "Waste"
 "waste CHP CC" = "Waste"
-
 
 [view.balance.heat]
 name = "Heat Energy Balance"
