@@ -701,14 +701,14 @@ def calculate_input_share(
         # fixme: is suspect this is wrong for heat pumps and CHPs with sum(efficiency > 1). The problem is, that 100%
         #  of heat generation is called "low voltage", but this is not correct. It should label 100% of
         #  electricity demand as low voltage and the rest as ambient heat
-        if factor < 1.0 and "heat pump" in _df.index.unique("carrier")[0]:
-            print("heat pumps")
-        if (
-            factor < 1.0
-            and share != 0
-            and "heat pump" not in _df.index.unique("carrier")[0]
-        ):
-            print(_df)
+        # if factor < 1.0 and "heat pump" in _df.index.unique("carrier")[0]:
+        #     print("heat pumps")
+        # if (
+        #     factor < 1.0
+        #     and share != 0
+        #     and "heat pump" not in _df.index.unique("carrier")[0]
+        # ):
+        #     print(_df)
         return withdrawal / factor * share
 
     groups = [DataModel.YEAR, DataModel.LOCATION, DataModel.CARRIER]

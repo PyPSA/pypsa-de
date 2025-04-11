@@ -166,9 +166,8 @@ def view_balance_heat(
             networks,
             statistic="withdrawal",
             bus_carrier=BusCarrier.heat_buses(),
-        )
-        .pipe(split_urban_heat_losses_and_consumption, heat_loss_factor)
-        .pipe(rename_aggregate, {"urban central water tanks charger": "Storage"})
+        ).pipe(split_urban_heat_losses_and_consumption, heat_loss_factor)
+        # .pipe(rename_aggregate, {"urban central water tanks charger": "Storage"})
         .mul(-1)
     )
 
@@ -178,15 +177,9 @@ def view_balance_heat(
         statistics_unit="MWh",
     )
 
-    # todo: check if ambient heat from heat pumps is already included in the input energy shares (= in low voltage)
-    # todo: check if unit conversions might cause the problem. Looking at you: MWh_LHV
-    # todo: check if CHPs produce energy and if those amounts cause the problem.
-
     # static view settings:
     exporter.defaults.plotly.chart = ESMGroupedBarChart
     exporter.defaults.plotly.xaxis_title = ""
-    exporter.defaults.plotly.pattern = {
-        "Demand": "/"
-    }  # todo: not applied in grouped bar charts
+    exporter.defaults.plotly.pattern = {"Demand": "/"}
 
     exporter.export(result_path, subdir)

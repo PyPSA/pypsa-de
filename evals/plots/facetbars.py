@@ -93,12 +93,19 @@ class ESMGroupedBarChart(ESMChart):
             self.fig = empty_figure(title)
             return
 
+        pattern = {
+            col: self.cfg.pattern.get(col, "")
+            for col in self.df[self.cfg.plot_category].unique()
+        }
+
         self.fig = px.bar(
             self.df,
             x=self.cfg.plot_xaxis,
             y=self.col_values,
             facet_col=self.cfg.facet_column,
             facet_col_spacing=0.04,
+            pattern_shape=self.cfg.plot_category,
+            pattern_shape_map=pattern,
             color=self.cfg.plot_category,
             color_discrete_map=self.cfg.colors,
             text=self.cfg.facet_column,  # needed to rename xaxis and dropped afterward
@@ -183,7 +190,6 @@ class ESMGroupedBarChart(ESMChart):
         xaxis
             The subplot xaxis (a dictionary-like object).
         """
-        # todo: balances with positive and negative values are not supported
         idx = xaxis["anchor"].lstrip("y")
         sector = xaxis["title"]["text"].lstrip("<b>")
         values = self.df.query(f"{self.cfg.facet_column} == '{sector}'").copy()
