@@ -31,17 +31,15 @@ def view_balance_hydrogen(
     -----
     See eval module docstring for parameter description.
     """
-    h2_supply = collect_myopic_statistics(
+    supply = collect_myopic_statistics(
         networks,
         statistic="supply",
         bus_carrier=BusCarrier.H2,
     )
-    pipelines = h2_supply.filter(like="pipeline", axis=0).index.unique(
-        DataModel.CARRIER
-    )
-    h2_supply = h2_supply.drop(pipelines, level=DataModel.CARRIER)
+    pipelines = supply.filter(like="pipeline", axis=0).index.unique(DataModel.CARRIER)
+    supply = supply.drop(pipelines, level=DataModel.CARRIER)
 
-    h2_demand = (
+    demand = (
         collect_myopic_statistics(
             networks,
             statistic="withdrawal",
@@ -51,63 +49,75 @@ def view_balance_hydrogen(
         .drop(pipelines, level=DataModel.CARRIER)
     )
 
-    h2_import_foreign = (
-        collect_myopic_statistics(
-            networks,
-            statistic="trade_energy",
-            scope=TradeTypes.FOREIGN,
-            direction="import",
-            bus_carrier=BusCarrier.H2,
+    trade_statistics = []
+    for scope, direction, alias in [
+        (TradeTypes.FOREIGN, "import", Group.import_foreign),
+        (TradeTypes.FOREIGN, "export", Group.export_foreign),
+        (TradeTypes.DOMESTIC, "import", Group.import_domestic),
+        (TradeTypes.DOMESTIC, "export", Group.export_domestic),
+    ]:
+        trade_statistics.append(
+            collect_myopic_statistics(
+                networks,
+                statistic="trade_energy",
+                scope=scope,
+                direction=direction,
+                bus_carrier=BusCarrier.H2,
+            )
+            .filter(like="pipeline", axis=0)
+            .pipe(rename_aggregate, alias)
         )
-        .filter(like="pipeline", axis=0)
-        .pipe(rename_aggregate, Group.import_foreign)
-    )
-
-    h2_export_foreign = (
-        collect_myopic_statistics(
-            networks,
-            statistic="trade_energy",
-            scope=TradeTypes.FOREIGN,
-            direction="export",
-            bus_carrier=BusCarrier.H2,
-        )
-        .filter(like="pipeline", axis=0)
-        .pipe(rename_aggregate, Group.export_foreign)
-    )
-
-    h2_import_domestic = (
-        collect_myopic_statistics(
-            networks,
-            statistic="trade_energy",
-            scope=TradeTypes.DOMESTIC,
-            direction="import",
-            bus_carrier=BusCarrier.H2,
-        )
-        .filter(like="pipeline", axis=0)
-        .pipe(rename_aggregate, Group.import_domestic)
-    )
-
-    h2_export_domestic = (
-        collect_myopic_statistics(
-            networks,
-            statistic="trade_energy",
-            scope=TradeTypes.DOMESTIC,
-            direction="export",
-            bus_carrier=BusCarrier.H2,
-        )
-        .filter(like="pipeline", axis=0)
-        .pipe(rename_aggregate, Group.export_domestic)
-    )
+    #
+    # h2_import_foreign = (
+    #     collect_myopic_statistics(
+    #         networks,
+    #         statistic="trade_energy",
+    #         scope=TradeTypes.FOREIGN,
+    #         direction="import",
+    #         bus_carrier=BusCarrier.H2,
+    #     )
+    #     .filter(like="pipeline", axis=0)
+    #     .pipe(rename_aggregate, Group.import_foreign)
+    # )
+    #
+    # h2_export_foreign = (
+    #     collect_myopic_statistics(
+    #         networks,
+    #         statistic="trade_energy",
+    #         scope=TradeTypes.FOREIGN,
+    #         direction="export",
+    #         bus_carrier=BusCarrier.H2,
+    #     )
+    #     .filter(like="pipeline", axis=0)
+    #     .pipe(rename_aggregate, Group.export_foreign)
+    # )
+    #
+    # h2_import_domestic = (
+    #     collect_myopic_statistics(
+    #         networks,
+    #         statistic="trade_energy",
+    #         scope=TradeTypes.DOMESTIC,
+    #         direction="import",
+    #         bus_carrier=BusCarrier.H2,
+    #     )
+    #     .filter(like="pipeline", axis=0)
+    #     .pipe(rename_aggregate, Group.import_domestic)
+    # )
+    #
+    # h2_export_domestic = (
+    #     collect_myopic_statistics(
+    #         networks,
+    #         statistic="trade_energy",
+    #         scope=TradeTypes.DOMESTIC,
+    #         direction="export",
+    #         bus_carrier=BusCarrier.H2,
+    #     )
+    #     .filter(like="pipeline", axis=0)
+    #     .pipe(rename_aggregate, Group.export_domestic)
+    # )
 
     metric = Exporter(
-        statistics=[
-            h2_supply,
-            h2_demand,
-            h2_import_foreign,
-            h2_export_foreign,
-            h2_import_domestic,
-            h2_export_domestic,
-        ],
+        statistics=[supply, demand] + trade_statistics,
         view_config=config["view"],
         statistics_unit="MWh",
     )
@@ -122,5 +132,7 @@ def view_balance_hydrogen(
         ],
         "/",
     )
+
+    # todo: split storage in and storage out
 
     metric.export(result_path, subdir)

@@ -23,20 +23,6 @@ def view_balance_electricity(
       - "Link" supply with AC bus_carrier, and
       - Pump-Hydro-Storage and Run-Of-River inflows
     """
-    # (
-    #     collect_myopic_statistics(
-    #         networks,
-    #         statistic="trade_energy",
-    #         scope=TradeTypes.DOMESTIC,
-    #         direction="import",
-    #         bus_carrier="AC",
-    #     )
-    #     # the trade statistic wrongly finds transmission between EU -> country buses.
-    #     # Those are dropped by the filter_by statement.
-    #     .pipe(filter_by, carrier=["AC", "DC"])
-    #     .pipe(rename_aggregate, "domestic import")
-    # )
-
     transmission_carrier = ["AC", "DC"]
 
     supply = collect_myopic_statistics(
@@ -74,46 +60,6 @@ def view_balance_electricity(
             # Those are dropped by the filter_by statement.
             .pipe(filter_by, carrier=["AC", "DC"]).pipe(rename_aggregate, alias)
         )
-
-    # import_foreign = (
-    #     collect_myopic_statistics(
-    #         networks,
-    #         statistic="trade_energy",
-    #         scope=TradeTypes.FOREIGN,
-    #         direction="import",
-    #         bus_carrier="AC",
-    #     )
-    #     # the trade statistic wrongly finds transmission between EU -> country buses.
-    #     # Those are dropped by the filter_by statement.
-    #     .pipe(filter_by, carrier=["AC", "DC"])
-    #     .pipe(rename_aggregate, Group.import_foreign)
-    # )
-    # export_foreign = (
-    #     collect_myopic_statistics(
-    #         networks,
-    #         statistic="trade_energy",
-    #         scope=TradeTypes.FOREIGN,
-    #         direction="export",
-    #         bus_carrier="AC",
-    #     )
-    #     # the trade statistic wrongly finds transmission between EU -> country buses.
-    #     # Those are dropped by the filter_by statement.
-    #     .pipe(filter_by, carrier=["AC", "DC"])
-    #     .pipe(rename_aggregate, Group.export_foreign)
-    # )
-    # import_domestic = (
-    #     collect_myopic_statistics(
-    #         networks,
-    #         statistic="trade_energy",
-    #         scope=TradeTypes.DOMESTIC,
-    #         direction="import",
-    #         bus_carrier="AC",
-    #     )
-    #     # the trade statistic wrongly finds transmission between EU -> country buses.
-    #     # Those are dropped by the filter_by statement.
-    #     .pipe(filter_by, carrier=["AC", "DC"])
-    #     .pipe(rename_aggregate, Group.import_foreign)
-    # )
 
     exporter = Exporter(
         statistics=[supply, demand] + trade_statistics,
