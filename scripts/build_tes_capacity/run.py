@@ -36,8 +36,9 @@ Outputs
 import logging
 
 import xarray as xr
-from _helpers import set_scenario_config
 from tes_capacity_approximator import TesCapacityApproximator
+
+from scripts._helpers import set_scenario_config
 
 logger = logging.getLogger(__name__)
 
