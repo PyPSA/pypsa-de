@@ -532,7 +532,7 @@ class TransmissionGridMap:
         style
             The style dictionary to pass to the geojson layer.
         """
-        res = resources.files("esmtools") / "data"
+        res = resources.files("evals") / "data"
         gdf = gpd.read_file(res / file_name).to_crs(crs=f"EPSG:{self.cfg.crs}")
         if style:  # applies the same style to all features
             gdf["style"] = [style] * gdf.shape[0]

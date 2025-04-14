@@ -89,7 +89,7 @@ def build_geojson_base_layer(
         "AT33": "AT0 8",  # Tirol
         "AT34": "AT0 7",  # Vorarlberg
     }
-    gdf = gdf.replace({"ESM_ID": nuts_to_esm_mapping})
+    # gdf = gdf.replace({"ESM_ID": nuts_to_esm_mapping})
 
     nodes = gdf.dissolve(by="ESM_ID")
     duplicates = [s for s in nodes.index if s.startswith(("AT", "DE")) and len(s) != 5]
@@ -98,5 +98,9 @@ def build_geojson_base_layer(
     # some countries are not modeled
     nodes = nodes.drop(["TR", "IS", "CY"])
 
-    file_path = resources.files("esmtools") / "data" / "nodes.geojson"
+    file_path = resources.files("evals") / "data" / "nodes.geojson"
     nodes["geometry"].to_file(file_path, driver="GeoJSON")
+
+
+if __name__ == "__main__":
+    build_geojson_base_layer()

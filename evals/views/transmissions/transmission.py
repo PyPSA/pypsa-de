@@ -45,9 +45,10 @@ def view_grid_capactiy(
         n.df("Bus").loc["AT13", "y"] += 0.1  # Lat, up
 
     grid_capactiy = collect_myopic_statistics(
-        networks, statistic="grid_capactiy", drop_zero_rows=False
+        networks, statistic="grid_capactiy", drop_zero_rows=False, comps="Link"
     )
-    grid_capactiy = grid_capactiy.drop("2015", level=DataModel.YEAR, errors="ignore")
+    # enable line below when working with ESM
+    # grid_capactiy = grid_capactiy.drop("2015", level=DataModel.YEAR, errors="ignore")
     # cannot use utils.scale(), because of the additional "line" column
     col = "Capacity (MW)"
     grid_capactiy[col] = grid_capactiy[col] * 1e-3
@@ -83,14 +84,22 @@ def view_grid_capactiy(
     import_capacity.name = metric_name
 
     config = GridMapConfig(show_year="2030")  # fixme: show_year is broken =(
-    buses = networks["2050"].df("Bus")
+    buses = networks[next(reversed(networks))].df("Bus")
 
     # every list item will become one HTML file with a map for the
     # specified carrier and bus_carrier
+    # ToDo: Add CO2 once it works properly
     carriers_bus_carrier_groups = (
         (["", "DC"], "AC"),
-        ([Carrier.gas_pipepline], BusCarrier.CH4),
-        ([Carrier.h2_pipeline, Carrier.h2_pipeline_retro], BusCarrier.H2),
+        ([Carrier.gas_pipepline, Carrier.gas_pipepline_new], BusCarrier.CH4),
+        (
+            [
+                Carrier.h2_pipeline,
+                Carrier.h2_pipeline_retro,
+                Carrier.h2_pipeline_kernnetz,
+            ],
+            BusCarrier.H2,
+        ),
     )
 
     for carriers, bus_carrier in carriers_bus_carrier_groups:

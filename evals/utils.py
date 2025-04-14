@@ -904,8 +904,8 @@ def add_grid_lines(buses: pd.DataFrame, statistic: pd.Series) -> pd.DataFrame:
     if isinstance(statistic, pd.Series):
         statistic = statistic.to_frame()
 
-    bus0 = statistic.index.get_level_values("bus0")
-    bus1 = statistic.index.get_level_values("bus1")
+    bus0 = statistic.index.get_level_values("bus0").str.strip()
+    bus1 = statistic.index.get_level_values("bus1").str.strip()
     ac_buses = filter_by(buses, carrier="AC")[["x", "y"]]
 
     def _get_bus_lines(_nodes: tuple[str]) -> np.ndarray:

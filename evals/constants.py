@@ -205,6 +205,7 @@ class Carrier:
     ch4_from_sabatier: str = "Gas from Sabatier"
     biogas_to_ch4: str = "biogas to gas"
     gas_pipepline: str = "gas pipeline"
+    gas_pipepline_new: str = "gas pipeline new"
     ch4_generator: str = "gas generator"
     ch4_import_foreign: str = "gas foreign import"
     cng_long: str = "CNG long"
@@ -245,7 +246,8 @@ class Carrier:
     fcev_short: str = "FCEV short"
     h2_sabatier: str = "H2 for Sabatier"
     h2_pipeline: str = "H2 pipeline"
-    h2_pipeline_retro: str = "H2 pipeline retrofit"
+    h2_pipeline_retro: str = "H2 pipeline retrofitted"
+    h2_pipeline_kernnetz: str = "H2 pipeline (Kernnetz)"
     road_freight_h2: str = "H2 road freight"
     h2_industry: str = "H2 for industry"
     h2_shipping: str = "H2 for shipping"
@@ -1282,8 +1284,10 @@ TRANSMISSION_CARRIER: tuple = (
     "",
     "DC",
     Carrier.gas_pipepline,
+    Carrier.gas_pipepline_new,
     Carrier.h2_pipeline,
     Carrier.h2_pipeline_retro,
+    Carrier.h2_pipeline_kernnetz,
 )
 
 

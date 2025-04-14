@@ -186,13 +186,13 @@ def collect_myopic_statistics(
         year_statistics.append(year_statistic)
 
     statistic = pd.concat(year_statistics, axis=0, sort=True)
-
-    if "EU" in statistic.index.unique(DataModel.LOCATION):
-        logger.debug(
-            f"EU node found in statistic:\n"
-            f"{filter_by(statistic, location='EU')}"
-            f"\n\nPlease check if this is intentional!"
-        )
+    if DataModel.LOCATION in statistic.index.names:
+        if "EU" in statistic.index.unique(DataModel.LOCATION):
+            logger.debug(
+                f"EU node found in statistic:\n"
+                f"{filter_by(statistic, location='EU')}"
+                f"\n\nPlease check if this is intentional!"
+            )
 
     if aggregate_components and "component" in statistic.index.names:
         _names = statistic.index.droplevel("component").names
