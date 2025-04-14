@@ -359,7 +359,9 @@ rule modify_prenetwork:
         regions_offshore=resources("regions_offshore_base_s_{clusters}.geojson"),
         offshore_connection_points="ariadne-data/offshore_connection_points.csv",
     output:
-        network=resources("networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_final.nc"),
+        network=resources(
+            "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_final.nc"
+        ),
     resources:
         mem_mb=4000,
     log:
