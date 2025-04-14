@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20250404-fit_for_2050
+  prefix: 20250414_merge_master_april
   name:
   # - CurrentPolicies
   - KN2045_Bal_v4
