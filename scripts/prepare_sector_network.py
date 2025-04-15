@@ -4994,51 +4994,6 @@ def add_industry(
             efficiency3=process_co2_per_naphtha,
         )
 
-    # aviation
-    demand_factor = get(options["aviation_demand_factor"], investment_year)
-    if demand_factor != 1:
-        logger.warning(
-            f"Changing aviation demand by {demand_factor * 100 - 100:+.2f}%."
-        )
-
-    all_aviation = ["total international aviation", "total domestic aviation"]
-
-    p_set = (
-        demand_factor
-        * pop_weighted_energy_totals.loc[nodes, all_aviation].sum(axis=1)
-        * 1e6
-        / nhours
-    ).rename(lambda x: x + " kerosene for aviation")
-
-    if not options["regional_oil_demand"]:
-        p_set = p_set.sum()
-
-    n.add(
-        "Bus",
-        spatial.oil.kerosene,
-        location=spatial.oil.demand_locations,
-        carrier="kerosene for aviation",
-        unit="MWh_LHV",
-    )
-
-    n.add(
-        "Load",
-        spatial.oil.kerosene,
-        bus=spatial.oil.kerosene,
-        carrier="kerosene for aviation",
-        p_set=p_set,
-    )
-
-    n.add(
-        "Link",
-        spatial.oil.kerosene,
-        bus0=spatial.oil.nodes,
-        bus1=spatial.oil.kerosene,
-        bus2="co2 atmosphere",
-        carrier="kerosene for aviation",
-        p_nom_extendable=True,
-        efficiency2=costs.at["oil", "CO2 intensity"],
-    )
     # TODO simplify bus expression
     n.add(
         "Load",
