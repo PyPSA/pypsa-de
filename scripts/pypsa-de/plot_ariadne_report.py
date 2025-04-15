@@ -95,6 +95,7 @@ year_colors = [
     "cadetblue",
     "hotpink",
     "darkviolet",
+    "gold",
 ]
 markers = [
     "v",
