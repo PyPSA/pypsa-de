@@ -1041,29 +1041,10 @@ def enforce_transmission_project_build_years(n, current_year):
     n.links.loc[dc_future, "p_nom_max"] = 0.0
 
 
-def force_connection_nep_offshore(n, current_year):
+def force_connection_nep_offshore(n, current_year, costs):
     # WARNING this code adds a new generator for the offwind connection
     # at an onshore locations. These extra capacities are not accounted
     # for in the land use constraint
-
-    # Load costs
-    nep23_costs = (
-        pd.read_csv(
-            snakemake.input.costs_modifications,
-            index_col=0,
-        )
-        .query(
-            """
-            source == 'NEP2023' \
-            & technology.str.contains('offwind') \
-            & parameter == 'investment'
-        """
-        )
-        .rename(columns={"value": "investment"})
-    )
-    # kW to MW
-    nep23_costs.at["offwind-ac-station", "investment"] *= 1000
-    nep23_costs.at["offwind-dc-station", "investment"] *= 1000
 
     # Load shapes and projects
     offshore = pd.read_csv(snakemake.input.offshore_connection_points, index_col=0)
@@ -1112,10 +1093,10 @@ def force_connection_nep_offshore(n, current_year):
     dc_connection_totals = (
         dc_projects["Trassenlänge in km"]
         * (
-            2 / 3 * nep23_costs.at["offwind-dc-connection-submarine", "investment"]
-            + 1 / 3 * nep23_costs.at["offwind-dc-connection-underground", "investment"]
+            2 / 3 * costs.at["offwind-dc-connection-submarine", "investment"]
+            + 1 / 3 * costs.at["offwind-dc-connection-underground", "investment"]
         )
-        + nep23_costs.at["offwind-dc-station", "investment"]
+        + costs.at["offwind-dc-station", "investment"]
     ) * dc_projects["Übertragungsleistung in MW"]
 
     dc_connection_overnight_costs = (
@@ -1181,10 +1162,10 @@ def force_connection_nep_offshore(n, current_year):
     ac_connection_totals = (
         ac_projects["Trassenlänge in km"]
         * (
-            2 / 3 * nep23_costs.at["offwind-ac-connection-submarine", "investment"]
-            + 1 / 3 * nep23_costs.at["offwind-ac-connection-underground", "investment"]
+            2 / 3 * costs.at["offwind-ac-connection-submarine", "investment"]
+            + 1 / 3 * costs.at["offwind-ac-connection-underground", "investment"]
         )
-        + nep23_costs.at["offwind-ac-station", "investment"]
+        + costs.at["offwind-ac-station", "investment"]
     ) * ac_projects["Übertragungsleistung in MW"]
 
     ac_connection_overnight_costs = (
@@ -1356,7 +1337,7 @@ if __name__ == "__main__":
 
     drop_duplicate_transmission_projects(n)
 
-    force_connection_nep_offshore(n, current_year)
+    force_connection_nep_offshore(n, current_year, costs)
 
     scale_capacity(n, snakemake.params.scale_capacity)
 
