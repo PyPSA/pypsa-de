@@ -1281,7 +1281,7 @@ UNITS: frozendict = frozendict(
 
 # transmission technologies
 TRANSMISSION_CARRIER: tuple = (
-    "",
+    "AC",
     "DC",
     Carrier.gas_pipepline,
     Carrier.gas_pipepline_new,
@@ -1521,6 +1521,7 @@ ALIAS_COUNTRY: frozendict = frozendict(
         "SE": "Sweden",
         "SI": "Slovenia",
         "SK": "Slovakia",
+        "XK": "Kosovo",
     }
 )
 ALIAS_COUNTRY_REV: frozendict = frozendict({v: k for k, v in ALIAS_COUNTRY.items()})

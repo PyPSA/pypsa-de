@@ -45,8 +45,12 @@ def view_grid_capactiy(
         n.df("Bus").loc["AT13", "y"] += 0.1  # Lat, up
 
     grid_capactiy = collect_myopic_statistics(
-        networks, statistic="grid_capactiy", drop_zero_rows=False, comps="Link"
+        networks,
+        statistic="grid_capactiy",
+        drop_zero_rows=False,
+        comps=["Link", "Line"],
     )
+
     # enable line below when working with ESM
     # grid_capactiy = grid_capactiy.drop("2015", level=DataModel.YEAR, errors="ignore")
     # cannot use utils.scale(), because of the additional "line" column
@@ -90,7 +94,7 @@ def view_grid_capactiy(
     # specified carrier and bus_carrier
     # ToDo: Add CO2 once it works properly
     carriers_bus_carrier_groups = (
-        (["", "DC"], "AC"),
+        (["AC", "DC"], "AC"),
         ([Carrier.gas_pipepline, Carrier.gas_pipepline_new], BusCarrier.CH4),
         (
             [
@@ -112,4 +116,4 @@ def view_grid_capactiy(
             df_grid, df_import_energy, df_import_capacity, buses, config
         )
         grid_map.draw_grid_by_carrier_groups_myopic()
-        grid_map.save(output_path, f"gridmap_{'-'.join(carriers)}")
+        grid_map.save(result_path, f"gridmap_{'-'.join(carriers)}", subdir)

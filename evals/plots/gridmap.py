@@ -6,6 +6,7 @@ import pathlib
 from dataclasses import dataclass, field
 from importlib import resources
 from math import copysign
+from pathlib import Path
 
 import folium
 import geopandas as gpd
@@ -49,10 +50,10 @@ class GridMapConfig:
     line_capacity_threshold: float = 0.1  # GWh
     line_weight_min: float = 2.0  # px
     line_weight_max: float = 20.0  # px
-
+    # ToDo: Add colors
     carrier_style: dict = field(
         default_factory=lambda: {
-            "": {  # AC Lines
+            "AC": {  # AC Lines
                 "color": "#D90429",
                 "nice_name": "AC",
                 "offset": -10,
@@ -64,7 +65,11 @@ class GridMapConfig:
             },
             "gas pipeline": {
                 "color": "#63A452",
-                "nice_name": "Methane",
+                "nice_name": "Methane (brownfield)",
+            },
+            "gas pipeline new": {
+                "color": "#8BA352",
+                "nice_name": "Methane (new)",
             },
             "H2 pipeline": {
                 "color": "#258994",
@@ -72,8 +77,14 @@ class GridMapConfig:
                 "offset": -10,
             },
             "H2 pipeline retrofit": {
-                "color": "#258994",
+                "color": "#255194",
                 "nice_name": "H2 (retrofit)",
+                "dash_array": "10",  # px, equal gaps
+                "offset": 10,  # px
+            },
+            "H2 pipeline (Kernnetz)": {
+                "color": "259468",
+                "nice_name": "H2 (Kernnetz)",
                 "dash_array": "10",  # px, equal gaps
                 "offset": 10,  # px
             },
@@ -131,7 +142,7 @@ class TransmissionGridMap:
             self.fmap.add_child(fg)  # register the feature group
 
     def save(
-        self, output_path: pathlib.Path, file_name: str, subdir: str = "json"
+        self, output_path: pathlib.Path, file_name: str, subdir: str = "HTML"
     ) -> None:
         """Write the map to a html file.
 
@@ -150,7 +161,31 @@ class TransmissionGridMap:
             An optional subdirectory to store files at. Leave emtpy
             to skip, or change to html.
         """
-        self.fmap.save(output_path / subdir / f"{file_name}.html")
+        output_path = self.make_evaluation_result_directories(output_path, subdir)
+        self.fmap.save(output_path / f"{file_name}.html")
+
+    def make_evaluation_result_directories(
+        self, result_path: Path, subdir: Path | str
+    ) -> Path:
+        """
+        Create all directories needed to store evaluations results.
+
+        Parameters
+        ----------
+        result_path
+            The path of the result folder.
+        subdir
+            A relative path inside the result folder.
+
+        Returns
+        -------
+        :
+            The joined path: result_dir / subdir.
+        """
+        output_path = self.make_directory(result_path, subdir)
+        self.make_directory(output_path, "HTML")
+
+        return output_path
 
     def draw_grid_by_carrier_groups_myopic(self) -> None:
         """Plot carrier groups for all years to one map."""
@@ -431,21 +466,39 @@ class TransmissionGridMap:
             The input data frame with additional column containing the
             line center.
         """
-        assert df_slice.shape[0] == 1, f"Multiple rows are not supported: {df_slice}"
-        offset = df_slice["offset"].iloc[0]
-        line = df_slice["line"].iloc[0]
-        if offset != 0:
-            x0, x1 = line[0][0], line[1][0]
-            y0, y1 = line[0][1], line[1][1]
-            # +- 10% (0.4, 0.6) of line length, depending on offset sign
-            ratio = 0.5 + copysign(0.1, offset)
-            x = x0 + ratio * (x1 - x0)
-            y = y0 + ratio * (y1 - y0)
-            df_slice["line_center"] = [[x, y]]
-        else:  # simple line center
-            df_slice["line_center"] = [
-                [(line[0][i] + line[1][i]) / 2 for i in range(len(line))]
-            ]
+        # assert df_slice.shape[0] == 1, f"Multiple rows are not supported: {df_slice}"
+        # offset = df_slice["offset"].iloc[0]
+        # line = df_slice["line"].iloc[0]
+        # if offset != 0:
+        #     x0, x1 = line[0][0], line[1][0]
+        #     y0, y1 = line[0][1], line[1][1]
+        #     # +- 10% (0.4, 0.6) of line length, depending on offset sign
+        #     ratio = 0.5 + copysign(0.1, offset)
+        #     x = x0 + ratio * (x1 - x0)
+        #     y = y0 + ratio * (y1 - y0)
+        #     df_slice["line_center"] = [[x, y]]
+        # else:  # simple line center
+        #     df_slice["line_center"] = [
+        #         [(line[0][i] + line[1][i]) / 2 for i in range(len(line))]
+        #     ]
+
+        def compute_center(row):
+            offset = row["offset"]
+            line = row["line"]
+            if offset != 0:
+                x0, x1 = line[0][0], line[1][0]
+                y0, y1 = line[0][1], line[1][1]
+                # Move center by +-10% of line length depending on offset sign.
+                ratio = 0.5 + copysign(0.1, offset)
+                x = x0 + ratio * (x1 - x0)
+                y = y0 + ratio * (y1 - y0)
+                return [x, y]
+            else:
+                # Compute the simple midpoint
+                return [(line[0][i] + line[1][i]) / 2 for i in range(len(line[0]))]
+
+        # Use apply to compute the center for every row, ensuring the result is aligned with each row.
+        df_slice["line_center"] = df_slice.apply(compute_center, axis=1)
 
         return df_slice
 
@@ -539,3 +592,27 @@ class TransmissionGridMap:
 
         gj = GeoJson(gdf, control=False, overlay=True)
         gj.add_to(self.fmap)
+
+    @staticmethod
+    def make_directory(base: Path, subdir: Path | str) -> Path:
+        """
+        Create a directory and return its path.
+
+        Parameters
+        ----------
+        base
+            The path to base of the new folder.
+        subdir
+            A relative path inside the base folder.
+
+        Returns
+        -------
+        :
+            The joined path: result_dir / subdir / now.
+        """
+        base = Path(base).resolve()
+        assert base.is_dir(), f"Base path does not exist: {base}."
+        directory_path = base / subdir
+        directory_path.mkdir(parents=True, exist_ok=True)
+
+        return directory_path
