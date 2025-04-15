@@ -1045,6 +1045,10 @@ def force_connection_nep_offshore(n, current_year, costs):
     # WARNING this code adds a new generator for the offwind connection
     # at an onshore locations. These extra capacities are not accounted
     # for in the land use constraint
+    if not snakemake.config["renewable"]["offwind-dc"]["resource_classes"] == 1:
+        logger.warning(
+            "Number of offshore wind resource classes are not equal to 0. Assigning all offshore wind from NEP to class 0."
+        )
 
     # Load shapes and projects
     offshore = pd.read_csv(snakemake.input.offshore_connection_points, index_col=0)
@@ -1080,7 +1084,7 @@ def force_connection_nep_offshore(n, current_year, costs):
     nordsee_duck_node = regions_offshore.index[
         regions_offshore.contains(Point(6.19628, 54.38543))
     ][0]
-    nordsee_duck_off = f"{nordsee_duck_node} offwind-dc-{current_year}"
+    nordsee_duck_off = f"{nordsee_duck_node} 0 offwind-dc-{current_year}"
 
     dc_projects = goffshore[
         (goffshore.Inbetriebnahmejahr > current_year - 5)
@@ -1109,7 +1113,7 @@ def force_connection_nep_offshore(n, current_year, costs):
         logger.info(f"Forcing in NEP offshore DC projects with capacity:\n {dc_power}")
 
         for node in dc_power.index:
-            node_off = f"{node} offwind-dc-{current_year}"
+            node_off = f"{node} 0 offwind-dc-{current_year}"
 
             if node_off not in n.generators.index:
                 logger.info(f"Adding generator {node_off}")
@@ -1137,7 +1141,7 @@ def force_connection_nep_offshore(n, current_year, costs):
     ]
     for existing in existings:
         node = n.generators.at[existing, "bus"]
-        node_off = f"{node} offwind-dc-{current_year}"
+        node_off = f"{node} 0 offwind-dc-{current_year}"
         if node_off not in n.generators.index:
             logger.info(f"adding for dummy land constraint {node_off}")
             n.generators.loc[node_off] = n.generators.loc[nordsee_duck_off]
@@ -1178,7 +1182,7 @@ def force_connection_nep_offshore(n, current_year, costs):
         logger.info(f"Forcing in NEP offshore AC projects with capacity:\n {ac_power}")
 
         for node in ac_power.index:
-            node_off = f"{node} offwind-ac-{current_year}"
+            node_off = f"{node} 0 offwind-ac-{current_year}"
 
             if node_off not in n.generators.index:
                 logger.error(
