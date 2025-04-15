@@ -15,8 +15,7 @@ import pypsa
 from numpy import isclose
 
 from scripts._helpers import configure_logging, mock_snakemake
-from scripts.add_electricity import calculate_annuity
-from scripts.prepare_sector_network import prepare_costs
+from scripts.add_electricity import calculate_annuity, load_costs
 
 logger = logging.getLogger(__name__)
 
@@ -4668,7 +4667,7 @@ def get_operational_and_capital_costs(year):
     """
     var = pd.Series()
     ind = planning_horizons.index(year)
-    costs = prepare_costs(
+    costs = load_costs(
         snakemake.input.costs[ind],
         snakemake.params.costs,
         nyears=1,
@@ -5471,7 +5470,7 @@ if __name__ == "__main__":
 
     costs = list(
         map(
-            lambda _costs: prepare_costs(
+            lambda _costs: load_costs(
                 _costs,
                 snakemake.params.costs,
                 nyears,

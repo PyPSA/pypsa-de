@@ -8,7 +8,7 @@ from shapely.geometry import Point
 
 from scripts._helpers import configure_logging, mock_snakemake, sanitize_custom_columns
 from scripts.add_electricity import load_costs
-from scripts.prepare_sector_network import lossy_bidirectional_links, prepare_costs
+from scripts.prepare_sector_network import lossy_bidirectional_links
 
 logger = logging.getLogger(__name__)
 
@@ -1300,9 +1300,10 @@ if __name__ == "__main__":
     nhours = n.snapshot_weightings.generators.sum()
     nyears = nhours / 8760
 
-    costs = prepare_costs(
+    costs = load_costs(
         snakemake.input.costs,
         snakemake.params.costs,
+        snakemake.params.max_hours,
         nyears,
     )
 
@@ -1329,17 +1330,10 @@ if __name__ == "__main__":
         wkn = pd.read_csv(fn, index_col=0)
         add_wasserstoff_kernnetz(n, wkn, costs)
 
-    costs_loaded = load_costs(
-        snakemake.input.costs,
-        snakemake.params.costs,
-        snakemake.params.max_hours,
-        nyears,
-    )
-
     # change to NEP21 costs
     transmission_costs_from_modified_cost_data(
         n,
-        costs_loaded,
+        costs,
         snakemake.params.transmission_costs,
     )
 

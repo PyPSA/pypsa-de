@@ -20,8 +20,8 @@ from matplotlib.ticker import FuncFormatter
 from pypsa.plot import add_legend_circles, add_legend_lines, add_legend_patches
 
 from scripts._helpers import configure_logging, mock_snakemake
+from scripts.add_electricity import load_costs
 from scripts.plot_power_network import assign_location
-from scripts.prepare_sector_network import prepare_costs
 
 logger = logging.getLogger(__name__)
 
@@ -2682,7 +2682,7 @@ if __name__ == "__main__":
 
     costs = list(
         map(
-            lambda _costs: prepare_costs(
+            lambda _costs: load_costs(
                 _costs,
                 snakemake.params.costs,
                 nyears,
