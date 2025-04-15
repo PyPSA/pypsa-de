@@ -588,6 +588,7 @@ rule export_ariadne_variables:
     params:
         planning_horizons=config_provider("scenario", "planning_horizons"),
         hours=config_provider("clustering", "temporal", "resolution_sector"),
+        max_hours=config_provider("electricity", "max_hours"),
         costs=config_provider("costs"),
         config_industry=config_provider("industry"),
         energy_totals_year=config_provider("energy", "energy_totals_year"),
@@ -760,6 +761,7 @@ rule plot_ariadne_report:
         run=config_provider("run", "name"),
         foresight=config_provider("foresight"),
         costs=config_provider("costs"),
+        max_hours=config_provider("electricity", "max_hours"),
         post_discretization=config_provider("solving", "options", "post_discretization"),
         NEP_year=config_provider("costs", "NEP"),
         hours=config_provider("clustering", "temporal", "resolution_sector"),

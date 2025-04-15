@@ -21,7 +21,7 @@ from pypsa.plot import add_legend_circles, add_legend_lines, add_legend_patches
 
 from scripts._helpers import configure_logging, mock_snakemake
 from scripts.add_electricity import load_costs
-from scripts.plot_power_network import assign_location
+from scripts.make_summary import assign_locations
 
 logger = logging.getLogger(__name__)
 
@@ -1594,7 +1594,7 @@ def group_pipes(df, drop_direction=False):
 def plot_h2_map(n, regions, savepath, only_de=False):
     logger.info("Plotting H2 map")
     logger.info("Assigning location")
-    assign_location(n)
+    assign_locations(n)
 
     h2_storage = n.stores[n.stores.carrier.isin(["H2", "H2 Store"])]
     regions["H2"] = (
@@ -1820,7 +1820,7 @@ def plot_h2_map(n, regions, savepath, only_de=False):
 
 
 def plot_h2_map_de(n, regions, tech_colors, savepath, specify_buses=None):
-    assign_location(n)
+    assign_locations(n)
 
     h2_storage = n.stores[n.stores.carrier.isin(["H2", "H2 Store"])]
     regions["H2"] = (
@@ -2685,6 +2685,7 @@ if __name__ == "__main__":
             lambda _costs: load_costs(
                 _costs,
                 snakemake.params.costs,
+                snakemake.params.max_hours,
                 nyears,
             ).multiply(1e-9),  # in bn EUR
             snakemake.input.costs,

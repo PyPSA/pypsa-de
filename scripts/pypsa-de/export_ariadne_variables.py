@@ -4670,6 +4670,7 @@ def get_operational_and_capital_costs(year):
     costs = load_costs(
         snakemake.input.costs[ind],
         snakemake.params.costs,
+        snakemake.params.max_hours,
         nyears=1,
     )
 
@@ -5473,6 +5474,7 @@ if __name__ == "__main__":
             lambda _costs: load_costs(
                 _costs,
                 snakemake.params.costs,
+                snakemake.params.max_hours,
                 nyears,
             ).multiply(1e-9),  # in bn €
             snakemake.input.costs,
