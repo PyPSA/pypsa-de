@@ -5164,13 +5164,14 @@ def add_aviation(
     pop_weighted_energy_totals: pd.DataFrame,
     options: dict,
     spatial: SimpleNamespace,
+    investment_year: int,
 ) -> None:
     logger.info("Add aviation")
 
     nodes = pop_layout.index
     nhours = n.snapshot_weightings.generators.sum()
 
-    demand_factor = options["aviation_demand_factor"]
+    demand_factor = get(options["aviation_demand_factor"], investment_year)
     if demand_factor != 1:
         logger.warning(
             f"Changing aviation demand by {demand_factor * 100 - 100:+.2f}%."
@@ -6471,6 +6472,7 @@ if __name__ == "__main__":
             pop_weighted_energy_totals=pop_weighted_energy_totals,
             options=options,
             spatial=spatial,
+            investment_year=investment_year,
         )
 
     if options["heating"]:
