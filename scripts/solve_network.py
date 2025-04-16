@@ -1344,7 +1344,7 @@ def add_resistive_heater_constraints(n):
     logging.info(f"[Resistive heater constraints] Detected resistive heater carriers: {resistive_heater_carriers}")
 
     # Ensure all carriers are in the carriers component
-    if "carriers" not in n.components:
+    if "carriers" not in n.components.keys():
         n.add("Carrier", resistive_heater_carriers)
         logging.info(f"[Resistive heater constraints] Added resistive heater carriers to network")
     elif not all(c in n.carriers.index for c in resistive_heater_carriers):
@@ -2874,6 +2874,13 @@ def solve_network(
     )
     kwargs["assign_all_duals"] = cf_solving.get("assign_all_duals", False)
     kwargs["io_api"] = cf_solving.get("io_api", None)
+
+    if config['run'].get('quick_test', False):
+        start_date = '2019-01-1 00:00:00'
+        end_date = '2019-01-30 00:00:00'
+        selected_snapshots = n.snapshots[(n.snapshots >= start_date) & (n.snapshots <= end_date)]
+        kwargs['snapshots'] = selected_snapshots
+        n.snapshots = selected_snapshots
 
     if kwargs["solver_name"] == "gurobi":
         logging.getLogger("gurobipy").setLevel(logging.CRITICAL)

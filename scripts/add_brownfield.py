@@ -244,7 +244,7 @@ def adjust_renewable_profiles(n, input_profiles, params, year):
             n.generators_t.p_max_pu.loc[:, p_max_pu.columns] = p_max_pu
 
 
-def update_heat_pump_efficiency(n: pypsa.Network, n_p: pypsa.Network, year: int):
+def update_heat_pump_efficiency(n: pypsa.Network, n_p: pypsa.Network, year: int, config):
     """
     Update the efficiency of heat pumps from previous years to current year
     (e.g. 2030 heat pumps receive 2040 heat pump COPs in 2030).
@@ -277,10 +277,11 @@ def update_heat_pump_efficiency(n: pypsa.Network, n_p: pypsa.Network, year: int)
     corresponding_idx_this_iteration = heat_pump_idx_previous_iteration.str[:-4] + str(
         year
     )
-    # update efficiency of heat pumps in previous iteration in-place to efficiency in this iteration
-    n_p.links_t["efficiency"].loc[:, heat_pump_idx_previous_iteration] = (
-        n.links_t["efficiency"].loc[:, corresponding_idx_this_iteration].values
-    )
+    if not config['run'].get('quick_test', False):
+        # update efficiency of heat pumps in previous iteration in-place to efficiency in this iteration
+        n_p.links_t["efficiency"].loc[:, heat_pump_idx_previous_iteration] = (
+            n.links_t["efficiency"].loc[:, corresponding_idx_this_iteration].values
+        )
 
     # Change efficiency2 for heat pumps that use an explicitly modelled heat source
     previous_iteration_columns = heat_pump_idx_previous_iteration.intersection(
@@ -324,7 +325,7 @@ if __name__ == "__main__":
 
     n_p = pypsa.Network(snakemake.input.network_p)
 
-    update_heat_pump_efficiency(n, n_p, year)
+    update_heat_pump_efficiency(n, n_p, year, snakemake.config)
 
     add_brownfield(
         n,

@@ -6,19 +6,12 @@
 run:
   prefix: 20250414-NEP-flex
   name:
-  # - CurrentPolicies
-  - KN2045_Bal_v4
-  # - KN2045_Elec_v4
-  # - KN2045_H2_v4
-  # - KN2045plus_EasyRide
-  # - KN2045plus_LowDemand
-  # - KN2045minus_WorstCase
-  # - KN2045minus_SupplyFocus
-  # - KN2045_Bal_LowDemand
-  # - KN2045_Bal_HighDemand
+  - 8Gt_Bal_v3
+  # - 8Gt_Elec_v3
+  # - 8Gt_H2_v3
   scenarios:
     enable: true
-    manual_file: config/scenarios.manual.yaml
+    manual_file: config/scenarios.public.yaml
     file: config/scenarios.automated.yaml
   shared_resources:
     policy: base #stops recalculating
@@ -29,25 +22,20 @@ run:
     - industry_sector_ratios
     - build_industry_sector_ratios   # This is necessary to save build_industry_sector_ratios_data.log in the correct folder
     - modify_existing_heating
-  disable_progressbar: true
 
 iiasa_database:
-  db_name: ariadne2_intern
+  db_name: ariadne
   leitmodelle:
     general: REMIND-EU v1.1
     buildings: REMod v1.0
-    transport: Aladin v1
+    transport: REMIND-EU v1.1
+    transport_stock: DLR-VECTOR21
     industry: FORECAST v1.0
   scenarios:
-  - CurrentPolicies
-  - KN2045_Elec_v4
-  - KN2045_H2_v4
-  - KN2045_Bal_v4
-  - KN2045plus_EasyRide
-  - KN2045plus_LowDemand
-  - KN2045minus_WorstCase
-  - KN2045minus_SupplyFocus
-  reference_scenario: KN2045_Bal_v4
+  - 8Gt_Bal_v3
+  - 8Gt_Elec_v3
+  - 8Gt_H2_v3
+  reference_scenario: 8Gt_Bal_v3
   region: Deutschland
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#foresight
@@ -63,7 +51,7 @@ scenario:
   opts:
   - ''
   sector_opts:
-  - none
+   - 3H
   planning_horizons:
   #- 2020
   #- 2025
@@ -278,6 +266,48 @@ costs:
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#sector
 sector:
+  low_voltage_dsm:
+    enable: true
+    #scenario: "enhanced_flexibility"  # Add this identifier
+    "2030":
+      electricity:
+        s_util: 0.67
+        s_flex: 0.5
+        s_inc: 1
+        s_dec: 0
+        delta_t: 1
+      industry electricity:
+        s_util: 0.67
+        s_flex: 0.5
+        s_inc: 0.9
+        s_dec: 0.5
+        delta_t: 1
+    "2040":
+      electricity:
+        s_util: 0.67
+        s_flex: 0.5
+        s_inc: 1
+        s_dec: 0
+        delta_t: 2
+      industry electricity:
+        s_util: 0.67
+        s_flex: 0.5
+        s_inc: 0.9
+        s_dec: 0.5
+        delta_t: 4
+    "2045":
+      electricity:
+        s_util: 0.67
+        s_flex: 0.5
+        s_inc: 1
+        s_dec: 0
+        delta_t: 2
+      industry electricity:
+        s_util: 0.67
+        s_flex: 0.5
+        s_inc: 0.9
+        s_dec: 0.5
+        delta_t: 4
   bev_dsm_restriction_value: 0.75
   bev_dsm_restriction_time: 7
   transport_heating_deadband_upper: 20.
@@ -813,6 +843,18 @@ solving:
             2040: 2.5
             2045: 2.5
             2050: 2.5
+        DSM dispatch:
+          DE:
+            2030: 98.0
+            2037: 110.0
+            2040: 114.0
+            2045: 116.0
+        DSM charge:
+           DE:
+            2030: 98.0
+            2037: 110.0
+            2040: 114.0
+            2045: 116.0
         HVC to air:
           DE:
             2020: 0 # all HVC in Germany is either burned or recycled
@@ -845,7 +887,19 @@ solving:
             2035: 400
             2040: 366
             2045: 400
-
+    Link:
+      DSM dispatch:
+        DE:
+          2030: 6.0
+          2037: 7.0
+          2040: 10.0
+          2045: 12.0
+      DSM store:
+        DE:
+          2030: 6.0
+          2037: 7.0
+          2040: 10.0
+          2045: 12.0
 
   # For reference, this are the values specified in the laws
   # limits_capacity_min:

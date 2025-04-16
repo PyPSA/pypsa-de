@@ -4,6 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
+  # quick_test: true
   prefix: 20250414-NEP-flex
   name:
   # - CurrentPolicies
@@ -63,7 +64,7 @@ scenario:
   opts:
   - ''
   sector_opts:
-  - none
+  - 3H
   planning_horizons:
   #- 2020
   #- 2025

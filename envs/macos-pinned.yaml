@@ -1,4 +1,4 @@
-name: pypsa-de
+name: mm2-pypsa-de
 channels:
   - conda-forge
   - bioconda
@@ -521,7 +521,7 @@ dependencies:
   - zstandard=0.23.0
   - zstd=1.5.7
   - pip:
-      - gurobipy==12.0.1
+      - gurobipy==11.0.0
       - oauthlib==3.2.2
       - ply==3.11
       - pyomo==6.9.1

@@ -1398,3 +1398,6 @@ plotting:
     waste CHP CC: '#e3d3ff'
     HVC to air: 'k'
     tech_colors: '#8a1caf'
+    DSM charge: '#8a1caf'
+    DSM dispaatch: '#8a1caf'
+    DSM: '#8a1caf'
