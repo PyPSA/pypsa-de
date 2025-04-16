@@ -14,10 +14,12 @@ from itertools import product
 
 import pandas as pd
 import xarray as xr
+
 from scripts._helpers import (
     configure_logging,
     generate_periodic_profiles,
     get_snapshots,
+    mock_snakemake,
     set_scenario_config,
 )
 

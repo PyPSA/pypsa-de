@@ -12,10 +12,15 @@ import geopandas as gpd
 import matplotlib.pyplot as plt
 import pandas as pd
 import pypsa
-from scripts._helpers import configure_logging, retry, set_scenario_config
-from scripts.plot_power_network import assign_location, load_projection, rename_techs_tyndp
-from scripts.plot_summary import preferred_order
 from pypsa.plot import add_legend_circles, add_legend_lines
+
+from scripts._helpers import configure_logging, retry, set_scenario_config
+from scripts.plot_power_network import (
+    assign_location,
+    load_projection,
+    rename_techs_tyndp,
+)
+from scripts.plot_summary import preferred_order
 
 logger = logging.getLogger(__name__)
 

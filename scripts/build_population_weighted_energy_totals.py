@@ -8,6 +8,7 @@ Distribute country-level energy demands by population.
 import logging
 
 import pandas as pd
+
 from scripts._helpers import configure_logging, set_scenario_config
 
 logger = logging.getLogger(__name__)

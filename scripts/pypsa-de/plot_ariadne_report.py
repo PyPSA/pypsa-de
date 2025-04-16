@@ -1,11 +1,8 @@
-# -*- coding: utf-8 -*-
 import logging
 import os
 import sys
 
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
-import locale
-from datetime import datetime
 from itertools import compress, islice
 from multiprocessing import Pool
 
@@ -17,15 +14,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pypsa
-from export_ariadne_variables import get_discretized_value, process_postnetworks
-from matplotlib.lines import Line2D
+from export_ariadne_variables import process_postnetworks
 from matplotlib.patches import Patch
 from matplotlib.ticker import FuncFormatter
 from pypsa.plot import add_legend_circles, add_legend_lines, add_legend_patches
 
-from scripts._helpers import configure_logging, mock_snakemake, set_scenario_config
-from scripts.plot_power_network import load_projection, assign_location
-from scripts.plot_summary import preferred_order, rename_techs
+from scripts._helpers import configure_logging, mock_snakemake
+from scripts.plot_power_network import assign_location
 from scripts.prepare_sector_network import prepare_costs
 
 logger = logging.getLogger(__name__)
@@ -319,12 +314,10 @@ carriers_in_german = {
     "gas CHP CC": "Gas KWK mit CO2-Abscheidung",
     "urban central coal CHP": "Steinkohle-KWK",
     "Electricity trade": "Stromhandel",
-    "urban central gas CHP": "Gas-KWK",
     "urban central biomass CHP": "Biomasse-KWK",
     "biomass CHP": "Biomasse-KWK",
     "air heat pump": "Luftwärmepumpe",
     "Electricity load": "Stromlast",
-    "methanolisation": "Methanolisierung",
     "resistive heater": "Widerstandsheizung",
     "gas boiler": "Gaskessel",
     "H2 Electrolysis": "Elektrolyse",
@@ -350,7 +343,7 @@ carriers_in_german = {
 ####### functions #######
 def get_condense_sum(df, groups, groups_name, return_original=False):
     """
-    return condensed df, that has been groupeb by condense groups
+    Return condensed df, that has been groupeb by condense groups
     Arguments:
         df: df you want to condense (carriers have to be in the columns)
         groups: group labels you want to condense on
@@ -416,8 +409,6 @@ def plot_nodal_elec_balance(
 
     mask = nodal_balance.index.get_level_values("bus_carrier").isin(carriers)
     nb = nodal_balance[mask].groupby("carrier").sum().div(1e3).T.loc[period]
-    if plot_loads:
-        df_loads = abs(nb[loads].sum(axis=1))
     # condense groups (summarise carriers to groups)
     nb = get_condense_sum(nb, c1_groups, c1_groups_name)
     # rename unhandy column names
@@ -545,9 +536,9 @@ def plot_nodal_elec_balance(
     ax = df_pos.plot.area(ax=ax, stacked=True, color=pos_c, linewidth=0.0)
 
     # rename negative values that are also present on positive side, so that they are not shown and plot negative values
-    f = lambda c: "out_" + c
-    cols = [f(c) if (c in df_pos.columns) else c for c in df_neg.columns]
-    cols_map = dict(zip(df_neg.columns, cols))
+    def f(c):
+        "out_" + c
+
     df_neg = df_neg.drop(columns=["Electricity trade"], errors="ignore")
     df_neg["Sonstige"] = df_neg.drop(columns=preferred_order_neg, errors="ignore").sum(
         axis=1
@@ -579,8 +570,7 @@ def plot_nodal_elec_balance(
         # set limits of secondary y-axis
         ax2.set_ylim(
             [
-                -1.5
-                * lmps.max(),
+                -1.5 * lmps.max(),
                 # TODO rescale
                 # * abs(df_neg.sum(axis=1).min())
                 # / df_pos.sum(axis=1).max(),
@@ -707,7 +697,6 @@ def plot_nodal_heat_balance(
     ylabel="total electricity balance [GW]",
     title="Electricity balance",
 ):
-
     carriers = carriers
     loads = loads
     start_date = start_date
@@ -762,7 +751,9 @@ def plot_nodal_heat_balance(
     ax = df_pos.plot.area(ax=ax, stacked=True, color=c_pos, linewidth=0.0)
 
     # rename negative values that are also present on positive side, so that they are not shown and plot negative values
-    f = lambda c: "out_" + c
+    def f(c):
+        "out_" + c
+
     cols = [f(c) if (c in df_pos.columns) else c for c in df_neg.columns]
     cols_map = dict(zip(df_neg.columns, cols))
     ax = df_neg.rename(columns=cols_map).plot.area(
@@ -1034,9 +1025,6 @@ def plot_storage(
                 .sum()
                 .sum()
             )
-            gen = n.storage_units_t.p_dispatch.loc[
-                period, n.storage_units.carrier == carriers[i]
-            ].sum(axis=1)
             index = n.storage_units[n.storage_units.carrier == c].index
             max_stor_cap = (n.storage_units.max_hours * n.storage_units.p_nom_opt)[
                 index
@@ -1090,7 +1078,7 @@ def plot_storage(
                 mec="black",
             )
 
-    ax2.set_title(f"Speicherstand der Langzeitspeicher Technologiemix 2045")
+    ax2.set_title("Speicherstand der Langzeitspeicher Technologiemix 2045")
     ax1.set_title(
         f"State of charge of mid- and long-term storage technologies({model_run})"
     )
@@ -1120,7 +1108,6 @@ def plot_price_duration_curve(
     y_lim_values=[-50, 300],
     language="english",
 ):
-
     # only plot 2030 onwards
     years = years[2:]
     networks = dict(islice(networks.items(), 2, None))
@@ -1159,9 +1146,9 @@ def plot_price_duration_curve(
         )
         ax.set_title(
             (
-                f"Strompreisdauerlinien"
+                "Strompreisdauerlinien"
                 if language == "german"
-                else f"Electricity price duration curves"
+                else "Electricity price duration curves"
             ),
             fontsize=16,
         )
@@ -1186,7 +1173,6 @@ def plot_price_duration_hist(
     regions=["DE"],
     x_lim_values=[-50, 300],
 ):
-
     # only plot 2030 onwards
     years = years[2:]
     networks = dict(islice(networks.items(), 2, None))
@@ -1217,7 +1203,7 @@ def plot_price_duration_hist(
         axes[i].legend()
 
     axes[i].set_xlabel("Strompreis [$EUR/MWh_{el}$]")
-    plt.suptitle(f"Strompreise", fontsize=16, y=0.99)
+    plt.suptitle("Strompreise", fontsize=16, y=0.99)
     fig.tight_layout()
     fig.savefig(savepath, bbox_inches="tight")
     plt.close()
@@ -1228,7 +1214,6 @@ def plot_price_duration_hist(
 def plot_backup_capacity(
     networks, tech_colors, savepath, backup_techs, vre_gens, region="DE"
 ):
-
     kwargs = {
         "groupby": ["name", "bus", "carrier"],
         "nice_names": False,
@@ -1237,7 +1222,6 @@ def plot_backup_capacity(
     df_all = pd.DataFrame()
 
     for year in np.arange(2020, 2050, 5):
-
         n = networks[year]
 
         electricity_cap = (
@@ -1348,7 +1332,6 @@ def plot_backup_capacity(
 def plot_backup_generation(
     networks, tech_colors, savepath, backup_techs, vre_gens, region="DE"
 ):
-
     tech_colors["coal"] = "black"
 
     kwargs = {
@@ -1466,7 +1449,6 @@ def plot_backup_generation(
 def plot_elec_prices_spatial(
     network, tech_colors, savepath, onshore_regions, year="2045", region="DE"
 ):
-
     # onshore_regions = gpd.read_file("/home/julian-geis/repos/pypsa-ariadne-1/resources/20241203-force-onwind-south-49cl-disc/KN2045_Bal_v4/regions_onshore_base_s_49.geojson")
     # onshore_regions = onshore_regions.set_index('name')
 
@@ -1481,7 +1463,6 @@ def plot_elec_prices_spatial(
     pypsa_netzentgelt = (6.53 + 27.51) / 1.237
     nep_netzentgelt = (15.82 + 27.51) / 1.237
     elec_price_de = df["elec_price"][df.index.str.contains("DE")]
-    max_above_mean = elec_price_de.max() - elec_price_de.mean()
 
     # Calculate the difference from the mean_with_netzentgelt
 
@@ -2398,7 +2379,6 @@ def plot_cap_map_de(
     regions_de,
     savepath,
 ):
-
     m = network.copy()
     m.mremove("Bus", m.buses[m.buses.x == 0].index)
     m.buses.drop(m.buses.index[m.buses.carrier != "AC"], inplace=True)
@@ -2680,128 +2660,6 @@ def plot_h2_trade(
     fig.savefig(savepath, bbox_inches="tight")
 
 
-def plot_elec_trade(
-    networks,
-    planning_horizons,
-    tech_colors,
-    savepath,
-):
-    incoming_elec = []
-    outgoing_elec = []
-    for year in planning_horizons:
-        n = networks[planning_horizons.index(year)]
-        incoming_lines = n.lines[
-            (n.lines.bus0.str[:2] != "DE") & (n.lines.bus1.str[:2] == "DE")
-        ].index
-        outgoing_lines = n.lines[
-            (n.lines.bus0.str[:2] == "DE") & (n.lines.bus1.str[:2] != "DE")
-        ].index
-        incoming_links = n.links[
-            (n.links.carrier == "DC")
-            & (n.links.bus0.str[:2] != "DE")
-            & (n.links.bus1.str[:2] == "DE")
-        ].index
-        outgoing_links = n.links[
-            (n.links.carrier == "DC")
-            & (n.links.bus0.str[:2] == "DE")
-            & (n.links.bus1.str[:2] != "DE")
-        ].index
-        # positive when withdrawing power from bus0/bus1
-        incoming = n.lines_t.p1[incoming_lines].sum(axis=1).mul(
-            n.snapshot_weightings.generators, axis=0
-        ) + n.links_t.p1[incoming_links].sum(axis=1).mul(
-            n.snapshot_weightings.generators, axis=0
-        )
-        outgoing = n.lines_t.p0[outgoing_lines].sum(axis=1).mul(
-            n.snapshot_weightings.generators, axis=0
-        ) + n.links_t.p0[outgoing_links].sum(axis=1).mul(
-            n.snapshot_weightings.generators, axis=0
-        )
-        incoming_elec.append(
-            incoming[incoming < 0].abs().sum() + outgoing[outgoing > 0].sum()
-        )
-        outgoing_elec.append(
-            incoming[incoming > 0].sum() + outgoing[outgoing < 0].abs().sum()
-        )
-    elec_import = np.array(incoming_elec) / 1e6
-    elec_export = -np.array(outgoing_elec) / 1e6
-    net = elec_import + elec_export
-    x = np.arange(len(planning_horizons))
-
-    fig, ax = plt.subplots(figsize=(6, 4))
-    ax.bar(x, elec_import, color=tech_colors["AC"], label="Import")
-    ax.bar(x, elec_export, color="#3f630f", label="Export")
-    ax.scatter(x, net, color="black", marker="x", label="Netto")
-
-    ax.set_xticks(x)
-    ax.set_xticklabels(planning_horizons)
-    ax.axhline(0, color="black", linewidth=0.5)
-    ax.set_ylabel("Strom [TWh]")
-    ax.set_title("Strom Import/Export Deutschland")
-    ax.legend()
-
-    plt.tight_layout()
-    fig.savefig(savepath, bbox_inches="tight")
-
-
-def plot_h2_trade(
-    networks,
-    planning_horizons,
-    tech_colors,
-    savepath,
-):
-    incoming_h2 = []
-    outgoing_h2 = []
-    for year in planning_horizons:
-        n = networks[planning_horizons.index(year)]
-        incoming_links = n.links[
-            (n.links.carrier.str.contains("H2 pipeline"))
-            & (n.links.bus0.str[:2] != "DE")
-            & (n.links.bus1.str[:2] == "DE")
-        ].index
-        outgoing_links = n.links[
-            (n.links.carrier.str.contains("H2 pipeline"))
-            & (n.links.bus0.str[:2] == "DE")
-            & (n.links.bus1.str[:2] != "DE")
-        ].index
-        # positive when withdrawing power from bus0/bus1
-        incoming = (
-            n.links_t.p1[incoming_links]
-            .sum(axis=1)
-            .mul(n.snapshot_weightings.generators, axis=0)
-        )
-        outgoing = (
-            n.links_t.p0[outgoing_links]
-            .sum(axis=1)
-            .mul(n.snapshot_weightings.generators, axis=0)
-        )
-        incoming_h2.append(
-            incoming[incoming < 0].abs().sum() + outgoing[outgoing > 0].sum()
-        )
-        outgoing_h2.append(
-            incoming[incoming > 0].sum() + outgoing[outgoing < 0].abs().sum()
-        )
-    h2_import = np.array(incoming_h2) / 1e6
-    h2_export = -np.array(outgoing_h2) / 1e6
-    net = h2_import + h2_export
-    x = np.arange(len(planning_horizons))
-
-    fig, ax = plt.subplots(figsize=(6, 4))
-    ax.bar(x, h2_import, color=tech_colors["H2 pipeline"], label="Import")
-    ax.bar(x, h2_export, color=tech_colors["H2 pipeline (Kernnetz)"], label="Export")
-    ax.scatter(x, net, color="black", marker="x", label="Netto")
-
-    ax.set_xticks(x)
-    ax.set_xticklabels(planning_horizons)
-    ax.axhline(0, color="black", linewidth=0.5)
-    ax.set_ylabel("H2 [TWh]")
-    ax.set_title("Wasserstoff Import/Export Deutschland")
-    ax.legend()
-
-    plt.tight_layout()
-    fig.savefig(savepath, bbox_inches="tight")
-
-
 if __name__ == "__main__":
     if "snakemake" not in globals():
         snakemake = mock_snakemake(
@@ -2828,9 +2686,7 @@ if __name__ == "__main__":
                 _costs,
                 snakemake.params.costs,
                 nyears,
-            ).multiply(
-                1e-9
-            ),  # in bn EUR
+            ).multiply(1e-9),  # in bn EUR
             snakemake.input.costs,
         )
     )

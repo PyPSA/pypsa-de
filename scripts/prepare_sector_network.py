@@ -41,11 +41,7 @@ from scripts.build_energy_totals import (
 from scripts.build_transport_demand import transport_degree_factor
 from scripts.definitions.heat_sector import HeatSector
 from scripts.definitions.heat_system import HeatSystem
-from networkx.algorithms import complement
-from networkx.algorithms.connectivity.edge_augmentation import k_edge_augmentation
 from scripts.prepare_network import maybe_adjust_costs_and_potentials
-from pypsa.geo import haversine_pts
-from scipy.stats import beta
 
 spatial = SimpleNamespace()
 logger = logging.getLogger(__name__)
@@ -2414,7 +2410,7 @@ def add_land_transport(
     demand_factor = get(options["land_transport_demand_factor"], investment_year)
     if demand_factor != 1:
         logger.warning(
-            f"Changing land transport demand by {demand_factor*100-100:+.2f}%."
+            f"Changing land transport demand by {demand_factor * 100 - 100:+.2f}%."
         )
 
     transport = demand_factor * transport

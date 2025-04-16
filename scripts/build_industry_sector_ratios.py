@@ -32,6 +32,7 @@ import logging
 
 import country_converter as coco
 import pandas as pd
+
 from scripts._helpers import configure_logging, mute_print, set_scenario_config
 
 logger = logging.getLogger(__name__)

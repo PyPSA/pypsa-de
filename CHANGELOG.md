@@ -1,4 +1,5 @@
 # Changelog
+- Allowing myopic optimization until 2050
 - CHP plants located in onshore regions without district heating are represented as EOP plants
 - updating technology cost data to v0.11.0
 - add option for Offhsore NEP to delay projects by x years (CurPol and KN2045minus_WorstCase are delayed by one year)

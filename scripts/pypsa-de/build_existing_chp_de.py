@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # SPDX-FileCopyrightText: : 2024- The PyPSA-Eur Authors
 #
 # SPDX-License-Identifier: MIT
@@ -9,19 +8,14 @@ Using BNetzA data to get a high resolution map of German CHP plants.
 """
 
 import logging
-
-logger = logging.getLogger(__name__)
-import os
-import sys
 from typing import Union
 
 import geopandas as gpd
-import numpy as np
 import pandas as pd
-import pypsa
-from powerplantmatching.export import map_country_bus
 
 from scripts._helpers import configure_logging, mock_snakemake
+
+logger = logging.getLogger(__name__)
 
 
 def clean_data(combustion, biomass, geodata):

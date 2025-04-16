@@ -6,11 +6,11 @@ Concats pypsa networks of single investment periods to one network.
 """
 
 import logging
-from typing import List
 
 import numpy as np
 import pandas as pd
 import pypsa
+from add_electricity import sanitize_carriers
 from add_existing_baseyear import add_build_year_to_new_assets
 from pypsa.descriptors import expand_series
 from six import iterkeys
@@ -21,10 +21,6 @@ from scripts._helpers import (
     set_scenario_config,
     update_config_from_wildcards,
 )
-from add_electricity import sanitize_carriers
-from add_existing_baseyear import add_build_year_to_new_assets
-from pypsa.descriptors import expand_series
-from six import iterkeys
 
 logger = logging.getLogger(__name__)
 
@@ -566,40 +562,7 @@ def apply_time_segmentation_perfect(
     n.snapshot_weightings = n.snapshot_weightings.mul(sn_weightings, axis=0)
 
 
-def update_heat_pump_efficiency(n: pypsa.Network, years: list[int]) -> None:
-    """
-    Update the efficiency of heat pumps from previous years to current year
-    (e.g. 2030 heat pumps receive 2040 heat pump COPs in 2030).
-
-    Note: this also updates the efficiency of heat pumps in preceding years for previous years, which should have no effect (e.g. 2040 heat pumps receive 2030 COPs in 2030).
-
-    Parameters
-    ----------
-    n : pypsa.Network
-        The concatenated network.
-    years : list[int]
-        List of planning horizon years.
-
-    Returns
-    -------
-    None
-        This function updates the efficiency in place and does not return a value.
-    """
-
-    # get names of all heat pumps
-    heat_pump_idx = n.links.index[n.links.index.str.contains("heat pump")]
-    for year in years:
-        # for each heat pump type, correct efficiency is the efficiency of that technology built in <year>
-        correct_efficiency = n.links_t["efficiency"].loc[
-            (year, slice(None)), heat_pump_idx.str[:-4] + str(year)
-        ]
-        # in <year>, set the efficiency of all heat pumps to the correct efficiency
-        n.links_t["efficiency"].loc[(year, slice(None)), heat_pump_idx] = (
-            correct_efficiency.values
-        )
-
-
-def update_heat_pump_efficiency(n: pypsa.Network, years: List[int]):
+def update_heat_pump_efficiency(n: pypsa.Network, years: list[int]):
     """
     Update the efficiency of heat pumps from previous years to current year
     (e.g. 2030 heat pumps receive 2040 heat pump COPs in 2030).
@@ -627,9 +590,9 @@ def update_heat_pump_efficiency(n: pypsa.Network, years: List[int]):
             (year, slice(None)), heat_pump_idx.str[:-4] + str(year)
         ]
         # in <year>, set the efficiency of all heat pumps to the correct efficiency
-        n.links_t["efficiency"].loc[
-            (year, slice(None)), heat_pump_idx
-        ] = correct_efficiency.values
+        n.links_t["efficiency"].loc[(year, slice(None)), heat_pump_idx] = (
+            correct_efficiency.values
+        )
 
 
 if __name__ == "__main__":

@@ -10,6 +10,7 @@ import logging
 import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import pandas as pd
+
 from scripts._helpers import configure_logging, rename_techs, set_scenario_config
 from scripts.prepare_sector_network import co2_emissions_year
 

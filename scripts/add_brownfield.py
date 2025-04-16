@@ -12,7 +12,6 @@ import pandas as pd
 import pypsa
 import xarray as xr
 from add_existing_baseyear import add_build_year_to_new_assets
-from pypsa.clustering.spatial import normed_or_uniform
 
 from scripts._helpers import (
     configure_logging,
@@ -20,7 +19,6 @@ from scripts._helpers import (
     set_scenario_config,
     update_config_from_wildcards,
 )
-from add_existing_baseyear import add_build_year_to_new_assets
 
 logger = logging.getLogger(__name__)
 idx = pd.IndexSlice

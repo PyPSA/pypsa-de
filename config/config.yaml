@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20250320_dhsubnodes
+  prefix: 20250416_dhsubnodes
   name:
   # - CurrentPolicies
   - KN2045_Bal_v4
@@ -71,6 +71,7 @@ scenario:
   - 2035
   - 2040
   - 2045
+  - 2050
 
 existing_capacities:
   grouping_years_power: [1920, 1950, 1955, 1960, 1965, 1970, 1975, 1980, 1985, 1990, 1995, 2000, 2005, 2010, 2015, 2020]
@@ -368,6 +369,7 @@ industry:
     2035: 0.3
     2040: 0.6
     2045: 1
+    2050: 1
 #HVC primary/recycling based on values used in Neumann et al https://doi.org/10.1016/j.joule.2023.06.016, linearly interpolated between 2020 and 2050
 #2020 recycling rates based on Agora https://static.agora-energiewende.de/fileadmin/Projekte/2021/2021_02_EU_CEAP/A-EW_254_Mobilising-circular-economy_study_WEB.pdf
 #fractions refer to the total primary HVC production in 2020
@@ -449,6 +451,7 @@ solving:
             2035: 160 # EEG2023 Ziel für 2040
             2040: 250
             2045: 250
+            2050: 250
         offwind:
           DE:
             2020: 7.8
@@ -457,6 +460,7 @@ solving:
             2035: 50 # Planned projects until 2035 (offshore_connection_points.csv) -1.3 GW for potential delays
             2040: 65   # Planned projects until 2040 -1.5 GW for potential retirments
             2045: 70
+            2050: 70
         solar:
           DE:
             2020: 53.7
@@ -465,6 +469,7 @@ solving:
             2035: 400
             2040: 800
             2045: 1000
+            2050: 1000
       Store:
         co2 sequestered:
           DE:
@@ -474,6 +479,7 @@ solving:
             2035: 20000
             2040: 50000
             2045: 80000
+            2050: 80000
       Link:
         methanolisation:
           DE:
@@ -481,12 +487,14 @@ solving:
             2035: 5.7
             2040: 5.7
             2045: 5.7
+            2050: 5.7
         Fischer-Tropsch:
           DE:
             2030: 2.5
             2035: 2.5
             2040: 2.5
             2045: 2.5
+            2050: 2.5
         HVC to air:
           DE:
             2020: 0 # all HVC in Germany is either burned or recycled
@@ -495,6 +503,7 @@ solving:
             2035: 0
             2040: 0
             2045: 0
+            2050: 0
     limits_capacity_min:
       Generator:
         onwind:
@@ -514,10 +523,6 @@ solving:
               # EEG2023; Ziel for 2024: 88 GW and for 2026: 128 GW,
               # assuming at least 1/3 of difference reached in 2025
             2025: 101
-            2030: 101
-            2035: 101
-            2040: 101
-            2045: 101
   # For reference, this are the values specified in the laws
   # limits_capacity_min:
   #     Generator:
@@ -555,6 +560,7 @@ solving:
           2035: 40
           2040: 80
           2045: 125
+          2050: 125
       electrolysis:
       # boundary condition lower?
         DE:
@@ -564,6 +570,7 @@ solving:
           2035: 130
           2040: 215
           2045: 300
+          2050: 300
       h2_derivate_import:
       # boundary condition lower?
         DE:
@@ -573,6 +580,7 @@ solving:
           2035: 105
           2040: 200
           2045: 300
+          2050: 300
       h2_import:
       # boundary condition lower?
         DE:
@@ -582,6 +590,7 @@ solving:
           2035: 115
           2040: 220
           2045: 325
+          2050: 325
     limits_volume_min:
       electrolysis:
         DE:
@@ -591,6 +600,7 @@ solving:
           2035: 0
           2040: 0
           2045: 0
+          2050: 0
     limits_power_max: # in GW
       DE:
         2020: 15
@@ -599,6 +609,7 @@ solving:
         2035: 25
         2040: 30
         2045: 35
+        2050: 35
   # solver:
   #   options: gurobi-numeric-focus
   # solver_options:

@@ -12,10 +12,10 @@ import geopandas as gpd
 import matplotlib.pyplot as plt
 import pandas as pd
 import pypsa
-from scripts._helpers import configure_logging, retry, set_scenario_config
-from scripts.plot_power_network import assign_location, load_projection
 from pypsa.plot import add_legend_circles, add_legend_lines, add_legend_patches
 
+from scripts._helpers import configure_logging, retry, set_scenario_config
+from scripts.plot_power_network import assign_location, load_projection
 
 logger = logging.getLogger(__name__)
 

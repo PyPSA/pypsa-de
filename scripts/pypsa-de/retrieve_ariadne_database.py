@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import logging
 
 import pyam
@@ -23,5 +22,5 @@ if __name__ == "__main__":
         # Download only the most recent iterations of scenarios
     )
 
-    logger.info(f"Successfully retrieved database.")
+    logger.info("Successfully retrieved database.")
     db.timeseries().to_csv(snakemake.output.data)

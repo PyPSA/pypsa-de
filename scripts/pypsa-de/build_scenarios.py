@@ -1,11 +1,9 @@
-# -*- coding: utf-8 -*-
 # SPDX-FileCopyrightText: : 2024- The PyPSA-Eur Authors
 #
 # SPDX-License-Identifier: MIT
 
 # This script reads in data from the IIASA database to create the scenario.yaml file
 import logging
-import os
 from pathlib import Path
 
 import pandas as pd
@@ -159,7 +157,8 @@ def write_to_scenario_yaml(input, output, scenarios, df):
             2035,
             2040,
             2045,
-        ]  # for 2050 we still need data
+            2050,
+        ]
 
         aviation_demand_factor = get_transport_growth(
             df.loc[snakemake.params.leitmodelle["transport"], reference_scenario, :],

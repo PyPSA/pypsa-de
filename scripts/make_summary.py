@@ -11,13 +11,12 @@ import sys
 
 import numpy as np
 import pandas as pd
-pd.set_option("future.no_silent_downcasting", True)
-
 import pypsa
 
 from scripts._helpers import configure_logging, get_snapshots, set_scenario_config
 from scripts.prepare_sector_network import prepare_costs
 
+pd.set_option("future.no_silent_downcasting", True)
 idx = pd.IndexSlice
 logger = logging.getLogger(__name__)
 opt_name = {"Store": "e", "Line": "s", "Transformer": "s"}

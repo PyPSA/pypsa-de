@@ -13,10 +13,10 @@ import geopandas as gpd
 import matplotlib.pyplot as plt
 import pandas as pd
 import pypsa
-from scripts._helpers import configure_logging, rename_techs, retry, set_scenario_config
-from scripts.plot_summary import preferred_order
 from pypsa.plot import add_legend_circles, add_legend_lines, add_legend_patches
 
+from scripts._helpers import configure_logging, rename_techs, retry, set_scenario_config
+from scripts.plot_summary import preferred_order
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +56,7 @@ def assign_location(n):
             c.df.loc[names, "location"] = names.str[:i]
         if "location" not in c.df.columns:
             c.df["location"] = None
+
 
 def load_projection(plotting_params):
     proj_kwargs = plotting_params.get("projection", dict(name="EqualEarth"))
