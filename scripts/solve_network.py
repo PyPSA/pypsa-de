@@ -47,10 +47,10 @@ from pypsa.descriptors import get_switchable_as_dense as get_as_dense
 
 from scripts._helpers import (
     configure_logging,
+    get,
     set_scenario_config,
     update_config_from_wildcards,
 )
-from scripts.prepare_sector_network import get
 
 logger = logging.getLogger(__name__)
 pypsa.pf.logger.setLevel(logging.WARNING)
@@ -159,11 +159,10 @@ def add_land_use_constraint(n: pypsa.Network, planning_horizons: str) -> None:
         "offwind-float",
     ]:
         ext_i = (n.generators.carrier == carrier) & ~n.generators.p_nom_extendable
-        existing = (
-            n.generators.loc[ext_i, "p_nom"]
-            .groupby(n.generators.bus.map(n.buses.location))
-            .sum()
+        grouper = n.generators.loc[ext_i].index.str.replace(
+            f" {carrier}.*$", "", regex=True
         )
+        existing = n.generators.loc[ext_i, "p_nom"].groupby(grouper).sum()
         existing.index += f" {carrier}-{planning_horizons}"
         n.generators.loc[existing.index, "p_nom_max"] -= existing
 
@@ -260,18 +259,18 @@ def add_co2_sequestration_limit(
     """
 
     if not n.investment_periods.empty:
+        nyears = n.snapshot_weightings.groupby(level="period").generators.sum() / 8760
         periods = n.investment_periods
         limit = pd.Series(
-            {
-                f"co2_sequestration_limit-{period}": limit_dict.get(period, 200)
-                for period in periods
-            }
+            {period: nyears[period] * get(limit_dict, period) for period in periods}
         )
+        limit.index = limit.index.map(lambda s: f"co2_sequestration_limit-{s}")
         names = limit.index
     else:
-        limit = get(limit_dict, int(planning_horizons))
-        periods = [np.nan]
-        names = pd.Index(["co2_sequestration_limit"])
+        nyears = n.snapshot_weightings.generators.sum() / 8760
+        limit = get(limit_dict, int(planning_horizons)) * nyears
+        periods = np.nan
+        names = "co2_sequestration_limit"
 
     n.add(
         "GlobalConstraint",
@@ -548,9 +547,9 @@ def add_CCL_constraints(
         agg_p_nom_limits: data/agg_p_nom_minmax.csv
     """
 
-    assert planning_horizons is not None, (
-        "add_CCL_constraints are not implemented for perfect foresight, yet"
-    )
+    assert (
+        planning_horizons is not None
+    ), "add_CCL_constraints are not implemented for perfect foresight, yet"
 
     agg_p_nom_minmax = pd.read_csv(
         config["solving"]["agg_p_nom_limits"]["file"], index_col=[0, 1], header=[0, 1]
@@ -867,8 +866,8 @@ def add_TES_energy_to_power_ratio_constraints(n: pypsa.Network) -> None:
         energy_to_power_ratio_values,
     ):
         charger_var = n.model["Link-p_nom"].loc[charger]
-        if not tes.replace("-", " ").split(" ")[:5] == charger.split(" ")[:5]:
-            # e.g. "DE0 0 urban central water tanks charger" -> ["DE0", "0", "urban", "central", "water"]
+        if not tes == charger.replace(" charger", ""):
+            # e.g. "DE0 0 urban central water tanks charger-2050" -> "DE0 0 urban central water tanks-2050"
             raise RuntimeError(
                 f"Charger {charger} and TES {tes} do not match. "
                 "Ensure that the charger and TES are in the same location and refer to the same technology."
@@ -924,8 +923,10 @@ def add_TES_charger_ratio_constraints(n: pypsa.Network) -> None:
     for charger, discharger in zip(
         indices_charger_p_nom_extendable, indices_discharger_p_nom_extendable
     ):
-        if not charger.split(" ")[:5] == discharger.split(" ")[:5]:
-            # e.g. "DE0 0 urban central water tanks charger" -> ["DE0", "0", "urban", "central", "water"]
+        if not charger.replace(" charger", " ") == discharger.replace(
+            " discharger", " "
+        ):
+            # e.g. "DE0 0 urban central water tanks charger-2050" -> "DE0 0 urban central water tanks-2050"
             raise RuntimeError(
                 f"Charger {charger} and discharger {discharger} do not match. "
                 "Ensure that the charger and discharger are in the same location and refer to the same technology."
@@ -1076,6 +1077,38 @@ def add_flexible_egs_constraint(n):
     )
 
 
+def add_import_limit_constraint(n: pypsa.Network, sns: pd.DatetimeIndex):
+    """
+    Add constraint for limiting green energy imports (synthetic and biomass).
+    Does not include fossil fuel imports.
+    """
+
+    nyears = n.snapshot_weightings.generators.sum() / 8760
+
+    import_links = n.links.loc[n.links.carrier.str.contains("import")].index
+    import_gens = n.generators.loc[n.generators.carrier.str.contains("import")].index
+
+    limit = n.config["sector"]["imports"]["limit"]
+    limit_sense = n.config["sector"]["imports"]["limit_sense"]
+
+    if (import_links.empty and import_gens.empty) or not np.isfinite(limit):
+        return
+
+    weightings = n.snapshot_weightings.loc[sns, "generators"]
+
+    # everything needs to be in MWh_fuel
+    eff = n.links.loc[import_links, "efficiency"]
+
+    p_gens = n.model["Generator-p"].loc[sns, import_gens]
+    p_links = n.model["Link-p"].loc[sns, import_links]
+
+    lhs = (p_gens * weightings).sum() + (p_links * eff * weightings).sum()
+
+    rhs = limit * 1e6 * nyears
+
+    n.model.add_constraints(lhs, limit_sense, rhs, name="import_limit")
+
+
 def add_co2_atmosphere_constraint(n, snapshots):
     glcs = n.global_constraints[n.global_constraints.type == "co2_atmosphere"]
 
@@ -1152,16 +1185,6 @@ def extra_functionality(
         ).any():
             add_TES_energy_to_power_ratio_constraints(n)
             add_TES_charger_ratio_constraints(n)
-        elif (
-            n.links.index.str.contains(
-                "pits charger|tanks charger", case=False, na=False
-            ).any()
-            or n.stores.index.str.contains("pits", case=False, na=False).any()
-            or n.stores.index.str.contains("tanks", case=False, na=False).any()
-        ):
-            raise ValueError(
-                "Unsupported network configuration: tes is enabled but no heating bus was found."
-            )
 
     add_battery_constraints(n)
     add_lossy_bidirectional_link_constraints(n)
@@ -1175,6 +1198,9 @@ def extra_functionality(
 
     if config["sector"]["enhanced_geothermal"]["enable"]:
         add_flexible_egs_constraint(n)
+
+    if config["sector"]["imports"]["enable"]:
+        add_import_limit_constraint(n, snapshots)
 
     if n.params.custom_extra_functionality:
         source_path = pathlib.Path(n.params.custom_extra_functionality).resolve()
@@ -1255,7 +1281,7 @@ def solve_network(
     Raises
     ------
     RuntimeError
-        If solving status is infeasible
+        If solving status is infeasible or warning
     ObjectiveValueError
         If objective value differs from expected value
     """
@@ -1276,6 +1302,9 @@ def solve_network(
     )
     kwargs["assign_all_duals"] = cf_solving.get("assign_all_duals", False)
     kwargs["io_api"] = cf_solving.get("io_api", None)
+
+    kwargs["model_kwargs"] = cf_solving.get("model_kwargs", {})
+    kwargs["keep_files"] = cf_solving.get("keep_files", False)
 
     if kwargs["solver_name"] == "gurobi":
         logging.getLogger("gurobipy").setLevel(logging.CRITICAL)
@@ -1315,11 +1344,14 @@ def solve_network(
             )
         check_objective_value(n, solving)
 
+    if "warning" in condition:
+        raise RuntimeError("Solving status 'warning'. Discarding solution.")
+
     if "infeasible" in condition:
         labels = n.model.compute_infeasibilities()
         logger.info(f"Labels:\n{labels}")
         n.model.print_infeasibilities()
-        raise RuntimeError("Solving status 'infeasible'")
+        raise RuntimeError("Solving status 'infeasible'. Infeasibilities computed.")
 
     if status == "warning":
         raise RuntimeError(
@@ -1329,19 +1361,17 @@ def solve_network(
     return n
 
 
-# %%
 if __name__ == "__main__":
     if "snakemake" not in globals():
         from scripts._helpers import mock_snakemake
 
         snakemake = mock_snakemake(
-            "solve_sector_network_perfect",
+            "solve_sector_network",
             opts="",
             clusters="5",
-            configfiles="config/test/config.perfect.yaml",
-            ll="v1.0",
+            configfiles="config/test/config.overnight.yaml",
             sector_opts="",
-            # planning_horizons="2030",
+            planning_horizons="2030",
         )
     configure_logging(snakemake)
     set_scenario_config(snakemake)

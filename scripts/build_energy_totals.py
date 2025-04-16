@@ -1571,7 +1571,6 @@ def build_heating_efficiencies(
     return heating_efficiencies
 
 
-# %%
 if __name__ == "__main__":
     if "snakemake" not in globals():
         from scripts._helpers import mock_snakemake

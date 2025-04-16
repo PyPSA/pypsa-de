@@ -1048,7 +1048,6 @@ def sample_dE_costs_area(
     return cost_dE_new, area_tot
 
 
-# %% --- MAIN --------------------------------------------------------------
 if __name__ == "__main__":
     if "snakemake" not in globals():
         from scripts._helpers import mock_snakemake
@@ -1056,7 +1055,6 @@ if __name__ == "__main__":
         snakemake = mock_snakemake(
             "build_retro_cost",
             clusters=48,
-            ll="v1.0",
             sector_opts="Co2L0-168H-T-H-B-I-solar3-dist1",
         )
     configure_logging(snakemake)
