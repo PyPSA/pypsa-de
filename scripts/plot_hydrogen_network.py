@@ -15,7 +15,8 @@ import pypsa
 from pypsa.plot import add_legend_circles, add_legend_lines, add_legend_patches
 
 from scripts._helpers import configure_logging, retry, set_scenario_config
-from scripts.plot_power_network import assign_location, load_projection
+from scripts.make_summary import assign_locations
+from scripts.plot_power_network import load_projection
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +49,7 @@ def plot_h2_map(n, regions):
     # if "H2 pipeline" not in n.links.carrier.unique():
     #     return
 
-    assign_location(n)
+    assign_locations(n)
 
     h2_storage = n.stores.query("carrier == 'H2'")
     regions["H2"] = (
@@ -260,7 +261,6 @@ if __name__ == "__main__":
             "plot_hydrogen_network",
             opts="",
             clusters="37",
-            ll="v1.0",
             sector_opts="4380H-T-H-B-I-A-dist1",
         )
 

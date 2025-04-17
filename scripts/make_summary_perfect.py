@@ -13,15 +13,12 @@ import pypsa
 from make_summary import (
     assign_carriers,
     assign_locations,
-    calculate_cfs,  # noqa: F401
-    calculate_nodal_cfs,  # noqa: F401
-    calculate_nodal_costs,  # noqa: F401
 )
 from pypsa.descriptors import get_active_assets
 from six import iteritems
 
 from scripts._helpers import set_scenario_config
-from scripts.prepare_sector_network import prepare_costs
+from scripts.add_electricity import load_costs
 
 idx = pd.IndexSlice
 
@@ -657,10 +654,7 @@ def calculate_co2_emissions(n, label, df):
 
 
 outputs = [
-    "nodal_costs",
     "nodal_capacities",
-    "nodal_cfs",
-    "cfs",
     "costs",
     "capacities",
     "curtailment",
@@ -734,10 +728,10 @@ if __name__ == "__main__":
     print(networks_dict)
 
     nyears = 1
-    costs_db = prepare_costs(
+    costs_db = load_costs(
         snakemake.input.costs,
         snakemake.config["costs"],
-        nyears,
+        nyears=nyears,
     )
 
     df = make_summaries(networks_dict)

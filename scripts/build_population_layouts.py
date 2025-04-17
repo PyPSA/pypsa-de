@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-from scripts._helpers import configure_logging, set_scenario_config
+from scripts._helpers import configure_logging, load_cutout, set_scenario_config
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,7 @@ if __name__ == "__main__":
     set_scenario_config(snakemake)
     coco.logging.getLogger().setLevel(coco.logging.CRITICAL)
 
-    cutout = atlite.Cutout(snakemake.input.cutout)
+    cutout = load_cutout(snakemake.input.cutout)
 
     grid_cells = cutout.grid.geometry
 
