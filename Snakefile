@@ -24,6 +24,7 @@ copy_default_files(workflow)
 
 
 configfile: "config/config.default.yaml"
+configfile: "config/plotting.default.yaml"
 configfile: "config/config.yaml"
 configfile: "config/config.personal.yaml"
 
@@ -53,7 +54,6 @@ localrules:
 
 wildcard_constraints:
     clusters="[0-9]+(m|c)?|all|adm",
-    ll=r"(v|c)([0-9\.]+|opt)",
     opts=r"[-+a-zA-Z0-9\.]*",
     sector_opts=r"[-+a-zA-Z0-9\.\s]*",
     planning_horizons=r"[0-9]{4}",
@@ -66,7 +66,6 @@ include: "rules/build_electricity.smk"
 include: "rules/build_sector.smk"
 include: "rules/solve_electricity.smk"
 include: "rules/postprocess.smk"
-include: "rules/validate.smk"
 include: "rules/development.smk"
 
 
@@ -88,6 +87,70 @@ if config["foresight"] == "perfect":
 rule all:
     input:
         expand(RESULTS + "graphs/costs.svg", run=config["run"]["name"]),
+        expand(
+            resources("maps/power-network-s-{clusters}.pdf"),
+            run=config["run"]["name"],
+            **config["scenario"],
+        ),
+        expand(
+            RESULTS
+            + "maps/base_s_{clusters}_{opts}_{sector_opts}-costs-all_{planning_horizons}.pdf",
+            run=config["run"]["name"],
+            **config["scenario"],
+        ),
+        lambda w: expand(
+            (
+                RESULTS
+                + "maps/base_s_{clusters}_{opts}_{sector_opts}-h2_network_{planning_horizons}.pdf"
+                if config_provider("sector", "H2_network")(w)
+                else []
+            ),
+            run=config["run"]["name"],
+            **config["scenario"],
+        ),
+        lambda w: expand(
+            (
+                RESULTS
+                + "maps/base_s_{clusters}_{opts}_{sector_opts}-ch4_network_{planning_horizons}.pdf"
+                if config_provider("sector", "gas_network")(w)
+                else []
+            ),
+            run=config["run"]["name"],
+            **config["scenario"],
+        ),
+        lambda w: expand(
+            (
+                RESULTS + "csvs/cumulative_costs.csv"
+                if config_provider("foresight")(w) == "myopic"
+                else []
+            ),
+            run=config["run"]["name"],
+        ),
+        lambda w: expand(
+            (
+                RESULTS
+                + "maps/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}-balance_map_{carrier}.pdf"
+            ),
+            **config["scenario"],
+            run=config["run"]["name"],
+            carrier=config_provider("plotting", "balance_map", "bus_carriers")(w),
+        ),
+        directory(
+            expand(
+                RESULTS
+                + "graphics/balance_timeseries/s_{clusters}_{opts}_{sector_opts}_{planning_horizons}",
+                run=config["run"]["name"],
+                **config["scenario"],
+            ),
+        ),
+        directory(
+            expand(
+                RESULTS
+                + "graphics/heatmap_timeseries/s_{clusters}_{opts}_{sector_opts}_{planning_horizons}",
+                run=config["run"]["name"],
+                **config["scenario"],
+            ),
+        ),
     default_target: True
 
 
@@ -116,18 +179,35 @@ rule purge:
             raise Exception(f"Input {do_purge}. Aborting purge.")
 
 
-rule dag:
+rule rulegraph:
     message:
-        "Creating DAG of workflow."
+        "Creating RULEGRAPH dag of workflow."
     output:
-        dot=resources("dag.dot"),
-        pdf=resources("dag.pdf"),
-        png=resources("dag.png"),
+        dot=resources("dag_rulegraph.dot"),
+        pdf=resources("dag_rulegraph.pdf"),
+        png=resources("dag_rulegraph.png"),
     conda:
         "envs/environment.yaml"
     shell:
         r"""
         snakemake --rulegraph all | sed -n "/digraph/,\$p" > {output.dot}
+        dot -Tpdf -o {output.pdf} {output.dot}
+        dot -Tpng -o {output.png} {output.dot}
+        """
+
+
+rule filegraph:
+    message:
+        "Creating FILEGRAPH dag of workflow."
+    output:
+        dot=resources("dag_filegraph.dot"),
+        pdf=resources("dag_filegraph.pdf"),
+        png=resources("dag_filegraph.png"),
+    conda:
+        "envs/environment.yaml"
+    shell:
+        r"""
+        snakemake --filegraph all | sed -n "/digraph/,\$p" > {output.dot}
         dot -Tpdf -o {output.pdf} {output.dot}
         dot -Tpng -o {output.png} {output.dot}
         """
@@ -272,6 +352,101 @@ rule build_egon_data:
         "scripts/pypsa-de/build_egon_data.py"
 
 
+rule prepare_district_heating_subnodes:
+    params:
+        district_heating=config_provider("sector", "district_heating"),
+        baseyear=config_provider("scenario", "planning_horizons", 0),
+    input:
+        heating_technologies_nuts3=resources("heating_technologies_nuts3.geojson"),
+        regions_onshore=resources("regions_onshore_base_s_{clusters}.geojson"),
+        fernwaermeatlas="data/fernwaermeatlas/fernwaermeatlas.xlsx",
+        cities="data/fernwaermeatlas/cities_geolocations.geojson",
+        lau_regions="data/lau_regions.zip",
+        census=storage(
+            "https://www.zensus2022.de/static/Zensus_Veroeffentlichung/Zensus2022_Heizungsart.zip",
+            keep_local=True,
+        ),
+        osm_land_cover=storage(
+            "https://heidata.uni-heidelberg.de/api/access/datafile/23053?format=original&gbrecs=true",
+            keep_local=True,
+        ),
+        natura=ancient("data/bundle/natura/natura.tiff"),
+        groundwater_depth=storage(
+            "http://thredds-gfnl.usc.es/thredds/fileServer/GLOBALWTDFTP/annualmeans/EURASIA_WTD_annualmean.nc",
+            keep_local=True,
+        ),
+    output:
+        district_heating_subnodes=resources(
+            "district_heating_subnodes_base_s_{clusters}.geojson"
+        ),
+        regions_onshore_extended=resources(
+            "regions_onshore_base-extended_s_{clusters}.geojson"
+        ),
+        regions_onshore_restricted=resources(
+            "regions_onshore_base-restricted_s_{clusters}.geojson"
+        ),
+    resources:
+        mem_mb=20000,
+    script:
+        "scripts/pypsa-de/prepare_district_heating_subnodes.py"
+
+
+baseyear_value = config["scenario"]["planning_horizons"][0]
+
+
+rule add_district_heating_subnodes:
+    params:
+        district_heating=config_provider("sector", "district_heating"),
+        baseyear=config_provider("scenario", "planning_horizons", 0),
+        sector=config_provider("sector"),
+        heat_pump_sources=config_provider(
+            "sector", "heat_pump_sources", "urban central"
+        ),
+        heat_utilisation_potentials=config_provider(
+            "sector", "district_heating", "heat_utilisation_potentials"
+        ),
+        direct_utilisation_heat_sources=config_provider(
+            "sector", "district_heating", "direct_utilisation_heat_sources"
+        ),
+        adjustments=config_provider("adjustments", "sector"),
+    input:
+        unpack(input_heat_source_power),
+        network=resources(
+            "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc"
+        ),
+        subnodes=resources("district_heating_subnodes_base_s_{clusters}.geojson"),
+        nuts3=resources("nuts3_shapes.geojson"),
+        regions_onshore=resources("regions_onshore_base_s_{clusters}.geojson"),
+        fernwaermeatlas="data/fernwaermeatlas/fernwaermeatlas.xlsx",
+        cities="data/fernwaermeatlas/cities_geolocations.geojson",
+        cop_profiles=resources("cop_profiles_base_s_{clusters}_{planning_horizons}.nc"),
+        direct_heat_source_utilisation_profiles=resources(
+            "direct_heat_source_utilisation_profiles_base_s_{clusters}_{planning_horizons}.nc"
+        ),
+        existing_heating_distribution=resources(
+            f"existing_heating_distribution_base_s_{{clusters}}_{baseyear_value}.csv"
+        ),
+        lau_regions="data/lau_regions.zip",
+    output:
+        network=resources(
+            "networks/base-extended_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc"
+        ),
+        district_heating_subnodes=resources(
+            "district_heating_subnodes_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.geojson"
+        ),
+        existing_heating_distribution_extended=(
+            resources(
+                "existing_heating_distribution_base-extended_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.csv"
+            )
+            if baseyear_value != "{planning_horizons}"
+            else []
+        ),
+    resources:
+        mem_mb=10000,
+    script:
+        "scripts/pypsa-de/add_district_heating_subnodes.py"
+
+
 ruleorder: modify_district_heat_share > build_district_heat_share
 
 
@@ -409,6 +584,10 @@ rule retrieve_mastr:
 
 
 rule build_existing_chp_de:
+    params:
+        add_district_heating_subnodes=config_provider(
+            "sector", "district_heating", "add_subnodes"
+        ),
     input:
         mastr_biomass="data/mastr/bnetza_open_mastr_2023-08-08_B_biomass.csv",
         mastr_combustion="data/mastr/bnetza_open_mastr_2023-08-08_B_combustion.csv",
@@ -417,8 +596,13 @@ rule build_existing_chp_de:
             keep_local=True,
         ),
         regions=resources("regions_onshore_base_s_{clusters}.geojson"),
+        district_heating_subnodes=(
+            resources("district_heating_subnodes_base_s_{clusters}.geojson")
+            if config["sector"]["district_heating"].get("add_subnodes", True)
+            else []
+        ),
     output:
-        german_chp=resources("german_chp_{clusters}.csv"),
+        german_chp=resources("german_chp_base_s_{clusters}.csv"),
     log:
         logs("build_existing_chp_de_{clusters}.log"),
     script:
@@ -508,6 +692,7 @@ rule export_ariadne_variables:
     params:
         planning_horizons=config_provider("scenario", "planning_horizons"),
         hours=config_provider("clustering", "temporal", "resolution_sector"),
+        max_hours=config_provider("electricity", "max_hours"),
         costs=config_provider("costs"),
         config_industry=config_provider("industry"),
         energy_totals_year=config_provider("energy", "energy_totals_year"),
@@ -680,6 +865,7 @@ rule plot_ariadne_report:
         run=config_provider("run", "name"),
         foresight=config_provider("foresight"),
         costs=config_provider("costs"),
+        max_hours=config_provider("electricity", "max_hours"),
         post_discretization=config_provider("solving", "options", "post_discretization"),
         NEP_year=config_provider("costs", "NEP"),
         hours=config_provider("clustering", "temporal", "resolution_sector"),

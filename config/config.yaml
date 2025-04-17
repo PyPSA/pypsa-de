@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20250404-fit_for_2050
+  prefix: 20250416_dhsubnodes
   name:
   # - CurrentPolicies
   - KN2045_Bal_v4
@@ -292,6 +292,11 @@ sector:
       2040: 0.6
       2045: 0.8
       2050: 1.0
+    add_subnodes: false
+    excluder_resolution: 10
+    osm_landcover_codes: [21, 23, 32, 33]
+    max_groundwater_depth: -10
+    ptes_potential_scalar: 1
   heat_vent:
     urban central: true
     urban decentral: true

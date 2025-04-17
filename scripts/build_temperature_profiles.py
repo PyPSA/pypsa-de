@@ -15,13 +15,17 @@ Uses ``atlite.Cutout.temperature`` and ``atlite.Cutout.soil_temperature compute 
 
 import logging
 
-import atlite
 import geopandas as gpd
 import numpy as np
 import xarray as xr
 from dask.distributed import Client, LocalCluster
 
-from scripts._helpers import configure_logging, get_snapshots, set_scenario_config
+from scripts._helpers import (
+    configure_logging,
+    get_snapshots,
+    load_cutout,
+    set_scenario_config,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +46,7 @@ if __name__ == "__main__":
 
     time = get_snapshots(snakemake.params.snapshots, snakemake.params.drop_leap_day)
 
-    cutout = atlite.Cutout(snakemake.input.cutout).sel(time=time)
+    cutout = load_cutout(snakemake.input.cutout, time=time)
 
     clustered_regions = (
         gpd.read_file(snakemake.input.regions_onshore).set_index("name").buffer(0)
