@@ -1,25 +1,24 @@
-# -*- coding: utf-8 -*-
 import logging
 
 logger = logging.getLogger(__name__)
+
+import os
+import sys
+from typing import Union
 
 import geopandas as gpd
 import pandas as pd
 import pypsa
 import xarray as xr
-from typing import Union
-
-import os
-import sys
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from scripts.prepare_network import maybe_adjust_costs_and_potentials
 from scripts._helpers import (
     configure_logging,
     set_scenario_config,
     update_config_from_wildcards,
 )
+from scripts.prepare_network import maybe_adjust_costs_and_potentials
 
 
 def add_subnodes(
@@ -36,6 +35,7 @@ def add_subnodes(
      - the heat demand profiles taken from the mother node,
      - the district heating investment options (stores, storage units, links, generators) from the mother node,
     The district heating loads in the mother nodes are reduced accordingly.
+
     Parameters
     ----------
     n : pypsa.Network
@@ -46,6 +46,7 @@ def add_subnodes(
         COPs for heat pumps.
     direct_heat_source_utilisation_profile : xr.DataArray
         Direct heat source utilisation profiles.
+
     Returns
     -------
     None
@@ -67,7 +68,7 @@ def add_subnodes(
 
     # Add subnodes to network
     for _, subnode in subnodes_head.iterrows():
-        name = f'{subnode["cluster"]} {subnode["Stadt"]} urban central'
+        name = f"{subnode['cluster']} {subnode['Stadt']} urban central"
         location = f"{subnode['cluster']} {subnode['Stadt']}"
 
         # Add buses
@@ -160,10 +161,10 @@ def add_subnodes(
         )
 
         # Adjust loads of cluster buses
-        n.loads_t.p_set.loc[:, f'{subnode["cluster"]} urban central heat'] -= uch_load
+        n.loads_t.p_set.loc[:, f"{subnode['cluster']} urban central heat"] -= uch_load
 
         n.loads.loc[
-            f'{subnode["cluster"]} low-temperature heat for industry', "p_set"
+            f"{subnode['cluster']} low-temperature heat for industry", "p_set"
         ] -= lti_load
 
         if lost_load > 0:
@@ -211,7 +212,7 @@ def add_subnodes(
         if storage_units.carrier.str.contains("pits$").any():
             storage_units.loc[
                 storage_units.carrier.str.contains("pits$"), "p_nom_max"
-            ] = (subnode["ptes_pot_mwh"] / storage_units["max_hours"])
+            ] = subnode["ptes_pot_mwh"] / storage_units["max_hours"]
         n.add("StorageUnit", storage_units.index, **storage_units)
 
         # restrict PTES capacity in mother nodes
@@ -365,6 +366,7 @@ def extend_heating_distribution(
         DataFrame containing the existing heating distribution.
     subnodes : gpd.GeoDataFrame
         GeoDataFrame containing information about district heating subnodes.
+
     Returns
     -------
     pd.DataFrame
@@ -409,7 +411,6 @@ def extend_heating_distribution(
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
-
         from scripts._helpers import mock_snakemake
 
         # Change directory to this script directory

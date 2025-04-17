@@ -15,11 +15,14 @@ rule add_existing_baseyear:
             "sector", "district_heating", "add_subnodes"
         ),
     input:
-        network=resources(
-            "networks/base-extended_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc"
-        ) if config["sector"]["district_heating"].get("add_subnodes", True)
+        network=(
+            resources(
+                "networks/base-extended_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc"
+            )
+            if config["sector"]["district_heating"].get("add_subnodes", True)
             else resources(
-            "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc"
+                "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc"
+            )
         ),
         powerplants=resources("powerplants_s_{clusters}.csv"),
         busmap_s=resources("busmap_base_s.csv"),
@@ -41,9 +44,7 @@ rule add_existing_baseyear:
             )
         ),
         heating_efficiencies=resources("heating_efficiencies.csv"),
-        custom_powerplants=resources(
-            "german_chp_base_s_{clusters}.csv"
-        ),
+        custom_powerplants=resources("german_chp_base_s_{clusters}.csv"),
     output:
         resources(
             "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_brownfield.nc"
@@ -97,12 +98,15 @@ rule add_brownfield:
         unpack(input_profile_tech_brownfield),
         simplify_busmap=resources("busmap_base_s.csv"),
         cluster_busmap=resources("busmap_base_s_{clusters}.csv"),
-        network=resources(
-        "networks/base-extended_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc"
-        ) if config["sector"]["district_heating"].get("add_subnodes", True)
+        network=(
+            resources(
+                "networks/base-extended_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc"
+            )
+            if config["sector"]["district_heating"].get("add_subnodes", True)
             else resources(
                 "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc"
-                ),
+            )
+        ),
         network_p=solved_previous_horizon,  #solved network at previous time step
         costs=resources("costs_{planning_horizons}.csv"),
         cop_profiles=resources("cop_profiles_base_s_{clusters}_{planning_horizons}.nc"),

@@ -212,6 +212,7 @@ def assign_subnode(
 ) -> pd.DataFrame:
     """
     Assign subnodes to the CHP plants based on their location.
+
     Parameters
     ----------
     CHP_de : pd.DataFrame
@@ -220,6 +221,7 @@ def assign_subnode(
         GeoDataFrame containing subnode data with geometries.
     head : Union[bool, int]
         If int, select the largest N subnodes. If True, use all subnodes.
+
     Returns
     -------
     pd.DataFrame
