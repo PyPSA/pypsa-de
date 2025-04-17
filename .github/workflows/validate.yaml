@@ -23,7 +23,7 @@ jobs:
       with:
         step: run-self-hosted-validation
         env_file: envs/environment.yaml
-        snakemake_config: config/config.yaml
+        snakemake_config: config/config.de.yaml
         pre_command: "build_scenarios -f"
         main_command: "ariadne_all"
       env:
@@ -48,7 +48,7 @@ jobs:
     - uses: PyPSA/pypsa-validator@v0.2.5
       with:
         step: create-comment
-        snakemake_config: config/config.yaml
+        snakemake_config: config/config.de.yaml
         # The path starting from prefix in config
         # For plot results/<prefix>/<scenario>/<plot_name>.png pass
         # <scenario>/<plot_name>.png

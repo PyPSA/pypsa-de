@@ -30,11 +30,8 @@ doc/_build
 /scripts/create_scenarios.py
 /config/create_scenarios.py
 
-config/config.yaml
 config/scenarios.yaml
 config/scenarios.automated.yaml
-
-config/config.yaml
 
 dconf
 /data/links_p_nom.csv
