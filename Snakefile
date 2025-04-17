@@ -508,6 +508,10 @@ rule modify_prenetwork:
         shipping_methanol_share=config_provider("sector", "shipping_methanol_share"),
         mwh_meoh_per_tco2=config_provider("sector", "MWh_MeOH_per_tCO2"),
         scale_capacity=config_provider("scale_capacity"),
+        fix_reference_investments_nonDE=config_provider(
+            "run", "scenarios", "fix_reference_investments_nonDE"
+        ),
+        reference_scenario=config_provider("run", "scenarios", "reference"),
     input:
         costs_modifications="ariadne-data/costs_{planning_horizons}-modifications.csv",
         network=resources(
@@ -536,6 +540,7 @@ rule modify_prenetwork:
         regions_onshore=resources("regions_onshore_base_s_{clusters}.geojson"),
         regions_offshore=resources("regions_offshore_base_s_{clusters}.geojson"),
         offshore_connection_points="ariadne-data/offshore_connection_points.csv",
+        reference_network=f"results/{run['prefix']}/{run['scenarios']['reference']}/networks/base_s_{{clusters}}_{{opts}}_{{sector_opts}}_{{planning_horizons}}.nc" if run['scenarios']['fix_reference_investments_nonDE'] and run['scenarios']['reference'] not in "{run}" else [],
     output:
         network=RESULTS
         + "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_final.nc",
