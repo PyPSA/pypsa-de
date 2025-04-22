@@ -10,7 +10,6 @@ ExPol:
 
   iiasa_database:
     reference_scenario: ExPol
-    fallback_reference_scenario: ExPol # if the reference scenario is not available (due to late uploads)
 
   co2_budget_DE_source: UBA
 
@@ -81,7 +80,6 @@ KN2045_Mix:
 
   iiasa_database:
     reference_scenario: KN2045_Mix
-    fallback_reference_scenario: KN2045_Mix
   co2_budget_DE_source: KSG
 
   costs:
@@ -109,7 +107,6 @@ KN2045_Elek:
 
   iiasa_database:
     reference_scenario: KN2045_Elek
-    fallback_reference_scenario: KN2045_Elek
   co2_budget_DE_source: KSG
 
   costs:
@@ -175,7 +172,6 @@ KN2045_H2:
 
   iiasa_database:
     reference_scenario: KN2045_H2
-    fallback_reference_scenario: KN2045_H2
   co2_budget_DE_source: KSG
 
   costs:
@@ -255,7 +251,6 @@ KN2045_NFniedrig:
 
   iiasa_database:
     reference_scenario: KN2045plus_LowDemand
-    fallback_reference_scenario: KN2045_Mix
   co2_budget_DE_source: KSG
 
   costs:
@@ -304,7 +299,6 @@ KN2045_NFhoch:
 
   iiasa_database:
     reference_scenario: KN2045minus_SupplyFocus
-    fallback_reference_scenario: KN2045_Mix
   co2_budget_DE_source: KSG
 
   costs:

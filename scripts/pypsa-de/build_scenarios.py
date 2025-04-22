@@ -146,9 +146,6 @@ def write_to_scenario_yaml(input, output, scenarios, df):
     config = yaml.load(file_path)
     for scenario in scenarios:
         reference_scenario = config[scenario]["iiasa_database"]["reference_scenario"]
-        # fallback_reference_scenario = config[scenario]["iiasa_database"][
-        #     "fallback_reference_scenario"
-        # ]
 
         planning_horizons = [
             2020,
@@ -165,17 +162,8 @@ def write_to_scenario_yaml(input, output, scenarios, df):
             planning_horizons,
         )
 
-        # if reference_scenario.startswith(
-        #     "KN2045plus"
-        # ):  # Still waiting for REMIND uploads
-        #     fallback_reference_scenario = reference_scenario
-
         co2_budget_source = config[scenario]["co2_budget_DE_source"]
 
-        # if fallback_reference_scenario != reference_scenario:
-        #     logger.warning(
-        #         f"For CO2 budget: Using {fallback_reference_scenario} as fallback reference scenario for {scenario}."
-        #     )
         co2_budget_fractions = get_co2_budget(
             df.loc[snakemake.params.leitmodelle["general"], reference_scenario],
             co2_budget_source,

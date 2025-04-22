@@ -453,9 +453,6 @@ rule modify_existing_heating:
     params:
         iiasa_reference_scenario=config_provider("iiasa_database", "reference_scenario"),
         leitmodelle=config_provider("iiasa_database", "leitmodelle"),
-        fallback_reference_scenario=config_provider(
-            "iiasa_database", "fallback_reference_scenario"
-        ),
     input:
         ariadne=resources("ariadne_database.csv"),
         existing_heating="data/existing_infrastructure/existing_heating_raw.csv",
@@ -641,9 +638,7 @@ rule export_ariadne_variables:
 rule plot_ariadne_variables:
     params:
         iiasa_scenario=config_provider("iiasa_database", "reference_scenario"),
-        fallback_reference_scenario=config_provider(
-            "iiasa_database", "fallback_reference_scenario"
-        ),
+        reference_scenario=config_provider("iiasa_database", "reference_scenario"),
     input:
         exported_variables_full=RESULTS + "ariadne/exported_variables_full.xlsx",
         ariadne_database=resources("ariadne_database.csv"),

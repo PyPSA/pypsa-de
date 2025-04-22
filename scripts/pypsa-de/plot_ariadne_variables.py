@@ -828,9 +828,7 @@ if __name__ == "__main__":
     dfremind = pd.read_csv(
         snakemake.input.ariadne_database,
         index_col=["model", "scenario", "region", "variable", "unit"],
-    ).loc[leitmodell, snakemake.params.fallback_reference_scenario, "Deutschland"][
-        df.columns
-    ]
+    ).loc[leitmodell, snakemake.reference_scenario, "Deutschland"][df.columns]
     dfremind.index.names = df.index.names
 
     side_by_side_plot(
