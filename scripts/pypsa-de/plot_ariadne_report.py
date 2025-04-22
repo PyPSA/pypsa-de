@@ -1491,8 +1491,6 @@ def plot_elec_prices_spatial(
     region="DE",
     lang="ger",
 ):
-    # onshore_regions = gpd.read_file("/home/julian-geis/repos/pypsa-ariadne-1/resources/20241203-force-onwind-south-49cl-disc/KN2045_Bal_v4/regions_onshore_base_s_49.geojson")
-    # onshore_regions = onshore_regions.set_index('name')
     if lang == "ger":
         title1 = "Durchschnittspreis, NEP Ausbau [EUR/MWh]"
         cbar1_label = "Börsenstrompreis zzgl. durchschnittlichem Netzentgelt [EUR/MWh]"
@@ -1901,7 +1899,7 @@ def plot_h2_map(n, regions, savepath, only_de=False):
 def plot_h2_map_de(
     n, regions, tech_colors, savepath, specify_buses=None, german_carriers=True
 ):
-    assign_location(n)
+    assign_locations(n)
 
     legend_label = "hydrogen storage [TWh]"
     production_title = "Hydrogen infrastructure (production)"
@@ -2768,7 +2766,7 @@ if __name__ == "__main__":
             opts="",
             ll="vopt",
             sector_opts="None",
-            run="KN2045_Bal_v4",
+            run="KN2045_Mix",
         )
 
     configure_logging(snakemake)

@@ -54,9 +54,9 @@ jobs:
         # <scenario>/<plot_name>.png
         plots: >
           "
-          KN2045_Bal_v4/ariadne/primary_energy.png
-          KN2045_Bal_v4/ariadne/secondary_energy.png
-          KN2045_Bal_v4/ariadne/final_energy.png
+          KN2045_Mix/ariadne/primary_energy.png
+          KN2045_Mix/ariadne/secondary_energy.png
+          KN2045_Mix/ariadne/final_energy.png
           ariadne_comparison/Trade-Secondary-Energy-Hydrogen-Volume.png
           ariadne_comparison/Trade-Secondary-Energy-Liquids-Hydrogen-Volume.png
           ariadne_comparison/Capacity-Electricity-Solar.png

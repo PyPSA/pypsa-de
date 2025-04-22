@@ -1076,7 +1076,7 @@ if __name__ == "__main__":
             opts="",
             sector_opts="none",
             planning_horizons="2020",
-            run="KN2045_Bal_v4",
+            run="KN2045_Mix",
         )
 
     configure_logging(snakemake)  # pylint: disable=E0606

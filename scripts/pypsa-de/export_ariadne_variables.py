@@ -5417,7 +5417,7 @@ if __name__ == "__main__":
             opts="",
             ll="vopt",
             sector_opts="None",
-            run="KN2045_Bal_v4",
+            run="KN2045_Mix",
         )
     configure_logging(snakemake)
     config = snakemake.config

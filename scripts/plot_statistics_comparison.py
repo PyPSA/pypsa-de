@@ -90,7 +90,7 @@ if __name__ == "__main__":
 
         snakemake = mock_snakemake(
             "plot_statistics_comparison",
-            run="CurrentPolicies",
+            run="ExPol",
             country="DE",
             carrier="H2",
         )

@@ -807,7 +807,7 @@ if __name__ == "__main__":
             ll="v1.2",
             sector_opts="None",
             planning_horizons="2045",
-            run="KN2045_Bal_v4",
+            run="KN2045_Mix",
             # configfiles="config/config.public.yaml"
         )
 
