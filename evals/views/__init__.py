@@ -3,6 +3,7 @@
 from evals.views.balance.electricity import view_balance_electricity
 from evals.views.balance.heat import view_balance_heat
 from evals.views.balance.hydrogen import view_balance_hydrogen
+from evals.views.balance.methane import view_balance_methane
 from evals.views.capacity.ac_production import view_electricity_production_capacities
 from evals.views.capacity.ac_storage import view_capacity_ac_storage
 from evals.views.capacity.gas_storage import view_gas_storage_capacities
@@ -18,6 +19,7 @@ __all__ = [
     "view_electricity_production_capacities",
     "view_balance_electricity",
     "view_balance_hydrogen",
+    "view_balance_methane",
     "view_balance_heat",
     "view_heat_production",
     "view_timeseries_hydrogen",

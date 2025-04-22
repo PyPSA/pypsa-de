@@ -1,27 +1,26 @@
-"""Module for hydrogen nodal balances."""
+"""Module for methane nodal balances."""
 
 from pathlib import Path
 
 from evals.constants import (
-    BusCarrier,
     DataModel,
     Group,
     TradeTypes,
 )
 from evals.fileio import Exporter
-from evals.plots.barchart import ESMBarChart
+from evals.plots import ESMGroupedBarChart
 from evals.statistic import collect_myopic_statistics
 from evals.utils import rename_aggregate
 
 
-def view_balance_hydrogen(
+def view_balance_methane(
     result_path: str | Path,
     networks: dict,
     config: dict,
     subdir: str | Path = "evaluation",
 ) -> None:
     """
-    Evaluate the Hydrogen balance.
+    Evaluate the methane balance.
 
     Returns
     -------
@@ -32,26 +31,27 @@ def view_balance_hydrogen(
     See eval module docstring for parameter description.
     """
     unit = "MWh_LHV"
+    bus_carrier = ["gas", "gas primary", "biogas", "gas for industry", "renewable gas"]
 
     supply = collect_myopic_statistics(
         networks,
         statistic="supply",
-        bus_carrier=BusCarrier.H2,
+        bus_carrier=bus_carrier,
     )
     pipelines = supply.filter(like="pipeline", axis=0).index.unique(DataModel.CARRIER)
     supply = supply.drop(pipelines, level=DataModel.CARRIER)
-    supply.attrs["unit"] = unit
+    supply.attrs["unit"] = unit  # renewable gas lacks unit (unit is '')
 
     demand = (
         collect_myopic_statistics(
             networks,
             statistic="withdrawal",
-            bus_carrier=BusCarrier.H2,
+            bus_carrier=bus_carrier,
         )
         .mul(-1)
         .drop(pipelines, level=DataModel.CARRIER)
     )
-    demand.attrs["unit"] = unit
+    demand.attrs["unit"] = unit  # renewable gas lacks unit (unit is '')
 
     trade_statistics = []
     for scope, direction, alias in [
@@ -66,7 +66,7 @@ def view_balance_hydrogen(
                 statistic="trade_energy",
                 scope=scope,
                 direction=direction,
-                bus_carrier=BusCarrier.H2,
+                bus_carrier=bus_carrier,
             )
             .filter(like="pipeline", axis=0)
             .pipe(rename_aggregate, alias)
@@ -74,13 +74,15 @@ def view_balance_hydrogen(
         trade.attrs["unit"] = unit
         trade_statistics.append(trade)
 
-    metric = Exporter(
+    exporter = Exporter(
         statistics=[supply, demand] + trade_statistics,
         view_config=config["view"],
     )
+    # todo: split storage in and storage out
 
-    metric.defaults.plotly.chart = ESMBarChart
-    metric.defaults.plotly.pattern = dict.fromkeys(
+    exporter.defaults.plotly.chart = ESMGroupedBarChart
+    exporter.defaults.plotly.xaxis_title = ""
+    exporter.defaults.plotly.pattern = dict.fromkeys(
         [
             Group.export_foreign,
             Group.import_foreign,
@@ -90,6 +92,4 @@ def view_balance_hydrogen(
         "/",
     )
 
-    # todo: split storage in and storage out
-
-    metric.export(result_path, subdir)
+    exporter.export(result_path, subdir)

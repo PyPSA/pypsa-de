@@ -23,23 +23,33 @@ def view_balance_electricity(
       - "Link" supply with AC bus_carrier, and
       - Pump-Hydro-Storage and Run-Of-River inflows
     """
+    bus_carrier = ["AC", "low voltage", "home battery", "battery", "EV battery"]
     transmission_carrier = ["AC", "DC"]
+    # storage_carrier = ["PHS", "BEV charger", "EV battery", "V2G"]
+    storage_carrier = dict()
 
-    supply = collect_myopic_statistics(
-        networks,
-        statistic="supply",
-        bus_carrier=["AC", "low voltage"],
-    ).drop(transmission_carrier, level=DataModel.CARRIER)
+    supply = (
+        collect_myopic_statistics(
+            networks,
+            statistic="supply",
+            bus_carrier=bus_carrier,
+        )
+        .drop(transmission_carrier, level=DataModel.CARRIER)
+        .pipe(rename_aggregate, dict.fromkeys(storage_carrier, Group.storage_out))
+    )
+    supply.attrs["unit"] = "MWh"
 
     demand = (
         collect_myopic_statistics(
             networks,
             statistic="withdrawal",
-            bus_carrier=["AC", "low voltage"],
+            bus_carrier=bus_carrier,
         )
         .drop(transmission_carrier, level=DataModel.CARRIER)
+        .pipe(rename_aggregate, dict.fromkeys(storage_carrier, Group.storage_in))
         .mul(-1)
     )
+    demand.attrs["unit"] = "MWh"
 
     trade_statistics = []
     for scope, direction, alias in [
@@ -54,16 +64,15 @@ def view_balance_electricity(
                 statistic="trade_energy",
                 scope=scope,
                 direction=direction,
-                bus_carrier="AC",
+                bus_carrier=bus_carrier,
             )
             # the trade statistic wrongly finds transmission between EU -> country buses.
             # Those are dropped by the filter_by statement.
-            .pipe(filter_by, carrier=["AC", "DC"]).pipe(rename_aggregate, alias)
+            .pipe(filter_by, carrier=transmission_carrier).pipe(rename_aggregate, alias)
         )
 
     exporter = Exporter(
         statistics=[supply, demand] + trade_statistics,
-        statistics_unit="MWh",
         view_config=config["view"],
     )
 
@@ -79,7 +88,7 @@ def view_balance_electricity(
         "/",
     )
 
-    # todo: split PHS input and output
+    # todo: electricity load split
     # todo: split Transport input and output
 
     exporter.export(result_path, subdir)

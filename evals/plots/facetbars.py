@@ -80,6 +80,13 @@ class ESMGroupedBarChart(ESMChart):
             )
             df_list.append(sorted_sector)
         df = pd.concat(df_list)
+        # df = df.groupby(self.cfg.facet_column, sort=True).apply(
+        #     self.custom_sort,
+        #     by=self.cfg.plot_category,
+        #     values=self.cfg.category_orders,
+        #     ascending=True,
+        #     # include_groups=False,
+        # )
         # remove NaN categories again after sorting with all categories
         df = df.dropna(how="all", subset=self.col_values)
         df["display_value"] = df[self.col_values].apply(prettify_number)
@@ -161,7 +168,9 @@ class ESMGroupedBarChart(ESMChart):
         xaxis
             The subplot xaxis (a dictionary-like object).
         """
-        xaxis.update(tickfont_size=self.cfg.xaxis_font_size)
+        xaxis.update(
+            tickfont_size=self.cfg.xaxis_font_size, categoryorder="category ascending"
+        )
 
     def _style_grouped_bars(self) -> None:
         """Style bar traces for grouped bar charts."""
