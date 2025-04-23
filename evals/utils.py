@@ -925,7 +925,7 @@ def add_grid_lines(buses: pd.DataFrame, statistic: pd.Series) -> pd.DataFrame:
             A one dimensional array with lists of coordinate pairs,
             i.e. grid lines.
         """
-        return ac_buses.loc[[*_nodes]][["y", "x"]].to_numpy()
+        return ac_buses.loc[[*_nodes]][["y", "x"]].values.tolist()
 
     # generate lines [(x0, y0), (x1,y1)] between buses for every
     # row in grid and store it in a new column
