@@ -174,7 +174,6 @@ def view_balance_heat(
     exporter = Exporter(
         statistics=heat_supply + [heat_demand],
         view_config=config["view"],
-        statistics_unit="MWh",
     )
 
     # static view settings:

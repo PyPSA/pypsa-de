@@ -695,16 +695,17 @@ class Exporter:
         to show the full country name.
     """
 
-    def __init__(  # noqa: PLR0913, PLR0917
+    def __init__(
         self,
         statistics: list,
-        statistics_unit: str,
         view_config: dict,
         keep_regions: tuple = ("AT",),
         region_nice_names: bool = True,
     ) -> None:
         self.statistics = statistics
-        self.is_unit = statistics_unit
+        units = {stat.attrs["unit"] for stat in statistics}
+        assert len(units) == 1, f"Mixed units cannot be exported: {units}."
+        self.is_unit = units.pop()
         self.metric_name = view_config["name"]
         self.to_unit = view_config["unit"]
         self.keep_regions = keep_regions

@@ -156,6 +156,27 @@ exports = []
 "Methanol steam reforming" = "Methanol Steam Reforming"
 "solid biomass to hydrogen" = "H2 from Solid Biomass"
 
+[view.balance.methane]
+name = "Methane Energy Balance"
+unit = "TWh"
+file_name = "nodal_balance_methane_{location}"
+cutoff = 0.001
+legend_order = [
+    # production ordered from zero to outside
+
+    "Storage",
+    "Import Domestic",
+    "Import Foreign",
+    # demand ordered from zero to outside:
+
+    "Export Domestic",
+    "Export Foreign",
+]
+checks = ["balances_almost_zero"]
+exports = []
+
+[view.balance.methane.categories]
+
 [view.balance.electricity]
 name = "Electricity Energy Balance"
 unit = "TWh"
@@ -197,7 +218,7 @@ legend_order = [
 
 ]
 checks = ["balances_almost_zero"]
-exports = []  # "csv", "excel"
+exports = []
 
 [view.balance.electricity.categories]
 "BEV charger" = "Transport"
@@ -282,7 +303,7 @@ legend_order = [
     "Heat Ventilation"
 ]
 checks = ["balances_almost_zero"]
-exports = []  # "csv", "excel"
+exports = []
 
 [view.balance.heat.categories]
 #"AC" = "Electricity"
