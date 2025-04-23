@@ -124,7 +124,8 @@ def get_location_from_name_at_port(
     return (
         n.static(c)[f"bus{location_port}"]
         .str.extract(group, expand=False)
-        .rename(str("bus" + location_port))
+        .str.strip()  # some white spaces still go through regex
+        .rename(f"bus{location_port}")
     )
 
 
