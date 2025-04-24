@@ -21,7 +21,7 @@ from scripts._helpers import (
 
 configfile: "config/config.default.yaml"
 configfile: "config/plotting.default.yaml"
-configfile: "config/config.de.yaml"
+configfile: "config/config.at.yaml"
 
 
 run = config["run"]
