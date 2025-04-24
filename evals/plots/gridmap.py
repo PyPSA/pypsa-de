@@ -499,21 +499,6 @@ class TransmissionGridMap:
             The input data frame with additional column containing the
             line center.
         """
-        # assert df_slice.shape[0] == 1, f"Multiple rows are not supported: {df_slice}"
-        # offset = df_slice["offset"].iloc[0]
-        # line = df_slice["line"].iloc[0]
-        # if offset != 0:
-        #     x0, x1 = line[0][0], line[1][0]
-        #     y0, y1 = line[0][1], line[1][1]
-        #     # +- 10% (0.4, 0.6) of line length, depending on offset sign
-        #     ratio = 0.5 + copysign(0.1, offset)
-        #     x = x0 + ratio * (x1 - x0)
-        #     y = y0 + ratio * (y1 - y0)
-        #     df_slice["line_center"] = [[x, y]]
-        # else:  # simple line center
-        #     df_slice["line_center"] = [
-        #         [(line[0][i] + line[1][i]) / 2 for i in range(len(line))]
-        #     ]
 
         def compute_center(row):
             offset = row["offset"]
@@ -530,7 +515,6 @@ class TransmissionGridMap:
                 # Compute the simple midpoint
                 return [(line[0][i] + line[1][i]) / 2 for i in range(len(line[0]))]
 
-        # Use apply to compute the center for every row, ensuring the result is aligned with each row.
         df_slice["line_center"] = df_slice.apply(compute_center, axis=1)
 
         return df_slice
