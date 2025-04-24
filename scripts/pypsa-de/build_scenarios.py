@@ -15,11 +15,9 @@ logger = logging.getLogger(__name__)
 
 
 def get_transport_growth(df, planning_horizons):
-    try:
-        aviation = df.loc["Final Energy|Bunkers|Aviation", "PJ/yr"]
-    except KeyError:
-        aviation = df.loc["Final Energy|Bunkers|Aviation", "TWh/yr"] * 3.6  # TWh to PJ
+    aviation = df.loc["Final Energy|Bunkers|Aviation", "TWh/yr"]
 
+    aviation[2020] = 111.25  # Ariadne2-internal DB, Aladin model
     aviation_growth_factor = aviation / aviation[2020]
 
     return aviation_growth_factor[planning_horizons]
@@ -31,18 +29,11 @@ def get_primary_steel_share(df, planning_horizons):
     total_steel = df.loc[model, "Production|Steel"]
     primary_steel = df.loc[model, "Production|Steel|Primary"]
 
+    total_steel[2020] = 40.066  # Ariadne2-internal DB, FORECAST, 2021
+    primary_steel[2020] = 27.975  # Ariadne2-interbal DB, FORECAST, 2021
+
     primary_steel_share = primary_steel / total_steel
     primary_steel_share = primary_steel_share[planning_horizons]
-
-    if (
-        model == "FORECAST v1.0"
-        and (planning_horizons[0] == 2020)
-        and snakemake.params.db_name == "ariadne2_intern"
-    ):
-        logger.warning(
-            "FORECAST v1.0 does not have data for 2020. Using 2021 data for Production|Steel instead."
-        )
-        primary_steel_share[2020] = primary_steel[2021] / total_steel[2021]
 
     return primary_steel_share.set_index(pd.Index(["Primary_Steel_Share"]))
 
@@ -54,14 +45,10 @@ def get_DRI_share(df, planning_horizons):
     # Assuming that only hydrogen DRI steel is sustainable and DRI using natural gas is phased out
     DRI_steel = df.loc[model, "Production|Steel|Primary|Direct Reduction Hydrogen"]
 
+    total_steel[2020] = 40.066  # Ariadne2-internal DB, FORECAST, 2021
+    DRI_steel[2020] = 0  # Ariadne2-internal DB, FORECAST, 2021
+
     DRI_steel_share = DRI_steel / total_steel
-
-    if model == "FORECAST v1.0" and planning_horizons[0] == 2020:
-        logger.warning(
-            "FORECAST v1.0 does not have data for 2020. Using 2021 data for DRI fraction instead."
-        )
-        DRI_steel_share[2020] = DRI_steel_share[2021] / total_steel[2021]
-
     DRI_steel_share = DRI_steel_share[planning_horizons]
 
     return DRI_steel_share.set_index(pd.Index(["DRI_Steel_Share"]))
@@ -135,6 +122,9 @@ def get_co2_budget(df, source):
     targets_pypsa = targets_co2 - nonco2
 
     target_fractions_pypsa = targets_pypsa.loc[targets_co2.index] / baseline_pypsa
+    target_fractions_pypsa[2020] = (
+        0.671  # Hard-coded based on REMIND data from ariadne2-internal DB
+    )
 
     return target_fractions_pypsa.round(3)
 
@@ -156,6 +146,9 @@ def write_to_scenario_yaml(input, output, scenarios, df):
             2045,
             2050,
         ]
+        logger.info(
+            "Using hard-coded values for the year 2020 for aviation demand, steel shares and non-co2 emissions. Source: Model results in the Ariadne2-internal database"
+        )
 
         aviation_demand_factor = get_transport_growth(
             df.loc[snakemake.params.leitmodelle["transport"], reference_scenario, :],
