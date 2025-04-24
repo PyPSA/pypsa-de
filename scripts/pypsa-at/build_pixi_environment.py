@@ -10,7 +10,7 @@ def main():
     move("pixi.lock", "pixi.lock.bak")
 
     # re-create pixi files from environment.yaml
-    run(["pixi", "init", "--import", "envs/linux-pinned.yaml"], check=True)
+    run(["pixi", "init", "--import", "envs/environment.yaml"], check=True)
     run(["pixi", "install"], check=True)
 
     # add pypsa-at packages
@@ -33,5 +33,9 @@ def main():
     output = run(["pixi", "add"] + packages, check=True, capture_output=True, text=True)
     print(output.stdout)
 
+    pypi_packages = ["highspy", "xpress", "tsam", "mkdocs-badges"]
+    output = run(["pixi", "install", "--pypi"] + pypi_packages, check=True, capture_output=True, text=True)
+    print(output.stdout)
+    
 if __name__ == '__main__':
     main()
