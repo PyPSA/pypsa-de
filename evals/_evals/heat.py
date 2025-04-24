@@ -2,7 +2,6 @@
 
 from pathlib import Path
 
-import pandas as pd
 from constants import TITLE_SUFFIX, BusCarrier, Carrier, DataModel, Group
 from metric import Metric
 from plots.barchart import ESMBarChart
@@ -81,7 +80,8 @@ def eval_district_heat_balance_ts(
     networks: dict,
     subdir: str | Path = "esm_run/evaluation",
 ) -> None:  # numpydoc ignore=PR01
-    """Evaluate the district heat energy balance time series.
+    """
+    Evaluate the district heat energy balance time series.
 
     Writes 2 Excel files and 1 TimeSeriesChart per country and
     country.

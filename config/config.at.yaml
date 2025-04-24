@@ -76,7 +76,6 @@ existing_capacities:
 renewable:
   onwind:
     capacity_per_sqkm: 1.4
-    cutout: europe-2019-sarah3-era5
     correction_factor: 0.95
     resource:
       smooth: false  #this is false until correction to onshore wind speeds from GWA implemented
@@ -100,7 +99,6 @@ renewable:
   offwind-ac:
     capacity_per_sqkm: 6
     landfall_length: 30
-    cutout: europe-2019-sarah3-era5
     correction_factor: 0.95
     resource:
       smooth: true
@@ -124,7 +122,6 @@ renewable:
   offwind-dc:
     capacity_per_sqkm: 6
     landfall_length: 30
-    cutout: europe-2019-sarah3-era5
     correction_factor: 0.95
     resource:
       smooth: true
@@ -148,20 +145,15 @@ renewable:
   offwind-float: # disabled at the moment
     landfall_length: 30
     capacity_per_sqkm: 6
-    cutout: europe-2019-sarah3-era5
     correction_factor: 0.95
   solar:
-    cutout: europe-2019-sarah3-era5
     correction_factor: 0.9 # scaling to Abbildung 36 of https://www.ise.fraunhofer.de/de/veroeffentlichungen/studien/aktuelle-fakten-zur-photovoltaik-in-deutschland.html
   solar-hsat:
-    cutout: europe-2019-sarah3-era5
     correction_factor: 0.9 # scaling to Abbildung 36 of https://www.ise.fraunhofer.de/de/veroeffentlichungen/studien/aktuelle-fakten-zur-photovoltaik-in-deutschland.html
-  hydro:
-    cutout: europe-2019-sarah3-era5
 
 lines:
   dynamic_line_rating:
-    cutout: europe-2019-sarah3-era5
+    cutout: default
 
 clustering:
   mode: administrative
@@ -550,7 +542,6 @@ solving:
   solver:
     name: highs
     options: highs-default
-
 
 plotting:
   tech_colors:

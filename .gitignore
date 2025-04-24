@@ -12,7 +12,6 @@ gurobi.log
 .vscode
 *.orig
 .idea
-.pixi
 
 /bak
 /resources
@@ -91,3 +90,7 @@ dev/*
 
 #folder quick marimo evals
 .marimo/JM_marimo_bs
+
+# pixi environments
+.pixi
+*.egg-info

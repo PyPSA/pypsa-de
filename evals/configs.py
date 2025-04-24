@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Module to collect configuration items and their default values."""
 
 from dataclasses import dataclass, field

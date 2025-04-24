@@ -2,7 +2,6 @@ import inspect
 import itertools
 
 import pytest
-
 from esmtools import constants
 from esmtools.utils import get_mapping
 

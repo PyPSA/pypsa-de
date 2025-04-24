@@ -1,9 +1,5 @@
 """Module for transformation Sankey evaluations."""
 
-from pathlib import Path
-
-from statistic import collect_myopic_statistics
-from utils import filter_by
 
 # def eval_sankey_detail(
 #     result_path: str | Path,

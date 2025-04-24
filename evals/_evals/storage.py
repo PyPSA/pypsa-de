@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Module for gas storage evaluations."""
 
 from pathlib import Path

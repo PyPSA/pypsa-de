@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Create a view for optimal heat production capacities.
 

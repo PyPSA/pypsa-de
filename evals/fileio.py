@@ -3,7 +3,6 @@
 import inspect
 import logging
 import re
-import tomllib
 from functools import cached_property
 from importlib import resources
 from pathlib import Path
@@ -11,6 +10,7 @@ from typing import Callable
 
 import pandas as pd
 import pypsa
+import tomllib
 from pydantic.v1.utils import deep_update
 
 from evals.configs import ViewDefaults
@@ -870,13 +870,13 @@ class Exporter:
             yearly_sum = self.df.groupby(groups).sum().abs()
             balanced = yearly_sum < self.view_config["cutoff"]
             if isinstance(balanced, pd.DataFrame):
-                assert (
-                    balanced.all().all()
-                ), f"Imbalances detected: {yearly_sum[balanced == False].dropna(how='all').sort_values(by=balanced.columns[0], na_position='first').tail()}"
+                assert balanced.all().all(), (
+                    f"Imbalances detected: {yearly_sum[balanced == False].dropna(how='all').sort_values(by=balanced.columns[0], na_position='first').tail()}"
+                )
             else:  # Series
-                assert (
-                    balanced.all().item()
-                ), f"Imbalances detected: {yearly_sum[balanced.squeeze() == False].squeeze().sort_values().tail()}"
+                assert balanced.all().item(), (
+                    f"Imbalances detected: {yearly_sum[balanced.squeeze() == False].squeeze().sort_values().tail()}"
+                )
 
     def default_checks(self) -> None:
         """"""
@@ -893,25 +893,25 @@ class Exporter:
         superfluous_categories = self.df.index.unique(category).difference(
             categories.keys()
         )
-        assert (
-            len(superfluous_categories) == 0
-        ), f"Superfluous categories found: {superfluous_categories}"
+        assert len(superfluous_categories) == 0, (
+            f"Superfluous categories found: {superfluous_categories}"
+        )
 
         a = set(self.view_config["legend_order"])
         b = set(categories.values())
         additional = a.difference(b)
-        assert (
-            not additional
-        ), f"Superfluous categories defined in legend order: {additional}"
+        assert not additional, (
+            f"Superfluous categories defined in legend order: {additional}"
+        )
         missing = b.difference(a)
-        assert (
-            not missing
-        ), f"Some categories are not defined in legend order: {missing}"
+        assert not missing, (
+            f"Some categories are not defined in legend order: {missing}"
+        )
 
         no_color = [c for c in categories.values() if c not in COLOUR_SCHEME_BMK]
-        assert (
-            len(no_color) == 0
-        ), f"Some categories used in the view do not have a color assigned: {no_color}"
+        assert len(no_color) == 0, (
+            f"Some categories used in the view do not have a color assigned: {no_color}"
+        )
 
     def make_evaluation_result_directories(
         self, result_path: Path, subdir: Path | str

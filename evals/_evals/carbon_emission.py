@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Module for CO2 Emission evaluations."""
 
 from functools import partial
@@ -31,7 +30,8 @@ def eval_co2(
     networks: dict,
     subdir: str | Path = "esm_run/evaluation",
 ) -> None:  # numpydoc ignore=PR01
-    """Evaluate Carbon Dioxide balances per country.
+    """
+    Evaluate Carbon Dioxide balances per country.
 
     Returns
     -------
@@ -193,7 +193,8 @@ def eval_co2(
 def _distribute_eu_values_by_country_share(
     statistic_eu: pd.Series, country_base: pd.Series
 ) -> pd.Series:
-    """Spread CO2 emission from EU level to countries.
+    """
+    Spread CO2 emission from EU level to countries.
 
     Parameters
     ----------

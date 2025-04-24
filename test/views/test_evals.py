@@ -152,7 +152,8 @@ class Constants:
 
 
 def _barchart_file_names():
-    """Construct all file names that have only location encoded.
+    """
+    Construct all file names that have only location encoded.
 
     Some file names are marked as xfail. These tests return green
     if they fail and red if they succeed. This is because some
@@ -251,8 +252,7 @@ def _time_series_file_names():
 
         if file_name == "elec_prod_dem_time_2040_LV":
             reason = (
-                "The Toolbox wrongly counts the 'MISS.*' Link at port 1 "
-                "as Base Load."
+                "The Toolbox wrongly counts the 'MISS.*' Link at port 1 as Base Load."
             )
         elif file_name.endswith(
             ("AT", "DE", "DK", "ES", "GB", "IT")

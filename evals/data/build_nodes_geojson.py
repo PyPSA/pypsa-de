@@ -9,7 +9,8 @@ import requests
 def build_geojson_base_layer(
     resolution: int = 10, year: int = 2021, crs: int = 4326
 ) -> None:
-    """Download and reshape the NUTS regions to meet ESM chart needs.
+    """
+    Download and reshape the NUTS regions to meet ESM chart needs.
 
     Parameters
     ----------
@@ -41,7 +42,8 @@ def build_geojson_base_layer(
     gdf = gpd.GeoDataFrame.from_features(response.json(), crs=crs)
 
     def nuts_id_to_esm_node(nuts_id: str) -> str:
-        """Transform NUTS3 region codes.
+        """
+        Transform NUTS3 region codes.
 
         Parameters
         ----------

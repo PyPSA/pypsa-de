@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # SPDX-FileCopyrightText: Contributors to PyPSA-Eur <https://github.com/pypsa/pypsa-eur>
 #
 # SPDX-License-Identifier: MIT
@@ -539,9 +538,9 @@ def _set_countries_and_substations(n, config, country_shapes, offshore_shapes):
                 .join(n.buses.country)
                 .dropna()
             )
-            assert (
-                not df.empty
-            ), f"No buses with defined country within 200km of bus `{b}`"
+            assert not df.empty, (
+                f"No buses with defined country within 200km of bus `{b}`"
+            )
             n.buses.at[b, "country"] = df.loc[df.pathlength.idxmin(), "country"]
 
         logger.warning(
@@ -676,7 +675,9 @@ def base_network(
         "entsoegridkit",
         "osm-raw",
         "osm-prebuilt",
-    }, f"base_network must be either 'entsoegridkit', 'osm-raw' or 'osm-prebuilt', but got '{base_network}'"
+    }, (
+        f"base_network must be either 'entsoegridkit', 'osm-raw' or 'osm-prebuilt', but got '{base_network}'"
+    )
     if base_network == "entsoegridkit":
         warnings.warn(
             "The 'entsoegridkit' base network is deprecated and will be removed in future versions. Please use 'osm-raw' or 'osm-prebuilt' instead.",

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Module for electricity evaluations."""
 
 import logging
@@ -32,7 +31,8 @@ def eval_electricity_demand(
     networks: dict,
     subdir: str | Path = "esm_run/evaluation",
 ) -> None:  # numpydoc ignore=PR01
-    """Evaluate the electricity demand by country and year.
+    """
+    Evaluate the electricity demand by country and year.
 
     Electricity demand is sum of power supply from
       - electricity loads split by sector,
@@ -108,7 +108,8 @@ def eval_electricity_production(
     networks: dict,
     subdir: str | Path = "esm_run/evaluation",
 ) -> None:  # numpydoc ignore=PR01
-    """Evaluate the electricity production by country and year.
+    """
+    Evaluate the electricity production by country and year.
 
     Electricity production is sum of power supply from
       - "Generator" component,
@@ -170,7 +171,8 @@ def eval_residual_load(
     networks: dict,
     subdir: str | Path = "esm_run/evaluation",
 ) -> None:  # numpydoc ignore=PR01
-    """Evaluate the residual load for AC technologies.
+    """
+    Evaluate the residual load for AC technologies.
 
     The residual load is defined as the part of the inflexible demand,
     that cannot be met by renewable generators, i.e. the difference
@@ -249,7 +251,8 @@ def eval_electricity_balance_ts(
     networks: dict,
     subdir: str | Path = "esm_run/evaluation",
 ) -> None:  # numpydoc ignore=PR01
-    """Evaluate the electricity production and demand balance.
+    """
+    Evaluate the electricity production and demand balance.
 
     Electricity production is sum of supply from
       - "StorageUnit", "Store", and "Generator" components,
@@ -324,9 +327,7 @@ def eval_electricity_balance_ts(
             comps="StorageUnit",
             bus_carrier=BusCarrier.AC,
             aggregate_time=False,
-        ).mul(
-            -1
-        )  # demand is negative
+        ).mul(-1)  # demand is negative
 
     # replicate time series for industry and rail yearly demand
     rail_industry = collect_myopic_statistics(
@@ -345,9 +346,7 @@ def eval_electricity_balance_ts(
         bus_carrier=BusCarrier.AC,
         aggregate_time=False,
         drop_zero_rows=False,
-    ).mul(
-        -1.0
-    )  # demand is negative
+    ).mul(-1.0)  # demand is negative
     ac_demand = ac_demand.drop("value of lost load", level="carrier", errors="ignore")
     ac_demand = _subtract_rail_and_industry_demands_from_electricity_base_load(
         ac_demand, rail_industry
@@ -442,7 +441,8 @@ def eval_electricity_balance(
     networks: dict,
     subdir: str | Path = "esm_run/evaluation",
 ) -> None:  # numpydoc ignore=PR01
-    """Evaluate the electricity production & demand by country and year.
+    """
+    Evaluate the electricity production & demand by country and year.
 
     Electricity production is sum of power supply from
       - "Generator" components,
@@ -552,7 +552,8 @@ def _subtract_rail_and_industry_demands_from_electricity_base_load(
     keep_regions: tuple = ("AT",),
     regional_clipping: bool = True,
 ) -> pd.DataFrame:
-    """Calculate the base load without rail and industry demands.
+    """
+    Calculate the base load without rail and industry demands.
 
     Subtract rail and industry demand from electricity (Base Load),
     because they were added from dedicated metrics already. Note,
@@ -659,7 +660,8 @@ def _subtract_rail_and_industry_demands_from_electricity_base_load(
 
 
 def _calculate_inflexible_demand(statistics: pd.DataFrame) -> pd.DataFrame:
-    """Calculate the inflexible demand time series.
+    """
+    Calculate the inflexible demand time series.
 
     Parameters
     ----------
@@ -698,7 +700,8 @@ def _calculate_inflexible_demand(statistics: pd.DataFrame) -> pd.DataFrame:
 def _fetch_electricity_trade_statistics(
     networks: dict, aggregate_time: str | bool = "sum", net_trade: bool = True
 ) -> list:
-    """Calculate foreign and domenstic trade statistics.
+    """
+    Calculate foreign and domenstic trade statistics.
 
     Parameters
     ----------

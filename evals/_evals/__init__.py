@@ -1,5 +1,6 @@
 # numpydoc ignore=PR02
-"""Module for Energy System Modeling evaluations.
+"""
+Module for Energy System Modeling evaluations.
 
 ESM evaluation functions use solved PyPSA networks to produce
 human-readable output files and beautiful HTML graphs.
@@ -35,6 +36,8 @@ script is only accessible after package installation. See
 [Installation](../../how-to-guides/installation.md) section
 for instructions.
 """
+
+from views.capacity.heat_capacity import view_heat_capacity
 
 from evals.capacity import (
     eval_electricity_capacities,
@@ -72,7 +75,6 @@ from evals.storage import (
 )
 from evals.transmission import eval_grid_capactiy
 from evals.transport import eval_transport_sectoral, eval_transport_total
-from views.capacity.heat_capacity import view_heat_capacity
 
 __all__ = [
     "eval_capex",

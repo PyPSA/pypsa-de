@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ESM time series scatter plots."""
 
 from functools import cached_property
@@ -12,7 +11,8 @@ from evals.utils import apply_cutoff
 
 
 class ESMTimeSeriesChart(ESMChart):
-    """A class that produces one time series chart.
+    """
+    A class that produces one time series chart.
 
     Parameters
     ----------
@@ -32,7 +32,8 @@ class ESMTimeSeriesChart(ESMChart):
 
     @cached_property
     def df(self) -> pd.DataFrame:
-        """Plot data formatted for time series charts.
+        """
+        Plot data formatted for time series charts.
 
         Returns
         -------
@@ -49,7 +50,8 @@ class ESMTimeSeriesChart(ESMChart):
         return df.T  # transpose to iterate column wise over categories
 
     def plot(self) -> None:
-        """Plot the data to the chart.
+        """
+        Plot the data to the chart.
 
         This function iterates over the data series, adds traces to the
         figure, styles the inflexible demand, sets the layout, styles
@@ -94,7 +96,8 @@ class ESMTimeSeriesChart(ESMChart):
 
     @staticmethod
     def fix_snapshots(df: pd.DataFrame, year: int) -> pd.DataFrame:
-        """Correct the year in snapshot timestamp column labels.
+        """
+        Correct the year in snapshot timestamp column labels.
 
         Parameters
         ----------
@@ -123,7 +126,8 @@ class ESMTimeSeriesChart(ESMChart):
         )
 
     def _style_time_series_axes_and_layout(self, title) -> None:
-        """Update the layout and axes for time series charts.
+        """
+        Update the layout and axes for time series charts.
 
         Parameters
         ----------

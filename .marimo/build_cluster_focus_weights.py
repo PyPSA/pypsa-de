@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import marimo
 
 __generated_with = "0.11.22"
@@ -96,9 +95,9 @@ def _(focus_weights):
 
 @app.cell
 def _(focus_weights):
-    assert (
-        sum(focus_weights.values()) == 1.0
-    ), f"Sum of focus weights is not 1.0 but {sum(focus_weights.values())}"
+    assert sum(focus_weights.values()) == 1.0, (
+        f"Sum of focus weights is not 1.0 but {sum(focus_weights.values())}"
+    )
     return
 
 

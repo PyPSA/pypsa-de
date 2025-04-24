@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Module for Sankey evaluations."""
 
 from functools import partial
@@ -27,7 +26,8 @@ def eval_sankey(
     networks: dict,
     subdir: str | Path = "esm_run/evaluation",
 ) -> None:  # numpydoc ignore=PR01
-    """Produce Sankey diagrams.
+    """
+    Produce Sankey diagrams.
 
     # https://plotly.com/blog/sankey-diagrams/
 
@@ -64,7 +64,8 @@ def eval_sankey(
 
 
 def build_metric_generation(networks: dict, result_path: Path) -> Metric:
-    """Build the left side input data for the sankey chart.
+    """
+    Build the left side input data for the sankey chart.
 
     Parameters
     ----------
@@ -81,9 +82,7 @@ def build_metric_generation(networks: dict, result_path: Path) -> Metric:
         statistic="supply",
         groupby=partial(get_location_and_carrier_and_bus_carrier, location_port="1"),
         comps=["Generator", "StorageUnit"],
-    ).drop(
-        "PHS", level="carrier"
-    )  # included in phs statistic
+    ).drop("PHS", level="carrier")  # included in phs statistic
 
     trade_import = collect_myopic_statistics(
         networks,
@@ -165,7 +164,8 @@ def build_metric_demand(networks: dict, result_path: Path) -> Metric:
 
 
 def format_metric_for_sankey(metric: Metric) -> pd.DataFrame:
-    """Apply aggregations and return a data frame.
+    """
+    Apply aggregations and return a data frame.
 
     Parameters
     ----------

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Module for methane evaluations."""
 
 from logging import getLogger

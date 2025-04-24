@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Module for Sankey diagram."""
 
 import numpy as np
@@ -75,7 +74,8 @@ class ProtoSankey:
 
 
 class OverviewSankey:
-    """Overview Sankey diagram for one country and year.
+    """
+    Overview Sankey diagram for one country and year.
 
     Follows the (MVC) model view component architecture. The data model
     is a collection of data frames with "carrier" and bus_carrier index
@@ -129,7 +129,8 @@ class OverviewSankey:
         self.fig = Figure(sankey_trace)
 
     def check_input(self) -> None:
-        """Check the slice inputs.
+        """
+        Check the slice inputs.
 
         This should not be the responsibility of the plotter class.
 
@@ -270,7 +271,8 @@ class OverviewSankey:
         links_idx_name: str,
         start: int,
     ) -> pd.DataFrame:
-        """Add ids and labels to an input dataframe.
+        """
+        Add ids and labels to an input dataframe.
 
         Set
 
@@ -317,7 +319,8 @@ class OverviewSankey:
         return metric_slice
 
     def get_start_node_id(self) -> int:
-        """Return the largest node id from the view.
+        """
+        Return the largest node id from the view.
 
         The returned value is used as a first value for node ids.
         The very first id is zero, subsequent ids are the largest
@@ -339,7 +342,8 @@ class OverviewSankey:
         return max(max_source, max_target)
 
     def extend_view(self, link_or_node: str, field: str, items: np.array) -> None:
-        """Add given sources to the view.
+        """
+        Add given sources to the view.
 
         Parameters
         ----------

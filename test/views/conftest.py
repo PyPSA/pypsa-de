@@ -1,4 +1,5 @@
-"""Fixtures in this file are available to test functions as arguments.
+"""
+Fixtures in this file are available to test functions as arguments.
 
 Non-fixture functions are functions (hooks), that are
 called during different stages of a test runs, e.g.:
@@ -15,13 +16,13 @@ import subprocess
 from pathlib import Path
 
 import pytest
-
 from esmtools.fileio import read_networks
 
 
 @pytest.fixture(scope="session")
 def result_path(pytestconfig) -> Path:
-    """Retrieve the results path from CLI.
+    """
+    Retrieve the results path from CLI.
 
     The default path assumes, that we run from inside a cloned
     pypsa-eur-sec repository.

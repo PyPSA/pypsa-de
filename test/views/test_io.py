@@ -1,9 +1,8 @@
 import pandas as pd
 import pytest
 import yaml
-from numpy import nan
-
 from esmtools.fileio import prepare_co2_emissions, prepare_costs
+from numpy import nan
 
 
 @pytest.mark.unit
@@ -28,7 +27,8 @@ def test_read_historical_country_emissions(
 
 @pytest.fixture(scope="module")
 def expected_costs() -> pd.DataFrame:
-    """Return the expected costs.
+    """
+    Return the expected costs.
 
     Expected data is the result from
     Toolbox.Import_functions.prepare_costs and for 2030 only.
@@ -2539,7 +2539,8 @@ def expected_costs() -> pd.DataFrame:
 
 @pytest.fixture(scope="module")
 def expected_co2_share() -> pd.DataFrame:
-    """Return the expected CO2 share.
+    """
+    Return the expected CO2 share.
 
     Expected data is the result from
     Toolbox.Import_functions.get_historical_emissions_per_country

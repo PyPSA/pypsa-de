@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Collect constant values and identifiers used for evaluations.
 

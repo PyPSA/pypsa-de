@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 import pytest
-
 from esmtools.constants import DataModel
 from esmtools.plots._base import ESMChart
 from esmtools.plots.timeseries import ESMTimeSeriesChart
@@ -133,7 +132,8 @@ def df_metric(name="foo", unit="(bar)"):
     ],
 )
 def test_insert_index_level(axis, pos, expected_index, simple_data_frame):
-    """Test the insert_index_level function.
+    """
+    Test the insert_index_level function.
 
     This function tests the behavior of the insert_index_level function
     to ensure it correctly modifies the index or columns of a DataFrame
@@ -155,7 +155,8 @@ def test_insert_index_level(axis, pos, expected_index, simple_data_frame):
     ],
 )
 def test_calculate_cost_annuity(n, r, expected):
-    """Test the calculate_cost_annuity function.
+    """
+    Test the calculate_cost_annuity function.
 
     This test verifies that the calculate_cost_annuity function
     correctly calculates the annuity factor for various input values
@@ -203,7 +204,8 @@ def test_calculate_cost_annuity_series(n, r, expected):
     ids=["zero_year_raises_ZeroDivisionError"],
 )
 def test_calculate_cost_annuity_fails(n, r, expected):
-    """Test the calculate_cost_annuity function for error cases.
+    """
+    Test the calculate_cost_annuity function for error cases.
 
     This test verifies that the calculate_cost_annuity function raises
     the appropriate exceptions when invalid input values are provided.
@@ -235,7 +237,8 @@ def test_calculate_cost_annuity_fails(n, r, expected):
     ],
 )
 def test_get_unit(input_str, expected_output):
-    """Test the get_unit function.
+    """
+    Test the get_unit function.
 
     This test verifies that the get_unit function correctly extracts the
     unit from a given input string. The unit must be enclosed in
@@ -267,7 +270,8 @@ def test_get_unit(input_str, expected_output):
     ],
 )
 def test_get_trade_type(bus_a, bus_b, expected):
-    """Test the get_trade_type function.
+    """
+    Test the get_trade_type function.
 
     This test verifies that the get_trade_type function correctly
     determines the trade type between two buses based on their region
@@ -304,7 +308,8 @@ def test_get_trade_type(bus_a, bus_b, expected):
     ],
 )
 def test_trade_mask(trade_type, buses, expected, df_buses):
-    """Test the trade_mask function.
+    """
+    Test the trade_mask function.
 
     This test verifies that the trade_mask function correctly generates
     a mask for different trade types based on the provided component
@@ -437,7 +442,8 @@ def test_trade_mask(trade_type, buses, expected, df_buses):
     ],
 )
 def test_filter_by_data_frame(exclude, kwargs, expected, df_multi_index):
-    """Test the filter_by function for DataFrame filtering.
+    """
+    Test the filter_by function for DataFrame filtering.
 
     This test verifies that the filter_by function correctly filters
     a DataFrame based on specified index values and conditions.
@@ -525,7 +531,8 @@ def test_filter_by_data_frame(exclude, kwargs, expected, df_multi_index):
     ],
 )
 def test_filter_by_series(exclude, kwargs, expected, ser_multi_index):
-    """Test the filter_by function for Series filtering.
+    """
+    Test the filter_by function for Series filtering.
 
     This test verifies that the filter_by function correctly filters
     a Series based on specified index values and conditions.
@@ -595,7 +602,8 @@ def test_filter_by_series(exclude, kwargs, expected, ser_multi_index):
     ],
 )
 def test_expand_to_time_series(data_input, snapshots, data_expected):
-    """Test the expand_to_time_series function.
+    """
+    Test the expand_to_time_series function.
 
     This test verifies that the expand_to_time_series function correctly
     converts aggregated values into a time series format based on the
@@ -667,7 +675,8 @@ def test_expand_to_time_series(data_input, snapshots, data_expected):
     ],
 )
 def test_custom_sort_happy_and_edge_cases(values, ascending, expected, df_sort):
-    """Test the custom_sort function with various inputs.
+    """
+    Test the custom_sort function with various inputs.
 
     This test verifies that the custom_sort function correctly sorts
     a DataFrame based on specified values and order. It includes
@@ -686,7 +695,8 @@ def test_custom_sort_happy_and_edge_cases(values, ascending, expected, df_sort):
     ],
 )
 def test_custom_sort_error_cases(values, by, expected, df_sort):
-    """Test the behavior of custom_sort with invalid input.
+    """
+    Test the behavior of custom_sort with invalid input.
 
     This test checks that custom_sort raises the appropriate exception
     when an invalid column name is specified. It ensures that the
@@ -729,7 +739,8 @@ def test_custom_sort_error_cases(values, by, expected, df_sort):
     ],
 )
 def test_fix_snapshots(df, year, expected):
-    """Test the fix_snapshots function with various inputs.
+    """
+    Test the fix_snapshots function with various inputs.
 
     This test verifies that the fix_snapshots function correctly adjusts
     the timestamps in the DataFrame column labels to the specified year.
@@ -822,7 +833,8 @@ def test_fix_snapshots(df, year, expected):
     ],
 )
 def test_split_location_carrier(index, names, expected):
-    """Test the split_location_carrier function with various inputs.
+    """
+    Test the split_location_carrier function with various inputs.
 
     This test verifies that the split_location_carrier function
     correctly splits the location and carrier from the innermost
@@ -919,7 +931,8 @@ def test_split_location_carrier(index, names, expected):
     ],
 )
 def test_scale(df, to_unit, expected):
-    """Test the behavior of the scale function with various inputs.
+    """
+    Test the behavior of the scale function with various inputs.
 
     This test verifies that the scale function correctly scales the
     metric columns of a DataFrame to the specified unit. It includes

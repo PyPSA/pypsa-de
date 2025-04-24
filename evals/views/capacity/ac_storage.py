@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
 """Export electricity storage Volumes."""
 
 from pathlib import Path
 
-from evals.constants import BusCarrier, Group
+from evals.constants import BusCarrier
 from evals.fileio import Exporter
 from evals.plots.barchart import ESMBarChart
 from evals.statistic import collect_myopic_statistics

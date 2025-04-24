@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Module for electricity evaluations."""
 
 from functools import partial
@@ -19,7 +18,8 @@ def eval_electricity_capacities(
     networks: dict,
     subdir: str | Path = "esm_run/evaluation",
 ) -> None:  # numpydoc ignore=PR01
-    """Evaluate the optimal capacity for AC technologies.
+    """
+    Evaluate the optimal capacity for AC technologies.
 
     Returns
     -------
@@ -78,7 +78,8 @@ def eval_fuel_production_capacities(
     networks: dict,
     subdir: str | Path = "esm_run/evaluation",
 ) -> None:  # numpydoc ignore=PR01
-    """Evaluate the fuel production capacities per country.
+    """
+    Evaluate the fuel production capacities per country.
 
     Returns
     -------
@@ -101,9 +102,7 @@ def eval_fuel_production_capacities(
         statistic="optimal_capacity",
         comps="Link",
         bus_carrier=[BusCarrier.CH4, BusCarrier.H2],
-    ).clip(
-        lower=0
-    )  # supply only
+    ).clip(lower=0)  # supply only
     gas_production = gas_production.drop(
         pipelines_or_biogas, level=DataModel.CARRIER, errors="ignore"
     )

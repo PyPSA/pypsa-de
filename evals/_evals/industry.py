@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Industry Evaluations."""
 
 from pathlib import Path
@@ -44,7 +43,8 @@ def eval_industry_total(
     networks: dict,
     subdir: str | Path = "esm_run/evaluation",
 ) -> None:  # numpydoc ignore=PR01
-    """Evaluate the energy demand by carrier.
+    """
+    Evaluate the energy demand by carrier.
 
     Results are grouped by bus_carrier (and not by carrier
     technology as usual) to show the source energy mix.
@@ -102,7 +102,8 @@ def eval_industry_sectoral(
     networks: dict,
     subdir: str | Path = "esm_run/evaluation",
 ) -> None:  # numpydoc ignore=PR01
-    """Evaluate the energy demand by carrier and sector.
+    """
+    Evaluate the energy demand by carrier and sector.
 
     Results are grouped by bus_carrier (and not by carrier
     technology as usual) to show the source energy mix.
@@ -167,7 +168,8 @@ def eval_industry_sectoral(
 def fetch_industry_demand_statistics(
     networks: dict, result_path: str | Path
 ) -> pd.Series:
-    """Calculate the industry demand statistics.
+    """
+    Calculate the industry demand statistics.
 
     fixme: AT Hydrogen Demand in 2020 and sector Industry is -0.06 TWh
            in old and in new evaluation. Could be a problem in the

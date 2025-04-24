@@ -6,7 +6,8 @@ def get_filter_dictionaries(
     language_parameter: str = "DE",
     int_ext: str = "int",
 ) -> dict:
-    """Return filter and mapping dictionary for evaluations.
+    """
+    Return filter and mapping dictionary for evaluations.
 
     Parameters
     ----------

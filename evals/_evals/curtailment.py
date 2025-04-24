@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Module for curtailment evaluations."""
 
 from pathlib import Path
@@ -43,7 +42,8 @@ def eval_curtailment(
     networks: dict,
     subdir: str | Path = "esm_run/evaluation",
 ) -> None:  # numpydoc ignore=PR01
-    """Evaluate the curtailment by country and year.
+    """
+    Evaluate the curtailment by country and year.
 
     Curtailment ("Abregelung") is the amount of energy that was not
     dispatched by generators, although it could have been dispatched.

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Evaluate energy prices."""
 
 from pathlib import Path

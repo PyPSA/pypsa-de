@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # SPDX-FileCopyrightText: Contributors to PyPSA-Eur <https://github.com/pypsa/pypsa-eur>
 #
 # SPDX-License-Identifier: MIT
@@ -163,16 +162,16 @@ def distribute_n_clusters_to_countries(
 
     N = n.buses.groupby(["country", "sub_network"]).size()[L.index]
 
-    assert (
-        n_clusters >= len(N) and n_clusters <= N.sum()
-    ), f"Number of clusters must be {len(N)} <= n_clusters <= {N.sum()} for this selection of countries."
+    assert n_clusters >= len(N) and n_clusters <= N.sum(), (
+        f"Number of clusters must be {len(N)} <= n_clusters <= {N.sum()} for this selection of countries."
+    )
 
     if isinstance(focus_weights, dict):
         total_focus = sum(list(focus_weights.values()))
 
-        assert (
-            total_focus <= 1.0
-        ), "The sum of focus weights must be less than or equal to 1."
+        assert total_focus <= 1.0, (
+            "The sum of focus weights must be less than or equal to 1."
+        )
 
         for country, weight in focus_weights.items():
             L[country] = weight / len(L[country])
@@ -184,9 +183,9 @@ def distribute_n_clusters_to_countries(
 
         logger.warning("Using custom focus weights for determining number of clusters.")
 
-    assert np.isclose(
-        L.sum(), 1.0, rtol=1e-3
-    ), f"Country weights L must sum up to 1.0 when distributing clusters. Is {L.sum()}."
+    assert np.isclose(L.sum(), 1.0, rtol=1e-3), (
+        f"Country weights L must sum up to 1.0 when distributing clusters. Is {L.sum()}."
+    )
 
     m = linopy.Model()
     clusters = m.add_variables(

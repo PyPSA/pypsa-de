@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Module for transport sector evaluations."""
 
 from functools import partial
@@ -61,7 +60,8 @@ def eval_transport_total(
     networks: dict,
     subdir: str | Path = "esm_run/evaluation",
 ) -> None:  # numpydoc ignore=PR01
-    """Evaluate the transport demand per country.
+    """
+    Evaluate the transport demand per country.
 
     Writes 2 Excel files and 1 Barchart for the total energy demand
     for transport, and  2 Excel files and 1 GroupedBarchart for
@@ -117,7 +117,8 @@ def eval_transport_sectoral(
     networks: dict,
     subdir: str | Path = "esm_run/evaluation",
 ) -> None:  # numpydoc ignore=PR01
-    """Evaluate transport demand by sector.
+    """
+    Evaluate transport demand by sector.
 
     Writes 2 Excel files and 1 Barchart for the total energy demand
     for transport, and  2 Excel files and 1 GroupedBarchart for
@@ -172,7 +173,8 @@ def eval_transport_sectoral(
 
 
 def _fetch_transport_statistics(networks: dict, result_path: Path) -> list:
-    """Calculate the transport statistics.
+    """
+    Calculate the transport statistics.
 
     Parameters
     ----------

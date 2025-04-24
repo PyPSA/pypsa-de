@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import pandas as pd
 from openpyxl.chart import BarChart, Reference
 from openpyxl.chart.marker import DataPoint
@@ -17,7 +16,8 @@ def export_excel_countries(
     excel_defaults: ExcelConfig,
     view_config: dict,
 ) -> None:
-    """Add one sheet per country to an Excel file.
+    """
+    Add one sheet per country to an Excel file.
 
     The function appends one sheet per location to the workbook of the
     opened writer instance.
@@ -56,7 +56,8 @@ def export_excel_regions_at(
     excel_defaults: ExcelConfig,
     view_config: dict,
 ) -> None:
-    """Write one Excel sheet for Europe, Austria, and Austrian regions.
+    """
+    Write one Excel sheet for Europe, Austria, and Austrian regions.
 
     The function appends one sheet per location to the workbook of the
     opened writer instance.
@@ -129,7 +130,8 @@ def _write_excel_sheet(
     sheet_name: str,
     position: int = -1,
 ) -> None:
-    """Write a data frame to an Excel sheet.
+    """
+    Write a data frame to an Excel sheet.
 
     The input data are written to xlsx and a corresponding diagram
     (currently only stacked bar chart) is included.
@@ -181,7 +183,8 @@ def _write_excel_sheet(
 def _write_categories_sheet(
     mapping: dict, carrier: tuple, writer: ExcelWriter, sheet_name: str
 ) -> None:
-    """Write the mapping to a separate Excel sheet.
+    """
+    Write the mapping to a separate Excel sheet.
 
     This is useful to make the renaming process transparent. The mapping
     sheet will show 2 columns: one for the model names and the other for
@@ -211,7 +214,8 @@ def _write_categories_sheet(
 
 
 def _delete_index_name_row(ws: Worksheet, df: pd.DataFrame, start_row: int) -> None:
-    """Remove the index name row from the Excel sheet.
+    """
+    Remove the index name row from the Excel sheet.
 
     Delete the row in the Excel worksheet based on the number of index
     levels and the starting row.
@@ -229,7 +233,8 @@ def _delete_index_name_row(ws: Worksheet, df: pd.DataFrame, start_row: int) -> N
 
 
 def _move_excel_sheet(writer: ExcelWriter, sheet_name: str, position: int) -> None:
-    """Move an Excel sheet to a given position.
+    """
+    Move an Excel sheet to a given position.
 
     Parameters
     ----------
@@ -260,7 +265,8 @@ def _create_excel_barchart(
     axis_labels: list,
     start_row: int,
 ) -> BarChart:
-    """Create an Excel bar chart object.
+    """
+    Create an Excel bar chart object.
 
     The function support bar chart of two different orientations:
       - categories from column labels, and
@@ -374,7 +380,8 @@ def _create_excel_barchart(
 
 
 def _expand_column_to_fit_content(ws: Worksheet, df: pd.DataFrame, col: int) -> None:
-    """Expand cell columns to improve readability in Excel.
+    """
+    Expand cell columns to improve readability in Excel.
 
     The function expands the column to the larger value of its current
     column width and the largest string in the input data frame index.
