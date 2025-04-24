@@ -75,6 +75,10 @@ rule add_brownfield:
         drop_leap_day=config_provider("enable", "drop_leap_day"),
         carriers=config_provider("electricity", "renewable_carriers"),
         heat_pump_sources=config_provider("sector", "heat_pump_sources"),
+        tes=config_provider("sector", "tes"),
+        dynamic_ptes_capacity=config_provider(
+            "sector", "district_heating", "ptes", "dynamic_capacity"
+        ),
     input:
         unpack(input_profile_tech_brownfield),
         simplify_busmap=resources("busmap_base_s.csv"),
@@ -119,8 +123,9 @@ rule solve_sector_network_myopic:
         custom_extra_functionality=input_custom_extra_functionality,
         energy_year=config_provider("energy", "energy_totals_year"),
     input:
-        network=RESULTS
-        + "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_final.nc",
+        network=resources(
+            "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_final.nc"
+        ),
         co2_totals_name=resources("co2_totals.csv"),
         energy_totals=resources("energy_totals.csv"),
     output:

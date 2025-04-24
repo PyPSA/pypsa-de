@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # SPDX-FileCopyrightText: Contributors to PyPSA-Eur <https://github.com/pypsa/pypsa-eur>
 #
 # SPDX-License-Identifier: MIT
@@ -43,7 +42,7 @@ from central_heating_temperature_approximator import (
     CentralHeatingTemperatureApproximator,
 )
 
-from scripts._helpers import set_scenario_config
+from scripts._helpers import get_snapshots, set_scenario_config
 
 
 def extrapolate_missing_supply_temperatures_by_country(
@@ -239,7 +238,9 @@ if __name__ == "__main__":
 
     # map forward and return temperatures specified on country-level to onshore regions
     regions_onshore = gpd.read_file(snakemake.input.regions_onshore)["name"]
-    snapshots = pd.date_range(freq="h", **snakemake.params.snapshots)
+    snapshots = get_snapshots(
+        snakemake.params.snapshots, snakemake.params.drop_leap_day
+    )
     max_forward_temperature_central_heating_by_node_and_time: xr.DataArray = (
         map_temperature_dict_to_onshore_regions(
             supply_temperature_by_country=max_forward_temperature_investment_year,

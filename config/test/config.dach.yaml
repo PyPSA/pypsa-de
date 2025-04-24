@@ -1,0 +1,57 @@
+# SPDX-FileCopyrightText: Contributors to PyPSA-DE <https://github.com/pypsa/pypsa-eur>
+#
+# SPDX-License-Identifier: CC0-1.0
+
+run:
+  prefix: "test-sector-myopic-dach"
+  name:
+  - KN2045_Bal_v4
+
+scenario:
+  clusters:
+  - 5 #current options: 27, 49
+countries: ['DE', 'AT', 'CH']
+
+snapshots:
+  start: "2013-03-01"
+  end: "2013-03-08"
+
+atlite:
+  default_cutout: dach-03-2013-sarah3-era5
+  cutouts:
+    dach-03-2013-sarah3-era5:
+      module: [sarah, era5] # in priority order
+      x: [5., 18.]
+      y: [45., 56.]
+      time: ["2013-03-01", "2013-03-08"]
+
+renewable:
+  onwind:
+    cutout: dach-03-2013-sarah3-era5
+  offwind-ac:
+    cutout: dach-03-2013-sarah3-era5
+    max_depth: false
+  offwind-dc:
+    cutout: dach-03-2013-sarah3-era5
+    max_depth: false
+  offwind-float:
+    cutout: dach-03-2013-sarah3-era5
+    max_depth: false
+    min_depth: false
+  solar:
+    cutout: dach-03-2013-sarah3-era5
+  solar-hsat:
+    cutout: dach-03-2013-sarah3-era5
+
+clustering:
+  focus_weights: []
+  temporal:
+    resolution_sector: 3H
+
+electricity:
+  renewable_carriers: [solar, solar-hsat, onwind, offwind-ac, offwind-dc] # removed hydro, offwind-float
+
+solving:
+  solver:
+    name: highs
+    options: highs-simplex

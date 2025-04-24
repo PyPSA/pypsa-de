@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # SPDX-FileCopyrightText: Contributors to PyPSA-Eur <https://github.com/pypsa/pypsa-eur>
 #
 # SPDX-License-Identifier: MIT
@@ -17,6 +16,7 @@ import pypsa
 from pypsa.plot import add_legend_circles, add_legend_lines, add_legend_patches
 
 from scripts._helpers import configure_logging, rename_techs, retry, set_scenario_config
+from scripts.make_summary import assign_locations
 from scripts.plot_summary import preferred_order
 
 logger = logging.getLogger(__name__)
@@ -46,19 +46,6 @@ def rename_techs_tyndp(tech):
         return tech
 
 
-def assign_location(n):
-    for c in n.iterate_components(n.one_port_components | n.branch_components):
-        ifind = pd.Series(c.df.index.str.find(" ", start=4), c.df.index)
-        for i in ifind.value_counts().index:
-            # these have already been assigned defaults
-            if i == -1:
-                continue
-            names = ifind.index[ifind == i]
-            c.df.loc[names, "location"] = names.str[:i]
-        if "location" not in c.df.columns:
-            c.df["location"] = None
-
-
 def load_projection(plotting_params):
     proj_kwargs = plotting_params.get("projection", dict(name="EqualEarth"))
     proj_func = getattr(ccrs, proj_kwargs.pop("name"))
@@ -75,7 +62,7 @@ def plot_map(
 ):
     tech_colors = snakemake.params.plotting["tech_colors"]
 
-    assign_location(n)
+    assign_locations(n)
     # Drop non-electric buses so they don't clutter the plot
     n.buses.drop(n.buses.index[n.buses.carrier != "AC"], inplace=True)
 
@@ -256,7 +243,6 @@ if __name__ == "__main__":
             "plot_power_network",
             opts="",
             clusters="37",
-            ll="v1.0",
             sector_opts="4380H-T-H-B-I-A-dist1",
         )
 

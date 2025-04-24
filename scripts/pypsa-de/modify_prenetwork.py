@@ -1,7 +1,4 @@
-# -*- coding: utf-8 -*-
 import logging
-import os
-import sys
 
 import geopandas as gpd
 import numpy as np
@@ -11,7 +8,7 @@ from shapely.geometry import Point
 
 from scripts._helpers import configure_logging, mock_snakemake, sanitize_custom_columns
 from scripts.add_electricity import load_costs
-from scripts.prepare_sector_network import lossy_bidirectional_links, prepare_costs
+from scripts.prepare_sector_network import lossy_bidirectional_links
 
 logger = logging.getLogger(__name__)
 
@@ -187,7 +184,7 @@ def add_wasserstoff_kernnetz(n, wkn, costs):
     # get previous planning horizon
     planning_horizons = snakemake.params.planning_horizons
     i = planning_horizons.index(int(snakemake.wildcards.planning_horizons))
-    previous_investment_year = int(planning_horizons[i - 1]) if i != 0 else 2015
+    previous_investment_year = int(planning_horizons[i - 1]) if i != 0 else 2015  # noqa
 
     # use only pipes added since the previous investment period
     wkn_new = wkn.query(
@@ -611,7 +608,7 @@ def unravel_gasbus(n, costs):
     """
     logger.info("Unraveling gas bus")
 
-    if not "DE" in n.buses:
+    if "DE" not in n.buses:
         n.add("Bus", "DE", location="DE", x=10.5, y=51.2, carrier="none")
 
     ### create DE gas bus/generator/store
@@ -835,8 +832,10 @@ def aladin_mobility_demand(n):
     # get aladin data
     aladin_demand = pd.read_csv(snakemake.input.aladin_demand, index_col=0)
 
+    simulation_period_correction_factor = n.snapshot_weightings.objective.sum() / 8760
+
     # oil demand
-    oil_demand = aladin_demand.Liquids
+    oil_demand = aladin_demand.Liquids * simulation_period_correction_factor
     oil_index = n.loads[
         (n.loads.carrier == "land transport oil") & (n.loads.index.str[:2] == "DE")
     ].index
@@ -849,7 +848,7 @@ def aladin_mobility_demand(n):
     )
 
     # hydrogen demand
-    h2_demand = aladin_demand.Hydrogen
+    h2_demand = aladin_demand.Hydrogen * simulation_period_correction_factor
     h2_index = n.loads[
         (n.loads.carrier == "land transport fuel cell")
         & (n.loads.index.str[:2] == "DE")
@@ -863,7 +862,7 @@ def aladin_mobility_demand(n):
     )
 
     # electricity demand
-    ev_demand = aladin_demand.Electricity
+    ev_demand = aladin_demand.Electricity * simulation_period_correction_factor
     ev_index = n.loads[
         (n.loads.carrier == "land transport EV") & (n.loads.index.str[:2] == "DE")
     ].index
@@ -1042,38 +1041,23 @@ def enforce_transmission_project_build_years(n, current_year):
     n.links.loc[dc_future, "p_nom_max"] = 0.0
 
 
-def force_connection_nep_offshore(n, current_year):
+def force_connection_nep_offshore(n, current_year, costs):
     # WARNING this code adds a new generator for the offwind connection
     # at an onshore locations. These extra capacities are not accounted
     # for in the land use constraint
-
-    # Load costs
-    nep23_costs = (
-        pd.read_csv(
-            snakemake.input.costs_modifications,
-            index_col=0,
+    if not snakemake.config["renewable"]["offwind-dc"]["resource_classes"] == 1:
+        logger.warning(
+            "Number of offshore wind resource classes are not equal to 0. Assigning all offshore wind from NEP to class 0."
         )
-        .query(
-            """
-            source == 'NEP2023' \
-            & technology.str.contains('offwind') \
-            & parameter == 'investment'
-        """
-        )
-        .rename(columns={"value": "investment"})
-    )
-    # kW to MW
-    nep23_costs.at["offwind-ac-station", "investment"] *= 1000
-    nep23_costs.at["offwind-dc-station", "investment"] *= 1000
 
     # Load shapes and projects
     offshore = pd.read_csv(snakemake.input.offshore_connection_points, index_col=0)
 
     if int(snakemake.params.offshore_nep_force["delay_years"]) != 0:
         # Modify 'Inbetriebnahmejahr' by adding the delay years for rows where 'Inbetriebnahmejahr' > 2025
-        offshore.loc[
-            offshore["Inbetriebnahmejahr"] > 2025, "Inbetriebnahmejahr"
-        ] += int(snakemake.params.offshore_nep_force["delay_years"])
+        offshore.loc[offshore["Inbetriebnahmejahr"] > 2025, "Inbetriebnahmejahr"] += (
+            int(snakemake.params.offshore_nep_force["delay_years"])
+        )
         logger.info(
             f"Delaying NEP offshore connection points by {snakemake.params.offshore_nep_force['delay_years']} years."
         )
@@ -1100,7 +1084,7 @@ def force_connection_nep_offshore(n, current_year):
     nordsee_duck_node = regions_offshore.index[
         regions_offshore.contains(Point(6.19628, 54.38543))
     ][0]
-    nordsee_duck_off = f"{nordsee_duck_node} offwind-dc-{current_year}"
+    nordsee_duck_off = f"{nordsee_duck_node} 0 offwind-dc-{current_year}"
 
     dc_projects = goffshore[
         (goffshore.Inbetriebnahmejahr > current_year - 5)
@@ -1113,10 +1097,10 @@ def force_connection_nep_offshore(n, current_year):
     dc_connection_totals = (
         dc_projects["Trassenlänge in km"]
         * (
-            2 / 3 * nep23_costs.at["offwind-dc-connection-submarine", "investment"]
-            + 1 / 3 * nep23_costs.at["offwind-dc-connection-underground", "investment"]
+            2 / 3 * costs.at["offwind-dc-connection-submarine", "investment"]
+            + 1 / 3 * costs.at["offwind-dc-connection-underground", "investment"]
         )
-        + nep23_costs.at["offwind-dc-station", "investment"]
+        + costs.at["offwind-dc-station", "investment"]
     ) * dc_projects["Übertragungsleistung in MW"]
 
     dc_connection_overnight_costs = (
@@ -1129,9 +1113,9 @@ def force_connection_nep_offshore(n, current_year):
         logger.info(f"Forcing in NEP offshore DC projects with capacity:\n {dc_power}")
 
         for node in dc_power.index:
-            node_off = f"{node} offwind-dc-{current_year}"
+            node_off = f"{node} 0 offwind-dc-{current_year}"
 
-            if not node_off in n.generators.index:
+            if node_off not in n.generators.index:
                 logger.info(f"Adding generator {node_off}")
                 n.generators.loc[node_off] = n.generators.loc[nordsee_duck_off]
                 n.generators.at[node_off, "bus"] = node
@@ -1157,7 +1141,7 @@ def force_connection_nep_offshore(n, current_year):
     ]
     for existing in existings:
         node = n.generators.at[existing, "bus"]
-        node_off = f"{node} offwind-dc-{current_year}"
+        node_off = f"{node} 0 offwind-dc-{current_year}"
         if node_off not in n.generators.index:
             logger.info(f"adding for dummy land constraint {node_off}")
             n.generators.loc[node_off] = n.generators.loc[nordsee_duck_off]
@@ -1182,10 +1166,10 @@ def force_connection_nep_offshore(n, current_year):
     ac_connection_totals = (
         ac_projects["Trassenlänge in km"]
         * (
-            2 / 3 * nep23_costs.at["offwind-ac-connection-submarine", "investment"]
-            + 1 / 3 * nep23_costs.at["offwind-ac-connection-underground", "investment"]
+            2 / 3 * costs.at["offwind-ac-connection-submarine", "investment"]
+            + 1 / 3 * costs.at["offwind-ac-connection-underground", "investment"]
         )
-        + nep23_costs.at["offwind-ac-station", "investment"]
+        + costs.at["offwind-ac-station", "investment"]
     ) * ac_projects["Übertragungsleistung in MW"]
 
     ac_connection_overnight_costs = (
@@ -1198,9 +1182,9 @@ def force_connection_nep_offshore(n, current_year):
         logger.info(f"Forcing in NEP offshore AC projects with capacity:\n {ac_power}")
 
         for node in ac_power.index:
-            node_off = f"{node} offwind-ac-{current_year}"
+            node_off = f"{node} 0 offwind-ac-{current_year}"
 
-            if not node_off in n.generators.index:
+            if node_off not in n.generators.index:
                 logger.error(
                     f"Assuming all AC projects are connected at locations where other generators exists. That is not the case for {node_off}. Terminating"
                 )
@@ -1227,7 +1211,8 @@ def scale_capacity(n, scaling):
     """
     Scale the output capacity of energy system links based on predefined scaling limits.
 
-    Parameters:
+    Parameters
+    ----------
     - n: The network/model object representing the energy system.
     - scaling: A dictionary with scaling limits structured as
                {year: {region: {carrier: limit}}}.
@@ -1300,9 +1285,10 @@ if __name__ == "__main__":
     nhours = n.snapshot_weightings.generators.sum()
     nyears = nhours / 8760
 
-    costs = prepare_costs(
+    costs = load_costs(
         snakemake.input.costs,
         snakemake.params.costs,
+        snakemake.params.max_hours,
         nyears,
     )
 
@@ -1329,17 +1315,10 @@ if __name__ == "__main__":
         wkn = pd.read_csv(fn, index_col=0)
         add_wasserstoff_kernnetz(n, wkn, costs)
 
-    costs_loaded = load_costs(
-        snakemake.input.costs,
-        snakemake.params.costs,
-        snakemake.params.max_hours,
-        nyears,
-    )
-
     # change to NEP21 costs
     transmission_costs_from_modified_cost_data(
         n,
-        costs_loaded,
+        costs,
         snakemake.params.transmission_costs,
     )
 
@@ -1362,7 +1341,7 @@ if __name__ == "__main__":
 
     drop_duplicate_transmission_projects(n)
 
-    force_connection_nep_offshore(n, current_year)
+    force_connection_nep_offshore(n, current_year, costs)
 
     scale_capacity(n, snakemake.params.scale_capacity)
 

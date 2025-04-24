@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # SPDX-FileCopyrightText: Contributors to PyPSA-Eur <https://github.com/pypsa/pypsa-eur>
 #
 # SPDX-License-Identifier: MIT
@@ -31,12 +30,11 @@ if __name__ == "__main__":
             configfiles="test/config.electricity.yaml",
             opts="",
             clusters="5",
-            ll="v1.5",
             sector_opts="",
             planning_horizons="",
         )
 
-    configure_logging(snakemake)
+    configure_logging(snakemake)  # pylint: disable=E0606
     set_scenario_config(snakemake)
     update_config_from_wildcards(snakemake.config, snakemake.wildcards)
 

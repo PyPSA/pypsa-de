@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # SPDX-FileCopyrightText: : 2024- The PyPSA-Eur Authors
 #
 # SPDX-License-Identifier: MIT
@@ -14,7 +13,8 @@ Inputs:
 Outputs:
     - resources/updated_district_heat_share.csv: Path to the CSV file where the updated district heating shares will be saved.
 
-Parameters:
+Parameters
+----------
     - sector.district_heating["potential"]: Maximum potential district heating share.
     - sector.district_heating["progress"]: Progress of district heating share over planning horizons.
     - wildcards.planning_horizons: Planning horizon year.
@@ -24,7 +24,6 @@ import logging
 
 import geopandas as gpd
 import pandas as pd
-from shapely.geometry import Point
 
 from scripts._helpers import mock_snakemake
 
@@ -76,9 +75,7 @@ def update_district_heat_share(heat_techs_clustered, dh_shares):
         "Fernwaerme"
     ] / heat_techs_clustered.drop(  # Fernwaerme is the German term for district heating
         "pop", axis=1
-    ).sum(
-        axis=1
-    )
+    ).sum(axis=1)
 
     urban_fraction = dh_shares["urban fraction"]
     max_dh_share = snakemake.params.district_heating["potential"]

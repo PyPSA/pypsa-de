@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import ast
 import logging
 import math
@@ -16,8 +15,7 @@ import pypsa
 from numpy import isclose
 
 from scripts._helpers import configure_logging, mock_snakemake
-from scripts.add_electricity import calculate_annuity
-from scripts.prepare_sector_network import prepare_costs
+from scripts.add_electricity import calculate_annuity, load_costs
 
 logger = logging.getLogger(__name__)
 
@@ -42,12 +40,14 @@ def domestic_length_factor(n, carriers, region="DE"):
     """
     Calculate the length factor for specified carriers within a PyPSA network.
 
-    Parameters:
+    Parameters
+    ----------
     n (pypsa.Network): The PyPSA network object.
     carriers (list or str): List of carrier types to filter, or a single carrier as a string.
     region (str): The region code to match in the buses (e.g., "DE").
 
-    Returns:
+    Returns
+    -------
     float or dict: A single length factor if one carrier is provided; otherwise, a dictionary
                    of length factors for each carrier and component type.
     """
@@ -115,9 +115,7 @@ def _get_fuel_fractions(n, region, fuel):
         n.statistics.supply(bus_carrier=f"renewable {fuel}", **kwargs)
         .groupby(["bus", "carrier"])
         .sum()
-    ).round(
-        3
-    )  # rounding for numerical stability
+    ).round(3)  # rounding for numerical stability
 
     total_fuel_supply = (
         n.statistics.supply(bus_carrier=f"{fuel}", **kwargs)
@@ -261,7 +259,7 @@ def _get_h2_fossil_fraction(n):
 
 
 def _get_t_sum(df, df_t, carrier, region, snapshot_weightings, port):
-    if type(carrier) == list:
+    if isinstance(carrier, list):
         return sum(
             [
                 _get_t_sum(df, df_t, car, region, snapshot_weightings, port)
@@ -292,7 +290,7 @@ def sum_load(n, carrier, region):
 
 
 def sum_co2(n, carrier, region):
-    if type(carrier) == list:
+    if isinstance(carrier, list):
         return sum([sum_co2(n, car, region) for car in carrier])
     try:
         port = (
@@ -348,7 +346,6 @@ def get_capacities(n, region):
 
 
 def add_system_cost_rows(n):
-
     def fill_if_lifetime_inf(n, carrier, lifetime, component="links"):
         df = getattr(n, component)
         if df.loc[df.carrier == carrier, "lifetime"].sum() == np.inf:
@@ -386,7 +383,8 @@ def add_system_cost_rows(n):
 
     for component in ["lines", "links", "generators", "stores", "storage_units"]:
         df = getattr(n, component)
-
+        if df.empty:
+            continue
         decentral_idx = df.index[df.index.str.contains("decentral|rural|rooftop")]
         not_decentral_idx = df.index[~df.index.str.contains("decentral|rural|rooftop")]
 
@@ -423,7 +421,6 @@ def add_system_cost_rows(n):
 
 
 def get_system_cost(n, region):
-
     add_system_cost_rows(n)
 
     invest = _get_capacities(
@@ -1546,9 +1543,12 @@ def get_secondary_energy(n, region, _industry_demand):
         + var["Secondary Energy|Electricity|Biomass|w/ CCS"]
     )
 
-    var["Secondary Energy|Electricity|Hydro"] = electricity_supply.get(
-        "hydro"
-    ) + electricity_supply.get("ror")
+    var["Secondary Energy|Electricity|Hydro"] = electricity_supply.reindex(
+        [
+            "hydro",
+            "ror",
+        ]
+    ).sum()
     # ! Neglecting PHS here because it is storage infrastructure
 
     var["Secondary Energy|Electricity|Nuclear"] = electricity_supply.filter(
@@ -1651,7 +1651,7 @@ def get_secondary_energy(n, region, _industry_demand):
     assert isclose(
         electricity_supply[
             ~electricity_supply.index.str.contains(
-                "PHS" "|battery discharger" "|home battery discharger" "|V2G"
+                "PHS|battery discharger|home battery discharger|V2G"
             )
         ].sum(),
         var["Secondary Energy|Electricity"],
@@ -2043,7 +2043,7 @@ def get_final_energy(
 
     for gas_type in gas_fractions.index:
         var[f"Final Energy|Industry excl Non-Energy Use|Gases|{gas_type}"] = (
-            var[f"Final Energy|Industry excl Non-Energy Use|Gases"]
+            var["Final Energy|Industry excl Non-Energy Use|Gases"]
             * gas_fractions[gas_type]
         )
 
@@ -2383,7 +2383,7 @@ def get_final_energy(
 
     var["Final Energy|Bunkers|Aviation"] = var[
         "Final Energy|Bunkers|Aviation|Liquids"
-    ] = (sum_load(n, "kerosene for aviation", region) * international_aviation_fraction)
+    ] = sum_load(n, "kerosene for aviation", region) * international_aviation_fraction
 
     for var_key, fraction_key in zip(
         ["Biomass", "Petroleum", "Efuel"], oil_fractions.index
@@ -2878,7 +2878,7 @@ def get_emissions(n, region, _energy_totals, industry_demand):
     # E and Biofuels with CC
     var["Carbon Sequestration|Other"] = co2_storage.mul(ccs_fraction)[
         ~co2_storage.index.str.contains("bio|process")
-    ].sum() + co2_storage.mul(ccs_fraction).get("process emissions CC") * (
+    ].sum() + co2_storage.mul(ccs_fraction).get("process emissions CC", 0) * (
         1 - pe_fossil_fraction
     )
 
@@ -3113,13 +3113,15 @@ def get_nodal_flows(n, bus_carrier, region, query="index == index or index != in
     """
     Get the nodal flows for a given bus carrier and region.
 
-    Parameters:
+    Parameters
+    ----------
         n (pypsa.Network): The PyPSA network object.
         bus_carrier (str): The bus carrier for which to retrieve the nodal flows.
         region (str): The region for which to retrieve the nodal flows.
         query (str, optional): A query string to filter the nodal flows. Defaults to 'index == index or index != index'.
 
-    Returns:
+    Returns
+    -------
         pandas.DataFrame: The nodal flows for the specified bus carrier and region.
     """
 
@@ -3147,13 +3149,15 @@ def get_nodal_supply(n, bus_carrier, query="index == index or index != index"):
     """
     Get the nodal flows for a given bus carrier and region.
 
-    Parameters:
+    Parameters
+    ----------
         n (pypsa.Network): The PyPSA network object.
         bus_carrier (str): The bus carrier for which to retrieve the nodal flows.
         region (str): The region for which to retrieve the nodal flows.
         query (str, optional): A query string to filter the nodal flows. Defaults to 'index == index or index != index'.
 
-    Returns:
+    Returns
+    -------
         pandas.DataFrame: The nodal flows for the specified bus carrier and region.
     """
 
@@ -3178,12 +3182,14 @@ def price_load(n, load_carrier, region):
     """
     Calculate the average price of a specific load carrier in a given region.
 
-    Parameters:
+    Parameters
+    ----------
     - n (pandas.DataFrame): The network model.
     - load_carrier (str): The load carrier to calculate the price for.
     - region (str): The region to calculate the price in.
 
-    Returns:
+    Returns
+    -------
     - tuple: A tuple containing the average price and the total load of the specified load carrier in the region.
     """
 
@@ -3204,12 +3210,14 @@ def costs_gen_generators(n, region, carrier):
     Calculate the cost per unit of generated energy of a generators in a given
     region.
 
-    Parameters:
+    Parameters
+    ----------
     - n (pandas.DataFrame): The network model.
     - region (str): The region to consider.
     - carrier (str): The carrier of the generators.
 
-    Returns:
+    Returns
+    -------
     - tuple: A tuple containing cost and total generation of the generators.
     """
 
@@ -3238,13 +3246,15 @@ def costs_gen_links(n, region, carrier, gen_bus="p1"):
     """
     Calculate the cost per unit of generated energy from a specific link.
 
-    Parameters:
+    Parameters
+    ----------
         n (pypsa.Network): The PyPSA network object.
         region (str): The region to consider for the links.
         carrier (str): The carrier of the links.
         gen_bus (str, optional): The bus where the main generation of the link takes place. Defaults to "p1".
 
-    Returns:
+    Returns
+    -------
         tuple: A tuple containing the costs per unit of generetad energy and the total generation of the specified generator bus.
     """
 
@@ -3332,11 +3342,13 @@ def get_prices(n, region):
     """
     Calculate the prices of various energy sources in the Ariadne model.
 
-    Parameters:
+    Parameters
+    ----------
     - n (PyPSa network): The Ariadne model scenario output.
     - region (str): The region for which the prices are calculated.
 
-    Returns:
+    Returns
+    -------
     - var (pandas.Series): A series containing the calculated prices.
 
     This function calculates the prices of different energy sources in the Ariadne model
@@ -3350,10 +3362,6 @@ def get_prices(n, region):
 
     var = pd.Series()
 
-    kwargs = {
-        "groupby": ["name", "bus", "carrier"],
-        "nice_names": False,
-    }
     try:
         co2_limit_de = n.global_constraints.loc["co2_limit-DE", "mu"]
     except KeyError:
@@ -3963,7 +3971,7 @@ def get_grid_investments(
         & (n.links.bus0 + n.links.bus1).str.contains(region)
         & ~n.links.reversed
     ]
-    current_year = n.generators.build_year.max()
+    current_year = n.generators.build_year.max()  # noqa
     nep_dc = dc_links.query(
         "(index.str.startswith('DC') or index.str.startswith('TYNDP')) and build_year > 2025 and (@current_year - 5 < build_year <= @current_year)"
     ).index
@@ -4118,7 +4126,7 @@ def get_grid_investments(
 
     var["Investment|Energy Supply|Hydrogen|Transmission and Distribution"] = var[
         "Investment|Energy Supply|Hydrogen|Transmission"
-    ] = (h2_investments.sum() / 5)
+    ] = h2_investments.sum() / 5
 
     new_h2_links_kernnetz_i = new_h2_links[
         (new_h2_links.index.str.contains("kernnetz"))
@@ -4160,7 +4168,7 @@ def get_grid_investments(
     )
     var[
         "Investment|Energy Supply|Hydrogen|Transmission and Distribution|Retrofitted"
-    ] = (h2_investments[new_h2_links_retrofitted_i].sum() / 5)
+    ] = h2_investments[new_h2_links_retrofitted_i].sum() / 5
 
     assert isclose(
         var["Investment|Energy Supply|Hydrogen|Transmission and Distribution"],
@@ -4243,13 +4251,13 @@ def get_grid_investments(
 
     var[
         "Investment|Energy Supply|Hydrogen|Transmission and Distribution|Kernnetz|PCI"
-    ] = (h2_investments[pci_i].sum() / 5)
+    ] = h2_investments[pci_i].sum() / 5
     var[
         "Investment|Energy Supply|Hydrogen|Transmission and Distribution|Kernnetz|IPCEI"
-    ] = (h2_investments[ipcei_i].sum() / 5)
+    ] = h2_investments[ipcei_i].sum() / 5
     var[
         "Investment|Energy Supply|Hydrogen|Transmission and Distribution|Kernnetz|PCI+IPCEI"
-    ] = (h2_investments[pci_i.union(ipcei_i)].sum() / 5)
+    ] = h2_investments[pci_i.union(ipcei_i)].sum() / 5
     var[
         "Investment|Energy Supply|Hydrogen|Transmission and Distribution|Kernnetz|NOT-PCI+IPCEI"
     ] = (
@@ -4609,8 +4617,11 @@ def get_trade(n, region):
     var["Trade|Primary Energy|Biomass|Volume"] = biomass_net_exports
 
     logger.info(
-        f"""Share of imported biomass: {round(
-        -biomass_net_exports / (biomass_potential_DE + biomass_net_exports), 3)}"""
+        f"""Share of imported biomass: {
+            round(
+                -biomass_net_exports / (biomass_potential_DE + biomass_net_exports), 3
+            )
+        }"""
     )
 
     return var
@@ -4626,9 +4637,7 @@ def get_production(region, year):
     index = next((idx for idx, y in enumerate(years) if y == year), None)
     production = pd.read_csv(
         snakemake.input.industrial_production_per_country_tomorrow[index], index_col=0
-    ).div(
-        1e3
-    )  # kton/a -> Mton/a
+    ).div(1e3)  # kton/a -> Mton/a
 
     var["Production|Non-Metallic Minerals|Cement"] = production.loc[region, "Cement"]
     var["Production|Steel"] = production.loc[
@@ -4658,9 +4667,10 @@ def get_operational_and_capital_costs(year):
     """
     var = pd.Series()
     ind = planning_horizons.index(year)
-    costs = prepare_costs(
+    costs = load_costs(
         snakemake.input.costs[ind],
         snakemake.params.costs,
+        snakemake.params.max_hours,
         nyears=1,
     )
 
@@ -4714,12 +4724,8 @@ def get_operational_and_capital_costs(year):
         "waste CHP CC": "waste CHP CC",
         # Heat capacities
         # TODO Check the units of the investments
-        "DAC": "direct air capture",
         "Fischer-Tropsch": None,  #'Fischer-Tropsch' * "efficiency" ,
-        "H2 Electrolysis": "electrolysis",
-        "H2 Fuel Cell": "fuel cell",
         "Sabatier": "methanation",
-        "methanolisation": "methanolisation",
         # 'urban central air heat pump': 'central air-sourced heat pump',
         # 'urban central coal CHP': 'central coal CHP',
         # 'urban central gas CHP': 'central gas CHP',
@@ -4740,14 +4746,12 @@ def get_operational_and_capital_costs(year):
         "rural gas boiler": "decentral gas boiler",
         #'rural ground heat pump': None,
         "rural oil boiler": "decentral oil boiler",
-        "rural resistive heater": "decentral resistive heater",
         "rural water tanks charger": "water tank charger",
         "rural water tanks discharger": "water tank discharger",
         #'urban decentral air heat pump': None,
         "urban decentral biomass boiler": "biomass boiler",
         "urban decentral gas boiler": "decentral gas boiler",
         "urban decentral oil boiler": "decentral oil boiler",
-        "urban decentral resistive heater": "decentral resistive heater",
         "urban decentral water tanks charger": "water tank charger",
         "urban decentral water tanks discharger": "water tank discharger",
         # Other capacities
@@ -4893,7 +4897,7 @@ def get_grid_capacity(n, region, year):
     ] *= 0.5
 
     # NEP subsets
-    current_year = n.generators.build_year.max()
+    current_year = n.generators.build_year.max()  # noqa
     nep_dc = dc_links.query(
         "(index.str.startswith('DC') or index.str.startswith('TYNDP')) and build_year > 2025 and (@current_year - 5 < build_year <= @current_year)"
     ).index
@@ -5047,7 +5051,9 @@ def get_grid_capacity(n, region, year):
         var["Capacity|Hydrogen|Transmission"],
         var["Capacity|Hydrogen|Transmission|Kernnetz"]
         + var["Capacity|Hydrogen|Transmission|Endogenous"],
-    ), "Hydrogen transmission capacity is not correctly split into Kernnetz and Endogenous"
+    ), (
+        "Hydrogen transmission capacity is not correctly split into Kernnetz and Endogenous"
+    )
 
     year = h2_links.build_year.max()
     new_h2_links = h2_links[
@@ -5074,7 +5080,9 @@ def get_grid_capacity(n, region, year):
         var["Capacity Additions|Hydrogen|Transmission"],
         var["Capacity Additions|Hydrogen|Transmission|Kernnetz"]
         + var["Capacity Additions|Hydrogen|Transmission|Endogenous"],
-    ), "Hydrogen transmission capacity additions are not correctly split into Kernnetz and Endogenous"
+    ), (
+        "Hydrogen transmission capacity additions are not correctly split into Kernnetz and Endogenous"
+    )
 
     # TODO: add length additions
 
@@ -5084,7 +5092,7 @@ def get_grid_capacity(n, region, year):
 def hack_DC_projects(n, p_nom_start, p_nom_planned, model_year, snakemake, costs):
     logger.info(f"Hacking DC projects for year {model_year}")
 
-    logger.info(f"Assuming all indices of DC projects start with 'DC' or 'TYNDP'")
+    logger.info("Assuming all indices of DC projects start with 'DC' or 'TYNDP'")
     tprojs = n.links.loc[
         (n.links.index.str.startswith("DC") | n.links.index.str.startswith("TYNDP"))
         & ~n.links.reversed
@@ -5220,11 +5228,14 @@ def process_postnetworks(n, n_start, model_year, snakemake, costs):
     n.links.loc[h2_links_kern, "overnight_cost"] = overnight_costs
 
     logger.info("Post-Discretizing DC links")
-    _dc_lambda = lambda x: get_discretized_value(
-        x,
-        post_discretization["link_unit_size"]["DC"],
-        post_discretization["link_threshold"]["DC"],
-    )
+
+    def _dc_lambda(x):
+        return get_discretized_value(
+            x,
+            post_discretization["link_unit_size"]["DC"],
+            post_discretization["link_threshold"]["DC"],
+        )
+
     dc_links = n.links.query("carrier == 'DC'").index
     for attr in ["p_nom_opt", "p_nom", "p_nom_min"]:
         # The values  in p_nom_opt may already be discretized, here we make sure that
@@ -5235,11 +5246,14 @@ def process_postnetworks(n, n_start, model_year, snakemake, costs):
     p_nom_start = n_start.links.loc[dc_links, "p_nom"].apply(_dc_lambda)
 
     logger.info("Post-Discretizing AC lines")
-    _ac_lambda = lambda x: get_discretized_value(
-        x,
-        post_discretization["line_unit_size"],
-        post_discretization["line_threshold"],
-    )
+
+    def _ac_lambda(x):
+        return get_discretized_value(
+            x,
+            post_discretization["line_unit_size"],
+            post_discretization["line_threshold"],
+        )
+
     for attr in ["s_nom_opt", "s_nom", "s_nom_min"]:
         # The values  in s_nom_opt may already be discretized, here we make sure that
         # the same logic is applied to s_nom and s_nom_min
@@ -5457,13 +5471,12 @@ if __name__ == "__main__":
 
     costs = list(
         map(
-            lambda _costs: prepare_costs(
+            lambda _costs: load_costs(
                 _costs,
                 snakemake.params.costs,
+                snakemake.params.max_hours,
                 nyears,
-            ).multiply(
-                1e-9
-            ),  # in bn €
+            ).multiply(1e-9),  # in bn €
             snakemake.input.costs,
         )
     )
@@ -5495,7 +5508,7 @@ if __name__ == "__main__":
 
     yearly_dfs = []
     for i, year in enumerate(planning_horizons):
-        print("Getting data for year {year}...".format(year=year))
+        print(f"Getting data for year {year}...")
         yearly_dfs.append(
             get_data(
                 networks[i],

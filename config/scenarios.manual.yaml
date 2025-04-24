@@ -34,21 +34,13 @@ CurrentPolicies:
           onwind:
             DE:
               2030: 86.5   # 75 % Wind-an-Land Law
-              2035: 86.5
-              2040: 86.5
-              2045: 86.5
           offwind:
             DE:
               2030: 17.3
               2035: 29.3
-              2040: 29.3
-              2045: 29.3
           solar:
             DE:
               2030: 161.25   # 75 % PV strategy
-              2035: 161.25
-              2040: 161.25
-              2045: 161.25
       # boundary condition of maximum volumes
       limits_capacity_max:
         Generator:
@@ -64,52 +56,6 @@ CurrentPolicies:
           solar:
             DE:
               2030: 215 # uba Projektionsbericht
-      limits_volume_max:
-        # constrain electricity import in TWh
-        electricity_import:
-          DE:
-            2020: -20
-            2025: 0
-            2030: 0
-            2035: 40
-            2040: 80
-            2045: 125
-        electrolysis:
-        # boundary condition lower?
-          DE:
-            2020: 0
-            2025: 5
-            2030: 45
-            2035: 130
-            2040: 215
-            2045: 300
-        h2_derivate_import:
-        # boundary condition lower?
-          DE:
-            2020: 0
-            2025: 0
-            2030: 10
-            2035: 105
-            2040: 200
-            2045: 300
-        h2_import:
-        # boundary condition lower?
-          DE:
-            2020: 0
-            2025: 5
-            2030: 15
-            2035: 115
-            2040: 220
-            2045: 325
-      limits_volume_min:
-        electrolysis:
-          DE:
-            2020: 0
-            2025: 0
-            2030: 0
-            2035: 0
-            2040: 0
-            2045: 0
 
   industry:
     steam_biomass_fraction: 0.4
@@ -144,50 +90,6 @@ KN2045_Bal_v4:
     transmission: "overhead" # either overhead line ("overhead") or underground cable ("underground")
   solving:
     constraints:
-      # boundary condition of maximum volumes
-      limits_volume_max:
-        # constrain electricity import in TWh
-        electricity_import:
-          DE:
-            2020: -20
-            2025: 0
-            2030: 0
-            2035: 40
-            2040: 80
-            2045: 125
-        electrolysis:
-          DE:
-            2020: 0
-            2025: 5
-            2030: 45
-            2035: 130
-            2040: 215
-            2045: 300
-        h2_derivate_import:
-          DE:
-            2020: 0
-            2025: 0
-            2030: 10
-            2035: 105
-            2040: 200
-            2045: 300
-        h2_import:
-          DE:
-            2020: 0
-            2025: 5
-            2030: 15
-            2035: 115
-            2040: 220
-            2045: 325
-      limits_volume_min:
-        electrolysis:
-          DE:
-            2020: 0
-            2025: 0
-            2030: 0
-            2035: 0
-            2040: 0
-            2045: 0
       limits_capacity_min:
         Link:
           H2 Electrolysis:
@@ -226,6 +128,7 @@ KN2045_Elec_v4:
             2035: 50
             2040: 100
             2045: 150
+            2050: 150
         electrolysis:
           DE:
             2020: 0
@@ -234,6 +137,7 @@ KN2045_Elec_v4:
             2035: 95
             2040: 145
             2045: 200
+            2050: 200
         h2_derivate_import:
           DE:
             2020: 0
@@ -242,6 +146,7 @@ KN2045_Elec_v4:
             2035: 70
             2040: 130
             2045: 200
+            2050: 200
         h2_import:
           DE:
             2020: 0
@@ -250,15 +155,7 @@ KN2045_Elec_v4:
             2035: 90
             2040: 170
             2045: 250
-      limits_volume_min:
-        electrolysis:
-          DE:
-            2020: 0
-            2025: 0
-            2030: 0
-            2035: 0
-            2040: 0
-            2045: 0
+            2050: 250
       limits_capacity_min:
         Link:
           H2 Electrolysis:
@@ -297,6 +194,7 @@ KN2045_H2_v4:
             2035: 30
             2040: 70
             2045: 100 # scenario guidelines
+            2050: 100
 
         # constrain hydrogen import in TWh
         h2_import:
@@ -307,6 +205,7 @@ KN2045_H2_v4:
             2035: 155
             2040: 265
             2045: 400 # scenario guidelines
+            2050: 400
         # import of h2 derivatives in TWh
         h2_derivate_import:
           DE:
@@ -316,6 +215,7 @@ KN2045_H2_v4:
             2035: 140
             2040: 270
             2045: 400 # scenario guidelines
+            2050: 400
         electrolysis:
           DE:
             2020: 0
@@ -324,6 +224,7 @@ KN2045_H2_v4:
             2035: 160
             2040: 275
             2045: 400 # scenario guidelines
+            2050: 400
 
       limits_volume_min:
         electrolysis:
@@ -333,6 +234,7 @@ KN2045_H2_v4:
             2035: 0
             2040: 0
             2045: 200
+            2050: 200
       limits_capacity_min:
         Link:
           H2 Electrolysis:
@@ -363,31 +265,6 @@ KN2045plus_EasyRide:
     constraints:
       # boundary condition of maximum volumes
       limits_volume_max: # following the Bal scenario
-        # constrain electricity import in TWh
-        electricity_import:
-          DE:
-            2020: -20
-            2025: 0
-            2030: 0
-            2035: 40
-            2040: 80
-            2045: 125
-        electrolysis:
-          DE:
-            2020: 0
-            2025: 5
-            2030: 45
-            2035: 130
-            2040: 215
-            2045: 300
-        h2_derivate_import:
-          DE:
-            2020: 0
-            2025: 0
-            2030: 10
-            2035: 105
-            2040: 200
-            2045: 300
         h2_import:
           DE:
             2020: 0
@@ -396,15 +273,7 @@ KN2045plus_EasyRide:
             2035: 115
             2040: 220
             2045: 325
-      limits_volume_min:
-        electrolysis:
-          DE:
-            2020: 0
-            2025: 0
-            2030: 0
-            2035: 0
-            2040: 0
-            2045: 0
+            2050: 325
       limits_capacity_min:
         Link:
           H2 Electrolysis:
@@ -423,6 +292,7 @@ KN2045plus_EasyRide:
       2035: 0.25
       2040: 0.34
       2045: 0.43
+      2050: 0.50
 
 KN2045plus_LowDemand:
 # Im Vergleich zu Easy Ride eher knappe EE Erzeugung
@@ -449,6 +319,7 @@ KN2045plus_LowDemand:
             2035: 20
             2040: 40
             2045: 62.5
+            2050: 62.5
         electrolysis:
           DE:
             2020: 0
@@ -457,6 +328,7 @@ KN2045plus_LowDemand:
             2035: 65
             2040: 107.5
             2045: 150
+            2050: 150
         h2_derivate_import:
           DE:
             2020: 0
@@ -465,6 +337,7 @@ KN2045plus_LowDemand:
             2035: 52.5
             2040: 100
             2045: 150
+            2050: 150
         h2_import:
           DE:
             2020: 0
@@ -473,15 +346,7 @@ KN2045plus_LowDemand:
             2035: 57.5
             2040: 110
             2045: 162.5
-      limits_volume_min:
-        electrolysis:
-          DE:
-            2020: 0
-            2025: 0
-            2030: 0
-            2035: 0
-            2040: 0
-            2045: 0
+            2050: 162.5
       limits_capacity_min:
         Link:
           H2 Electrolysis:
@@ -500,6 +365,7 @@ KN2045plus_LowDemand:
       2035: 0.25
       2040: 0.34
       2045: 0.43
+      2050: 0.50
 
 KN2045minus_WorstCase:
 # Nachfrage nach Endenergie ist höher als in den Szenarien 1-3
@@ -539,6 +405,7 @@ KN2045minus_WorstCase:
             2035: 20
             2040: 40
             2045: 62.5
+            2050: 62.5
         electrolysis:
           DE:
             2020: 0
@@ -547,6 +414,7 @@ KN2045minus_WorstCase:
             2035: 65
             2040: 107.5
             2045: 150
+            2050: 150
         h2_derivate_import:
           DE:
             2020: 0
@@ -555,6 +423,7 @@ KN2045minus_WorstCase:
             2035: 52.5
             2040: 100
             2045: 150
+            2050: 150
         h2_import:
           DE:
             2020: 0
@@ -563,35 +432,19 @@ KN2045minus_WorstCase:
             2035: 57.5
             2040: 110
             2045: 162.5
-      limits_volume_min:
-        electrolysis:
-          DE:
-            2020: 0
-            2025: 0
-            2030: 0
-            2035: 0
-            2040: 0
-            2045: 0
+            2050: 162.5
       limits_capacity_min:
         Generator:
           onwind:
             DE:
               2030: 86.5   # 75 % Wind-an-Land Law
-              2035: 86.5
-              2040: 86.5
-              2045: 86.5
           offwind:
             DE:
               2030: 17.3   # 75 % Wind-auf-See Law
               2035: 29.3
-              2040: 29.3
-              2045: 29.3
           solar:
             DE:
               2030: 161.25   # 75 % PV strategy
-              2035: 161.25
-              2040: 161.25
-              2045: 161.25
         Link:
           H2 Electrolysis:
             DE:
@@ -625,6 +478,7 @@ KN2045minus_WorstCase:
       2035: 0.18
       2040: 0.24
       2045: 0.29
+      2050: 0.33
   offshore_nep_force:
     cutin_year: 2025
     cutout_year: 2035 # Hackily reduced to 2030 if delay_years: 1
@@ -656,31 +510,6 @@ KN2045minus_SupplyFocus:
     constraints:
       # boundary condition of maximum volumes
       limits_volume_max: # following the Bal scenario
-        # constrain electricity import in TWh
-        electricity_import:
-          DE:
-            2020: -20
-            2025: 0
-            2030: 0
-            2035: 40
-            2040: 80
-            2045: 125
-        electrolysis:
-          DE:
-            2020: 0
-            2025: 5
-            2030: 45
-            2035: 130
-            2040: 215
-            2045: 300
-        h2_derivate_import:
-          DE:
-            2020: 0
-            2025: 0
-            2030: 10
-            2035: 105
-            2040: 200
-            2045: 300
         h2_import:
           DE:
             2020: 0
@@ -689,30 +518,16 @@ KN2045minus_SupplyFocus:
             2035: 115
             2040: 220
             2045: 325
-      limits_volume_min:
-        electrolysis:
-          DE:
-            2020: 0
-            2025: 0
-            2030: 0
-            2035: 0
-            2040: 0
-            2045: 0
+            2050: 325
       limits_capacity_min:
         Generator:
           onwind:
             DE:
               2030: 115 # Wind-an-Land Law
-              2035: 115 # not forcing more EE
-              2040: 115
-              2045: 115
           solar:
             DE:
               2025: 101
               2030: 215 # PV strategy
-              2035: 215 # not forcing more EE
-              2040: 215
-              2045: 215
         Link:
           H2 Electrolysis:
             DE:
@@ -734,6 +549,7 @@ KN2045minus_SupplyFocus:
       2035: 0.18
       2040: 0.24
       2045: 0.29
+      2050: 0.33
 
 KN2045_Bal_LowDemand:
 # Ausgewogener Mix an Technologien zur Dekarbonisierung der Sektoren
@@ -755,31 +571,6 @@ KN2045_Bal_LowDemand:
     constraints:
       # boundary condition of maximum volumes
       limits_volume_max:
-        # constrain electricity import in TWh
-        electricity_import:
-          DE:
-            2020: -20
-            2025: 0
-            2030: 0
-            2035: 40
-            2040: 80
-            2045: 125
-        electrolysis:
-          DE:
-            2020: 0
-            2025: 5
-            2030: 45
-            2035: 130
-            2040: 215
-            2045: 300
-        h2_derivate_import:
-          DE:
-            2020: 0
-            2025: 0
-            2030: 10
-            2035: 105
-            2040: 200
-            2045: 300
         h2_import:
           DE:
             2020: 0
@@ -788,15 +579,7 @@ KN2045_Bal_LowDemand:
             2035: 115
             2040: 220
             2045: 325
-      limits_volume_min:
-        electrolysis:
-          DE:
-            2020: 0
-            2025: 0
-            2030: 0
-            2035: 0
-            2040: 0
-            2045: 0
+            2050: 325
       limits_capacity_min:
         Link:
           H2 Electrolysis:
@@ -815,6 +598,7 @@ KN2045_Bal_LowDemand:
       2035: 0.25
       2040: 0.34
       2045: 0.43
+      2050: 0.50
 
 KN2045_Bal_HighDemand:
 # Ausgewogener Mix an Technologien zur Dekarbonisierung der Sektoren
@@ -836,31 +620,6 @@ KN2045_Bal_HighDemand:
     constraints:
       # boundary condition of maximum volumes
       limits_volume_max:
-        # constrain electricity import in TWh
-        electricity_import:
-          DE:
-            2020: -20
-            2025: 0
-            2030: 0
-            2035: 40
-            2040: 80
-            2045: 125
-        electrolysis:
-          DE:
-            2020: 0
-            2025: 5
-            2030: 45
-            2035: 130
-            2040: 215
-            2045: 300
-        h2_derivate_import:
-          DE:
-            2020: 0
-            2025: 0
-            2030: 10
-            2035: 105
-            2040: 200
-            2045: 300
         h2_import:
           DE:
             2020: 0
@@ -869,15 +628,7 @@ KN2045_Bal_HighDemand:
             2035: 115
             2040: 220
             2045: 325
-      limits_volume_min:
-        electrolysis:
-          DE:
-            2020: 0
-            2025: 0
-            2030: 0
-            2035: 0
-            2040: 0
-            2045: 0
+            2050: 325
       limits_capacity_min:
         Link:
           H2 Electrolysis:
@@ -896,3 +647,4 @@ KN2045_Bal_HighDemand:
       2035: 0.18
       2040: 0.24
       2045: 0.29
+      2050: 0.33
