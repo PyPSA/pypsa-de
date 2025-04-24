@@ -4,18 +4,9 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20250414_merge_master_april
+  prefix: v2025.01
   name:
-  # - CurrentPolicies
   - KN2045_Bal_v4
-  # - KN2045_Elec_v4
-  # - KN2045_H2_v4
-  # - KN2045plus_EasyRide
-  # - KN2045plus_LowDemand
-  # - KN2045minus_WorstCase
-  # - KN2045minus_SupplyFocus
-  # - KN2045_Bal_LowDemand
-  # - KN2045_Bal_HighDemand
   scenarios:
     enable: true
     manual_file: config/scenarios.manual.yaml
@@ -59,7 +50,7 @@ scenario:
   ll:
   - vopt
   clusters:
-  - 27 #current options: 27, 49
+  - adm
   opts:
   - ''
   sector_opts:
@@ -77,28 +68,10 @@ existing_capacities:
   grouping_years_power: [1920, 1950, 1955, 1960, 1965, 1970, 1975, 1980, 1985, 1990, 1995, 2000, 2005, 2010, 2015, 2020]
   grouping_years_heat: [1980, 1985, 1990, 1995, 2000, 2005, 2010, 2015, 2019] # heat grouping years >= baseyear will be ignored
 
-
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#countries
-# Germany plus 12 "Stromnachbarn"
-countries: ['AT', 'BE', 'CH', 'CZ', 'DE', 'DK', 'FR', 'GB', 'LU', 'NL', 'NO', 'PL', 'SE', 'ES', 'IT']
-
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#snapshots
-snapshots:
-  start: "2019-01-01"
-  end: "2020-01-01"
-  inclusive: 'left'
-
-atlite:
-  default_cutout: europe-2019-sarah3-era5
-  cutouts:
-    europe-2019-sarah3-era5:
-      module: [sarah, era5] # in priority order
-      x: [-12., 42.]
-      y: [33., 72]
-      dx: 0.3
-      dy: 0.3
-      time: ['2019', '2019']
-
+# from pypsa-eur default config:
+# countries
+# snapshots
+# atlite cutouts
 
 renewable:
   onwind:
@@ -191,47 +164,16 @@ lines:
     cutout: europe-2019-sarah3-era5
 
 clustering:
-  # simplify_network:
-  #   to_substations: true
-  # Code snippet for editing focus_weights
-  # fw = pd.Series(snakemake.config["clustering"]["focus_weights"])
-  # fw = fw.div(fw.min()).round()
-  # fw["ES"] = 1
-  # print(fw.div(fw.sum()).subtract(5e-5).round(4).to_dict().__repr__().replace(",","\n"))
-  focus_weights:
-  # 27 nodes: 8 for Germany, 3 for Italy, 2 each for Denmark, UK and Spain, 1 per each of other 10 "Stromnachbarn"
-    'DE': 0.2966
-    'AT': 0.0370
-    'BE': 0.0370
-    'CH': 0.0370
-    'CZ': 0.0370
-    'DK': 0.0741
-    'FR': 0.0370
-    'GB': 0.0741
-    'LU': 0.0370
-    'NL': 0.0370
-    'NO': 0.0370
-    'PL': 0.0370
-    'SE': 0.0370
-    'ES': 0.0741
-    'IT': 0.1111
-  # high spatial resolution: change clusters to 49
-  # 49 nodes: 30 for Germany, 3 for Italy, 2 each for Denmark, UK and Spain, 1 per each of other 10 "Stromnachbarn"
-    # 'DE': 0.6124
-    # 'AT': 0.0204
-    # 'BE': 0.0204
-    # 'CH': 0.0204
-    # 'CZ': 0.0204
-    # 'DK': 0.0408
-    # 'FR': 0.0204
-    # 'GB': 0.0408
-    # 'LU': 0.0204
-    # 'NL': 0.0204
-    # 'NO': 0.0204
-    # 'PL': 0.0204
-    # 'SE': 0.0204
-    # 'ES': 0.0408
-    # 'IT': 0.0612
+  mode: administrative
+  administrative:
+    level: 0 # countries
+    AT: 2 # + 8 regions
+    DE: 1 # + 15 regions
+    DK: 1 # +1 islands
+    GB: 1 # +1 North Ireland
+    FR: 1 # +1 islands
+    IT: 1 # +2 islands
+    ES: 1 # +1 islands
   temporal:
     resolution_sector: 365H
 
@@ -280,8 +222,8 @@ costs:
 sector:
   chp:
     enable: false # This should only deactivate the CHPs from prepare_sector_network, not those from add_existing_baseyear
-  v2g: false
-  solar_thermal: false
+  v2g: false  # todo: wanted
+  solar_thermal: false  # todo: wanted
   district_heating:
     potential: 0.3
     progress:
@@ -304,7 +246,7 @@ sector:
   regional_methanol_demand: true  #set to true if regional CO2 constraints needed
   regional_oil_demand: true  #set to true if regional CO2 constraints needed
   regional_coal_demand: true  #set to true if regional CO2 constraints needed
-  gas_network: false
+  gas_network: false  # todo: wanted
   regional_gas_demand: true
   H2_retrofit: true
   biogas_upgrading_cc: true
@@ -605,13 +547,10 @@ solving:
         2040: 30
         2045: 35
         2050: 35
-  # solver:
-  #   options: gurobi-numeric-focus
-  # solver_options:
-  #   gurobi-default:
-  #     NumericFocus: 1
-  #     FeasibilityTol: 1.e-4
-  #     BarHomogeneous: 1
+  solver:
+    name: highs
+    options: highs-default
+
 
 plotting:
   tech_colors:
@@ -628,6 +567,7 @@ plotting:
   countries:
   - all
   - DE
+  - AT
   carriers:
   - electricity
   - heat

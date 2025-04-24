@@ -72,6 +72,7 @@ CurrentPolicies:
     delay_years: 1
 
 
+
 KN2045_Bal_v4:
 # Ausgewogener Mix an Technologien zur Dekarbonisierung der Sektoren
 # Breites Energieträgerportfolio in der Endenergie (Strom, Wasserstoff, synthetische Kraftstoffe)
@@ -483,7 +484,6 @@ KN2045minus_WorstCase:
     cutin_year: 2025
     cutout_year: 2035 # Hackily reduced to 2030 if delay_years: 1
     delay_years: 1
-
 
 KN2045minus_SupplyFocus:
 # Nachfrage genau so hoch wie in Szenario WorstCase
