@@ -103,6 +103,100 @@ exports = ["csv"]
 "waste CHP" = "Thermal Powerplants"
 "waste CHP CC" = "Thermal Powerplants"
 
+[view.balance.carbon]
+name = "Carbon Dioxide Balance"
+unit = "Mt_co2"
+file_name = "nodal_balance_carbon_{location}"
+cutoff = 0.001
+legend_order = [
+    # production ordered from zero to outside
+
+    "Import Domestic",
+    "Import Foreign",
+    # demand ordered from zero to outside:
+
+    "Export Domestic",
+    "Export Foreign",
+]
+checks = ["balances_almost_zero"]
+exports = []
+
+[view.balance.carbon.categories]
+"co2" = "CO2 Budget"
+"biogas to gas" = "Biogas"
+"biomass to liquid" = "Bioliquids"
+
+"BioSNG" = "SynGas"
+"BioSNG CC" = "SynGas (CC)"
+"CCGT" = "Electricity"
+"DAC" = "DAC"
+"Export Domestic" = "Export Domestic"
+"Export Foreign" = "Export Foreign"
+"Fischer-Tropsch" = "Fischer-Tropsch"
+"HVC to air" = "HVC"
+"Import Domestic" = "Import Domestic"
+"Import Foreign" = "Import Foreign"
+"Methanol steam reforming" = "Methanol Steam Reforming"
+"OCGT" = "Electricity"
+"SMR" = "SMR"
+"SMR CC" = "SMR"
+"Sabatier" = "Sabatier"
+"agriculture machinery oil" = "Agriculture"
+"co2 sequestered" = "CO2 Sequestration"
+"co2 stored" = "CO2 Store"
+"co2 vent" = "CO2 ventilation"
+"coal" = "Electricity"
+"coal for industry" = "Industry"
+"electrobiofuels" = "Biofuels"
+"gas compressing" = "Gas Compression"
+"gas for industry" = "Industry"
+"gas for industry CC" = "Industry (CC)"
+"industry methanol" = "Industry"
+"kerosene for aviation" = "Transport"
+"land transport oil" = "Transport"
+"lignite" = "Electricity"
+"methanolisation" = "Methanolisation"
+"municipal solid waste" = "Waste"
+"oil refining" = "Oil Refining"
+"process emissions" = "Industry"
+"process emissions CC" = "Industry (CC)"
+"rural gas boiler" = "Heat"
+"rural oil boiler" = "Heat"
+"shipping methanol" = "Transport"
+"shipping oil" = "Transport"
+"solid biomass for industry CC" = "Industry (CC)"
+"unsustainable bioliquids" = "Bioliquids"
+"urban central CHP" = "CHP"
+"urban central coal CHP" = "CHP"
+"urban central gas CHP" = "CHP"
+"urban central gas boiler" = "Heat"
+"urban central lignite CHP" = "CHP"
+"urban central oil CHP" = "CHP"
+"urban decentral gas boiler" = "Heat"
+"urban decentral oil boiler" = "Heat"
+"waste CHP" = "CHP"
+"waste CHP CC" = "CHP (CC)"
+
+[view.balance.fuels]
+name = "Fuel Balance"
+unit = "MWh_LHV"
+file_name = "nodal_balance_fuels_{location}"
+cutoff = 0.001
+legend_order = [
+    # production ordered from zero to outside
+
+    "Import Domestic",
+    "Import Foreign",
+    # demand ordered from zero to outside:
+
+    "Export Domestic",
+    "Export Foreign",
+]
+checks = ["balances_almost_zero"]
+exports = []
+
+[view.balance.fuels.categories]
+
 [view.balance.hydrogen]
 name = "Hydrogen Energy Balance"
 unit = "TWh"
@@ -187,7 +281,7 @@ legend_order = [
     "Hydro Power",
     "Nuclear Power",
     "Wind Power",
-    "Distribution Grid",  # demand and production!
+    "Distribution Grid", # demand and production!
     "Solar Power",
     "Solid Biomass",
     "Waste",
@@ -197,7 +291,6 @@ legend_order = [
     "Oil",
     "Import Domestic",
     "Import Foreign",
-
     # demand ordered from zero to outside
 
     "Base Load",
@@ -286,7 +379,7 @@ legend_order = [
     "Electrolysis",
     "Sabatier",
     "Methanolisation",
-#    "CHP",
+    #    "CHP",
     "Waste",
     "CO2",
     "Coal",
