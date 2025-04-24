@@ -57,7 +57,6 @@ PyPSA-DE is a softfork of PyPSA-EUR. As such, large parts of the functionality a
 - Default resolution of 16 regions in Germany and 13 region for neighboring countries
 - 10 pre-defined scenarios (1 Current Policies, 3 Net-Zero Scenarios (Balanced, Focus H2, Focus Electricity), 2 Demand Variations based on the Balanced Scenario, 4 Demand Variations Based on the Current Policies Scenario)
 - Specific cost assumption for Germany:
-
   - Gas, Oil, Coal prices
   - electrolysis and heat-pump costs
   - Infrastructure costs [according to the Netzentwicklungsplan](https://github.com/PyPSA/pypsa-ariadne/pull/193) 2021 and 2023
