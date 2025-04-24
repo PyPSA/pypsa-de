@@ -184,7 +184,7 @@ class TransmissionGridMap:
             The joined path: result_dir / subdir.
         """
         output_path = self.make_directory(result_path, subdir)
-        self.make_directory(output_path, "HTML")
+        output_path = self.make_directory(output_path, "HTML")
 
         return output_path
 

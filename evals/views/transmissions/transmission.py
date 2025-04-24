@@ -115,4 +115,4 @@ def view_grid_capactiy(
             df_grid, df_import_energy, df_import_capacity, buses, config
         )
         grid_map.draw_grid_by_carrier_groups_myopic()
-        grid_map.save(result_path, f"gridmap_{'-'.join(carriers)}", subdir)
+        grid_map.save(result_path, f"gridmap_{'-'.join(bus_carrier)}", subdir)
