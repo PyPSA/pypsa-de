@@ -370,13 +370,42 @@ def busmap_for_admin_regions(
     for country in tqdm.tqdm(buses["country"].unique()):
         buses_subset = buses.loc[buses["country"] == country]
 
+        regions_subset = admin_regions.loc[admin_regions["country"] == country]
+        # if params["cluster_network"]["algorithm"] != "substations":
+        #     # number substations become is rendered incorrect after
+        #     # separation of multi-polygons.
+        # regions_subset = with_split_multipolygons(regions_subset, "AT33")
+
         buses.loc[buses_subset.index, "busmap"] = gpd.sjoin_nearest(
             buses_subset.to_crs(epsg=3857),
-            admin_regions.loc[admin_regions["country"] == country].to_crs(epsg=3857),
+            regions_subset.to_crs(epsg=3857),
             how="left",
         )["admin"]
 
     return buses["busmap"]
+
+
+def with_split_multipolygons(
+    regions_subset: gpd.GeoDataFrame, region_to_split: str
+) -> gpd.GeoDataFrame:
+    """"""
+    _idx = regions_subset.query("contains == @region_to_split").index
+    if not any(_idx):
+        return regions_subset
+
+    # Tirol Jungholz merge: this should go into a modify script
+    regions_subset.loc[_idx, "geometry"] = (
+        regions_subset.loc[_idx, "geometry"].buffer(0.0001).union_all().buffer(-0.0001)
+    )
+
+    # this logic should be in cluster_network?
+    regions_subset = regions_subset.explode(index_parts=True)
+    regions_subset["admin"] = [
+        f"{adm}" if subnet == 0 else f"{adm} {subnet}"
+        for (_, subnet), adm in regions_subset["admin"].items()
+    ]
+
+    return regions_subset.reset_index(drop=True)
 
 
 def keep_largest_polygon(geometry: MultiPolygon) -> Polygon:
@@ -461,7 +490,16 @@ if __name__ == "__main__":
     if "snakemake" not in globals():
         from scripts._helpers import mock_snakemake
 
-        snakemake = mock_snakemake("cluster_network", clusters=60)
+        snakemake = mock_snakemake(
+            "cluster_network",
+            configfiles="config/config.public.yaml",
+            opts="",
+            clusters="adm",
+            ll="vopt",
+            sector_opts="none",
+            planning_horizons="2040",
+            run="8Gt_Bal_v3",
+        )
     configure_logging(snakemake)
     set_scenario_config(snakemake)
 

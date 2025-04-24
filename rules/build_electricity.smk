@@ -139,7 +139,7 @@ rule build_shapes:
         country_shapes=resources("country_shapes.geojson"),
         offshore_shapes=resources("offshore_shapes.geojson"),
         europe_shape=resources("europe_shape.geojson"),
-        nuts3_shapes=resources("nuts3_shapes.geojson"),
+        nuts3_shapes=resources("nuts3_shapes-raw.geojson"),
     log:
         logs("build_shapes.log"),
     benchmark:

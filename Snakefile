@@ -62,6 +62,7 @@ include: "rules/build_sector.smk"
 include: "rules/solve_electricity.smk"
 include: "rules/postprocess.smk"
 include: "rules/development.smk"
+include: "rules/modifications.smk"
 
 
 if config["foresight"] == "overnight":
@@ -185,7 +186,7 @@ rule rulegraph:
         "envs/environment.yaml"
     shell:
         r"""
-        snakemake --rulegraph all | sed -n "/digraph/,\$p" > {output.dot}
+        snakemake --rulegraph ariadne_all | sed -n "/digraph/,\$p" > {output.dot}
         dot -Tpdf -o {output.pdf} {output.dot}
         dot -Tpng -o {output.png} {output.dot}
         """

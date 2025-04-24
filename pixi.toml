@@ -4,22 +4,20 @@ name = "pypsa-at"
 platforms = ["linux-64"]
 version = "0.1.0"
 
-[tasks]
-
 [dependencies]
-python = ">=3.8"
+python = ">=3.10"
 pip = "*"
 pycountry = "*"
 pyam = ">=2.0"
 "ruamel.yaml" = "*"
 jpype1 = "*"
-pypsa = "<=0.31.0"
-atlite = ">=0.2.9"
-linopy = "*"
-powerplantmatching = ">=0.5.15,<0.6"
+pypsa = ">=0.33.2,<0.34"
+atlite = ">=0.3"
+linopy = ">=0.4.4"
+powerplantmatching = ">=0.5.15,<0.7"
 dask = "*"
 xlrd = "*"
-openpyxl = "*"
+openpyxl = ">=3.1.5,<4"
 seaborn = "*"
 snakemake-minimal = "<8.25"
 memory_profiler = "*"
@@ -54,15 +52,51 @@ cartopy = "*"
 descartes = "*"
 rasterio = "==1.4.1"
 libgdal-core = "<3.10.0"
-pixi-pycharm = ">=0.0.8,<0.0.9"
-marimo = ">=0.11.22,<0.12"
-plotly = ">=6.0.1,<7"
+
+# additional dependencies for pypsa-at
+pixi-pycharm="*"
+plotly="*"
+pytest="*"
+click="*"
+folium="*"
+xlsxwriter="*"
+frozendict="*"
+mkdocs="*"
+mkdocs-material= {version = "*"}  # , extras = ["imaging"]
+mkdocstrings-python="*"  # {version = "*"}  # , extras = ["python"]
+mkdocs-material-extensions="*"
+Pygments="*"
+mkdocs-marimo="*"
+mknotebooks="*"
+markdown = ">=3.6,<4"
+pymdown-extensions = ">=10.14.3,<11"
+
+#[environments]
+#dev = {features = ["dev"], solve-group = "prod"}
+#
+#[feature.dev.dependencies]
+#pixi-pycharm="*"
+#marimo="*"
+#plotly="*"
+#pytest="*"
+#click="*"
+#folium="*"
+#xlsxwriter="*"
+#frozendict="*"
+#mkdocs="*"
+#mkdocs-material= {version = "*"}  # , extras = ["imaging"]
+#mkdocstrings-python="*"  # {version = "*"}  # , extras = ["python"]
+#mkdocs-material-extensions="*"
+#Pygments="*"
+#mkdocs-marimo="*"
+#mknotebooks="*"
 
 [pypi-dependencies]
 gurobipy = "*"
-highspy = "<1.8"
+highspy = "*"
 xpress = "*"
 tsam = ">=2.3.1"
 snakemake-storage-plugin-http = "*"
 snakemake-executor-plugin-slurm = "*"
 snakemake-executor-plugin-cluster-generic = "*"
+mkdocs-badges="*"

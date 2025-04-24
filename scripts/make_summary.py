@@ -302,11 +302,13 @@ if __name__ == "__main__":
 
         snakemake = mock_snakemake(
             "make_summary",
-            clusters="5",
             opts="",
-            sector_opts="",
-            planning_horizons="2030",
-            configfiles="config/test/config.overnight.yaml",
+            clusters="61",
+            ll="vopt",
+            sector_opts="none",
+            planning_horizons=2020,
+            run="8Gt_Bal_v3",
+            configfiles="config/config.public.yaml",
         )
 
     configure_logging(snakemake)

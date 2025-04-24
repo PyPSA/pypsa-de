@@ -2773,7 +2773,7 @@ if __name__ == "__main__":
 
     configure_logging(snakemake)
 
-    ### Modify postnetworks (this might be moved to a separate script)
+    ### Modify networks (this might be moved to a separate script)
 
     # Load costs (needed for modification)
     nhours = int(snakemake.params.hours[:-1])
@@ -2815,7 +2815,7 @@ if __name__ == "__main__":
     del _networks
 
     # # for running with explicit networks not within repo structure (comment out load data and load regions)
-    # diry = "postnetworks-folder"
+    # diry = "networks-folder"
     # file_list = os.listdir(diry)
     # file_list.sort()
     # networks = [pypsa.Network(diry+"/"+fn) for fn in file_list]
