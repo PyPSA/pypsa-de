@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import logging
 import sys
 
@@ -292,6 +291,9 @@ def electricity_import_limits(n, investment_year, limits_volume_max):
     for ct in limits_volume_max["electricity_import"]:
         limit = limits_volume_max["electricity_import"][ct][investment_year] * 1e6
 
+        if limit < 0:
+            limit *= n.snapshot_weightings.generators.sum() / 8760
+
         logger.info(f"limiting electricity imports in {ct} to {limit / 1e6} TWh/a")
 
         incoming_line = n.lines.index[
@@ -364,7 +366,7 @@ def add_co2limit_country(n, limit_countries, snakemake):
     limit_countries : dict
     snakemake: snakemake object
     """
-    logger.info(f"Adding CO2 budget limit for each country as per unit of 1990 levels")
+    logger.info("Adding CO2 budget limit for each country as per unit of 1990 levels")
 
     nhours = n.snapshot_weightings.generators.sum()
     nyears = nhours / 8760
@@ -401,7 +403,7 @@ def add_co2limit_country(n, limit_countries, snakemake):
             if port == "0":
                 efficiency = -1.0
             elif port == "1":
-                efficiency = n.links.loc[links, f"efficiency"]
+                efficiency = n.links.loc[links, "efficiency"]
             else:
                 efficiency = n.links.loc[links, f"efficiency{port}"]
 
@@ -681,7 +683,7 @@ def add_h2_derivate_limit(n, investment_year, limits_volume_max):
 
 def adapt_nuclear_output(n):
     logger.info(
-        f"limiting german electricity generation from nuclear to 2020 value of 61 TWh"
+        "limiting german electricity generation from nuclear to 2020 value of 61 TWh"
     )
     limit = 61e6
 
@@ -697,7 +699,7 @@ def adapt_nuclear_output(n):
 
     lhs = nuclear_gen
 
-    cname = f"Nuclear_generation_limit-DE"
+    cname = "Nuclear_generation_limit-DE"
 
     n.model.add_constraints(lhs <= limit, name=f"GlobalConstraint-{cname}")
 

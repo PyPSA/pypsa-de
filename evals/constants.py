@@ -1273,9 +1273,9 @@ UNITS: frozendict = frozendict(
         "PWh": 1e9,
         "currency": 1,
         "EUR": 1,  # base currency
-        "t": 1,
-        "kt": 1e3,
-        "Mt": 1e6,
+        "t_co2": 1,
+        "kt_co2": 1e3,
+        "Mt_co2": 1e6,
     }
 )
 

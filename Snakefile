@@ -13,19 +13,15 @@ min_version("8.11")
 
 from scripts._helpers import (
     path_provider,
-    copy_default_files,
     get_scenarios,
     get_rdir,
     get_shadow,
 )
 
 
-copy_default_files(workflow)
-
-
 configfile: "config/config.default.yaml"
-configfile: "config/config.yaml"
-configfile: "config/config.personal.yaml"
+configfile: "config/plotting.default.yaml"
+configfile: "config/config.de.yaml"
 
 
 run = config["run"]
@@ -53,7 +49,6 @@ localrules:
 
 wildcard_constraints:
     clusters="[0-9]+(m|c)?|all|adm",
-    ll=r"(v|c)([0-9\.]+|opt)",
     opts=r"[-+a-zA-Z0-9\.]*",
     sector_opts=r"[-+a-zA-Z0-9\.\s]*",
     planning_horizons=r"[0-9]{4}",
@@ -66,7 +61,6 @@ include: "rules/build_electricity.smk"
 include: "rules/build_sector.smk"
 include: "rules/solve_electricity.smk"
 include: "rules/postprocess.smk"
-include: "rules/validate.smk"
 include: "rules/development.smk"
 include: "rules/modifications.smk"
 
@@ -89,6 +83,70 @@ if config["foresight"] == "perfect":
 rule all:
     input:
         expand(RESULTS + "graphs/costs.svg", run=config["run"]["name"]),
+        expand(
+            resources("maps/power-network-s-{clusters}.pdf"),
+            run=config["run"]["name"],
+            **config["scenario"],
+        ),
+        expand(
+            RESULTS
+            + "maps/base_s_{clusters}_{opts}_{sector_opts}-costs-all_{planning_horizons}.pdf",
+            run=config["run"]["name"],
+            **config["scenario"],
+        ),
+        lambda w: expand(
+            (
+                RESULTS
+                + "maps/base_s_{clusters}_{opts}_{sector_opts}-h2_network_{planning_horizons}.pdf"
+                if config_provider("sector", "H2_network")(w)
+                else []
+            ),
+            run=config["run"]["name"],
+            **config["scenario"],
+        ),
+        lambda w: expand(
+            (
+                RESULTS
+                + "maps/base_s_{clusters}_{opts}_{sector_opts}-ch4_network_{planning_horizons}.pdf"
+                if config_provider("sector", "gas_network")(w)
+                else []
+            ),
+            run=config["run"]["name"],
+            **config["scenario"],
+        ),
+        lambda w: expand(
+            (
+                RESULTS + "csvs/cumulative_costs.csv"
+                if config_provider("foresight")(w) == "myopic"
+                else []
+            ),
+            run=config["run"]["name"],
+        ),
+        lambda w: expand(
+            (
+                RESULTS
+                + "maps/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}-balance_map_{carrier}.pdf"
+            ),
+            **config["scenario"],
+            run=config["run"]["name"],
+            carrier=config_provider("plotting", "balance_map", "bus_carriers")(w),
+        ),
+        directory(
+            expand(
+                RESULTS
+                + "graphics/balance_timeseries/s_{clusters}_{opts}_{sector_opts}_{planning_horizons}",
+                run=config["run"]["name"],
+                **config["scenario"],
+            ),
+        ),
+        directory(
+            expand(
+                RESULTS
+                + "graphics/heatmap_timeseries/s_{clusters}_{opts}_{sector_opts}_{planning_horizons}",
+                run=config["run"]["name"],
+                **config["scenario"],
+            ),
+        ),
     default_target: True
 
 
@@ -117,18 +175,35 @@ rule purge:
             raise Exception(f"Input {do_purge}. Aborting purge.")
 
 
-rule dag:
+rule rulegraph:
     message:
-        "Creating DAG of workflow."
+        "Creating RULEGRAPH dag of workflow."
     output:
-        dot=resources("dag.dot"),
-        pdf=resources("dag.pdf"),
-        png=resources("dag.png"),
+        dot=resources("dag_rulegraph.dot"),
+        pdf=resources("dag_rulegraph.pdf"),
+        png=resources("dag_rulegraph.png"),
     conda:
         "envs/environment.yaml"
     shell:
         r"""
         snakemake --rulegraph ariadne_all | sed -n "/digraph/,\$p" > {output.dot}
+        dot -Tpdf -o {output.pdf} {output.dot}
+        dot -Tpng -o {output.png} {output.dot}
+        """
+
+
+rule filegraph:
+    message:
+        "Creating FILEGRAPH dag of workflow."
+    output:
+        dot=resources("dag_filegraph.dot"),
+        pdf=resources("dag_filegraph.pdf"),
+        png=resources("dag_filegraph.png"),
+    conda:
+        "envs/environment.yaml"
+    shell:
+        r"""
+        snakemake --filegraph all | sed -n "/digraph/,\$p" > {output.dot}
         dot -Tpdf -o {output.pdf} {output.dot}
         dot -Tpng -o {output.png} {output.dot}
         """
@@ -184,8 +259,9 @@ rule retrieve_egon_data:
         mapping="data/egon/mapping_technologies.json",
     shell:
         """
-        wget -O {output.spatial} "https://api.opendata.ffe.de/demandregio/demandregio_spatial?id_spatial=5&year=2018"
-        wget -O {output.mapping} "https://api.opendata.ffe.de/demandregio/demandregio_spatial_description?id_spatial=5"
+        mkdir -p data/egon
+        curl -o {output.spatial} "https://api.opendata.ffe.de/demandregio/demandregio_spatial?id_spatial=5&year=2018"
+        curl -o {output.mapping} "https://api.opendata.ffe.de/demandregio/demandregio_spatial_description?id_spatial=5"
         """
 
 
@@ -359,8 +435,9 @@ rule modify_prenetwork:
         regions_offshore=resources("regions_offshore_base_s_{clusters}.geojson"),
         offshore_connection_points="ariadne-data/offshore_connection_points.csv",
     output:
-        network=RESULTS
-        + "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_final.nc",
+        network=resources(
+            "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_final.nc"
+        ),
     resources:
         mem_mb=4000,
     log:
@@ -508,6 +585,7 @@ rule export_ariadne_variables:
     params:
         planning_horizons=config_provider("scenario", "planning_horizons"),
         hours=config_provider("clustering", "temporal", "resolution_sector"),
+        max_hours=config_provider("electricity", "max_hours"),
         costs=config_provider("costs"),
         config_industry=config_provider("industry"),
         energy_totals_year=config_provider("energy", "energy_totals_year"),
@@ -680,6 +758,7 @@ rule plot_ariadne_report:
         run=config_provider("run", "name"),
         foresight=config_provider("foresight"),
         costs=config_provider("costs"),
+        max_hours=config_provider("electricity", "max_hours"),
         post_discretization=config_provider("solving", "options", "post_discretization"),
         NEP_year=config_provider("costs", "NEP"),
         hours=config_provider("clustering", "temporal", "resolution_sector"),
@@ -702,13 +781,13 @@ rule plot_ariadne_report:
             **config["scenario"],
             allow_missing=True,
         ),
+        exported_variables_full=RESULTS + "ariadne/exported_variables_full.xlsx",
     output:
         elec_price_duration_curve=RESULTS
         + "ariadne/report/elec_price_duration_curve.pdf",
         elec_price_duration_hist=RESULTS + "ariadne/report/elec_price_duration_hist.pdf",
         backup_capacity=RESULTS + "ariadne/report/backup_capacity.pdf",
         backup_generation=RESULTS + "ariadne/report/backup_generation.pdf",
-        elec_prices_spatial_de=RESULTS + "ariadne/report/elec_prices_spatial_de.pdf",
         results=directory(RESULTS + "ariadne/report"),
         elec_transmission=directory(RESULTS + "ariadne/report/elec_transmission"),
         h2_transmission=directory(RESULTS + "ariadne/report/h2_transmission"),
@@ -717,7 +796,7 @@ rule plot_ariadne_report:
         heat_balances=directory(RESULTS + "ariadne/report/heat_balance_timeseries"),
         nodal_balances=directory(RESULTS + "ariadne/report/balance_timeseries_2045"),
     resources:
-        mem_mb=30000,
+        mem_mb=32000,
     log:
         RESULTS + "logs/plot_ariadne_report.log",
     script:

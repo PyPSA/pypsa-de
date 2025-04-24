@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # SPDX-FileCopyrightText: Contributors to PyPSA-Eur <https://github.com/pypsa/pypsa-eur>
 #
 # SPDX-License-Identifier: MIT
@@ -38,7 +37,12 @@ from dask.distributed import Client
 from shapely.geometry import LineString as Line
 from shapely.geometry import Point
 
-from scripts._helpers import configure_logging, get_snapshots, set_scenario_config
+from scripts._helpers import (
+    configure_logging,
+    get_snapshots,
+    load_cutout,
+    set_scenario_config,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -149,7 +153,7 @@ if __name__ == "__main__":
     n = pypsa.Network(snakemake.input.base_network)
     time = get_snapshots(snakemake.params.snapshots, snakemake.params.drop_leap_day)
 
-    cutout = atlite.Cutout(snakemake.input.cutout).sel(time=time)
+    cutout = load_cutout(snakemake.input.cutout, time=time)
 
     da = calculate_line_rating(n, cutout, show_progress, dask_kwargs)
     da.to_netcdf(snakemake.output[0])

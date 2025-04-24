@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # SPDX-FileCopyrightText: Contributors to PyPSA-Eur <https://github.com/pypsa/pypsa-eur>
 #
 # SPDX-License-Identifier: MIT
@@ -20,6 +19,7 @@ from scripts._helpers import (
     configure_logging,
     generate_periodic_profiles,
     get_snapshots,
+    mock_snakemake,
     set_scenario_config,
 )
 

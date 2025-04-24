@@ -38,9 +38,9 @@ def verify_metric_format(metric: pd.DataFrame) -> None:
     AssertionError
         If the metric does not comply with the data model.
     """
-    assert isinstance(
-        metric, pd.DataFrame
-    ), f"Metric must be a DataFrame, but {type(metric)} was passed."
+    assert isinstance(metric, pd.DataFrame), (
+        f"Metric must be a DataFrame, but {type(metric)} was passed."
+    )
     assert set(metric.index.names).issubset(set(DataModel.YEAR_IDX_NAMES)), (
         f"Metric index levels must contain {DataModel.YEAR_IDX_NAMES}, "
         f"but {metric.index.names} is set."
@@ -54,16 +54,16 @@ def verify_metric_format(metric: pd.DataFrame) -> None:
     assert metric.attrs.get("unit"), "Must set the metric unit in 'metric.attrs'."
 
     if metric.columns.names == [DataModel.METRIC]:
-        assert all(
-            "(" in c and ")" in c for c in metric.columns
-        ), f"All columns must have a unit in braces: {metric.columns}"
+        assert all("(" in c and ")" in c for c in metric.columns), (
+            f"All columns must have a unit in braces: {metric.columns}"
+        )
 
         assert len(metric.columns) == 1, "Multiple aggregated metrics are not allowed."
 
     elif metric.columns.name == DataModel.SNAPSHOTS:
-        assert isinstance(
-            metric.columns, pd.DatetimeIndex
-        ), "Snapshot columns must be of type DatetimeIndex."
+        assert isinstance(metric.columns, pd.DatetimeIndex), (
+            "Snapshot columns must be of type DatetimeIndex."
+        )
 
 
 def insert_index_level(
@@ -701,31 +701,46 @@ def calculate_input_share(
         withdrawal = _df[_df.lt(0)]
         supply = _df[_df.ge(0)]
         bus_carrier_supply = filter_by(supply, bus_carrier=bus_carrier).sum()
-        # factor takes into account that Link inputs and outputs are not equally large
-        factor = withdrawal.sum() / supply.sum()
+        # scaling takes into account that Link inputs and outputs are not equally large
+        scaling = withdrawal.sum() / supply.sum()
         # share takes multiple outputs into account
         share = bus_carrier_supply / supply.sum()
-        # fixme: is suspect this is wrong for heat pumps and CHPs with sum(efficiency > 1). The problem is, that 100%
+        # fixme: i suspect this is wrong for heat pumps and CHPs with sum(efficiency > 1). The problem is, that 100%
         #  of heat generation is called "low voltage", but this is not correct. It should label 100% of
         #  electricity demand as low voltage and the rest as ambient heat
-        # if factor < 1.0 and "heat pump" in _df.index.unique("carrier")[0]:
+        # if scaling < 1.0 and "heat pump" in _df.index.unique("carrier")[0]:
         #     print("heat pumps")
         # if (
-        #     factor < 1.0
+        #     scaling < 1.0
         #     and share != 0
         #     and "heat pump" not in _df.index.unique("carrier")[0]
         # ):
+        #     print("CHPs?")
         #     print(_df)
-        return withdrawal / factor * share
+        return withdrawal / scaling * share
 
     groups = [DataModel.YEAR, DataModel.LOCATION, DataModel.CARRIER]
     return df.groupby(groups, group_keys=False).apply(_input_share)
 
 
-def filter_for_carrier_connected_to(
-    df: pd.DataFrame, bus_carrier: str | list, kind: str = None
-):
-    """"""
+def filter_for_carrier_connected_to(df: pd.DataFrame, bus_carrier: str | list):
+    """
+    Return a subset with technologies connected to a bus carrier.
+
+    Parameters
+    ----------
+    df
+        The input DataFrame or Series with a MultiIndex.
+    bus_carrier
+        The bus carrier to filter for.
+
+    Returns
+    -------
+    :
+        A subset of the input data that contains all location + carrier
+        combinations that have at least one connection to the requested
+        bus_carrier.
+    """
     carrier_connected_to_bus_carrier = []
     locations_connected_to_bus_carrier = []
     for (loc, carrier), data in df.groupby([DataModel.LOCATION, DataModel.CARRIER]):

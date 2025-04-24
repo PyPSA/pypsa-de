@@ -3,7 +3,6 @@
 from pathlib import Path
 
 from evals.constants import BusCarrier, Carrier, DataModel
-from evals.fileio import Exporter
 from evals.plots.gridmap import GridMapConfig, TransmissionGridMap
 from evals.statistic import collect_myopic_statistics
 from evals.utils import filter_by
@@ -94,8 +93,8 @@ def view_grid_capactiy(
     # specified carrier and bus_carrier
     # ToDo: Add CO2 once it works properly
     carriers_bus_carrier_groups = (
-        (["AC", "DC"], "AC"),
-        ([Carrier.gas_pipepline, Carrier.gas_pipepline_new], BusCarrier.CH4),
+        # (["AC", "DC"], "AC"),
+        #  ([Carrier.gas_pipepline, Carrier.gas_pipepline_new], BusCarrier.CH4),
         (
             [
                 Carrier.h2_pipeline,

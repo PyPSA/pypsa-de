@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import logging
 
 import pandas as pd
@@ -67,12 +66,10 @@ if __name__ == "__main__":
         "Deutschland",
         :,
         :,
-    ][
-        snakemake.wildcards.planning_horizons
-    ]
+    ][snakemake.wildcards.planning_horizons]
 
     logger.info(
-        f"Retrieving German mobility demand from {snakemake.params.leitmodelle["transport"]} transport model."
+        f"Retrieving German mobility demand from {snakemake.params.leitmodelle['transport']} transport model."
     )
     # get transport_data data
     transport_data = get_transport_data(db)

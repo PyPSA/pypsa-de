@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # SPDX-FileCopyrightText: : 2020-2024 The PyPSA-Eur Authors
 #
 # SPDX-License-Identifier: MIT
@@ -11,13 +10,13 @@ import logging
 
 import geopandas as gpd
 import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
 import pypsa
 from pypsa.plot import add_legend_circles, add_legend_lines, add_legend_patches
 
 from scripts._helpers import configure_logging, mock_snakemake, set_scenario_config
-from scripts.plot_power_network import assign_location, load_projection
+from scripts.make_summary import assign_locations
+from scripts.plot_power_network import load_projection
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +48,7 @@ def plot_h2_map(n, regions):
     # if "H2 pipeline" not in n.links.carrier.unique():
     #     return
 
-    assign_location(n)
+    assign_locations(n)
 
     h2_storage = n.stores.query("carrier == 'H2'")
     regions["H2"] = (

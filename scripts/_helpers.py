@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # SPDX-FileCopyrightText: Contributors to PyPSA-Eur <https://github.com/pypsa/pypsa-eur>
 #
 # SPDX-License-Identifier: MIT
@@ -11,16 +10,17 @@ import os
 import re
 import time
 from functools import partial, wraps
-from os.path import exists
 from pathlib import Path
-from shutil import copyfile
-from typing import Callable
+from tempfile import NamedTemporaryFile
+from typing import Callable, Union
 
+import atlite
 import fiona
 import pandas as pd
 import pypsa
 import pytz
 import requests
+import xarray as xr
 import yaml
 from snakemake.utils import update_config
 from tqdm import tqdm
@@ -30,25 +30,13 @@ logger = logging.getLogger(__name__)
 REGION_COLS = ["geometry", "name", "x", "y", "country"]
 
 
-def copy_default_files(workflow):
-    default_files = {
-        "config/config.default.yaml": "config/config.yaml",
-        "config/scenarios.template.yaml": "config/scenarios.yaml",
-    }
-    for template, target in default_files.items():
-        target = os.path.join(workflow.current_basedir, target)
-        template = os.path.join(workflow.current_basedir, template)
-        if not exists(target) and exists(template):
-            copyfile(template, target)
-
-
 def get_scenarios(run):
     scenario_config = run.get("scenarios", {})
     if run["name"] and scenario_config.get("enable"):
         fn = Path(scenario_config["file"])
         if fn.exists():
             scenarios = yaml.safe_load(fn.read_text())
-            if scenarios == None:
+            if scenarios is None:
                 print(
                     "WARNING! Scenario management enabled but scenarios file appears to be empty."
                 )
@@ -132,6 +120,7 @@ def get_run_path(fn, dir, rdir, shared_resources, exclude_from_shared):
             "cluster_network_base_s_{clusters}",
             "profile_{clusters}_",
             "build_renewable_profile_{clusters}",
+            "regions_by_class_{clusters}",
             "availability_matrix_",
             "determine_availability_matrix_",
             "solar_thermal",
@@ -289,7 +278,7 @@ def configure_logging(snakemake, skip_handlers=False):
 
 def update_p_nom_max(n):
     # if extendable carriers (solar/onwind/...) have capacity >= 0,
-    # e.g. existing assets from the OPSD project are included to the network,
+    # e.g. existing assets from GEM are included to the network,
     # the installed capacity might exceed the expansion limit.
     # Hence, we update the assumptions.
 
@@ -790,9 +779,9 @@ def update_config_from_wildcards(config, w, inplace=True):
         if dg_enable:
             config["sector"]["electricity_distribution_grid"] = True
             if dg_factor is not None:
-                config["sector"][
-                    "electricity_distribution_grid_cost_factor"
-                ] = dg_factor
+                config["sector"]["electricity_distribution_grid_cost_factor"] = (
+                    dg_factor
+                )
 
         if "biomasstransport" in opts:
             config["sector"]["biomass_transport"] = True
@@ -902,17 +891,55 @@ def validate_checksum(file_path, zenodo_url=None, checksum=None):
         for chunk in iter(lambda: f.read(65536), b""):  # 64kb chunks
             hasher.update(chunk)
     calculated_checksum = hasher.hexdigest()
-    assert (
-        calculated_checksum == checksum
-    ), "Checksum is invalid. This may be due to an incomplete download. Delete the file and re-execute the rule."
+    assert calculated_checksum == checksum, (
+        "Checksum is invalid. This may be due to an incomplete download. Delete the file and re-execute the rule."
+    )
 
 
-def get_snapshots(snapshots, drop_leap_day=False, freq="h", **kwargs):
+def get_snapshots(
+    snapshots: dict, drop_leap_day: bool = False, freq: str = "h", **kwargs
+) -> pd.DatetimeIndex:
     """
-    Returns pandas DateTimeIndex potentially without leap days.
-    """
+    Returns a DateTimeIndex of snapshots, supporting multiple time ranges.
 
-    time = pd.date_range(freq=freq, **snapshots, **kwargs)
+    Parameters
+    ----------
+    snapshots : dict
+        Dictionary containing time range parameters. 'start' and 'end' can be
+        strings or lists of strings for multiple date ranges.
+    drop_leap_day : bool, default False
+        If True, removes February 29th from the DateTimeIndex in leap years.
+    freq : str, default "h"
+        Frequency string indicating the time step interval (e.g., "h" for hourly)
+    **kwargs : dict
+        Additional keyword arguments passed to pd.date_range().
+
+    Returns
+    -------
+    pd.DatetimeIndex
+    """
+    start = (
+        snapshots["start"]
+        if isinstance(snapshots["start"], list)
+        else [snapshots["start"]]
+    )
+    end = snapshots["end"] if isinstance(snapshots["end"], list) else [snapshots["end"]]
+
+    assert len(start) == len(end), (
+        "Lists of start and end dates must have the same length"
+    )
+
+    time_periods = []
+    for s, e in zip(start, end):
+        period = pd.date_range(
+            start=s, end=e, freq=freq, inclusive=snapshots["inclusive"], **kwargs
+        )
+        time_periods.append(period)
+
+    time = pd.DatetimeIndex([])
+    for period in time_periods:
+        time = time.append(period)
+
     if drop_leap_day and time.is_leap_year.any():
         time = time[~((time.month == 2) & (time.day == 29))]
 
@@ -1022,3 +1049,35 @@ def rename_techs(label: str) -> str:
         if old == label:
             label = new
     return label
+
+
+def load_cutout(
+    cutout_files: Union[str, list[str]], time: Union[None, pd.DatetimeIndex] = None
+) -> atlite.Cutout:
+    """
+    Load and optionally combine multiple cutout files.
+
+    Parameters
+    ----------
+    cutout_files : str or list of str
+        Path to a single cutout file or a list of paths to multiple cutout files.
+        If a list is provided, the cutouts will be concatenated along the time dimension.
+    time : pd.DatetimeIndex, optional
+        If provided, select only the specified times from the cutout.
+
+    Returns
+    -------
+    atlite.Cutout
+        Merged cutout with optional time selection applied.
+    """
+    if isinstance(cutout_files, str):
+        cutout = atlite.Cutout(cutout_files)
+    elif isinstance(cutout_files, list):
+        cutout_da = [atlite.Cutout(c).data for c in cutout_files]
+        combined_data = xr.concat(cutout_da, dim="time", data_vars="minimal")
+        cutout = atlite.Cutout(NamedTemporaryFile().name, data=combined_data)
+
+    if time is not None:
+        cutout.data = cutout.data.sel(time=time)
+
+    return cutout

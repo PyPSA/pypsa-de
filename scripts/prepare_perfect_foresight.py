@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # SPDX-FileCopyrightText: Contributors to PyPSA-Eur <https://github.com/pypsa/pypsa-eur>
 #
 # SPDX-License-Identifier: MIT
@@ -7,7 +6,6 @@ Concats pypsa networks of single investment periods to one network.
 """
 
 import logging
-from typing import List
 
 import numpy as np
 import pandas as pd
@@ -179,7 +177,9 @@ def adjust_electricity_grid(n: pypsa.Network, year: int, years: list[int]) -> No
 
 
 # --------------------------------------------------------------------
-def concat_networks(years: list[int], network_paths: list[str]) -> pypsa.Network:
+def concat_networks(
+    years: list[int], network_paths: list[str], social_discountrate: float
+) -> pypsa.Network:
     """
     Concat given pypsa networks and add build years.
 
@@ -344,7 +344,7 @@ def set_phase_out(
     n.links.loc[assets_i, "lifetime"] = (phase_out_year - build_year).astype(float)
 
 
-def set_all_phase_outs(n: pypsa.Network) -> None:
+def set_all_phase_outs(n: pypsa.Network, years: list[int]) -> None:
     # TODO move this to a csv or to the config
     planned = [
         (["nuclear"], "DE", 2022),
@@ -564,40 +564,7 @@ def apply_time_segmentation_perfect(
     n.snapshot_weightings = n.snapshot_weightings.mul(sn_weightings, axis=0)
 
 
-def update_heat_pump_efficiency(n: pypsa.Network, years: list[int]) -> None:
-    """
-    Update the efficiency of heat pumps from previous years to current year
-    (e.g. 2030 heat pumps receive 2040 heat pump COPs in 2030).
-
-    Note: this also updates the efficiency of heat pumps in preceding years for previous years, which should have no effect (e.g. 2040 heat pumps receive 2030 COPs in 2030).
-
-    Parameters
-    ----------
-    n : pypsa.Network
-        The concatenated network.
-    years : list[int]
-        List of planning horizon years.
-
-    Returns
-    -------
-    None
-        This function updates the efficiency in place and does not return a value.
-    """
-
-    # get names of all heat pumps
-    heat_pump_idx = n.links.index[n.links.index.str.contains("heat pump")]
-    for year in years:
-        # for each heat pump type, correct efficiency is the efficiency of that technology built in <year>
-        correct_efficiency = n.links_t["efficiency"].loc[
-            (year, slice(None)), heat_pump_idx.str[:-4] + str(year)
-        ]
-        # in <year>, set the efficiency of all heat pumps to the correct efficiency
-        n.links_t["efficiency"].loc[
-            (year, slice(None)), heat_pump_idx
-        ] = correct_efficiency.values
-
-
-def update_heat_pump_efficiency(n: pypsa.Network, years: List[int]):
+def update_heat_pump_efficiency(n: pypsa.Network, years: list[int]):
     """
     Update the efficiency of heat pumps from previous years to current year
     (e.g. 2030 heat pumps receive 2040 heat pump COPs in 2030).
@@ -625,9 +592,9 @@ def update_heat_pump_efficiency(n: pypsa.Network, years: List[int]):
             (year, slice(None)), heat_pump_idx.str[:-4] + str(year)
         ]
         # in <year>, set the efficiency of all heat pumps to the correct efficiency
-        n.links_t["efficiency"].loc[
-            (year, slice(None)), heat_pump_idx
-        ] = correct_efficiency.values
+        n.links_t["efficiency"].loc[(year, slice(None)), heat_pump_idx] = (
+            correct_efficiency.values
+        )
 
 
 if __name__ == "__main__":
@@ -638,10 +605,9 @@ if __name__ == "__main__":
             "prepare_perfect_foresight",
             opts="",
             clusters="37",
-            ll="v1.5",
             sector_opts="1p7-4380H-T-H-B-I-A-dist1",
         )
-    configure_logging(snakemake)
+    configure_logging(snakemake)  # pylint: disable=E0606
     set_scenario_config(snakemake)
 
     update_config_from_wildcards(snakemake.config, snakemake.wildcards)
@@ -657,7 +623,7 @@ if __name__ == "__main__":
     network_paths = [snakemake.input.brownfield_network] + [
         snakemake.input[f"network_{year}"] for year in years[1:]
     ]
-    n = concat_networks(years, network_paths)
+    n = concat_networks(years, network_paths, social_discountrate)
 
     # temporal aggregate
     solver_name = snakemake.config["solving"]["solver"]["name"]
@@ -673,7 +639,7 @@ if __name__ == "__main__":
     adjust_stores(n)
 
     # set phase outs
-    set_all_phase_outs(n)
+    set_all_phase_outs(n, years)
 
     # add H2 boiler
     add_H2_boilers(n)

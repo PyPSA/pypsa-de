@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # SPDX-FileCopyrightText: : 2023-2024 The PyPSA-Eur Authors
 #
 # SPDX-License-Identifier: MIT
@@ -17,11 +16,11 @@ This includes
 
 import logging
 
-logger = logging.getLogger(__name__)
 import pandas as pd
 
 from scripts._helpers import configure_logging, mock_snakemake
 
+logger = logging.getLogger(__name__)
 if __name__ == "__main__":
     if "snakemake" not in globals():
         snakemake = mock_snakemake(
@@ -124,7 +123,7 @@ if __name__ == "__main__":
     # multiply with steel production including primary and secondary steel since distinguishing is taken care of later
     existing_industry.loc[
         "DE", ["Electric arc", "Integrated steelworks", "DRI + Electric arc"]
-    ] = (ratio * ariadne.loc["Production|Steel", year])
+    ] = ratio * ariadne.loc["Production|Steel", year]
 
     logger.info("German demand after modification")
     logger.info(

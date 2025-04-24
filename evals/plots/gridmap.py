@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Barchart organized in subplots (facets)."""
 
 import base64
@@ -76,14 +75,14 @@ class GridMapConfig:
                 "nice_name": "H2",
                 "offset": -10,
             },
-            "H2 pipeline retrofit": {
+            "H2 pipeline retrofitted": {
                 "color": "#255194",
-                "nice_name": "H2 (retrofit)",
+                "nice_name": "H2 (retrofitted)",
                 "dash_array": "10",  # px, equal gaps
                 "offset": 10,  # px
             },
             "H2 pipeline (Kernnetz)": {
-                "color": "259468",
+                "color": "#259468",
                 "nice_name": "H2 (Kernnetz)",
                 "dash_array": "10",  # px, equal gaps
                 "offset": 10,  # px
@@ -93,7 +92,8 @@ class GridMapConfig:
 
 
 class TransmissionGridMap:
-    """Creates a map with transmission capacities.
+    """
+    Creates a map with transmission capacities.
 
     Parameters
     ----------
@@ -144,7 +144,8 @@ class TransmissionGridMap:
     def save(
         self, output_path: pathlib.Path, file_name: str, subdir: str = "HTML"
     ) -> None:
-        """Write the map to a html file.
+        """
+        Write the map to a html file.
 
         We want to store the HTML inside the JSON folder by default,
         because Folium does not support the import of JSON files.
@@ -225,7 +226,8 @@ class TransmissionGridMap:
         ).add_to(self.fmap)
 
     def draw_import_locations(self) -> None:
-        """Add import location icons and lines to the map.
+        """
+        Add import location icons and lines to the map.
 
         Notes
         -----
@@ -314,7 +316,8 @@ class TransmissionGridMap:
         )
 
     def draw_country_markers(self) -> None:
-        """Draw markers for countries on the map.
+        """
+        Draw markers for countries on the map.
 
         Retrieves bus information from networks, iterates over unique
         bus locations, creates CircleMarker and Marker objects for
@@ -351,7 +354,8 @@ class TransmissionGridMap:
 
     @staticmethod
     def _get_icon(icon: str) -> str:
-        """Encode a raw SVG string to bytes.
+        """
+        Encode a raw SVG string to bytes.
 
         Parameters
         ----------
@@ -367,7 +371,8 @@ class TransmissionGridMap:
         return f"data:image/svg+xml;base64,{data}"
 
     def _calculate_line_weights(self, df_slice: pd.DataFrame) -> pd.DataFrame:
-        """Calculate the line weights for a grid.
+        """
+        Calculate the line weights for a grid.
 
         Parameters
         ----------
@@ -389,7 +394,8 @@ class TransmissionGridMap:
         _min_width = self.cfg.line_weight_min  # 2.0
 
         def linear_scale(ser: pd.Series) -> pd.Series:
-            """Scale values between lower and upper line weight values.
+            """
+            Scale values between lower and upper line weight values.
 
             Returns the linear equation k * x + d. Where x is the ratio,
             k is the min-max range and d the lower bound constant.
@@ -414,8 +420,9 @@ class TransmissionGridMap:
         return df_slice
 
     @staticmethod
-    def _calculate_line_offset(df_slice: pd.DataFrame) -> pd.DataFrame:
-        """Add a column with the offset values for a grid.
+    def _calculate_line_offset(df_slice: pd.DataFrame, gap: float = 1) -> pd.DataFrame:
+        """
+        Add a column with the offset values for a grid.
 
         The offset is used to prevent overplotting lines and labels.
         It is only required if multiple edges exist between the same
@@ -426,6 +433,9 @@ class TransmissionGridMap:
         df_slice
             A data frame slice for every unique node connection
             and for all displayed carriers in a map.
+        gap : float, optional
+            Number of pixels to insert between the edges of adjacent lines
+            (default is 1 px), preventing strokes from touching.
 
         Returns
         -------
@@ -433,21 +443,44 @@ class TransmissionGridMap:
             The input data slice with the offset in pixel in an
             additional column.
         """
-        if df_slice.shape[0] == 1:
-            df_slice["offset"] = 0
-        elif df_slice.shape[0] == 2:
-            # move lines (down and up) by half their combined line
-            # weights plus 1 px for a visible gap
-            half_weight = df_slice["line_weight"].sum() / 2 + 1
-            df_slice["offset"] = [-0.5 * half_weight, 0.5 * half_weight]
-        else:
-            raise NotImplementedError(f"Number of rows: {df_slice} not supported.")
+        # if df_slice.shape[0] == 1:
+        #     df_slice["offset"] = 0
+        # elif df_slice.shape[0] == 2:
+        #     # move lines (down and up) by half their combined line
+        #     # weights plus 1 px for a visible gap
+        #     half_weight = df_slice["line_weight"].sum() / 2 + 1
+        #     df_slice["offset"] = [-0.5 * half_weight, 0.5 * half_weight]
+        # else:
+        #     raise NotImplementedError(f"Number of rows: {df_slice} not supported.")
+        #
+        # return df_slice
+        weights = df_slice["line_weight"].astype(float).tolist()
+        n = len(weights)
 
+        # Total envelope width = sum of all stroke widths + (n-1) gaps
+        total_width = sum(weights) + (n - 1) * gap
+
+        # Start at left edge of that envelope
+        current = -total_width / 2
+        offsets = []
+
+        # For each stroke:
+        #   • move by half its width  → centerline of this band
+        #   • record that as the offset
+        #   • then advance by (half its width + gap) to get to the next band’s start
+        for w in weights:
+            current += w / 2
+            offsets.append(current)
+            current += w / 2 + gap
+
+        # Attach offsets and return
+        df_slice["offset"] = offsets
         return df_slice
 
     @staticmethod
     def _calculate_line_center(df_slice: pd.DataFrame) -> pd.DataFrame:
-        """Calculate the line center for all lines.
+        """
+        Calculate the line center for all lines.
 
         In case the line has an offset, the center is moved by 10%
         of the line length and along the line in the direction of the
@@ -503,7 +536,8 @@ class TransmissionGridMap:
         return df_slice
 
     def _draw_grid_polyline_with_circle_marker(self, grid: pd.DataFrame) -> None:
-        """Draw grid lines on the map for a specific carrier.
+        """
+        Draw grid lines on the map for a specific carrier.
 
         Retrieves the nice name, color, and dash array configuration
         for the carrier. Iterates over grid data, creates PolyLine
@@ -576,7 +610,8 @@ class TransmissionGridMap:
         ).add_to(self.fmap)
 
     def _load_geojson(self, file_name: str, style: dict = None) -> None:
-        """Add the geojson layer.
+        """
+        Add the geojson layer.
 
         Parameters
         ----------
