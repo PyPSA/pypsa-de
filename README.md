@@ -24,42 +24,11 @@ Where `{os}` should be replaced with your operating system, e.g. for linux the c
 conda env create -f envs/linux-pinned.yaml
 ```
 
-## Connecting to the Ariadne-Database
-
-### For external users: Use config.public.yaml
-
-The default workflow configured for this repository assumes access to the internal Ariadne2 database. The database will soon be publicly available. Until then, users that do not have the required login details can run the analysis based on the data published during the [first phase of the Ariadne project](https://data.ece.iiasa.ac.at/ariadne/).
-
-This is possible by providing an additional config to the snakemake workflow. For every `snakemake COMMAND` specified in the instructions below, public users should use:
-
-```
-snakemake COMMAND --configfile=config/config.public.yaml
-```
-
-The additional config file specifies the required database, model, and scenario names for Ariadne1. If public users wish to edit the default scenario specifications, they can do so by changing `scenarios.public.yaml` to `scenarios.manual.yaml`. More details on using scenarios are given below.
-
-### For internal users: Provide login details
-
-The snakemake rule `retrieve_ariadne_database` logs into the interal Ariadne IIASA Database via the [`pyam`](https://pyam-iamc.readthedocs.io/en/stable/tutorials/iiasa.html) package. The credentials for logging into this database have to be stored locally on your machine with `ixmp4`. To do this activate the project environment and run
-
-```
-ixmp4 login <username>
-```
-
-You will be prompted to enter your `<password>`.
-
-Caveat: These credentials are stored on your machine in plain text.
-
-To switch between internal and public use, the command `ixmp4 logout` may be necessary.
-
 ## Run the analysis
 
 Before running any analysis with scenarios, the rule `build_scenarios` must be executed. This will create the file `config/scenarios.automated.yaml` which includes input data and CO2 targets from the IIASA Ariadne database as well as the specifications from the manual scenario file. [This file is specified in the  config.de.yaml via they key `run:scenarios:manual_file` and located at `config/scenarios.manual.yaml` by default].
 
     snakemake build_scenarios -f
-or in case of using the public database
-
-    snakemake build_scenarios --configfile=config/config.public.yaml -f
 
 Note that the hierarchy of scenario files is the following: `scenarios.automated.yaml` > (any `explicitly specified --configfiles`) > `config.de.yaml `> `config.default.yaml `Changes in the file `scenarios.manual.yaml `are only taken into account if the rule `build_scenarios` is executed.
 
