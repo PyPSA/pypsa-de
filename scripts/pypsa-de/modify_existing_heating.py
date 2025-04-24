@@ -22,14 +22,6 @@ if __name__ == "__main__":
         f"Heating demand before modification:\n{existing_heating.loc['Germany']}"
     )
 
-    mapping = {
-        "gas boiler": "Gas Boiler",
-        "oil boiler": "Oil Boiler",
-        "air heat pump": "Heat Pump|Electrical|Air",
-        "ground heat pump": "Heat Pump|Electrical|Ground",
-        "biomass boiler": "Biomass Boiler",
-    }
-
     new_values = pd.Series()
 
     logger.warning(
