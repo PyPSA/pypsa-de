@@ -583,7 +583,7 @@ def within_plot(
     select_regex=r"",
     drop_regex=r"",
     write_sum=False,
-    unit="EUR_2020/GJ",
+    unit="EUR_2020/MWh",
     **kwargs,
 ):
     df = df.T.copy()
