@@ -203,6 +203,8 @@ class Carrier:
     import_foreign: str = "foreign import"
     ch4_from_sabatier: str = "Gas from Sabatier"
     biogas_to_ch4: str = "biogas to gas"
+    AC: str = "AC"
+    DC: str = "DC"
     gas_pipepline: str = "gas pipeline"
     gas_pipepline_new: str = "gas pipeline new"
     ch4_generator: str = "gas generator"

@@ -93,8 +93,8 @@ def view_grid_capactiy(
     # specified carrier and bus_carrier
     # ToDo: Add CO2 once it works properly
     carriers_bus_carrier_groups = (
-        # (["AC", "DC"], "AC"),
-        #  ([Carrier.gas_pipepline, Carrier.gas_pipepline_new], BusCarrier.CH4),
+        ([Carrier.AC, Carrier.DC], BusCarrier.AC),
+        ([Carrier.gas_pipepline, Carrier.gas_pipepline_new], BusCarrier.CH4),
         (
             [
                 Carrier.h2_pipeline,
@@ -115,4 +115,4 @@ def view_grid_capactiy(
             df_grid, df_import_energy, df_import_capacity, buses, config
         )
         grid_map.draw_grid_by_carrier_groups_myopic()
-        grid_map.save(result_path, f"gridmap_{'-'.join(carriers)}", subdir)
+        grid_map.save(result_path, f"gridmap_{bus_carrier}", subdir)
