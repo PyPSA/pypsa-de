@@ -40,6 +40,7 @@ def get_transport_data(db, year):
                 key = f"Final Energy|Transportation|{subsector}|{fuel}"
                 transport_demand.loc[fuel] += df.get((key, "TWh/yr"), 0.0)
 
+        transport_demand = transport_demand.mul(1e6)  # convert TWh to MWh
         transport_demand["number_of_cars"] = df.loc[
             "Stock|Transportation|LDV|BEV", "million"
         ]
