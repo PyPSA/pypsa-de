@@ -227,7 +227,7 @@ def _get_fuel_fractions(n, region, fuel):
     else:
         raise ValueError(f"Fuel {fuel} not supported")
 
-    fuel_fractions = fuel_fractions.divide(domestic_fuel_supply.sum())
+    fuel_fractions = fuel_fractions.divide(domestic_fuel_supply.sum()).round(9)
 
     assert isclose(fuel_fractions.sum(), 1)
 
@@ -1233,11 +1233,19 @@ def get_primary_energy(n, region):
 
     var["Primary Energy|Gas"] = gas_usage.sum() / primary_gas_factor
 
+    _gas_primary = (
+        n.statistics.withdrawal(
+            bus_carrier="gas primary",
+            **kwargs,
+        )
+        .get(("Link", "DE gas compressing"), pd.Series(0))
+        .round()
+        .item()
+    )
+
     assert isclose(
         var["Primary Energy|Gas"],
-        n.statistics.withdrawal(bus_carrier="gas primary", **kwargs)
-        .get(("Link", "DE gas compressing"), pd.Series(0))
-        .item(),
+        _gas_primary,
     )
 
     var["Primary Energy|Gas|Gases"] = (
