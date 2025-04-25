@@ -3900,7 +3900,7 @@ def get_grid_investments(
             .p_nom
         )
         common_index = offwind.index.intersection(offwind2020.index)
-        offwind_capacity[common_index] -= offwind2020[common_index]
+        offwind_capacity.loc[common_index] -= offwind2020.loc[common_index]
     offwind_connection_overnight_cost = (
         offwind_capacity * offwind.connection_overnight_cost
     ) * 1e-9
