@@ -56,9 +56,9 @@ test:
 	set -e
 	echo "Running tests..."
 	echo "Build scenarios..."
-	snakemake build_scenarios
+	snakemake -call build_scenarios
 	echo "Run DACH config..."
-	snakemake ariadne_all --configfile=config/test/config.dach.yaml
+	snakemake -call ariadne_all --configfile=config/test/config.dach.yaml
 	echo "All tests completed successfully."
 
 unit-test:
@@ -66,11 +66,11 @@ unit-test:
 
 # Cleans all output files from tests
 clean-tests:
-	snakemake solve_elec_networks --configfile config/test/config.electricity.yaml --delete-all-output
-	snakemake --configfile config/test/config.overnight.yaml --delete-all-output
-	snakemake --configfile config/test/config.myopic.yaml --delete-all-output
-	snakemake make_summary_perfect --configfile config/test/config.perfect.yaml --delete-all-output
-	snakemake --configfile config/test/config.scenarios.yaml -n --delete-all-output
+	snakemake -call solve_elec_networks --configfile config/test/config.electricity.yaml --delete-all-output
+	snakemake -call --configfile config/test/config.overnight.yaml --delete-all-output
+	snakemake -call --configfile config/test/config.myopic.yaml --delete-all-output
+	snakemake -call make_summary_perfect --configfile config/test/config.perfect.yaml --delete-all-output
+	snakemake -call --configfile config/test/config.scenarios.yaml -n --delete-all-output
 
 # Removes all created files except for large cutout files (similar to fresh clone)
 reset:
