@@ -5100,22 +5100,19 @@ def get_data(
         "Investment|Energy Supply|Hydrogen|Gas"
     ]
     # For internal use only and translated directly to TWh
-    var["Demand|Electricity"] = (
-        var.reindex(
-            [
-                "Secondary Energy|Electricity|Storage Losses",
-                "Secondary Energy Input|Electricity|Heat",
-                "Secondary Energy Input|Electricity|Hydrogen",
-                "Secondary Energy Input|Electricity|Liquids",
-                "Final Energy|Industry|Electricity",
-                "Final Energy|Agriculture|Electricity",
-                "Final Energy|Residential and Commercial|Electricity",
-                "Final Energy|Transportation|Electricity",
-                "Final Energy|Carbon Dioxide Removal|Electricity",
-            ]
-        ).sum()
-        / 3.6
-    )
+    var["Demand|Electricity"] = var.reindex(
+        [
+            "Secondary Energy|Electricity|Storage Losses",
+            "Secondary Energy Input|Electricity|Heat",
+            "Secondary Energy Input|Electricity|Hydrogen",
+            "Secondary Energy Input|Electricity|Liquids",
+            "Final Energy|Industry|Electricity",
+            "Final Energy|Agriculture|Electricity",
+            "Final Energy|Residential and Commercial|Electricity",
+            "Final Energy|Transportation|Electricity",
+            "Final Energy|Carbon Dioxide Removal|Electricity",
+        ]
+    ).sum()
 
     data = []
     for v in var.index:

@@ -752,18 +752,18 @@ def elec_val_plot(df, savepath):
     # https://energy-charts.info/charts/energy/chart.htm?l=en&c=DE&interval=year&year=2020&source=total
 
     elec_generation["pypsa (net)"] = [
-        -df.loc[("Trade|Secondary Energy|Electricity|Volume", "TWh/yr"), 2020] / 3.6,
+        -df.loc[("Trade|Secondary Energy|Electricity|Volume", "TWh/yr"), 2020],
         0,
-        df.loc[("Secondary Energy|Electricity|Hydro", "TWh/yr"), 2020] / 3.6,
+        df.loc[("Secondary Energy|Electricity|Hydro", "TWh/yr"), 2020],
         0,
-        df.loc[("Secondary Energy|Electricity|Biomass", "TWh/yr"), 2020] / 3.6,
-        df.loc[("Secondary Energy|Electricity|Nuclear", "TWh/yr"), 2020] / 3.6,
-        df.loc[("Secondary Energy|Electricity|Coal|Lignite", "TWh/yr"), 2020] / 3.6,
-        df.loc[("Secondary Energy|Electricity|Coal|Hard Coal", "TWh/yr"), 2020] / 3.6,
-        df.loc[("Secondary Energy|Electricity|Oil", "TWh/yr"), 2020] / 3.6,
-        df.loc[("Secondary Energy|Electricity|Gas", "TWh/yr"), 2020] / 3.6,
-        df.loc[("Secondary Energy|Electricity|Wind", "TWh/yr"), 2020] / 3.6,
-        df.loc[("Secondary Energy|Electricity|Solar", "TWh/yr"), 2020] / 3.6,
+        df.loc[("Secondary Energy|Electricity|Biomass", "TWh/yr"), 2020],
+        df.loc[("Secondary Energy|Electricity|Nuclear", "TWh/yr"), 2020],
+        df.loc[("Secondary Energy|Electricity|Coal|Lignite", "TWh/yr"), 2020],
+        df.loc[("Secondary Energy|Electricity|Coal|Hard Coal", "TWh/yr"), 2020],
+        df.loc[("Secondary Energy|Electricity|Oil", "TWh/yr"), 2020],
+        df.loc[("Secondary Energy|Electricity|Gas", "TWh/yr"), 2020],
+        df.loc[("Secondary Energy|Electricity|Wind", "TWh/yr"), 2020],
+        df.loc[("Secondary Energy|Electricity|Solar", "TWh/yr"), 2020],
     ]
 
     # elec_generation.loc["sum/10"] = elec_generation.sum().div(10)
