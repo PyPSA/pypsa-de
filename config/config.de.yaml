@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20250414_merge_master_april
+  prefix: 20250425_public_db
   name:
   # - ExPol
   - KN2045_Mix
@@ -292,7 +292,6 @@ sector:
     rural: true
   co2_spatial: true
   biomass_spatial: true
-  #TBD what to include in config
   #relax so no infeasibility in 2050 with no land transport demand
   min_part_load_fischer_tropsch: 0.
   regional_methanol_demand: true  #set to true if regional CO2 constraints needed
