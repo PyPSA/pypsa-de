@@ -94,3 +94,4 @@ dev/*
 # pixi environments
 .pixi
 *.egg-info
+pixi.bak.*

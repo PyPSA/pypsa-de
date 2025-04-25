@@ -13,7 +13,7 @@ from evals.utils import (
 )
 
 
-def view_heat_production(
+def view_demand_heat(
     result_path: str | Path,
     networks: dict,
     config: dict,

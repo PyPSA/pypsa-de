@@ -8,7 +8,7 @@ from evals.plots.barchart import ESMBarChart
 from evals.statistic import collect_myopic_statistics
 
 
-def view_capacity_ac_storage(
+def view_capacity_electricity_storage(
     result_path: str | Path,
     networks: dict,
     config: dict,

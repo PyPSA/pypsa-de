@@ -8,7 +8,7 @@ from evals.plots.barchart import ESMBarChart
 from evals.statistic import collect_myopic_statistics
 
 
-def view_gas_storage_capacities(
+def view_capacity_gas_storage(
     result_path: str | Path,
     networks: dict,
     config: dict,
@@ -25,12 +25,11 @@ def view_gas_storage_capacities(
         networks,
         statistic="optimal_capacity",
         storage=True,
-        bus_carrier=[BusCarrier.H2],
+        bus_carrier=[BusCarrier.H2],  # Methane not relevant
     )
 
     metric = Exporter(
         statistics=[gas_stores],
-        statistics_unit="MWh",
         view_config=config["view"],
     )
 

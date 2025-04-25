@@ -35,68 +35,6 @@ def view_balance_heat(
     -------
     :
     """
-    # from evals.fileio import read_networks
-    # from evals.utils import filter_by
-    #
-    # collect_myopic_statistics(
-    #     networks=networks,
-    #     statistic="energy_balance",
-    #     bus_carrier="urban central heat",
-    #     groupby=["location", "carrier", "bus_carrier", "unit"]
-    # ).pipe(filter_by, location="FR0", year="2030").sum()
-    #
-    # n = networks["2030"]
-    # n.statistics.energy_balance(
-    #     bus_carrier="urban central heat",
-    #     groupby=["location", "carrier", "bus_carrier", "unit"],
-    # ).groupby("location").sum()
-    # fixme: how can it be that buses are not balanced?
-    #
-    # networks = read_networks(
-    #     result_path="/IdeaProjects/pypsa-at/results/20240627public_db/8Gt_Bal_v3"
-    # )
-    #
-    # bus_carrier = "urban central heat"
-    # location = "FR0"
-    # year = "2020"  # no low voltage -> only solid Biomass
-    #
-    # meth = collect_myopic_statistics(
-    #     networks,
-    #     statistic="energy_balance",
-    #     # bus_carrier=BusCarrier.heat_buses(),
-    # ).pipe(
-    #     filter_by,
-    #     location=location,
-    #     year=year,
-    #     carrier="methanolisation",
-    # )
-    #
-    # by_tech = collect_myopic_statistics(
-    #     networks,
-    #     statistic="supply",
-    #     bus_carrier=BusCarrier.heat_buses(),
-    # ).pipe(
-    #     filter_by,
-    #     location=location,
-    #     year=year,
-    #     bus_carrier=bus_carrier,
-    #     carrier="methanolisation",
-    # )
-    # print(by_tech)
-    #
-    # by_bus_carrier = (
-    #     collect_myopic_statistics(
-    #         networks,
-    #         comps="Link",
-    #         statistic="energy_balance",
-    #     ).pipe(filter_for_carrier_connected_to, bus_carrier)
-    #     .pipe(calculate_input_share, bus_carrier)
-    #     .pipe(filter_by, location=location, year=year, carrier="methanolisation")
-    # )
-    # print(by_bus_carrier)
-    #
-    # # I think it will never be possible to fetch input energies without unit conversions.
-    #
     link_energy_balance = collect_myopic_statistics(
         networks,
         comps="Link",
@@ -107,9 +45,7 @@ def view_balance_heat(
     heat_supply = []
     for bus_carrier in BusCarrier.heat_buses():
         supply = (
-            link_energy_balance.pipe(
-                filter_for_carrier_connected_to, bus_carrier, kind="supply"
-            )
+            link_energy_balance.pipe(filter_for_carrier_connected_to, bus_carrier)
             .pipe(calculate_input_share, bus_carrier)
             # drop technology names in favour of input bus carrier names:
             .pipe(rename_aggregate, bus_carrier)
@@ -118,16 +54,17 @@ def view_balance_heat(
             # .mul(-1)  # need to reverse from input (=withdrawal) to bus supply
         )
         supply.index = supply.index.set_names(DataModel.YEAR_IDX_NAMES)
+        supply.attrs["unit"] = "MWh_th"
         heat_supply.append(supply)
 
-    heat_supply.append(
-        collect_myopic_statistics(
-            networks,
-            statistic="supply",
-            comps="Generator",
-            bus_carrier=BusCarrier.heat_buses(),
-        )
+    generator_supply = collect_myopic_statistics(
+        networks,
+        statistic="supply",
+        comps="Generator",
+        bus_carrier=BusCarrier.heat_buses(),
     )
+    generator_supply.attrs["unit"] = "MWh_th"
+    heat_supply.append(generator_supply)
 
     # disabled: because with ambient heat a surplus is generated on the suppy side
     # heat_supply.append(
@@ -149,16 +86,16 @@ def view_balance_heat(
     cannot rename technologies with multiple bus carrier inputs to
     "Electricity", or "Hydrogen" without hiding the underlying demands.
 
-    For example, Electrolsyis needs AC and H2. Therefore it is not possible to
+    For example, Electrolysis needs AC and H2. Therefore it is not possible to
     show Electricity or Hydrogen in the supply side of this view.
     """
-    heat_supply = [
-        collect_myopic_statistics(
-            networks,
-            statistic="supply",
-            bus_carrier=BusCarrier.heat_buses(),
-        )  # .pipe(rename_aggregate, {"urban central water tanks discharger": "Storage"})
-    ]
+    # heat_supply = [
+    #     collect_myopic_statistics(
+    #         networks,
+    #         statistic="supply",
+    #         bus_carrier=BusCarrier.heat_buses(),
+    #     )  # .pipe(rename_aggregate, {"urban central water tanks discharger": "Storage"})
+    # ]
 
     heat_loss_factor = get_heat_loss_factor(networks)
     heat_demand = (
@@ -166,7 +103,8 @@ def view_balance_heat(
             networks,
             statistic="withdrawal",
             bus_carrier=BusCarrier.heat_buses(),
-        ).pipe(split_urban_heat_losses_and_consumption, heat_loss_factor)
+        )
+        .pipe(split_urban_heat_losses_and_consumption, heat_loss_factor)
         # .pipe(rename_aggregate, {"urban central water tanks charger": "Storage"})
         .mul(-1)
     )

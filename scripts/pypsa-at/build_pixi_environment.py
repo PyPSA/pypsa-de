@@ -1,5 +1,6 @@
 """A script to rebuild the pixi environment after upstream pinned version upgrades."""
 
+import shutil
 from pathlib import Path
 from shutil import move
 from subprocess import run
@@ -12,6 +13,9 @@ def main():
         fp = Path(filename)
         if fp.is_file():
             move(fp, f"{fp.stem}.bak{fp.suffix}")
+
+    # purge existing packages
+    shutil.rmtree(".pixi")
 
     # re-create pixi files from environment.yaml
     run(["pixi", "init", "--import", "envs/environment.yaml"], check=True)

@@ -13,7 +13,7 @@ from evals.plots.barchart import ESMBarChart
 from evals.statistic import collect_myopic_statistics
 
 
-def view_capacity_heat(
+def view_capacity_heat_production(
     result_path: str | Path,
     networks: dict,
     config: dict,
@@ -39,7 +39,6 @@ def view_capacity_heat(
 
     metric = Exporter(
         statistics=[heat_capacity],
-        statistics_unit=heat_capacity.attrs["unit"],
         view_config=config["view"],
     )
 

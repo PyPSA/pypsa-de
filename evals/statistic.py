@@ -172,7 +172,7 @@ def collect_myopic_statistics(
     pypsa_statistics = [m[0] for m in getmembers(pypsa.statistics.StatisticsAccessor)]
 
     if statistic in pypsa_statistics:  # register a default to reduce verbosity
-        kwargs.setdefault("groupby", ["location", "carrier", "bus_carrier"])
+        kwargs.setdefault("groupby", ["location", "carrier", "bus_carrier", "unit"])
 
     year_statistics = []
     for year, n in networks.items():
@@ -202,12 +202,23 @@ def collect_myopic_statistics(
     if kwargs.get("aggregate_time") is False:
         statistic.columns.name = DataModel.SNAPSHOTS
 
-    if drop_zero_rows:
-        statistic = (
-            statistic.loc[statistic != 0]  # Series
-            if isinstance(statistic, pd.Series)
-            else statistic.loc[(statistic != 0).any(axis=1)]  # DataFrame
-        )
+    if drop_zero_rows and isinstance(statistic, pd.Series):
+        statistic = statistic.loc[statistic != 0]
+    elif drop_zero_rows and isinstance(statistic, pd.DataFrame):
+        statistic = statistic.loc[(statistic != 0).any(axis=1)]
+    else:
+        raise TypeError(f"Unknown statistic type '{type(statistic)}'")
+
+    # assign the correct unit the statistic if possible
+    try:
+        statistic.attrs["unit"] = statistic.index.unique("unit").item()
+    except ValueError:
+        if not statistic.empty:
+            logger.warning(
+                f"Mixed units detected in statistic: {statistic.index.unique('unit')}."
+            )
+
+    statistic = statistic.droplevel("unit")
 
     return statistic.sort_index()
 
@@ -241,8 +252,8 @@ class ESMStatistics(StatisticsAccessor):
     def __init__(self, n: pypsa.Network, result_path: Path) -> None:
         super().__init__(n)
         self.result_path = result_path
-        self.set_parameters(nice_names=False)
-        self.set_parameters(drop_zero=True)
+        pypsa.options.params.statistics.nice_names = False
+        pypsa.options.params.statistics.drop_zero = True
         groupers.add_grouper("location", get_location)
         groupers.add_grouper(
             "bus0", partial(get_location_from_name_at_port, location_port="0")
@@ -725,9 +736,9 @@ class ESMStatistics(StatisticsAccessor):
             """
             hp = ser.unstack(DataModel.BUS_CARRIER)
             assert hp.shape[1] == 2, f"Unexpected number of bus_carrier: {hp.columns}."
-            assert (
-                "low voltage" in hp.columns
-            ), f"AC missing in bus_carrier: {hp.columns}."
+            assert "low voltage" in hp.columns, (
+                f"AC missing in bus_carrier: {hp.columns}."
+            )
             return hp.T.sum()
 
         ambient_heat = heat_pump.groupby(DataModel.CARRIER, group_keys=False).apply(

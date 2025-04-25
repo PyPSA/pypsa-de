@@ -8,7 +8,7 @@ from evals.plots.barchart import ESMBarChart
 from evals.statistic import collect_myopic_statistics
 
 
-def view_electricity_production_capacities(
+def view_capacity_electricity_production(
     result_path: str | Path,
     networks: dict,
     config: dict,
@@ -28,7 +28,8 @@ def view_electricity_production_capacities(
             statistic="optimal_capacity",
             comps=("Generator", "Link", "StorageUnit"),
             bus_carrier=BusCarrier.AC,
-        ).clip(lower=0)
+        )
+        .clip(lower=0)
         # drop Links connected to StorageUnits and DC Links
         .drop(
             [
@@ -45,7 +46,6 @@ def view_electricity_production_capacities(
 
     metric = Exporter(
         statistics=[ac_capacity],
-        statistics_unit=ac_capacity.attrs["unit"],
         view_config=config["view"],
     )
 
