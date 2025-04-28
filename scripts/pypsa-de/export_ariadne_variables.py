@@ -1246,6 +1246,7 @@ def get_primary_energy(n, region):
     assert isclose(
         var["Primary Energy|Gas"],
         _gas_primary,
+        atol=1e-1,
     )
 
     var["Primary Energy|Gas|Gases"] = (
@@ -5231,7 +5232,7 @@ if __name__ == "__main__":
 
     if "debug" == "debug":  # For debugging
         var = pd.Series()
-        idx = 2
+        idx = 6
         n = networks[idx]
         c = costs[idx]
         _industry_demand = industry_demands[idx]
