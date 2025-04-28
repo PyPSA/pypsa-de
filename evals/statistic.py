@@ -210,14 +210,15 @@ def collect_myopic_statistics(
         raise TypeError(f"Unknown statistic type '{type(statistic)}'")
 
     # assign the correct unit the statistic if possible
-    if not statistic.empty:
-        try:
-            statistic.attrs["unit"] = statistic.index.unique("unit").item()
-        except ValueError:
-            logger.warning(
-                f"Mixed units detected in statistic: {statistic.index.unique('unit')}."
-            )
-    statistic = statistic.droplevel("unit")
+    if "unit" in statistic.index.names:
+        if not statistic.empty:
+            try:
+                statistic.attrs["unit"] = statistic.index.unique("unit").item()
+            except ValueError:
+                logger.warning(
+                    f"Mixed units detected in statistic: {statistic.index.unique('unit')}."
+                )
+        statistic = statistic.droplevel("unit")
 
     return statistic.sort_index()
 
@@ -285,10 +286,10 @@ class ESMStatistics(StatisticsAccessor):
         industry and rail demands probably are not substracted from the correct
         series.
         """
-        year = self.n.meta["wildcards"]["planning_horizons"]
-        clusters = self.n.meta["wildcards"]["clusters"]
-        run = self.n.meta["run"]
-        res = get_resources_directory(self.n)(run["prefix"])
+        year = self._n.meta["wildcards"]["planning_horizons"]
+        clusters = self._n.meta["wildcards"]["clusters"]
+        run = self._n.meta["run"]
+        res = get_resources_directory(self._n)(run["prefix"])
 
         indu = read_csv_files(
             res,
@@ -451,7 +452,7 @@ class ESMStatistics(StatisticsAccessor):
             A DataFrame containing the split energy amounts for
             PHS and hydro.
         """
-        n = self.n
+        n = self._n
 
         idx = n.static("StorageUnit").index
         phs = pd.DataFrame(index=idx)
@@ -517,7 +518,7 @@ class ESMStatistics(StatisticsAccessor):
         :
             Cumulated or constant time series for storage units.
         """
-        n = self.n
+        n = self._n
         ts_efficiency_name_agg = [
             ("p_dispatch", "efficiency_dispatch", Group.turbine_cum, "cumsum"),
             ("p_store", "efficiency_store", Group.pumping_cum, "cumsum"),
@@ -603,7 +604,7 @@ class ESMStatistics(StatisticsAccessor):
             A DataFrame containing the calculated energy exchange
             between locations.
         """
-        n = self.n
+        n = self._n
         results_comp = []
 
         buses = n.static("Bus").reset_index()
@@ -676,7 +677,7 @@ class ESMStatistics(StatisticsAccessor):
         :
             Energy exchange capacity between locations.
         """
-        n = self.n
+        n = self._n
 
         capacity = self.optimal_capacity(
             comps=n.branch_components,
@@ -705,7 +706,7 @@ class ESMStatistics(StatisticsAccessor):
 
     def ambient_heat(self) -> pd.Series | pd.DataFrame:
         """Calculate ambient heat energy amounts used by heat pumps."""
-        energy_balance = self.n.statistics.energy_balance(
+        energy_balance = self._n.statistics.energy_balance(
             comps="Link",
             bus_carrier=BusCarrier.heat_buses() + ["low voltage"],
             groupby=DataModel.IDX_NAMES,
@@ -826,7 +827,7 @@ class ESMStatistics(StatisticsAccessor):
         because it returns energy amounts whereas this statistic returns
         the optimal capacity.
         """
-        n = self.n
+        n = self._n
         carrier = carrier or list(TRANSMISSION_CARRIER)
         capacities = n.statistics.optimal_capacity(
             comps=comps or n.branch_components,
@@ -879,7 +880,7 @@ class ESMStatistics(StatisticsAccessor):
             The amount of energy transfer for transmission technologies
             between nodes.
         """
-        n = self.n
+        n = self._n
         carrier = carrier or list(TRANSMISSION_CARRIER)
         comps = comps or n.branch_components
 

@@ -39,7 +39,7 @@ def view_balance_methane(
         bus_carrier=bus_carrier,
     )
     pipelines = supply.filter(like="pipeline", axis=0).index.unique(DataModel.CARRIER)
-    supply = supply.drop(pipelines, level=DataModel.CARRIER)
+    supply = supply.drop(pipelines, level=DataModel.CARRIER, errors="ignore")
     supply.attrs["unit"] = unit  # renewable gas lacks unit (unit is '')
 
     demand = (
@@ -47,40 +47,44 @@ def view_balance_methane(
             networks,
             statistic="withdrawal",
             bus_carrier=bus_carrier,
+            # comps=["Link", "Store", "StorageUnit"]
         )
         .mul(-1)
-        .drop(pipelines, level=DataModel.CARRIER)
+        .drop(pipelines, level=DataModel.CARRIER, errors="ignore")
     )
     demand.attrs["unit"] = unit  # renewable gas lacks unit (unit is '')
 
     trade_statistics = []
-    for scope, direction, alias in [
-        (TradeTypes.FOREIGN, "import", Group.import_foreign),
-        (TradeTypes.FOREIGN, "export", Group.export_foreign),
-        (TradeTypes.DOMESTIC, "import", Group.import_domestic),
-        (TradeTypes.DOMESTIC, "export", Group.export_domestic),
-    ]:
-        trade = (
-            collect_myopic_statistics(
-                networks,
-                statistic="trade_energy",
-                scope=scope,
-                direction=direction,
-                bus_carrier=bus_carrier,
+    if any(pipelines):
+        for scope, direction, alias in [
+            (TradeTypes.FOREIGN, "import", Group.import_foreign),
+            (TradeTypes.FOREIGN, "export", Group.export_foreign),
+            (TradeTypes.DOMESTIC, "import", Group.import_domestic),
+            (TradeTypes.DOMESTIC, "export", Group.export_domestic),
+        ]:
+            trade = (
+                collect_myopic_statistics(
+                    networks,
+                    statistic="trade_energy",
+                    scope=scope,
+                    direction=direction,
+                    bus_carrier=bus_carrier,
+                )
+                .filter(like="pipeline", axis=0)
+                .pipe(rename_aggregate, alias)
             )
-            .filter(like="pipeline", axis=0)
-            .pipe(rename_aggregate, alias)
-        )
-        trade.attrs["unit"] = unit
-        trade_statistics.append(trade)
+            trade.attrs["unit"] = unit
+            trade_statistics.append(trade)
 
     exporter = Exporter(
         statistics=[supply, demand] + trade_statistics,
         view_config=config["view"],
     )
+
     # todo: split storage in and storage out
 
     exporter.defaults.plotly.chart = ESMGroupedBarChart
+    # exporter.defaults.plotly.chart = ESMBarChart
     exporter.defaults.plotly.xaxis_title = ""
     exporter.defaults.plotly.pattern = dict.fromkeys(
         [
