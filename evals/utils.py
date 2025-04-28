@@ -138,7 +138,7 @@ def calculate_cost_annuity(n: float, r: float | pd.Series = 0.07) -> float | pd.
         return 1 / n
 
 
-def get_unit(s: str) -> str:
+def get_unit(s: str, ignore_suffix: bool = True) -> str:
     """
     Parse the unit from a string.
 
@@ -149,6 +149,8 @@ def get_unit(s: str) -> str:
     ----------
     s
         The input string that should contain a unit.
+    ignore_suffix
+        Whether to strip the suffix, e.g. `_th`, `_el`, `_LHV`, ...
 
     Returns
     -------
@@ -157,7 +159,11 @@ def get_unit(s: str) -> str:
         the enclosing parenthesis, or an empty string.
     """
     if matches := re.findall(Regex.unit, s):
-        return matches[-1].strip("()")
+        unit = matches[-1].strip("()")
+        if ignore_suffix:
+            return "_".join(unit.split("_")[:-1])
+        else:
+            return matches[-1].strip("()")
     return ""
 
 
@@ -702,25 +708,22 @@ def calculate_input_share(
         supply = _df[_df.ge(0)]
         bus_carrier_supply = filter_by(supply, bus_carrier=bus_carrier).sum()
         # scaling takes into account that Link inputs and outputs are not equally large
-        scaling = withdrawal.sum() / supply.sum()
+        scaling = abs(supply.sum() / withdrawal.sum())
         # share takes multiple outputs into account
-        share = bus_carrier_supply / supply.sum()
-        # fixme: i suspect this is wrong for heat pumps and CHPs with sum(efficiency > 1). The problem is, that 100%
-        #  of heat generation is called "low voltage", but this is not correct. It should label 100% of
-        #  electricity demand as low voltage and the rest as ambient heat
-        # if scaling < 1.0 and "heat pump" in _df.index.unique("carrier")[0]:
-        #     print("heat pumps")
-        # if (
-        #     scaling < 1.0
-        #     and share != 0
-        #     and "heat pump" not in _df.index.unique("carrier")[0]
-        # ):
-        #     print("CHPs?")
-        #     print(_df)
-        return withdrawal / scaling * share
+        with np.errstate(divide="ignore", invalid="ignore"):  # let supply be zero
+            share = bus_carrier_supply / supply.sum()
+        if scaling > 1.0:
+            _carrier = _df.index.unique(DataModel.CARRIER).item()
+            _bus_carrier = "ambient heat" if "heat pump" in _carrier else "latent heat"
+            surplus = rename_aggregate(
+                withdrawal * (scaling - 1), _bus_carrier, level=DataModel.BUS_CARRIER
+            )
+            return pd.concat([withdrawal, surplus]) * share
+        else:
+            return withdrawal * scaling * share
 
     groups = [DataModel.YEAR, DataModel.LOCATION, DataModel.CARRIER]
-    return df.groupby(groups, group_keys=False).apply(_input_share)
+    return df.groupby(groups, group_keys=False).apply(_input_share).mul(-1)
 
 
 def filter_for_carrier_connected_to(df: pd.DataFrame, bus_carrier: str | list):

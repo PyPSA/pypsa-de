@@ -40,7 +40,7 @@ def view_balance_hydrogen(
     )
     pipelines = supply.filter(like="pipeline", axis=0).index.unique(DataModel.CARRIER)
     supply = supply.drop(pipelines, level=DataModel.CARRIER)
-    supply.attrs["unit"] = unit
+    # supply.attrs["unit"] = unit
 
     demand = (
         collect_myopic_statistics(
@@ -51,7 +51,7 @@ def view_balance_hydrogen(
         .mul(-1)
         .drop(pipelines, level=DataModel.CARRIER)
     )
-    demand.attrs["unit"] = unit
+    # demand.attrs["unit"] = unit
 
     trade_statistics = []
     for scope, direction, alias in [

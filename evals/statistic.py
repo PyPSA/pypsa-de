@@ -210,14 +210,13 @@ def collect_myopic_statistics(
         raise TypeError(f"Unknown statistic type '{type(statistic)}'")
 
     # assign the correct unit the statistic if possible
-    try:
-        statistic.attrs["unit"] = statistic.index.unique("unit").item()
-    except ValueError:
-        if not statistic.empty:
+    if not statistic.empty:
+        try:
+            statistic.attrs["unit"] = statistic.index.unique("unit").item()
+        except ValueError:
             logger.warning(
                 f"Mixed units detected in statistic: {statistic.index.unique('unit')}."
             )
-
     statistic = statistic.droplevel("unit")
 
     return statistic.sort_index()

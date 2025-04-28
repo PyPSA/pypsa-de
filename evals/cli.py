@@ -48,10 +48,22 @@ logger = logging.getLogger(__name__)
 )
 @click.option("--names", "-n", multiple=True, required=False, default=[])
 @click.option(
-    "--config_override", "-c", type=str, multiple=False, required=False, default=""
+    "--config_override",
+    "-c",
+    type=click.Path(exists=True),
+    multiple=False,
+    required=False,
+    default=None,
+)
+@click.option(
+    "--fail_fast", "-f", type=bool, multiple=False, required=False, default=False
 )
 def run_eval(
-    result_path: click.Path, sub_directory: str, names: list, config_override: str
+    result_path: click.Path,
+    sub_directory: str,
+    names: list,
+    config_override: str,
+    fail_fast: bool,
 ) -> None:
     r"""
     Execute evaluation functions from the evals module.
@@ -71,7 +83,7 @@ def run_eval(
         Note, that running on copied result folders might fail
         due to missing resource files.
     sub_directory
-        The subdirectory with the postnetwork files.
+        The subdirectory with the network files.
     names
         A list of evaluation name, e.g. "eval_electricity_amounts",
         optional. Defaults to running all evaluations from
@@ -80,6 +92,9 @@ def run_eval(
         A path to a config.toml file with the same section as
         the config.defaults.toml used to override configurations
         used by view functions.
+    fail_fast
+        Whether to raise Exceptions or to run all functions, defaults to
+        running all functions.
 
     Returns
     -------
@@ -109,15 +124,17 @@ def run_eval(
         try:
             config = read_views_config(func, config_override)
             func(result_path=result_path, networks=networks, config=config)
-        except Exception:  # noqa
+        except Exception as e:
             logger.exception(f"Exception during {func.__name__}.", exc_info=True)
             fails.append(func.__name__)
+            if fail_fast:
+                raise e
         else:
             logger.info(
                 f"Executing {func.__name__} took {time() - eval_start:.2f} seconds."
             )
         finally:
-            logger.info(f"Finish {func.__name__}.")
+            logger.info(f"Finished {func.__name__}.")
 
     logger.info(
         f"Full run took {time() - run_start:.2f} seconds."
