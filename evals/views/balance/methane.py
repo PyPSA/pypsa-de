@@ -47,7 +47,6 @@ def view_balance_methane(
             networks,
             statistic="withdrawal",
             bus_carrier=bus_carrier,
-            # comps=["Link", "Store", "StorageUnit"]
         )
         .mul(-1)
         .drop(pipelines, level=DataModel.CARRIER, errors="ignore")
