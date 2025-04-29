@@ -59,12 +59,12 @@ def view_timeseries_hydrogen(
     )
     # todo: trade statistic finds transformation Links connected to EU buses, e.g. "EU NH3" or "EU renewable gas"
     trade_saldo = trade_saldo.filter(like="pipeline", axis=0)
+    trade_saldo.attrs["unit"] = "MWh_LHV"
 
     trade_saldo = rename_aggregate(trade_saldo, trade_saldo.attrs["name"])
 
     metric = Exporter(
         statistics=[h2_production, h2_demand, trade_saldo],
-        statistics_unit="MWh",
         view_config=config["view"],
     )
 

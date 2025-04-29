@@ -273,7 +273,7 @@ exports = []
 
 [view.balance.electricity]
 name = "Electricity Energy Balance"
-unit = "TWh"
+unit = "TWh_el"
 file_name = "nodal_balance_electricity_{location}"
 cutoff = 0.01  # TWh
 legend_order = [
@@ -505,7 +505,7 @@ exports = ["excel"]
 
 [view.timeseries.hydrogen]
 name = "Hydrogen Production and Demand"
-unit = "MWh"
+unit = "MWh_LHV"
 file_name = "timeseries_hydrogen_{location}_{year}"
 cutoff = 0.001
 legend_order = [
