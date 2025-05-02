@@ -1,5 +1,6 @@
 """Modify the NUTS3 shapefile for custom administrative clustering."""
 
+import sys
 import logging
 
 import geopandas as gpd
@@ -72,6 +73,7 @@ if __name__ == "__main__":
     ):
         logger.info("Skipping NUTS3 shapefile modification.")
         nuts3_regions.to_file(snakemake.output.nuts3_shapes)
+        sys.exit(0)
 
     assert admin_levels.get("level") == 0
     logger.info("Applying custom administrative clustering.")
