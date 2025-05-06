@@ -29,8 +29,8 @@ def get_primary_steel_share(df, planning_horizons):
     total_steel = df.loc[model, "Production|Steel"]
     primary_steel = df.loc[model, "Production|Steel|Primary"]
 
-    total_steel[2020] = 40.066  # Ariadne2-internal DB, FORECAST, 2021
-    primary_steel[2020] = 27.975  # Ariadne2-interbal DB, FORECAST, 2021
+    total_steel[2020] = 40.621  # Ariadne2-internal DB, FORECAST, 2021
+    primary_steel[2020] = 28.53  # Ariadne2-internal DB, FORECAST, 2021
 
     primary_steel_share = primary_steel / total_steel
     primary_steel_share = primary_steel_share[planning_horizons]
@@ -45,7 +45,7 @@ def get_DRI_share(df, planning_horizons):
     # Assuming that only hydrogen DRI steel is sustainable and DRI using natural gas is phased out
     DRI_steel = df.loc[model, "Production|Steel|Primary|Direct Reduction Hydrogen"]
 
-    total_steel[2020] = 40.066  # Ariadne2-internal DB, FORECAST, 2021
+    total_steel[2020] = 40.621  # Ariadne2-internal DB, FORECAST, 2021
     DRI_steel[2020] = 0  # Ariadne2-internal DB, FORECAST, 2021
 
     DRI_steel_share = DRI_steel / total_steel
