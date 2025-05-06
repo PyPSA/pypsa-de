@@ -10,7 +10,6 @@ This includes
 - Production|Steel
 - Production|Chemicals|Ammonia
 - Production|Chemicals|Methanol
-- Production|Non-Ferrous Metals
 - Production|Pulp and Paper
 """
 
@@ -52,11 +51,10 @@ if __name__ == "__main__":
             {
                 "Production|Chemicals|Ammonia": 2.891851,
                 "Production|Chemicals|Methanol": 1.359,
-                "Production|Non-Ferrous Metals": 1.943828,
                 "Production|Non-Metallic Minerals": 68.635925,
                 "Production|Non-Metallic Minerals|Cement": 34.966,
                 "Production|Pulp and Paper": 40.746,
-                "Production|Steel": 40.066,
+                "Production|Steel": 40.621,
             },
             index=[year],
         ).T.multiply(1000)
