@@ -78,6 +78,19 @@ if config["foresight"] == "perfect":
 
     include: "rules/solve_perfect.smk"
 
+# Pypsa-DE requires the scenario management by default
+onstart:
+    scenarios_file=Path(config["run"]["scenarios"]["file"])
+    manual_file=Path(config["run"]["scenarios"]["manual_file"])
+
+    if not scenarios_file.exists():
+        print(f"\033[91mWARNING: {scenarios_file} does not exist. Please run `snakemake build_scenarios` to create it.\033[0m")
+    elif manual_file.exists():
+        if scenarios_file.stat().st_mtime < manual_file.stat().st_mtime:
+            print(f"\033[91mWARNING: {manual_file} is newer than {scenarios_file}. Please run `snakemake build_scenarios` to update {scenarios_file}.\033[0m")
+    else:
+        print(f"\033[91mWARNING: {manual_file} does not exist. Please create it to use the scenario management.\033[0m")
+    print(f"Scenario file {scenarios_file} exists and is up to date. Starting workflow.")
 
 rule all:
     input:
@@ -147,15 +160,6 @@ rule all:
             ),
         ),
     default_target: True
-
-
-rule create_scenarios:
-    output:
-        config["run"]["scenarios"]["file"],
-    conda:
-        "envs/environment.yaml"
-    script:
-        "config/create_scenarios.py"
 
 
 rule purge:
