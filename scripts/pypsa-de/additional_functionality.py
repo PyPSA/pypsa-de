@@ -354,7 +354,7 @@ def electricity_import_limits(n, investment_year, limits_volume_max):
         )
 
 
-def add_co2limit_country(n, limit_countries, snakemake):
+def add_national_co2_budgets(n, snakemake, national_co2_budgets, investment_year):
     """
     Add a set of emissions limit constraints for specified countries.
 
@@ -363,11 +363,12 @@ def add_co2limit_country(n, limit_countries, snakemake):
     Parameters
     ----------
     n : pypsa.Network
-    limit_countries : dict
-    snakemake: snakemake object
-    """
-    logger.info("Adding CO2 budget limit for each country as per unit of 1990 levels")
+    snakemake : snakemake.io.Snakemake
+    national_co2_budgets : dict
+    investment_year : int
 
+    """
+    logger.info("Adding national CO2 budgets")
     nhours = n.snapshot_weightings.generators.sum()
     nyears = nhours / 8760
 
@@ -378,10 +379,10 @@ def add_co2limit_country(n, limit_countries, snakemake):
 
     co2_total_totals = co2_totals[sectors].sum(axis=1) * nyears
 
-    for ct in limit_countries:
-        limit = co2_total_totals[ct] * limit_countries[ct]
+    for ct in national_co2_budgets:
+        limit = co2_total_totals[ct] * national_co2_budgets[ct][investment_year]
         logger.info(
-            f"Limiting emissions in country {ct} to {limit_countries[ct]:.1%} of "
+            f"Limiting emissions in country {ct} to {national_co2_budgets[ct][investment_year]:.1%} of "
             f"1990 levels, i.e. {limit:,.2f} tCO2/a",
         )
 
@@ -418,10 +419,10 @@ def add_co2limit_country(n, limit_countries, snakemake):
         # Aviation demand
         energy_totals = pd.read_csv(snakemake.input.energy_totals, index_col=[0, 1])
         domestic_aviation = energy_totals.loc[
-            ("DE", snakemake.params.energy_year), "total domestic aviation"
+            (ct, snakemake.params.energy_year), "total domestic aviation"
         ]
         international_aviation = energy_totals.loc[
-            ("DE", snakemake.params.energy_year), "total international aviation"
+            (ct, snakemake.params.energy_year), "total international aviation"
         ]
         domestic_factor = domestic_aviation / (
             domestic_aviation + international_aviation
@@ -440,8 +441,8 @@ def add_co2limit_country(n, limit_countries, snakemake):
         )
 
         # Adding Efuel imports and exports to constraint
-        incoming_oil = n.links.index[n.links.index == "EU renewable oil -> DE oil"]
-        outgoing_oil = n.links.index[n.links.index == "DE renewable oil -> EU oil"]
+        incoming_oil = n.links.index[n.links.index == f"EU renewable oil -> {ct} oil"]
+        outgoing_oil = n.links.index[n.links.index == f"{ct} renewable oil -> EU oil"]
 
         lhs.append(
             (
@@ -459,8 +460,12 @@ def add_co2limit_country(n, limit_countries, snakemake):
             ).sum()
         )
 
-        incoming_methanol = n.links.index[n.links.index == "EU methanol -> DE methanol"]
-        outgoing_methanol = n.links.index[n.links.index == "DE methanol -> EU methanol"]
+        incoming_methanol = n.links.index[
+            n.links.index == f"EU methanol -> {ct} methanol"
+        ]
+        outgoing_methanol = n.links.index[
+            n.links.index == f"{ct} methanol -> EU methanol"
+        ]
 
         lhs.append(
             (
@@ -480,8 +485,8 @@ def add_co2limit_country(n, limit_countries, snakemake):
         )
 
         # Methane
-        incoming_CH4 = n.links.index[n.links.index == "EU renewable gas -> DE gas"]
-        outgoing_CH4 = n.links.index[n.links.index == "DE renewable gas -> EU gas"]
+        incoming_CH4 = n.links.index[n.links.index == f"EU renewable gas -> {ct} gas"]
+        outgoing_CH4 = n.links.index[n.links.index == f"{ct} renewable gas -> EU gas"]
 
         lhs.append(
             (
@@ -754,11 +759,11 @@ def additional_functionality(n, snapshots, snakemake):
     force_boiler_profiles_existing_per_boiler(n)
 
     if isinstance(constraints["co2_budget_national"], dict):
-        limit_countries = constraints["co2_budget_national"][investment_year]
-        add_co2limit_country(
+        add_national_co2_budgets(
             n,
-            limit_countries,
             snakemake,
+            constraints["co2_budget_national"],
+            investment_year,
         )
     else:
         logger.warning("No national CO2 budget specified!")

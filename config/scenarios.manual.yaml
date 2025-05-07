@@ -72,13 +72,12 @@ ExPol:
 
 
 KN2045_Mix:
-# Default scenario
+# Default scenario, defined in pypsa.de.yaml
 # Ausgewogener Mix an Technologien zur Dekarbonisierung der Sektoren
 # Breites Energieträgerportfolio in der Endenergie (Strom, Wasserstoff, synthetische Kraftstoffe)
 # Ausbau der erneuerbare Stromerzeugung erreicht politisch gesetzte Ziele
 # Importe erneuerbar erzeugter Energien auf mittlerem Niveau
 # dient als Referenzszenario in der Familie der Ariadne-Szenarien
-  co2_budget_DE_source: KSG
 
 
 KN2045_Elek:

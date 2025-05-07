@@ -135,10 +135,19 @@ def write_to_scenario_yaml(input, output, scenarios, df):
     file_path = Path(input)
     config = yaml.load(file_path)
     for scenario in scenarios:
+        if config.get(scenario) is None:
+            logger.warning(
+                f"Found an empty scenario config for {scenario}. Using default config `pypsa.de.yaml`."
+            )
+            config[scenario] = {}
+
         reference_scenario = (
             config[scenario]
             .get("iiasa_database", {})
-            .get("reference_scenario", "KN2045_Mix")
+            .get(
+                "reference_scenario",
+                snakemake.config["iiasa_database"]["reference_scenario"],
+            )  # Using the default reference scenario from pypsa.de.yaml
         )
 
         planning_horizons = [
@@ -158,8 +167,13 @@ def write_to_scenario_yaml(input, output, scenarios, df):
             df.loc[snakemake.params.leitmodelle["transport"], reference_scenario, :],
             planning_horizons,
         )
-
-        co2_budget_source = config[scenario]["co2_budget_DE_source"]
+        if not config[scenario].get("co2_budget_DE_source"):
+            logger.info(
+                f"No CO2 budget source for DE specified in the scenario config. Using KSG targets and REMIND emissions from {reference_scenario} for the {scenario} scenario."
+            )
+            co2_budget_source = "KSG"
+        else:
+            co2_budget_source = config[scenario]["co2_budget_DE_source"]
 
         co2_budget_fractions = get_co2_budget(
             df.loc[snakemake.params.leitmodelle["general"], reference_scenario],
@@ -212,18 +226,21 @@ def write_to_scenario_yaml(input, output, scenarios, df):
             config[scenario]["solving"] = {}
         if not config[scenario]["solving"].get("constraints"):
             config[scenario]["solving"]["constraints"] = {}
+        if not config[scenario]["solving"]["constraints"].get("co2_budget_national"):
+            config[scenario]["solving"]["constraints"]["co2_budget_national"] = {}
         if (
-            config[scenario]["solving"]["constraints"].get("co2_budget_national")
+            config[scenario]["solving"]["constraints"]["co2_budget_national"].get("DE")
             is not None
         ):
-            logger.warning(f"Overwriting co2_budget_national in {scenario} scenario")
+            logger.warning(
+                f"Overwriting co2_budget_national for DE in {scenario} scenario"
+            )
         else:
-            config[scenario]["solving"]["constraints"]["co2_budget_national"] = {}
+            config[scenario]["solving"]["constraints"]["co2_budget_national"]["DE"] = {}
 
         for year, target in co2_budget_fractions.items():
-            config[scenario]["solving"]["constraints"]["co2_budget_national"][year] = {}
-            config[scenario]["solving"]["constraints"]["co2_budget_national"][year][
-                "DE"
+            config[scenario]["solving"]["constraints"]["co2_budget_national"]["DE"][
+                year
             ] = target
 
     # write back to yaml file

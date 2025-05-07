@@ -434,6 +434,16 @@ solving:
         H2 pipeline retrofitted: 0.05
       fractional_last_unit_size: true
   constraints:
+    # The default CO2 budget uses the KSG targets, and the non CO2 emissions from the REMIND model in the KN2045_Mix scenario
+    co2_budget_national:
+      DE:
+        2020: 0.671
+        2025: 0.523
+        2030: 0.346
+        2035: 0.216
+        2040: 0.09
+        2045: -0.05
+        2050: -0.048
     efuel_export_ban: false
     limits_capacity_max:
       Generator:
