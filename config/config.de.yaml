@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20250425_public_db
+  prefix: 20250507_simple_scenarios
   name:
   # - ExPol
   - KN2045_Mix
