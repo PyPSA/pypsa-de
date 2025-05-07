@@ -23,8 +23,6 @@ ExPol:
     2050: 0.419
 
   costs:
-    horizon: "mean"
-    NEP: 2023
     transmission: "underground" # either overhead line ("overhead") or underground cable ("underground")
   solving:
     constraints:
@@ -56,10 +54,6 @@ ExPol:
             DE:
               2030: 215 # uba Projektionsbericht
 
-  industry:
-    steam_biomass_fraction: 0.4
-    steam_hydrogen_fraction: 0.3
-    steam_electricity_fraction: 0.3
 
   sector:
     district_heating:
@@ -88,12 +82,7 @@ KN2045_Elek:
 
   iiasa_database:
     reference_scenario: KN2045_Elek
-  co2_budget_DE_source: KSG
 
-  costs:
-    horizon: "mean"
-    NEP: 2023
-    transmission: "overhead" # either overhead line ("overhead") or underground cable ("underground")
   solving:
     constraints:
       limits_volume_max:
@@ -134,11 +123,6 @@ KN2045_Elek:
             2040: 170
             2045: 250
             2050: 250
-      limits_capacity_min:
-        Link:
-          H2 Electrolysis:
-            DE:
-              2030: 5
 
   industry:
     steam_biomass_fraction: 0.4
@@ -153,12 +137,7 @@ KN2045_H2:
 
   iiasa_database:
     reference_scenario: KN2045_H2
-  co2_budget_DE_source: KSG
 
-  costs:
-    horizon: "mean"
-    NEP: 2023
-    transmission: "overhead" # either overhead line ("overhead") or underground cable ("underground")
   solving:
     constraints:
       limits_volume_max:
@@ -212,11 +191,6 @@ KN2045_H2:
             2040: 0
             2045: 200
             2050: 200
-      limits_capacity_min:
-        Link:
-          H2 Electrolysis:
-            DE:
-              2030: 5
 
   industry:
     steam_biomass_fraction: 0.4
@@ -232,34 +206,6 @@ KN2045_NFniedrig:
 
   iiasa_database:
     reference_scenario: KN2045plus_LowDemand
-  co2_budget_DE_source: KSG
-
-  costs:
-    horizon: "mean"
-    NEP: 2023
-    transmission: "overhead" # either overhead line ("overhead") or underground cable ("underground")
-  solving:
-    constraints:
-      # boundary condition of maximum volumes
-      limits_volume_max:
-        h2_import:
-          DE:
-            2020: 0
-            2025: 5
-            2030: 15
-            2035: 115
-            2040: 220
-            2045: 325
-            2050: 325
-      limits_capacity_min:
-        Link:
-          H2 Electrolysis:
-            DE:
-              2030: 5
-  industry:
-    steam_biomass_fraction: 0.4
-    steam_hydrogen_fraction: 0.3
-    steam_electricity_fraction: 0.3
 
   sector:
     reduce_space_heat_exogenously_factor:
@@ -280,34 +226,6 @@ KN2045_NFhoch:
 
   iiasa_database:
     reference_scenario: KN2045minus_SupplyFocus
-  co2_budget_DE_source: KSG
-
-  costs:
-    horizon: "mean"
-    NEP: 2023
-    transmission: "overhead" # either overhead line ("overhead") or underground cable ("underground")
-  solving:
-    constraints:
-      # boundary condition of maximum volumes
-      limits_volume_max:
-        h2_import:
-          DE:
-            2020: 0
-            2025: 5
-            2030: 15
-            2035: 115
-            2040: 220
-            2045: 325
-            2050: 325
-      limits_capacity_min:
-        Link:
-          H2 Electrolysis:
-            DE:
-              2030: 5
-  industry:
-    steam_biomass_fraction: 0.4
-    steam_hydrogen_fraction: 0.3
-    steam_electricity_fraction: 0.3
 
   sector:
     reduce_space_heat_exogenously_factor:
