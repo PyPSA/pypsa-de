@@ -72,32 +72,14 @@ ExPol:
 
 
 KN2045_Mix:
+# Default scenario
 # Ausgewogener Mix an Technologien zur Dekarbonisierung der Sektoren
 # Breites Energieträgerportfolio in der Endenergie (Strom, Wasserstoff, synthetische Kraftstoffe)
 # Ausbau der erneuerbare Stromerzeugung erreicht politisch gesetzte Ziele
 # Importe erneuerbar erzeugter Energien auf mittlerem Niveau
 # dient als Referenzszenario in der Familie der Ariadne-Szenarien
-
-  iiasa_database:
-    reference_scenario: KN2045_Mix
   co2_budget_DE_source: KSG
 
-  costs:
-    horizon: "mean"
-    NEP: 2023
-    transmission: "overhead" # either overhead line ("overhead") or underground cable ("underground")
-  solving:
-    constraints:
-      limits_capacity_min:
-        Link:
-          H2 Electrolysis:
-            DE:
-              2030: 5
-
-  industry:
-    steam_biomass_fraction: 0.4
-    steam_hydrogen_fraction: 0.3
-    steam_electricity_fraction: 0.3
 
 KN2045_Elek:
 # Fokus auf dem Hochlauf von Technologien zur direkten Elektrifizierung der Sektoren

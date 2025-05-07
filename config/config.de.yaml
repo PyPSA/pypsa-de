@@ -269,6 +269,9 @@ first_technology_occurrence:
 
 costs:
   horizon: "mean" # "optimist", "pessimist" or "mean"
+  NEP: 2023
+  transmission: "overhead" # either overhead line ("overhead") or underground cable ("underground")
+
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#sector
 sector:
@@ -342,6 +345,9 @@ sector:
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#industry
 industry:
   ammonia: false
+  steam_biomass_fraction: 0.4
+  steam_hydrogen_fraction: 0.3
+  steam_electricity_fraction: 0.3
   St_primary_fraction:
     2020: 0.6
     2025: 0.55
@@ -511,6 +517,10 @@ solving:
               # EEG2023; Ziel for 2024: 88 GW and for 2026: 128 GW,
               # assuming at least 1/3 of difference reached in 2025
             2025: 101
+        Link:
+          H2 Electrolysis:
+            DE:
+              2030: 5
   # For reference, this are the values specified in the laws
   # limits_capacity_min:
   #     Generator:
