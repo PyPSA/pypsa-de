@@ -272,7 +272,7 @@ rule retrieve_ariadne_database:
     output:
         data=resources("ariadne_database.csv"),
     log:
-        "logs/pypsa-de/retrieve_ariadne_database.log",
+        logs("retrieve_ariadne_database.log"),
     resources:
         mem_mb=1000,
     script:
@@ -570,7 +570,7 @@ rule download_ariadne_template:
             keep_local=True,
         ),
     output:
-        resources("template_ariadne_database.xlsx"),
+        "data/template_ariadne_database.xlsx",
     run:
         move(input[0], output[0])
 
@@ -589,7 +589,7 @@ rule export_ariadne_variables:
         NEP_year=config_provider("costs", "NEP"),
         NEP_transmission=config_provider("costs", "transmission"),
     input:
-        template=resources("template_ariadne_database.xlsx"),
+        template="data/template_ariadne_database.xlsx",
         industry_demands=expand(
             resources(
                 "industrial_energy_demand_base_s_{clusters}_{planning_horizons}.csv"
