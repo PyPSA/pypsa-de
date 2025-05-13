@@ -4,20 +4,23 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20250507_simple_scenarios
+  prefix: 20250513_simple_sensitivities
   name:
   # - ExPol
-  - KN2045_Mix
+  - Mix
+  - Mix2010
+  - NoREStargets
+  - NoREStargets2010
   # - KN2045_Elek
   # - KN2045_H2
   # - KN2045_NFniedrig
   # - KN2045_NFhoch
   scenarios:
     enable: true
-    manual_file: config/scenarios.manual.yaml
+    manual_file: config/scenarios.sensitivities.yaml
     file: config/scenarios.automated.yaml
   shared_resources:
-    policy: base #stops recalculating
+    policy: false #stops recalculating
     exclude:
     - existing_heating.csv   # specify files which should not be shared between scenarios
     - costs
