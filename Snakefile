@@ -706,7 +706,10 @@ rule build_scenarios:
         scenarios=config_provider("run", "name"),
         leitmodelle=config_provider("iiasa_database", "leitmodelle"),
     input:
-        ariadne_database=resources("ariadne_database.csv"),
+        ariadne_database=expand(
+            resources("ariadne_database.csv"),
+            run=config_provider("run", "name"),
+        ),
         scenario_yaml=config["run"]["scenarios"]["manual_file"],
     output:
         scenario_yaml=config["run"]["scenarios"]["file"],
