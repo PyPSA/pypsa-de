@@ -1241,7 +1241,6 @@ def get_primary_energy(n, region):
             **kwargs,
         )
         .get(("Link", "DE gas compressing"), pd.Series(0))
-        .round()
         .item()
     )
 
