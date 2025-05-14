@@ -205,7 +205,7 @@ KN2045_NFniedrig:
 # dient als Referenzszenario in der Familie der Ariadne-Szenarien
 
   iiasa_database:
-    reference_scenario: KN2045plus_LowDemand
+    reference_scenario: KN2045_NFniedrig
 
   sector:
     reduce_space_heat_exogenously_factor:
@@ -225,7 +225,7 @@ KN2045_NFhoch:
 # dient als Referenzszenario in der Familie der Ariadne-Szenarien
 
   iiasa_database:
-    reference_scenario: KN2045minus_SupplyFocus
+    reference_scenario: KN2045_NFhoch
 
   sector:
     reduce_space_heat_exogenously_factor:
