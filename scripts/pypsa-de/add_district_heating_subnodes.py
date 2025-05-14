@@ -27,7 +27,7 @@ def add_subnodes(
     subnodes: gpd.GeoDataFrame,
     cop: xr.DataArray,
     direct_heat_source_utilisation_profile: xr.DataArray,
-    head: Union[int, bool] = 40,
+    head: int = 40,
 ) -> None:
     """
     Add largest district heating systems subnodes to the network.
@@ -46,14 +46,12 @@ def add_subnodes(
         COPs for heat pumps.
     direct_heat_source_utilisation_profile : xr.DataArray
         Direct heat source utilisation profiles.
+    head : int
+        Number of largest district heating systems to be added as subnodes.
     Returns
     -------
     None
     """
-
-    # If head is boolean set it to 40 for default behavior
-    if isinstance(head, bool):
-        head = 40
 
     # Keep only n largest district heating networks according to head parameter
     subnodes_head = subnodes.sort_values(
@@ -86,11 +84,11 @@ def add_subnodes(
         n.add("Bus", buses.index, **buses)
 
         # Get heat loads for urban central heat and low-temperature heat for industry
-        uch_load_cluster = (
+        urban_central_heat_load_cluster = (
             n_copy.snapshot_weightings.generators
             @ n_copy.loads_t.p_set[f"{subnode['cluster']} urban central heat"]
         )
-        lti_load_cluster = (
+        low_temperature_heat_for_industry_load_cluster = (
             n_copy.loads.loc[
                 f"{subnode['cluster']} low-temperature heat for industry", "p_set"
             ]
@@ -98,7 +96,10 @@ def add_subnodes(
         )
 
         # Calculate share of low-temperature heat for industry in total district heating load of cluster
-        dh_load_cluster = uch_load_cluster + lti_load_cluster
+        dh_load_cluster = (
+            urban_central_heat_load_cluster
+            + low_temperature_heat_for_industry_load_cluster
+        )
 
         dh_load_cluster_subnodes = subnodes_head.loc[
             subnodes_head.cluster == subnode["cluster"], "yearly_heat_demand_MWh"
@@ -112,13 +113,13 @@ def add_subnodes(
             )
             demand_ratio = subnode["yearly_heat_demand_MWh"] / dh_load_cluster_subnodes
 
-            uch_load = demand_ratio * n_copy.loads_t.p_set.filter(
+            urban_central_heat_load = demand_ratio * n_copy.loads_t.p_set.filter(
                 regex=f"{subnode['cluster']}.*urban central heat"
             ).sum(1).rename(
                 f"{subnode['cluster']} {subnode['Stadt']} urban central heat"
             )
 
-            lti_load = (
+            low_temperature_heat_for_industry_load = (
                 demand_ratio
                 * n_copy.loads.filter(
                     regex=f"{subnode['cluster']}.*low-temperature heat for industry",
@@ -129,11 +130,11 @@ def add_subnodes(
             # Calculate demand ratio between load of subnode according to Fernwärmeatlas and remaining load of assigned cluster
             demand_ratio = subnode["yearly_heat_demand_MWh"] / dh_load_cluster
 
-            uch_load = demand_ratio * n_copy.loads_t.p_set[
+            urban_central_heat_load = demand_ratio * n_copy.loads_t.p_set[
                 f"{subnode['cluster']} urban central heat"
             ].rename(f"{subnode['cluster']} {subnode['Stadt']} urban central heat")
 
-            lti_load = (
+            low_temperature_heat_for_industry_load = (
                 demand_ratio
                 * n_copy.loads.loc[
                     f"{subnode['cluster']} low-temperature heat for industry", "p_set"
@@ -145,7 +146,7 @@ def add_subnodes(
             "Load",
             f"{name} heat",
             bus=f"{name} heat",
-            p_set=uch_load,
+            p_set=urban_central_heat_load,
             carrier="urban central heat",
             location=f"{subnode['cluster']} {subnode['Stadt']}",
         )
@@ -154,21 +155,24 @@ def add_subnodes(
             "Load",
             f"{subnode['cluster']} {subnode['Stadt']} low-temperature heat for industry",
             bus=f"{name} heat",
-            p_set=lti_load,
+            p_set=low_temperature_heat_for_industry_load,
             carrier="low-temperature heat for industry",
-            location=location,
+            location=f"{subnode['cluster']} {subnode['Stadt']}",
         )
 
         # Adjust loads of cluster buses
-        n.loads_t.p_set.loc[:, f'{subnode["cluster"]} urban central heat'] -= uch_load
+        n.loads_t.p_set.loc[
+            :, f'{subnode["cluster"]} urban central heat'
+        ] -= urban_central_heat_load
 
         n.loads.loc[
             f'{subnode["cluster"]} low-temperature heat for industry', "p_set"
-        ] -= lti_load
+        ] -= low_temperature_heat_for_industry_load
 
         if lost_load > 0:
             lost_load_subnode = subnode["yearly_heat_demand_MWh"] - (
-                n.snapshot_weightings.generators @ uch_load + lti_load * 8760
+                n.snapshot_weightings.generators @ urban_central_heat_load
+                + low_temperature_heat_for_industry_load * 8760
             )
             logger.warning(
                 f"District heating load of {subnode['cluster']} {subnode['Stadt']} is reduced by {lost_load_subnode} MWh/a."
@@ -349,8 +353,6 @@ def add_subnodes(
                     "p_nom_max",
                 ] = p_max_source
 
-    return
-
 
 def extend_heating_distribution(
     existing_heating_distribution: pd.DataFrame, subnodes: gpd.GeoDataFrame
@@ -455,7 +457,7 @@ if __name__ == "__main__":
         direct_heat_source_utilisation_profile=xr.open_dataarray(
             snakemake.input.direct_heat_source_utilisation_profiles
         ),
-        head=snakemake.params.district_heating["add_subnodes"],
+        head=snakemake.params.district_heating["subnodes"]["nlargest"],
     )
 
     if snakemake.wildcards.planning_horizons == str(snakemake.params["baseyear"]):

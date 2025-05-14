@@ -11,13 +11,11 @@ rule add_existing_baseyear:
         costs=config_provider("costs"),
         heat_pump_sources=config_provider("sector", "heat_pump_sources"),
         energy_totals_year=config_provider("energy", "energy_totals_year"),
-        add_district_heating_subnodes=config_provider(
-            "sector", "district_heating", "add_subnodes"
-        ),
+        add_district_heating_subnodes=config_provider("sector", "district_heating", "subnodes", "enable"),
     input:
         network=resources(
             "networks/base-extended_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc"
-        ) if config["sector"]["district_heating"].get("add_subnodes", True)
+        ) if config_provider("sector", "district_heating", "subnodes", "enable")
             else resources(
             "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc"
         ),
@@ -35,7 +33,7 @@ rule add_existing_baseyear:
             resources(
                 "existing_heating_distribution_base-extended_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.csv"
             )
-            if config["sector"]["district_heating"].get("add_subnodes", True)
+            if config_provider("sector", "district_heating", "subnodes", "enable")
             else resources(
                 "existing_heating_distribution_base_s_{clusters}_{planning_horizons}.csv"
             )
@@ -99,7 +97,7 @@ rule add_brownfield:
         cluster_busmap=resources("busmap_base_s_{clusters}.csv"),
         network=resources(
         "networks/base-extended_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc"
-        ) if config["sector"]["district_heating"].get("add_subnodes", True)
+        ) if config_provider("sector", "district_heating", "subnodes", "enable")
             else resources(
                 "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc"
                 ),

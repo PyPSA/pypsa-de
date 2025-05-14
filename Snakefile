@@ -588,8 +588,8 @@ rule retrieve_mastr:
 
 rule build_existing_chp_de:
     params:
-        add_district_heating_subnodes=config_provider(
-            "sector", "district_heating", "add_subnodes"
+        district_heating_subnodes=config_provider(
+            "sector", "district_heating", "subnodes"
         ),
     input:
         mastr_biomass="data/mastr/bnetza_open_mastr_2023-08-08_B_biomass.csv",
@@ -603,7 +603,7 @@ rule build_existing_chp_de:
             resources(
                 "district_heating_subnodes_base_s_{clusters}.geojson"
             )
-            if config["sector"]["district_heating"].get("add_subnodes", True)
+            if config_provider("sector", "district_heating", "subnodes", "enable")
             else []
         ),
     output:

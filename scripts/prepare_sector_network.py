@@ -6591,7 +6591,7 @@ if __name__ == "__main__":
     if options["cluster_heat_buses"] and not first_year_myopic:
         cluster_heat_buses(n)
 
-    if not options["district_heating"]["add_subnodes"]:
+    if not options["district_heating"]["subnodes"]["enable"]:
         maybe_adjust_costs_and_potentials(
             n, snakemake.params["adjustments"], investment_year
         )

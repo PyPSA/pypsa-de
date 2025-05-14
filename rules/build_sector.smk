@@ -199,9 +199,7 @@ rule build_temperature_profiles:
         drop_leap_day=config_provider("enable", "drop_leap_day"),
     input:
         pop_layout=resources("pop_layout_total.nc"),
-        regions_onshore=resources("regions_onshore_base-extended_s_{clusters}.geojson") if  config["sector"][
-        "district_heating"
-        ].get("add_subnodes", True) else resources("regions_onshore_base_s_{clusters}.geojson"),
+        regions_onshore=resources("regions_onshore_base-extended_s_{clusters}.geojson") if  config_provider("sector", "district_heating", "subnodes", "enable") else resources("regions_onshore_base_s_{clusters}.geojson"),
         cutout=lambda w: input_cutout(
             w, config_provider("sector", "heat_demand_cutout")(w)
         ),
@@ -270,9 +268,7 @@ rule build_central_heating_temperature_profiles:
         energy_totals_year=config_provider("energy", "energy_totals_year"),
     input:
         temp_air_total=resources("temp_air_total_base_s_{clusters}.nc"),
-        regions_onshore=resources("regions_onshore_base-extended_s_{clusters}.geojson") if  config["sector"][
-    "district_heating"
-].get("add_subnodes", True) else resources("regions_onshore_base_s_{clusters}.geojson"),
+        regions_onshore=resources("regions_onshore_base-extended_s_{clusters}.geojson") if  config_provider("sector", "district_heating", "subnodes", "enable") else resources("regions_onshore_base_s_{clusters}.geojson"),
     output:
         central_heating_forward_temperature_profiles=resources(
             "central_heating_forward_temperature_profiles_base_s_{clusters}_{planning_horizons}.nc"
@@ -317,7 +313,7 @@ rule build_geothermal_heat_potential:
     input:
         isi_heat_potentials="data/isi_heat_utilisation_potentials.xlsx",
         regions_onshore=resources("regions_onshore_base-restricted_s_{clusters}.geojson")
-        if config["sector"]["district_heating"].get("add_subnodes", True)
+        if config_provider("sector", "district_heating", "subnodes", "enable")
         else resources("regions_onshore_base_s_{clusters}.geojson"),
         lau_regions="data/lau_regions.zip",
     output:
@@ -361,9 +357,7 @@ rule build_cop_profiles:
         ),
         temp_soil_total=resources("temp_soil_total_base_s_{clusters}.nc"),
         temp_air_total=resources("temp_air_total_base_s_{clusters}.nc"),
-        regions_onshore=resources("regions_onshore_base-extended_s_{clusters}.geojson") if  config["sector"][
-    "district_heating"
-].get("add_subnodes", True) else resources("regions_onshore_base_s_{clusters}.geojson"),
+        regions_onshore=resources("regions_onshore_base-extended_s_{clusters}.geojson") if  config_provider("sector", "district_heating", "subnodes", "enable") else resources("regions_onshore_base_s_{clusters}.geojson"),
     output:
         cop_profiles=resources("cop_profiles_base_s_{clusters}_{planning_horizons}.nc"),
     resources:

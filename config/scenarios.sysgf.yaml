@@ -34,9 +34,9 @@ No_PTES:
     electricity: false
     sector:
       absolute:
-        StorageUnit:
+        Store:
           urban central water pits:
-            p_nom_max: 0
+            e_nom_max: 0
   iiasa_database:
     reference_scenario: 8Gt_Bal_v3
     fallback_reference_scenario: 8Gt_Bal_v3
@@ -67,11 +67,11 @@ LowPTESCAPEX:
     electricity: false
     sector:
       factor:
-        StorageUnit:
+        Store:
           urban central water pits:
             capital_cost: 0.5
       absolute:
-        StorageUnit:
+        Store:
           urban central water pits:
             standing_loss: 0.00012121
           urban central water tanks:
@@ -108,11 +108,11 @@ HighPTESCAPEX:
     electricity: false
     sector:
       factor:
-        StorageUnit:
+        Store:
           urban central water pits:
             capital_cost: 2
       absolute:
-        StorageUnit:
+        Store:
           urban central water pits:
             standing_loss: 0.00012121
           urban central water tanks:
@@ -149,7 +149,7 @@ LowStandingLosses:
     electricity: false
     sector:
       absolute:
-        StorageUnit:
+        Store:
           urban central water pits:
             standing_loss: 0
   iiasa_database:
@@ -183,7 +183,7 @@ HighStandingLosses:
     electricity: false
     sector:
       absolute:
-        StorageUnit:
+        Store:
           urban central water pits:
             standing_loss: 0.0012121
   iiasa_database:
@@ -214,7 +214,9 @@ HighStandingLosses:
 LowGroundWaterDepth:
   sector:
     district_heating:
-      max_groundwater_depth: -25
+      subnodes:
+        limit_ptes_potential:
+          max_groundwater_depth: -25
   iiasa_database:
     reference_scenario: 8Gt_Bal_v3
     fallback_reference_scenario: 8Gt_Bal_v3
@@ -243,7 +245,9 @@ LowGroundWaterDepth:
 HighGroundWaterDepth:
   sector:
     district_heating:
-      max_groundwater_depth: 0 
+      subnodes:
+        limit_ptes_potential:
+          max_groundwater_depth: 0
   iiasa_database:
     reference_scenario: 8Gt_Bal_v3
     fallback_reference_scenario: 8Gt_Bal_v3
@@ -274,13 +278,13 @@ LowEtPRatio:
     electricity: false
     sector:
       factor:
-        StorageUnit:
+        Store:
           urban central water pits:
-            max_hours: 0.5
+            energy to power ratio: 0.5
             capital_cost: 0.5
-            p_nom_max: 2
+            e_nom_max: 2
       absolute:
-        StorageUnit:
+        Store:
           urban central water pits:
             standing_loss: 0.00012121
           urban central water tanks:
@@ -317,13 +321,13 @@ HighEtPRatio:
     electricity: false
     sector:
       factor:
-        StorageUnit:
+        Store:
           urban central water pits:
-            max_hours: 2
+            energy to power ratio: 2
             capital_cost: 2
-            p_nom_max: 0.5
+            e_nom_max: 0.5
       absolute:
-        StorageUnit:
+        Store:
           urban central water pits:
             standing_loss: 0.00012121
           urban central water tanks:

@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: CC0-1.0
 
 run:
-  prefix: 20250320_dhsubnodes
+  prefix: 20250514_dhsubnodes
   name:
   - Baseline
   # - No_PTES
@@ -83,7 +83,11 @@ wasserstoff_kernnetz:
 sector:
   district_heating:
     potential: 0.5
-    add_subnodes: true
+    subnodes:
+      enable: true
+    limited_heat_sources:
+      geothermal:
+        ignore_missing_regions: true
   heat_pump_sources:
     urban central:
       - air
