@@ -6,16 +6,12 @@
 run:
   prefix: 20250514_dhsubnodes
   name:
-  # - CurrentPolicies
-  - KN2045_Bal_v4
-  # - KN2045_Elec_v4
-  # - KN2045_H2_v4
-  # - KN2045plus_EasyRide
-  # - KN2045plus_LowDemand
-  # - KN2045minus_WorstCase
-  # - KN2045minus_SupplyFocus
-  # - KN2045_Bal_LowDemand
-  # - KN2045_Bal_HighDemand
+  # - ExPol
+  - KN2045_Mix
+  # - KN2045_Elek
+  # - KN2045_H2
+  # - KN2045_NFniedrig
+  # - KN2045_NFhoch
   scenarios:
     enable: true
     manual_file: config/scenarios.manual.yaml
@@ -32,22 +28,20 @@ run:
   disable_progressbar: true
 
 iiasa_database:
-  db_name: ariadne2_intern
+  db_name: ariadne2
   leitmodelle:
     general: REMIND-EU v1.1
     buildings: REMod v1.0
     transport: Aladin v1
     industry: FORECAST v1.0
   scenarios:
-  - CurrentPolicies
-  - KN2045_Elec_v4
-  - KN2045_H2_v4
-  - KN2045_Bal_v4
-  - KN2045plus_EasyRide
-  - KN2045plus_LowDemand
-  - KN2045minus_WorstCase
-  - KN2045minus_SupplyFocus
-  reference_scenario: KN2045_Bal_v4
+  - ExPol
+  - KN2045_Elek
+  - KN2045_H2
+  - KN2045_Mix
+  - KN2045_NFniedrig
+  - KN2045_NFhoch
+  reference_scenario: KN2045_Mix
   region: Deutschland
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#foresight
@@ -315,7 +309,6 @@ sector:
     rural: true
   co2_spatial: true
   biomass_spatial: true
-  #TBD what to include in config
   #relax so no infeasibility in 2050 with no land transport demand
   min_part_load_fischer_tropsch: 0.
   regional_methanol_demand: true  #set to true if regional CO2 constraints needed

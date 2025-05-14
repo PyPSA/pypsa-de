@@ -55,7 +55,7 @@ if __name__ == "__main__":
 
         snakemake = mock_snakemake(
             "plot_statistics_single",
-            run="CurrentPolicies",
+            run="ExPol",
             simpl="",
             ll="vopt",
             clusters="22",

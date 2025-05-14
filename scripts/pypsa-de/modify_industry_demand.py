@@ -10,7 +10,6 @@ This includes
 - Production|Steel
 - Production|Chemicals|Ammonia
 - Production|Chemicals|Methanol
-- Production|Non-Ferrous Metals
 - Production|Pulp and Paper
 """
 
@@ -30,39 +29,52 @@ if __name__ == "__main__":
             opts="",
             ll="vopt",
             sector_opts="None",
-            run="KN2045_Bal_v4",
+            run="KN2045_Mix",
             planning_horizons=2020,
         )
 
     configure_logging(snakemake)
-    # leitmodell for industry demand
-    leitmodell = "FORECAST v1.0"
 
     year = snakemake.input.industrial_production_per_country_tomorrow.split("_")[
         -1
     ].split(".")[0]
-    if snakemake.params.db_name == "ariadne2_intern" and year == "2020":
-        logger.warning(f"Assuming {leitmodell} uses 2021 as base year instead of 2020.")
-        year = "2021"
     existing_industry = pd.read_csv(
         snakemake.input.industrial_production_per_country_tomorrow, index_col=0
     )
 
     # read in ariadne database
-    ariadne = (
-        pd.read_csv(
-            snakemake.input.ariadne,
-            index_col=["model", "scenario", "region", "variable", "unit"],
+    if year == "2020":
+        logger.info(
+            "For 2020, using hardcoded values from FORECAST from the ariadne2-internal database",
         )
-        .loc[
-            leitmodell,
-            snakemake.params.reference_scenario,
-            "Deutschland",
-            :,
-            "Mt/yr",
-        ]
-        .multiply(1000)
-    )
+        ariadne = pd.DataFrame(
+            {
+                "Production|Chemicals|Ammonia": 2.891851,
+                "Production|Chemicals|Methanol": 1.359,
+                "Production|Non-Metallic Minerals": 68.635925,
+                "Production|Non-Metallic Minerals|Cement": 34.966,
+                "Production|Pulp and Paper": 40.746,
+                "Production|Steel": 40.621,
+            },
+            index=[year],
+        ).T.multiply(1000)
+    else:
+        # leitmodell for industry demand
+        leitmodell = "FORECAST v1.0"
+        ariadne = (
+            pd.read_csv(
+                snakemake.input.ariadne,
+                index_col=["model", "scenario", "region", "variable", "unit"],
+            )
+            .loc[
+                leitmodell,
+                snakemake.params.reference_scenario,
+                "Deutschland",
+                :,
+                "Mt/yr",
+            ]
+            .multiply(1000)
+        )
 
     logger.info(
         "German industry demand before modification",

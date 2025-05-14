@@ -260,7 +260,7 @@ if __name__ == "__main__":
         snakemake = mock_snakemake(
             "build_existing_chp_de",
             clusters=27,
-            run="KN2045_Bal_v4",
+            run="KN2045_Mix",
         )
 
     configure_logging(snakemake)

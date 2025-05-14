@@ -5,11 +5,11 @@
 run:
   prefix: "test-sector-myopic-dach"
   name:
-  - KN2045_Bal_v4
+  - KN2045_Mix
 
 scenario:
   clusters:
-  - 5 #current options: 27, 49
+  - 5
 countries: ['DE', 'AT', 'CH']
 
 snapshots:

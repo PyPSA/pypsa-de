@@ -45,7 +45,7 @@ if __name__ == "__main__":
             file_path="../data/costs/",
             file_name="costs_2020.csv",
             cost_horizon="mean",
-            run="KN2045_Bal_v4",
+            run="KN2045_Mix",
         )
     configure_logging(snakemake)
 

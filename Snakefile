@@ -13,20 +13,15 @@ min_version("8.11")
 
 from scripts._helpers import (
     path_provider,
-    copy_default_files,
     get_scenarios,
     get_rdir,
     get_shadow,
 )
 
 
-copy_default_files(workflow)
-
-
 configfile: "config/config.default.yaml"
 configfile: "config/plotting.default.yaml"
-configfile: "config/config.yaml"
-configfile: "config/config.personal.yaml"
+configfile: "config/config.de.yaml"
 
 
 run = config["run"]
@@ -316,7 +311,6 @@ if config["enable"]["retrieve"] and config["enable"].get("retrieve_cost_data", T
 
 rule build_mobility_demand:
     params:
-        db_name=config_provider("iiasa_database", "db_name"),
         reference_scenario=config_provider("iiasa_database", "reference_scenario"),
         planning_horizons=config_provider("scenario", "planning_horizons"),
         leitmodelle=config_provider("iiasa_database", "leitmodelle"),
@@ -537,8 +531,9 @@ rule modify_prenetwork:
         regions_offshore=resources("regions_offshore_base_s_{clusters}.geojson"),
         offshore_connection_points="ariadne-data/offshore_connection_points.csv",
     output:
-        network=RESULTS
-        + "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_final.nc",
+        network=resources(
+            "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_final.nc"
+        ),
     resources:
         mem_mb=4000,
     log:
@@ -555,9 +550,6 @@ rule modify_existing_heating:
     params:
         iiasa_reference_scenario=config_provider("iiasa_database", "reference_scenario"),
         leitmodelle=config_provider("iiasa_database", "leitmodelle"),
-        fallback_reference_scenario=config_provider(
-            "iiasa_database", "fallback_reference_scenario"
-        ),
     input:
         ariadne=resources("ariadne_database.csv"),
         existing_heating="data/existing_infrastructure/existing_heating_raw.csv",
@@ -618,7 +610,6 @@ rule build_existing_chp_de:
 
 rule modify_industry_demand:
     params:
-        db_name=config_provider("iiasa_database", "db_name"),
         reference_scenario=config_provider("iiasa_database", "reference_scenario"),
     input:
         ariadne=resources("ariadne_database.csv"),
@@ -756,9 +747,7 @@ rule export_ariadne_variables:
 rule plot_ariadne_variables:
     params:
         iiasa_scenario=config_provider("iiasa_database", "reference_scenario"),
-        fallback_reference_scenario=config_provider(
-            "iiasa_database", "fallback_reference_scenario"
-        ),
+        reference_scenario=config_provider("iiasa_database", "reference_scenario"),
     input:
         exported_variables_full=RESULTS + "ariadne/exported_variables_full.xlsx",
         ariadne_database=resources("ariadne_database.csv"),
@@ -826,7 +815,6 @@ rule ariadne_all:
 rule build_scenarios:
     params:
         scenarios=config_provider("run", "name"),
-        db_name=config_provider("iiasa_database", "db_name"),
         leitmodelle=config_provider("iiasa_database", "leitmodelle"),
     input:
         ariadne_database=resources("ariadne_database.csv"),
@@ -895,13 +883,13 @@ rule plot_ariadne_report:
             **config["scenario"],
             allow_missing=True,
         ),
+        exported_variables_full=RESULTS + "ariadne/exported_variables_full.xlsx",
     output:
         elec_price_duration_curve=RESULTS
         + "ariadne/report/elec_price_duration_curve.pdf",
         elec_price_duration_hist=RESULTS + "ariadne/report/elec_price_duration_hist.pdf",
         backup_capacity=RESULTS + "ariadne/report/backup_capacity.pdf",
         backup_generation=RESULTS + "ariadne/report/backup_generation.pdf",
-        elec_prices_spatial_de=RESULTS + "ariadne/report/elec_prices_spatial_de.pdf",
         results=directory(RESULTS + "ariadne/report"),
         elec_transmission=directory(RESULTS + "ariadne/report/elec_transmission"),
         h2_transmission=directory(RESULTS + "ariadne/report/h2_transmission"),
@@ -910,7 +898,7 @@ rule plot_ariadne_report:
         heat_balances=directory(RESULTS + "ariadne/report/heat_balance_timeseries"),
         nodal_balances=directory(RESULTS + "ariadne/report/balance_timeseries_2045"),
     resources:
-        mem_mb=30000,
+        mem_mb=32000,
     log:
         RESULTS + "logs/plot_ariadne_report.log",
     script:
