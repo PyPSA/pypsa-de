@@ -29,6 +29,7 @@ def add_subnodes(
     direct_heat_source_utilisation_profile: xr.DataArray,
     head: int = 40,
     dynamic_ptes_capacity: bool = False,
+    limit_ptes_potential_mother_nodes: bool = True,
 ) -> None:
     """
     Add largest district heating systems subnodes to the network.
@@ -197,8 +198,6 @@ def add_subnodes(
             "ptes_pot_mwh"
         ]
 
-        #
-
         if dynamic_ptes_capacity:
             e_max_pu_static = stores.e_max_pu
             e_max_pu = (
@@ -216,6 +215,17 @@ def add_subnodes(
             )
         else:
             n.add("Store", stores.index, **stores)
+
+        # Limit storage potential in mother nodes
+        if limit_ptes_potential_mother_nodes:
+            mother_nodes_ptes_pot = subnodes_rest.groupby("cluster").ptes_pot_mwh.sum()
+
+            mother_nodes_ptes_pot.index = (
+                mother_nodes_ptes_pot.index + " urban central water pits"
+            )
+            n.stores.loc[mother_nodes_ptes_pot.index, "e_nom_max"] = (
+                mother_nodes_ptes_pot
+            )
 
         # Replicate district heating storage units of mother node for subnodes
         storage_units = (
@@ -458,6 +468,9 @@ if __name__ == "__main__":
         dynamic_ptes_capacity=snakemake.params.district_heating["ptes"][
             "dynamic_capacity"
         ],
+        limit_ptes_potential_mother_nodes=snakemake.params.district_heating["subnodes"][
+            "limit_ptes_potential"
+        ]["limit_mother_nodes"],
     )
 
     if snakemake.wildcards.planning_horizons == str(snakemake.params["baseyear"]):
