@@ -111,9 +111,7 @@ def _get_fuel_fractions(n, region, fuel):
         n.statistics.supply(bus_carrier=f"renewable {fuel}", **kwargs)
         .groupby(["bus", "carrier"])
         .sum()
-    ).round(
-        3
-    )  # rounding for numerical stability
+    ).round(3)  # rounding for numerical stability
 
     total_fuel_supply = (
         n.statistics.supply(bus_carrier=f"{fuel}", **kwargs)
@@ -2359,7 +2357,7 @@ def get_final_energy(
 
     var["Final Energy|Bunkers|Aviation"] = var[
         "Final Energy|Bunkers|Aviation|Liquids"
-    ] = (sum_load(n, "kerosene for aviation", region) * international_aviation_fraction)
+    ] = sum_load(n, "kerosene for aviation", region) * international_aviation_fraction
 
     for var_key, fraction_key in zip(
         ["Biomass", "Petroleum", "Efuel"], oil_fractions.index
@@ -4086,7 +4084,7 @@ def get_grid_investments(
 
     var["Investment|Energy Supply|Hydrogen|Transmission and Distribution"] = var[
         "Investment|Energy Supply|Hydrogen|Transmission"
-    ] = (h2_investments.sum() / 5)
+    ] = h2_investments.sum() / 5
 
     new_h2_links_kernnetz_i = new_h2_links[
         (new_h2_links.index.str.contains("kernnetz"))
@@ -4128,7 +4126,7 @@ def get_grid_investments(
     )
     var[
         "Investment|Energy Supply|Hydrogen|Transmission and Distribution|Retrofitted"
-    ] = (h2_investments[new_h2_links_retrofitted_i].sum() / 5)
+    ] = h2_investments[new_h2_links_retrofitted_i].sum() / 5
 
     assert isclose(
         var["Investment|Energy Supply|Hydrogen|Transmission and Distribution"],
@@ -4211,13 +4209,13 @@ def get_grid_investments(
 
     var[
         "Investment|Energy Supply|Hydrogen|Transmission and Distribution|Kernnetz|PCI"
-    ] = (h2_investments[pci_i].sum() / 5)
+    ] = h2_investments[pci_i].sum() / 5
     var[
         "Investment|Energy Supply|Hydrogen|Transmission and Distribution|Kernnetz|IPCEI"
-    ] = (h2_investments[ipcei_i].sum() / 5)
+    ] = h2_investments[ipcei_i].sum() / 5
     var[
         "Investment|Energy Supply|Hydrogen|Transmission and Distribution|Kernnetz|PCI+IPCEI"
-    ] = (h2_investments[pci_i.union(ipcei_i)].sum() / 5)
+    ] = h2_investments[pci_i.union(ipcei_i)].sum() / 5
     var[
         "Investment|Energy Supply|Hydrogen|Transmission and Distribution|Kernnetz|NOT-PCI+IPCEI"
     ] = (
@@ -4594,9 +4592,7 @@ def get_production(region, year):
     index = next((idx for idx, y in enumerate(years) if y == year), None)
     production = pd.read_csv(
         snakemake.input.industrial_production_per_country_tomorrow[index], index_col=0
-    ).div(
-        1e3
-    )  # kton/a -> Mton/a
+    ).div(1e3)  # kton/a -> Mton/a
 
     var["Production|Non-Metallic Minerals|Cement"] = production.loc[region, "Cement"]
     var["Production|Steel"] = production.loc[
@@ -4797,7 +4793,9 @@ def get_grid_capacity(n, region, year):
         var["Capacity|Hydrogen|Transmission"],
         var["Capacity|Hydrogen|Transmission|Kernnetz"]
         + var["Capacity|Hydrogen|Transmission|Endogenous"],
-    ), "Hydrogen transmission capacity is not correctly split into Kernnetz and Endogenous"
+    ), (
+        "Hydrogen transmission capacity is not correctly split into Kernnetz and Endogenous"
+    )
 
     year = h2_links.build_year.max()
     new_h2_links = h2_links[
@@ -4824,7 +4822,9 @@ def get_grid_capacity(n, region, year):
         var["Capacity Additions|Hydrogen|Transmission"],
         var["Capacity Additions|Hydrogen|Transmission|Kernnetz"]
         + var["Capacity Additions|Hydrogen|Transmission|Endogenous"],
-    ), "Hydrogen transmission capacity additions are not correctly split into Kernnetz and Endogenous"
+    ), (
+        "Hydrogen transmission capacity additions are not correctly split into Kernnetz and Endogenous"
+    )
 
     # TODO: add length additions
 
@@ -5217,9 +5217,7 @@ if __name__ == "__main__":
                 snakemake.params.costs,
                 snakemake.params.max_hours,
                 nyears,
-            ).multiply(
-                1e-9
-            ),  # in bn €
+            ).multiply(1e-9),  # in bn €
             snakemake.input.costs,
         )
     )

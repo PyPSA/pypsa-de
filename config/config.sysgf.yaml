@@ -47,20 +47,20 @@ scenario:
   # - 2035
   # - 2040
   - 2045
-  
+
 clustering:
   temporal:
     resolution_sector: 365H
 
 adjustments:
-    electricity: false
-    sector:
-      absolute:
-        StorageUnit:
-          urban central water pits:
-            standing_loss: 0.00012121
-          urban central water tanks:
-            standing_loss: 0.00015476
+  electricity: false
+  sector:
+    absolute:
+      StorageUnit:
+        urban central water pits:
+          standing_loss: 0.00012121
+        urban central water tanks:
+          standing_loss: 0.00015476
 
 wasserstoff_kernnetz:
   enable: false
@@ -75,8 +75,8 @@ sector:
         ignore_missing_regions: true
   heat_pump_sources:
     urban central:
-      - air
-      - geothermal
+    - air
+    - geothermal
     urban decentral:
     - air
     rural:

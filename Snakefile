@@ -352,9 +352,7 @@ rule prepare_district_heating_subnodes:
         baseyear=config_provider("scenario", "planning_horizons", 0),
     input:
         heating_technologies_nuts3=resources("heating_technologies_nuts3.geojson"),
-        regions_onshore=resources(
-            "regions_onshore_base_s_{clusters}.geojson"
-        ),
+        regions_onshore=resources("regions_onshore_base_s_{clusters}.geojson"),
         fernwaermeatlas="data/fernwaermeatlas/fernwaermeatlas.xlsx",
         cities="data/fernwaermeatlas/cities_geolocations.geojson",
         lau_regions="data/lau_regions.zip",
@@ -369,8 +367,8 @@ rule prepare_district_heating_subnodes:
         natura=ancient("data/bundle/natura/natura.tiff"),
         groundwater_depth=storage(
             "http://thredds-gfnl.usc.es/thredds/fileServer/GLOBALWTDFTP/annualmeans/EURASIA_WTD_annualmean.nc",
-            keep_local=True
-            ),
+            keep_local=True,
+        ),
     output:
         district_heating_subnodes=resources(
             "district_heating_subnodes_base_s_{clusters}.geojson"
@@ -381,44 +379,43 @@ rule prepare_district_heating_subnodes:
         regions_onshore_restricted=resources(
             "regions_onshore_base-restricted_s_{clusters}.geojson"
         ),
-
     resources:
         mem_mb=20000,
     script:
         "scripts/pypsa-de/prepare_district_heating_subnodes.py"
 
+
 baseyear_value = config["scenario"]["planning_horizons"][0]
+
 
 rule add_district_heating_subnodes:
     params:
         district_heating=config_provider("sector", "district_heating"),
         baseyear=config_provider("scenario", "planning_horizons", 0),
         sector=config_provider("sector"),
-        heat_pump_sources=config_provider("sector", "heat_pump_sources", "urban central"),
+        heat_pump_sources=config_provider(
+            "sector", "heat_pump_sources", "urban central"
+        ),
         heat_utilisation_potentials=config_provider(
-        "sector", "district_heating", "heat_utilisation_potentials"
+            "sector", "district_heating", "heat_utilisation_potentials"
         ),
         direct_utilisation_heat_sources=config_provider(
             "sector", "district_heating", "direct_utilisation_heat_sources"
         ),
-        adjustments=config_provider( "adjustments", "sector"),
+        adjustments=config_provider("adjustments", "sector"),
     input:
         unpack(input_heat_source_power),
         network=resources(
-        "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc"
-    ),
-        subnodes=resources(
-            "district_heating_subnodes_base_s_{clusters}.geojson"
+            "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc"
         ),
+        subnodes=resources("district_heating_subnodes_base_s_{clusters}.geojson"),
         nuts3=resources("nuts3_shapes.geojson"),
-        regions_onshore=resources(
-            "regions_onshore_base_s_{clusters}.geojson"
-        ),
+        regions_onshore=resources("regions_onshore_base_s_{clusters}.geojson"),
         fernwaermeatlas="data/fernwaermeatlas/fernwaermeatlas.xlsx",
         cities="data/fernwaermeatlas/cities_geolocations.geojson",
         cop_profiles=resources("cop_profiles_base_s_{clusters}_{planning_horizons}.nc"),
         direct_heat_source_utilisation_profiles=resources(
-        "direct_heat_source_utilisation_profiles_base_s_{clusters}_{planning_horizons}.nc"
+            "direct_heat_source_utilisation_profiles_base_s_{clusters}_{planning_horizons}.nc"
         ),
         existing_heating_distribution=resources(
             f"existing_heating_distribution_base_s_{{clusters}}_{baseyear_value}.csv"
@@ -426,7 +423,7 @@ rule add_district_heating_subnodes:
         lau_regions="data/lau_regions.zip",
     output:
         network=resources(
-        "networks/base-extended_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc"
+            "networks/base-extended_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc"
         ),
         district_heating_subnodes=resources(
             "district_heating_subnodes_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.geojson"
@@ -592,16 +589,12 @@ rule build_existing_chp_de:
         ),
         regions=resources("regions_onshore_base_s_{clusters}.geojson"),
         district_heating_subnodes=(
-            resources(
-                "district_heating_subnodes_base_s_{clusters}.geojson"
-            )
+            resources("district_heating_subnodes_base_s_{clusters}.geojson")
             if config_provider("sector", "district_heating", "subnodes", "enable")
             else []
         ),
     output:
-        german_chp=resources(
-            "german_chp_base_s_{clusters}.csv"
-        ),
+        german_chp=resources("german_chp_base_s_{clusters}.csv"),
     log:
         logs("build_existing_chp_de_{clusters}.log"),
     script:

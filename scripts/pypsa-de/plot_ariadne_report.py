@@ -2784,9 +2784,7 @@ if __name__ == "__main__":
                 snakemake.params.costs,
                 snakemake.params.max_hours,
                 nyears,
-            ).multiply(
-                1e-9
-            ),  # in bn EUR
+            ).multiply(1e-9),  # in bn EUR
             snakemake.input.costs,
         )
     )

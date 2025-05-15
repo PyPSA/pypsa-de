@@ -8,7 +8,6 @@ Using BNetzA data to get a high resolution map of German CHP plants.
 """
 
 import logging
-from typing import Union
 
 import geopandas as gpd
 import pandas as pd
@@ -212,6 +211,7 @@ def assign_subnode(
 ) -> pd.DataFrame:
     """
     Assign subnodes to the CHP plants based on their location.
+
     Parameters
     ----------
     CHP_de : pd.DataFrame
@@ -220,6 +220,7 @@ def assign_subnode(
         GeoDataFrame containing subnode data with geometries.
     head : Union[bool, int]
         If int, select the largest N subnodes. If True, use all subnodes.
+
     Returns
     -------
     pd.DataFrame

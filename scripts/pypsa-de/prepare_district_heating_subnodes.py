@@ -1,26 +1,23 @@
-# -*- coding: utf-8 -*-
 import logging
 
 logger = logging.getLogger(__name__)
 
-import geopandas as gpd
-import pandas as pd
-import numpy as np
-from typing import Union
-import xarray as xr
-import shapely
-import rasterio
-from rasterio.windows import Window
-import rasterio
-import tempfile
-from atlite.gis import ExclusionContainer
-from atlite.gis import shape_availability
-import sys
 import os
-import zipfile
-import dask
-from dask.diagnostics import ProgressBar
+import sys
+import tempfile
 import weakref
+import zipfile
+
+import dask
+import geopandas as gpd
+import numpy as np
+import pandas as pd
+import rasterio
+import shapely
+import xarray as xr
+from atlite.gis import ExclusionContainer, shape_availability
+from dask.diagnostics import ProgressBar
+from rasterio.windows import Window
 
 from scripts._helpers import (
     configure_logging,
@@ -83,7 +80,7 @@ def get_chunked_raster(
     """
     Returns windowed data from a raster.
 
-    Parameters:
+    Parameters
     ----------
     dataset_path : str
         Path to the raster dataset.
@@ -93,7 +90,7 @@ def get_chunked_raster(
         Buffer distance in the dataset's units to add around the bounds.
         Default is 1000.
 
-    Returns:
+    Returns
     -------
     rasterio.io.DatasetReader
         A windowed raster dataset.
@@ -211,6 +208,7 @@ def prepare_subnodes(
 ) -> gpd.GeoDataFrame:
     """
     Prepare subnodes by assigning the corresponding LAU and onshore region shapes.
+
     Parameters
     ----------
     subnodes : pd.DataFrame
@@ -223,6 +221,7 @@ def prepare_subnodes(
         GeoDataFrame containing LAU (Local Administrative Units) geometries and IDs.
     heat_techs : gpd.GeoDataFrame
         GeoDataFrame containing NUTS3 region geometries of heat technologies and data from eGo^N project.
+
     Returns
     -------
     gpd.GeoDataFrame

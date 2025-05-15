@@ -72,7 +72,7 @@ LowGroundWaterDepth:
       subnodes:
         limit_ptes_potential:
           max_groundwater_depth: -25
- 
+
 HighGroundWaterDepth:
   sector:
     district_heating:
