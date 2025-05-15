@@ -384,7 +384,7 @@ def add_national_co2_budgets(n, snakemake, national_co2_budgets, investment_year
             logger.error(
                 f"CO2 budget for countries other than `DE` is not yet implemented. Found country {ct}. Please check the config file."
             )
-        
+
         limit = co2_total_totals[ct] * national_co2_budgets[ct][investment_year]
         logger.info(
             f"Limiting emissions in country {ct} to {national_co2_budgets[ct][investment_year]:.1%} of "
