@@ -29,21 +29,6 @@ run:
     - build_industry_sector_ratios   # This is necessary to save build_industry_sector_ratios_data.log in the correct folder
     - modify_existing_heating
 
-iiasa_database:
-  db_name: ariadne
-  leitmodelle:
-    general: REMIND-EU v1.1
-    buildings: REMod v1.0
-    transport: REMIND-EU v1.1
-    transport_stock: DLR-VECTOR21
-    industry: FORECAST v1.0
-  scenarios:
-  - 8Gt_Bal_v3
-  - 8Gt_Elec_v3
-  - 8Gt_H2_v3
-  reference_scenario: 8Gt_Bal_v3
-  region: Deutschland
-
 foresight: myopic
 
 scenario:
