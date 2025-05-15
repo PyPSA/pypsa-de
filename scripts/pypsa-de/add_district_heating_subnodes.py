@@ -28,6 +28,7 @@ def add_subnodes(
     cop: xr.DataArray,
     direct_heat_source_utilisation_profile: xr.DataArray,
     head: int = 40,
+    dynamic_ptes_capacity: bool = False,
 ) -> None:
     """
     Add largest district heating systems subnodes to the network.
@@ -191,12 +192,30 @@ def add_subnodes(
             .set_index("Store")
         )
 
-        # Restrict PTES capacity in subnodes if modeled as store
-        if stores.carrier.str.contains("pits$").any():
-            stores.loc[stores.carrier.str.contains("pits$").index, "e_nom_max"] = (
-                subnode["ptes_pot_mwh"]
+        # Restrict PTES capacity in subnodes
+        stores.loc[stores.carrier.str.contains("pits$").index, "e_nom_max"] = subnode[
+            "ptes_pot_mwh"
+        ]
+
+        #
+
+        if dynamic_ptes_capacity:
+            e_max_pu_static = stores.e_max_pu
+            e_max_pu = (
+                n.stores_t.e_max_pu[f"{subnode['cluster']} urban central water pits"]
+                .rename(f"{name} water pits")
+                .to_frame()
+                .reindex(columns=stores.index)
+                .fillna(e_max_pu_static)
             )
-        n.add("Store", stores.index, **stores)
+            n.add(
+                "Store",
+                stores.index,
+                e_max_pu=e_max_pu,
+                **stores.drop("e_max_pu", axis=1),
+            )
+        else:
+            n.add("Store", stores.index, **stores)
 
         # Replicate district heating storage units of mother node for subnodes
         storage_units = (
@@ -211,29 +230,7 @@ def add_subnodes(
             .set_index("StorageUnit")
         )
 
-        # Restrict PTES capacity in subnodes if modeled as storage unit
-        if storage_units.carrier.str.contains("pits$").any():
-            storage_units.loc[
-                storage_units.carrier.str.contains("pits$"), "p_nom_max"
-            ] = (subnode["ptes_pot_mwh"] / storage_units["max_hours"])
         n.add("StorageUnit", storage_units.index, **storage_units)
-
-        # restrict PTES capacity in mother nodes
-        mother_nodes_ptes_pot = subnodes_rest.groupby("cluster").ptes_pot_mwh.sum()
-
-        mother_nodes_ptes_pot.index = (
-            mother_nodes_ptes_pot.index + " urban central water pits"
-        )
-
-        if not n.storage_units.filter(like="urban central water pits", axis=0).empty:
-            n.storage_units.loc[mother_nodes_ptes_pot.index, "p_nom_max"] = (
-                mother_nodes_ptes_pot
-                / n.storage_units.loc[mother_nodes_ptes_pot.index, "max_hours"]
-            )
-        elif not n.stores.filter(like="urban central water pits", axis=0).empty:
-            n.stores.loc[mother_nodes_ptes_pot.index, "e_nom_max"] = (
-                mother_nodes_ptes_pot
-            )
 
         # Replicate district heating generators of mother node for subnodes
         generators = (
@@ -458,6 +455,9 @@ if __name__ == "__main__":
             snakemake.input.direct_heat_source_utilisation_profiles
         ),
         head=snakemake.params.district_heating["subnodes"]["nlargest"],
+        dynamic_ptes_capacity=snakemake.params.district_heating["ptes"][
+            "dynamic_capacity"
+        ],
     )
 
     if snakemake.wildcards.planning_horizons == str(snakemake.params["baseyear"]):
