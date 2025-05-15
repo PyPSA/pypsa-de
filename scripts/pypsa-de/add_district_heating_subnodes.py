@@ -466,12 +466,18 @@ def add_subnodes(
     output_path: str = None,
 ) -> None:
     """
-    Add largest district heating systems subnodes to the network.
+    Add the largest district heating systems as subnodes to the network based on
+    their heat demand. For each subnode, create individual district heating components
+    from the corresponding mother node template, including heat sources, storage options,
+    and heat pumps. Adjust loads of original mother nodes to maintain the overall
+    energy balance.
+
     They are initialized with:
      - the total annual heat demand taken from the mother node, that is assigned to urban central heat and low-temperature heat for industry,
      - the heat demand profiles taken from the mother node,
      - the district heating investment options (stores, storage units, links, generators) from the mother node,
     The district heating loads in the mother nodes are reduced accordingly.
+
     Parameters
     ----------
     n : pypsa.Network
