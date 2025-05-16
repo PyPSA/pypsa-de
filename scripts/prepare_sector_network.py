@@ -2812,7 +2812,7 @@ def add_land_transport(
     p_set = transport[nodes]
 
     # temperature for correction factor for heating/cooling
-    temperature = xr.open_dataarray(temp_air_total_file).to_pandas()
+    temperature = xr.open_dataarray(temp_air_total_file).to_pandas()[spatial.nodes]
 
     if shares["electric"] > 0:
         add_EVs(
@@ -3299,10 +3299,6 @@ def add_heat(
                 capital_cost=costs.at[
                     heat_system.central_or_decentral + " water tank storage",
                     "capital_cost",
-                ],
-                overnight_cost=costs.at[
-                    heat_system.central_or_decentral + " water tank storage",
-                    "investment",
                 ],
                 lifetime=costs.at[
                     heat_system.central_or_decentral + " water tank storage", "lifetime"
@@ -4934,7 +4930,7 @@ def add_industry(
             )
             n.add(
                 "Link",
-                spatial.nodes + " waste CHP",
+                spatial.nodes + " urban central waste CHP",
                 bus0=waste_source,
                 bus1=spatial.nodes,
                 bus2=urban_central_nodes,
@@ -6593,9 +6589,10 @@ if __name__ == "__main__":
     if options["cluster_heat_buses"] and not first_year_myopic:
         cluster_heat_buses(n)
 
-    maybe_adjust_costs_and_potentials(
-        n, snakemake.params["adjustments"], investment_year
-    )
+    if not options["district_heating"]["subnodes"]["enable"]:
+        maybe_adjust_costs_and_potentials(
+            n, snakemake.params["adjustments"], investment_year
+        )
 
     n.meta = dict(snakemake.config, **dict(wildcards=dict(snakemake.wildcards)))
 
