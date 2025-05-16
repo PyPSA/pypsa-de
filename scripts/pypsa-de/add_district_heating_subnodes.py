@@ -4,15 +4,12 @@ logger = logging.getLogger(__name__)
 
 import os
 import sys
+from typing import Dict, List
 
 import geopandas as gpd
 import pandas as pd
 import pypsa
 import xarray as xr
-from typing import Dict, List
-
-import os
-import sys
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".."))
 
@@ -156,13 +153,13 @@ def add_loads(
     )
 
     # Adjust loads of cluster buses
-    n.loads_t.p_set.loc[
-        :, f'{subnode["cluster"]} urban central heat'
-    ] -= urban_central_heat_load
+    n.loads_t.p_set.loc[:, f"{subnode['cluster']} urban central heat"] -= (
+        urban_central_heat_load
+    )
 
-    n.loads.loc[
-        f'{subnode["cluster"]} low-temperature heat for industry', "p_set"
-    ] -= low_temperature_heat_for_industry_load
+    n.loads.loc[f"{subnode['cluster']} low-temperature heat for industry", "p_set"] -= (
+        low_temperature_heat_for_industry_load
+    )
 
     if lost_load > 0:
         lost_load_subnode = subnode["yearly_heat_demand_MWh"] - (
@@ -506,6 +503,7 @@ def add_subnodes(
         Dictionary mapping heat sources to paths with potential data.
     output_path : str
         Path to save the subnodes_head GeoDataFrame.
+
     Returns
     -------
     None
@@ -525,7 +523,7 @@ def add_subnodes(
 
     # Add subnodes to network
     for _, subnode in subnodes_head.iterrows():
-        name = f'{subnode["cluster"]} {subnode["Stadt"]} urban central'
+        name = f"{subnode['cluster']} {subnode['Stadt']} urban central"
 
         # Add different component types
         add_buses(n, subnode, name)
