@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: CC0-1.0
 
 run:
-  prefix: 20250320_dhsubnodes
+  prefix: 20250514_dhsubnodes
   name:
   - Baseline
   # - No_PTES
@@ -29,21 +29,6 @@ run:
     - build_industry_sector_ratios   # This is necessary to save build_industry_sector_ratios_data.log in the correct folder
     - modify_existing_heating
 
-iiasa_database:
-  db_name: ariadne
-  leitmodelle:
-    general: REMIND-EU v1.1
-    buildings: REMod v1.0
-    transport: REMIND-EU v1.1
-    transport_stock: DLR-VECTOR21
-    industry: FORECAST v1.0
-  scenarios:
-  - 8Gt_Bal_v3
-  - 8Gt_Elec_v3
-  - 8Gt_H2_v3
-  reference_scenario: 8Gt_Bal_v3
-  region: Deutschland
-
 foresight: myopic
 
 scenario:
@@ -62,20 +47,20 @@ scenario:
   # - 2035
   # - 2040
   - 2045
-  
+
 clustering:
   temporal:
     resolution_sector: 365H
 
 adjustments:
-    electricity: false
-    sector:
-      absolute:
-        StorageUnit:
-          urban central water pits:
-            standing_loss: 0.00012121
-          urban central water tanks:
-            standing_loss: 0.00015476
+  electricity: false
+  sector:
+    absolute:
+      StorageUnit:
+        urban central water pits:
+          standing_loss: 0.00012121
+        urban central water tanks:
+          standing_loss: 0.00015476
 
 wasserstoff_kernnetz:
   enable: false
@@ -83,11 +68,15 @@ wasserstoff_kernnetz:
 sector:
   district_heating:
     potential: 0.5
-    add_subnodes: true
+    subnodes:
+      enable: true
+    limited_heat_sources:
+      geothermal:
+        ignore_missing_regions: true
   heat_pump_sources:
     urban central:
-      - air
-      - geothermal
+    - air
+    - geothermal
     urban decentral:
     - air
     rural:

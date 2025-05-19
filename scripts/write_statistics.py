@@ -30,7 +30,7 @@ if __name__ == "__main__":
 
         snakemake = mock_snakemake(
             "write_statistics",
-            run="CurrentPolicies",
+            run="ExPol",
             simpl="",
             ll="vopt",
             clusters="22",

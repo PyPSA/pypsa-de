@@ -1,26 +1,23 @@
-# -*- coding: utf-8 -*-
 import logging
 
 logger = logging.getLogger(__name__)
 
-import geopandas as gpd
-import pandas as pd
-import numpy as np
-from typing import Union
-import xarray as xr
-import shapely
-import rasterio
-from rasterio.windows import Window
-import rasterio
-import tempfile
-from atlite.gis import ExclusionContainer
-from atlite.gis import shape_availability
-import sys
 import os
+import sys
+import tempfile
+import weakref
 import zipfile
-import dask
-from dask.diagnostics import ProgressBar
 
+import dask
+import geopandas as gpd
+import numpy as np
+import pandas as pd
+import rasterio
+import shapely
+import xarray as xr
+from atlite.gis import ExclusionContainer, shape_availability
+from dask.diagnostics import ProgressBar
+from rasterio.windows import Window
 
 from scripts._helpers import (
     configure_logging,
@@ -83,7 +80,7 @@ def get_chunked_raster(
     """
     Returns windowed data from a raster.
 
-    Parameters:
+    Parameters
     ----------
     dataset_path : str
         Path to the raster dataset.
@@ -93,7 +90,7 @@ def get_chunked_raster(
         Buffer distance in the dataset's units to add around the bounds.
         Default is 1000.
 
-    Returns:
+    Returns
     -------
     rasterio.io.DatasetReader
         A windowed raster dataset.
@@ -143,9 +140,6 @@ def get_chunked_raster(
     # Return a reader for the temporary file
     # The OS will clean it up when the process exits or it's manually deleted
     dataset = rasterio.open(temp_path)
-
-    # Register finalizer to remove temporary file when dataset is garbage collected
-    import weakref
 
     def cleanup(temp_path: str) -> None:
         try:
@@ -214,6 +208,7 @@ def prepare_subnodes(
 ) -> gpd.GeoDataFrame:
     """
     Prepare subnodes by assigning the corresponding LAU and onshore region shapes.
+
     Parameters
     ----------
     subnodes : pd.DataFrame
@@ -226,6 +221,7 @@ def prepare_subnodes(
         GeoDataFrame containing LAU (Local Administrative Units) geometries and IDs.
     heat_techs : gpd.GeoDataFrame
         GeoDataFrame containing NUTS3 region geometries of heat technologies and data from eGo^N project.
+
     Returns
     -------
     gpd.GeoDataFrame
@@ -305,36 +301,52 @@ def prepare_subnodes(
     return subnodes
 
 
-def process_geometries(
-    gdf: gpd.GeoDataFrame, min_area: float = None, buffer_factor: float = None
+def process_district_heating_areas(
+    gdf: gpd.GeoDataFrame,
+    min_areas: list[float] = None,
+    buffer_factors: list[float] = None,
 ) -> gpd.GeoDataFrame:
     """
-    Process geometries in a GeoDataFrame by dissolving, exploding, and optionally filtering and buffering.
+    Process geometries in a GeoDataFrame by uniting polygons of same city and applying optional area filters and buffers to disjoint subpolygons.
+    Performs iterative processing with multiple min_area and buffer_factor values.
 
     Parameters
     ----------
     gdf : gpd.GeoDataFrame
         GeoDataFrame containing geometries to be processed. Must contain a 'Stadt' column for dissolving.
-    min_area : float, optional
-        Minimum area threshold. Geometries smaller than this will be filtered out.
-    buffer_factor : float, optional
-        Factor used to calculate buffer distance as a proportion of the square root of geometry area.
+    min_areas : list[float], optional
+        List of minimum area thresholds. Geometries smaller than these will be filtered out in each iteration.
+    buffer_factors : list[float], optional
+        List of factors used to calculate buffer distance as a proportion of the square root of geometry area.
 
     Returns
     -------
     gpd.GeoDataFrame
-        Processed GeoDataFrame with dissolved and exploded geometries, optionally filtered and buffered.
+        Processed GeoDataFrame with optionally dissolved and exploded geometries.
     """
-    gdf = gdf.dissolve("Stadt").explode(index_parts=False).reset_index(drop=False)
-    if min_area is not None:
+
+    # Ensure both lists have the same length
+    iterations = max(len(min_areas), len(buffer_factors))
+
+    # Iterative processing with different parameters
+    for i in range(iterations):
+        gdf = gdf.explode()
+        # Get current parameters, use 0 if index out of bounds
+        min_area = min_areas[i] if i < len(min_areas) else 0
+        buffer_factor = buffer_factors[i] if i < len(buffer_factors) else 0
+
         gdf = gdf.loc[gdf.area > min_area]
-    if buffer_factor is not None:
         gdf["geometry"] = gdf.geometry.buffer(np.sqrt(gdf.area) * buffer_factor)
+
+        gdf = gdf.dissolve("Stadt").reset_index()
+
     return gdf
 
 
 def refine_dh_areas_from_census_data(
-    subnodes: gpd.GeoDataFrame, census: gpd.GeoDataFrame
+    subnodes: gpd.GeoDataFrame,
+    census: gpd.GeoDataFrame,
+    **processing_config: dict[str, any],
 ) -> gpd.GeoDataFrame:
     """
     Refine district heating areas based on census raster data.
@@ -360,7 +372,7 @@ def refine_dh_areas_from_census_data(
     # Add buffer, so tiles are 100x100m
     census["geometry"] = census.geometry.buffer(50, cap_style="square")
 
-    # Union of conjunct geometries
+    # Union of conjoint geometries
     census = census.union_all()
     census = gpd.GeoDataFrame(geometry=[census], crs="EPSG:3035")
 
@@ -373,22 +385,46 @@ def refine_dh_areas_from_census_data(
     lau_shape_dict = dict(zip(subnodes["Stadt"], subnodes["lau_shape"]))
     census["lau_shape"] = census["Stadt"].map(lau_shape_dict)
 
+    # Take convex hull of census geometries
     census["geometry"] = census.convex_hull
 
-    # Filter out single tiles with area < 10000 m^2
-    census = census.loc[census.area > 10000]
+    # Process census geometries using passed configuration
+    census = process_district_heating_areas(
+        census,
+        processing_config["min_area"],
+        processing_config["buffer_factor"],
+    )
 
-    # Buffer the census areas by 1% of their area and combine them
-    # Buffer by 1% of area square root
-    census["geometry"] = census.geometry.buffer(np.sqrt(census.area) * 0.01)
+    return census
 
-    # Process with increasing buffer factors and area thresholds
-    census = process_geometries(census)
-    census = process_geometries(census, min_area=100000, buffer_factor=0.05)
-    census = process_geometries(census, buffer_factor=0.05)
-    census = process_geometries(census, min_area=1000000)
 
-    return census.dissolve("Stadt").reset_index()
+def process_batch(batch, osm_land_cover_path, natura_path, excluder_resolution, codes):
+    # Get efficient chunked rasters for this batch
+    osm_dataset = get_chunked_raster(osm_land_cover_path, batch.total_bounds)
+    natura_dataset = get_chunked_raster(natura_path, batch.total_bounds)
+
+    # Create exclusion container
+    excluder = ExclusionContainer(crs=3035, res=excluder_resolution)
+    excluder.add_raster(osm_dataset, codes=codes, invert=True, crs=3035)
+    excluder.add_raster(natura_dataset, codes=[1], invert=False, crs=3035)
+
+    # Process batch shapes
+    batch_shapes = batch["geometry"]
+    band, transform = shape_availability(batch_shapes, excluder)
+
+    # Extract valid points
+    row_indices, col_indices = np.where(band != osm_dataset.nodata)
+    values = band[row_indices, col_indices]
+
+    x_coords, y_coords = rasterio.transform.xy(transform, row_indices, col_indices)
+
+    # Process eligible points if any exist
+    if len(x_coords) > 0:
+        eligible_areas = process_eligible_points(
+            x_coords, y_coords, values, osm_dataset.crs, batch
+        )
+        return eligible_areas
+    return None
 
 
 def add_ptes_limit(
@@ -398,8 +434,9 @@ def add_ptes_limit(
     groundwater: xr.Dataset,
     codes: list,
     max_groundwater_depth: float,
-    ptes_potential_scalar: float,
     excluder_resolution: int,
+    min_area: float = 10000,
+    default_capacity: float = 4500,
 ) -> gpd.GeoDataFrame:
     """
     Add PTES limit to subnodes according to land availability within city regions.
@@ -418,56 +455,33 @@ def add_ptes_limit(
         List of CORINE land cover codes to include.
     max_groundwater_depth : float
         Maximum allowable groundwater depth for PTES installation.
-    ptes_potential_scalar : float
-        Scalar to adjust PTES potential.
+    excluder_resolution : int
+        Resolution of the exclusion raster.
+    min_area : float, optional
+        Minimum area for eligible regions. Default is 10000 m².
+    default_capacity : float, optional
+        Default capacity for PTES potential calculation. Default comes from DEA data and is 4500 MWh.
 
     Returns
     -------
     gpd.GeoDataFrame
         Updated GeoDataFrame with PTES potential added.
     """
-
-    dh_systems = subnodes.copy()
-
     # Increase batch size for better performance
     batch_size = 1
 
     # Create batches
     batches = []
-    for i in range(0, len(dh_systems), batch_size):
-        batches.append(dh_systems.iloc[i : i + batch_size])
-
-    # Define the processing function for a single batch
-    def process_batch(batch):
-        # Get efficient chunked rasters for this batch
-        osm_dataset = get_chunked_raster(osm_land_cover_path, batch.total_bounds)
-        natura_dataset = get_chunked_raster(natura_path, batch.total_bounds)
-
-        # Create exclusion container
-        excluder = ExclusionContainer(crs=3035, res=excluder_resolution)
-        excluder.add_raster(osm_dataset, codes=codes, invert=True, crs=3035)
-        excluder.add_raster(natura_dataset, codes=[1], invert=False, crs=3035)
-
-        # Process batch shapes
-        batch_shapes = batch["geometry"]
-        band, transform = shape_availability(batch_shapes, excluder)
-
-        # Extract valid points
-        row_indices, col_indices = np.where(band != osm_dataset.nodata)
-        values = band[row_indices, col_indices]
-
-        x_coords, y_coords = rasterio.transform.xy(transform, row_indices, col_indices)
-
-        # Process eligible points if any exist
-        if len(x_coords) > 0:
-            eligible_areas = process_eligible_points(
-                x_coords, y_coords, values, osm_dataset.crs, batch
-            )
-            return eligible_areas
-        return None
+    for i in range(0, len(subnodes), batch_size):
+        batches.append(subnodes.iloc[i : i + batch_size])
 
     # Create delayed tasks for each batch
-    delayed_results = [dask.delayed(process_batch)(batch) for batch in batches]
+    delayed_results = [
+        dask.delayed(process_batch)(
+            batch, osm_land_cover_path, natura_path, excluder_resolution, codes
+        )
+        for batch in batches
+    ]
 
     # Execute tasks in parallel with progress bar
     with ProgressBar():
@@ -481,11 +495,11 @@ def add_ptes_limit(
         eligible_areas = pd.concat(batch_results, ignore_index=True)
 
     eligible_areas = gpd.sjoin(
-        eligible_areas, dh_systems.drop("Stadt", axis=1), how="left", rsuffix=""
+        eligible_areas, subnodes.drop("Stadt", axis=1), how="left", rsuffix=""
     )[["Stadt", "geometry"]].set_geometry("geometry")
 
-    # filter for eligible areas that are larger than 10000 m^2
-    eligible_areas = eligible_areas[eligible_areas.area > 10000]
+    # filter for eligible areas that are larger than min_area
+    eligible_areas = eligible_areas[eligible_areas.area > min_area]
 
     # Find closest value in groundwater dataset and kick out areas with groundwater level > threshold
     eligible_areas["groundwater_level"] = eligible_areas.to_crs("EPSG:4326").apply(
@@ -501,18 +515,17 @@ def add_ptes_limit(
     # Combine eligible areas by city
     eligible_areas = eligible_areas.dissolve("Stadt")
 
-    # Calculate PTES potential according to Dronninglund and DEA parameters
+    # Calculate PTES potential according to storage configuration
     eligible_areas["area_m2"] = eligible_areas.area
-    eligible_areas["nstorages_pot"] = eligible_areas.area_m2 / 10000
-    eligible_areas["storage_pot_mwh"] = eligible_areas["nstorages_pot"] * 4500
+    eligible_areas["nstorages_pot"] = eligible_areas.area_m2 / min_area
+    eligible_areas["storage_pot_mwh"] = (
+        eligible_areas["nstorages_pot"] * default_capacity
+    )
 
     subnodes.set_index("Stadt", inplace=True)
-    subnodes["ptes_pot_mwh"] = (
-        eligible_areas.loc[subnodes.index.intersection(eligible_areas.index)][
-            "storage_pot_mwh"
-        ]
-        * ptes_potential_scalar
-    )
+    subnodes["ptes_pot_mwh"] = eligible_areas.loc[
+        subnodes.index.intersection(eligible_areas.index)
+    ]["storage_pot_mwh"]
     subnodes["ptes_pot_mwh"] = subnodes["ptes_pot_mwh"].fillna(0)
     subnodes.reset_index(inplace=True)
 
@@ -522,8 +535,8 @@ def add_ptes_limit(
 def extend_regions_onshore(
     regions_onshore: gpd.GeoDataFrame,
     subnodes_all: gpd.GeoDataFrame,
-    head: Union[int, bool] = 40,
-) -> Union[gpd.GeoDataFrame, gpd.GeoDataFrame]:
+    head: int = 40,
+) -> dict[str, gpd.GeoDataFrame]:
     """
     Extend onshore regions to include city LAU regions and restrict onshore regions to
     district heating areas of Fernwärmeatlas.
@@ -539,14 +552,12 @@ def extend_regions_onshore(
 
     Returns
     -------
-    regions_onshore_extended : geopandas.GeoDataFrame
-        GeoDataFrame with extended onshore regions including city LAU regions.
-    regions_onshore_restricted : geopandas.GeoDataFrame
-        GeoDataFrame with restricted onshore regions, replacing geometries
-        with the district heating areas.
+    dict
+        Dictionary with two keys:
+        - 'extended': GeoDataFrame with extended onshore regions including city LAU regions.
+        - 'restricted': GeoDataFrame with restricted onshore regions, replacing geometries
+          with the district heating areas.
     """
-    if isinstance(head, bool):
-        head = 40
 
     # Extend regions_onshore to include the cities' lau regions
     subnodes = (
@@ -566,7 +577,7 @@ def extend_regions_onshore(
     # Rename lau_shape to geometry
     subnodes = subnodes.drop(columns=["cluster"])
 
-    # Concat regions_onshore and subnodes CRS of regions_onshore
+    # Concat regions_onshore and subnodal regions
     regions_onshore_extended = pd.concat([regions_onshore, subnodes.set_index("name")])
 
     # Restrict regions_onshore geometries to only consist of the remaining city areas
@@ -586,7 +597,10 @@ def extend_regions_onshore(
         subnodes_all.loc[subnodes.index].set_index("name").geometry.to_crs("EPSG:4326")
     )
 
-    return regions_onshore_extended, regions_onshore_restricted
+    return {
+        "extended": regions_onshore_extended,
+        "restricted": regions_onshore_restricted,
+    }
 
 
 if __name__ == "__main__":
@@ -646,36 +660,52 @@ if __name__ == "__main__":
         heat_techs,
     )
 
-    subnodes = refine_dh_areas_from_census_data(subnodes, census)
+    if snakemake.params.district_heating["subnodes"]["census_areas"]["enable"]:
+        # Parameters for processing of census data is read from config file.
+        # Default values were chosen to yield district heating areas with high
+        # geographic accordance to the ones publicly available e.g. Berlin, Hamburg.
+        processing_config = snakemake.params.district_heating["subnodes"][
+            "census_areas"
+        ]["processing"]
+        subnodes = refine_dh_areas_from_census_data(
+            subnodes, census, **processing_config
+        )
 
-    bounds = subnodes.to_crs("EPSG:4326").total_bounds  # (minx, miny, maxx, maxy)
-    groundwater = xr.open_dataset(snakemake.input.groundwater_depth).sel(
-        lon=slice(bounds[0], bounds[2]),  # minx to maxx
-        lat=slice(bounds[1], bounds[3]),  # miny to maxy
-    )
-    subnodes = add_ptes_limit(
-        subnodes,
-        snakemake.input.osm_land_cover,
-        snakemake.input.natura,
-        groundwater,
-        snakemake.params.district_heating["osm_landcover_codes"],
-        snakemake.params.district_heating["max_groundwater_depth"],
-        snakemake.params.district_heating["ptes_potential_scalar"],
-        snakemake.params.district_heating["excluder_resolution"],
-    )
+    if snakemake.params.district_heating["subnodes"]["limit_ptes_potential"]["enable"]:
+        bounds = subnodes.to_crs("EPSG:4326").total_bounds  # (minx, miny, maxx, maxy)
+        groundwater = xr.open_dataset(snakemake.input.groundwater_depth).sel(
+            lon=slice(bounds[0], bounds[2]),  # minx to maxx
+            lat=slice(bounds[1], bounds[3]),  # miny to maxy
+        )
+
+        subnodes = add_ptes_limit(
+            subnodes,
+            snakemake.input.osm_land_cover,
+            snakemake.input.natura,
+            groundwater,
+            snakemake.params.district_heating["subnodes"]["limit_ptes_potential"][
+                "osm_landcover_codes"
+            ],
+            snakemake.params.district_heating["subnodes"]["limit_ptes_potential"][
+                "max_groundwater_depth"
+            ],
+            snakemake.params.district_heating["subnodes"]["limit_ptes_potential"][
+                "excluder_resolution"
+            ],
+        )
 
     subnodes.to_file(snakemake.output.district_heating_subnodes, driver="GeoJSON")
 
-    regions_onshore_extended, regions_onshore_restricted = extend_regions_onshore(
+    regions_onshore_modified = extend_regions_onshore(
         regions_onshore,
         subnodes,
-        head=snakemake.params.district_heating["add_subnodes"],
+        head=snakemake.params.district_heating["subnodes"]["nlargest"],
     )
 
-    regions_onshore_extended.to_file(
+    regions_onshore_modified["extended"].to_file(
         snakemake.output.regions_onshore_extended, driver="GeoJSON"
     )
 
-    regions_onshore_restricted.to_file(
+    regions_onshore_modified["restricted"].to_file(
         snakemake.output.regions_onshore_restricted, driver="GeoJSON"
     )

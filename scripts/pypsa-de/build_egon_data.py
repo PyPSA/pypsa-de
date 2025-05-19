@@ -30,7 +30,7 @@ if __name__ == "__main__":
     if "snakemake" not in globals():
         snakemake = mock_snakemake(
             "build_egon_data",
-            run="KN2045_Bal_v4",
+            run="KN2045_Mix",
         )
 configure_logging(snakemake)
 

@@ -1,4 +1,6 @@
 # Changelog
+- Simplified scenarion definition and made `Mix` the default scenario
+- 0.3: workflow is all public now, no longer requires credentials to internal data
 - Allowing myopic optimization until 2050
 - CHP plants located in onshore regions without district heating are represented as EOP plants
 - updating technology cost data to v0.11.0

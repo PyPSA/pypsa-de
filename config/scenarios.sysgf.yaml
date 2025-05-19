@@ -4,351 +4,96 @@
 # SPDX-License-Identifier: MIT
 
 Baseline:
+  foresight: myopic
   iiasa_database:
-    reference_scenario: 8Gt_Bal_v3
-    fallback_reference_scenario: 8Gt_Bal_v3
-  co2_budget_DE_source: KSG
-  industry:
-
-    St_primary_fraction:
-      2020: 0.7023
-      2025: 0.705
-      2030: 0.6929
-      2035: 0.6598
-      2040: 0.6273
-      2045: 0.6047
-    DRI_fraction:
-      2020: 0.0
-      2025: 0.0
-      2030: 0.2011
-      2035: 0.496
-      2040: 0.7729
-      2045: 1.0
-  costs:
-    horizon: mean
-    NEP: 2023
-    transmission: overhead   # either overhead line ("overhead") or underground cable ("underground")
+    reference_scenario: KN2045_Mix
+  co2_budget_DE_source: UBA
 
 No_PTES:
   adjustments:
     electricity: false
     sector:
       absolute:
-        StorageUnit:
+        Store:
           urban central water pits:
-            p_nom_max: 0
-  iiasa_database:
-    reference_scenario: 8Gt_Bal_v3
-    fallback_reference_scenario: 8Gt_Bal_v3
-  co2_budget_DE_source: KSG
-  industry:
-
-    St_primary_fraction:
-      2020: 0.7023
-      2025: 0.705
-      2030: 0.6929
-      2035: 0.6598
-      2040: 0.6273
-      2045: 0.6047
-    DRI_fraction:
-      2020: 0.0
-      2025: 0.0
-      2030: 0.2011
-      2035: 0.496
-      2040: 0.7729
-      2045: 1.0
-  costs:
-    horizon: mean
-    NEP: 2023
-    transmission: overhead   # either overhead line ("overhead") or underground cable ("underground")
+            e_nom_max: 0
 
 LowPTESCAPEX:
   adjustments:
     electricity: false
     sector:
       factor:
-        StorageUnit:
+        Store:
           urban central water pits:
             capital_cost: 0.5
       absolute:
-        StorageUnit:
+        Store:
           urban central water pits:
             standing_loss: 0.00012121
           urban central water tanks:
             standing_loss: 0.00015476
-
-  iiasa_database:
-    reference_scenario: 8Gt_Bal_v3
-    fallback_reference_scenario: 8Gt_Bal_v3
-  co2_budget_DE_source: KSG
-  industry:
-
-    St_primary_fraction:
-      2020: 0.7023
-      2025: 0.705
-      2030: 0.6929
-      2035: 0.6598
-      2040: 0.6273
-      2045: 0.6047
-    DRI_fraction:
-      2020: 0.0
-      2025: 0.0
-      2030: 0.2011
-      2035: 0.496
-      2040: 0.7729
-      2045: 1.0
-  costs:
-    horizon: mean
-    NEP: 2023
-    transmission: overhead   # either overhead line ("overhead") or underground cable ("underground")
-
 
 HighPTESCAPEX:
   adjustments:
     electricity: false
     sector:
       factor:
-        StorageUnit:
+        Store:
           urban central water pits:
             capital_cost: 2
       absolute:
-        StorageUnit:
+        Store:
           urban central water pits:
             standing_loss: 0.00012121
           urban central water tanks:
             standing_loss: 0.00015476
-
-  iiasa_database:
-    reference_scenario: 8Gt_Bal_v3
-    fallback_reference_scenario: 8Gt_Bal_v3
-  co2_budget_DE_source: KSG
-  industry:
-
-    St_primary_fraction:
-      2020: 0.7023
-      2025: 0.705
-      2030: 0.6929
-      2035: 0.6598
-      2040: 0.6273
-      2045: 0.6047
-    DRI_fraction:
-      2020: 0.0
-      2025: 0.0
-      2030: 0.2011
-      2035: 0.496
-      2040: 0.7729
-      2045: 1.0
-  costs:
-    horizon: mean
-    NEP: 2023
-    transmission: overhead   # either overhead line ("overhead") or underground cable ("underground")
-
 
 LowStandingLosses:
   adjustments:
     electricity: false
     sector:
       absolute:
-        StorageUnit:
+        Store:
           urban central water pits:
             standing_loss: 0
-  iiasa_database:
-    reference_scenario: 8Gt_Bal_v3
-    fallback_reference_scenario: 8Gt_Bal_v3
-  co2_budget_DE_source: KSG
-  industry:
-
-    St_primary_fraction:
-      2020: 0.7023
-      2025: 0.705
-      2030: 0.6929
-      2035: 0.6598
-      2040: 0.6273
-      2045: 0.6047
-    DRI_fraction:
-      2020: 0.0
-      2025: 0.0
-      2030: 0.2011
-      2035: 0.496
-      2040: 0.7729
-      2045: 1.0
-  costs:
-    horizon: mean
-    NEP: 2023
-    transmission: overhead   # either overhead line ("overhead") or underground cable ("underground")
-
 
 HighStandingLosses:
   adjustments:
     electricity: false
     sector:
       absolute:
-        StorageUnit:
+        Store:
           urban central water pits:
             standing_loss: 0.0012121
-  iiasa_database:
-    reference_scenario: 8Gt_Bal_v3
-    fallback_reference_scenario: 8Gt_Bal_v3
-  co2_budget_DE_source: KSG
-  industry:
-
-    St_primary_fraction:
-      2020: 0.7023
-      2025: 0.705
-      2030: 0.6929
-      2035: 0.6598
-      2040: 0.6273
-      2045: 0.6047
-    DRI_fraction:
-      2020: 0.0
-      2025: 0.0
-      2030: 0.2011
-      2035: 0.496
-      2040: 0.7729
-      2045: 1.0
-  costs:
-    horizon: mean
-    NEP: 2023
-    transmission: overhead   # either overhead line ("overhead") or underground cable ("underground")
 
 LowGroundWaterDepth:
   sector:
     district_heating:
-      max_groundwater_depth: -25
-  iiasa_database:
-    reference_scenario: 8Gt_Bal_v3
-    fallback_reference_scenario: 8Gt_Bal_v3
-  co2_budget_DE_source: KSG
-  industry:
-
-    St_primary_fraction:
-      2020: 0.7023
-      2025: 0.705
-      2030: 0.6929
-      2035: 0.6598
-      2040: 0.6273
-      2045: 0.6047
-    DRI_fraction:
-      2020: 0.0
-      2025: 0.0
-      2030: 0.2011
-      2035: 0.496
-      2040: 0.7729
-      2045: 1.0
-  costs:
-    horizon: mean
-    NEP: 2023
-    transmission: overhead   # either overhead line ("overhead") or underground cable ("underground")
+      subnodes:
+        limit_ptes_potential:
+          max_groundwater_depth: -25
 
 HighGroundWaterDepth:
   sector:
     district_heating:
-      max_groundwater_depth: 0 
-  iiasa_database:
-    reference_scenario: 8Gt_Bal_v3
-    fallback_reference_scenario: 8Gt_Bal_v3
-  co2_budget_DE_source: KSG
-  industry:
-
-    St_primary_fraction:
-      2020: 0.7023
-      2025: 0.705
-      2030: 0.6929
-      2035: 0.6598
-      2040: 0.6273
-      2045: 0.6047
-    DRI_fraction:
-      2020: 0.0
-      2025: 0.0
-      2030: 0.2011
-      2035: 0.496
-      2040: 0.7729
-      2045: 1.0
-  costs:
-    horizon: mean
-    NEP: 2023
-    transmission: overhead   # either overhead line ("overhead") or underground cable ("underground")
+      subnodes:
+        limit_ptes_potential:
+          max_groundwater_depth: 0
 
 LowEtPRatio:
   adjustments:
     electricity: false
     sector:
       factor:
-        StorageUnit:
-          urban central water pits:
-            max_hours: 0.5
-            capital_cost: 0.5
-            p_nom_max: 2
-      absolute:
-        StorageUnit:
-          urban central water pits:
-            standing_loss: 0.00012121
-          urban central water tanks:
-            standing_loss: 0.00015476
-
-  iiasa_database:
-    reference_scenario: 8Gt_Bal_v3
-    fallback_reference_scenario: 8Gt_Bal_v3
-  co2_budget_DE_source: KSG
-  industry:
-
-    St_primary_fraction:
-      2020: 0.7023
-      2025: 0.705
-      2030: 0.6929
-      2035: 0.6598
-      2040: 0.6273
-      2045: 0.6047
-    DRI_fraction:
-      2020: 0.0
-      2025: 0.0
-      2030: 0.2011
-      2035: 0.496
-      2040: 0.7729
-      2045: 1.0
-  costs:
-    horizon: mean
-    NEP: 2023
-    transmission: overhead   # either overhead line ("overhead") or underground cable ("underground")
-
+        Link:
+          urban central water pits charger:
+            energy to power ratio: 0.5
 
 HighEtPRatio:
   adjustments:
     electricity: false
     sector:
       factor:
-        StorageUnit:
-          urban central water pits:
-            max_hours: 2
-            capital_cost: 2
-            p_nom_max: 0.5
-      absolute:
-        StorageUnit:
-          urban central water pits:
-            standing_loss: 0.00012121
-          urban central water tanks:
-            standing_loss: 0.00015476
-  iiasa_database:
-    reference_scenario: 8Gt_Bal_v3
-    fallback_reference_scenario: 8Gt_Bal_v3
-  co2_budget_DE_source: KSG
-  industry:
-
-    St_primary_fraction:
-      2020: 0.7023
-      2025: 0.705
-      2030: 0.6929
-      2035: 0.6598
-      2040: 0.6273
-      2045: 0.6047
-    DRI_fraction:
-      2020: 0.0
-      2025: 0.0
-      2030: 0.2011
-      2035: 0.496
-      2040: 0.7729
-      2045: 1.0
-  costs:
-    horizon: mean
-    NEP: 2023
-    transmission: overhead   # either overhead line ("overhead") or underground cable ("underground")
+        Link:
+          urban central water pits charger:
+            energy to power ratio: 2

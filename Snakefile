@@ -13,20 +13,15 @@ min_version("8.11")
 
 from scripts._helpers import (
     path_provider,
-    copy_default_files,
     get_scenarios,
     get_rdir,
     get_shadow,
 )
 
 
-copy_default_files(workflow)
-
-
 configfile: "config/config.default.yaml"
 configfile: "config/plotting.default.yaml"
-configfile: "config/config.yaml"
-configfile: "config/config.personal.yaml"
+configfile: "config/config.de.yaml"
 
 
 run = config["run"]
@@ -271,13 +266,13 @@ rule retrieve_egon_data:
 
 rule retrieve_ariadne_database:
     params:
-        db_name=config_provider("iiasa_database", "db_name"),
-        leitmodelle=config_provider("iiasa_database", "leitmodelle"),
-        scenarios=config_provider("iiasa_database", "scenarios"),
+        db_name=config["iiasa_database"]["db_name"],
+        leitmodelle=config["iiasa_database"]["leitmodelle"],
+        scenarios=config["iiasa_database"]["scenarios"],
     output:
-        data=resources("ariadne_database.csv"),
+        data="resources/ariadne_database.csv",
     log:
-        "logs/pypsa-de/retrieve_ariadne_database.log",
+        "logs/retrieve_ariadne_database.log",
     resources:
         mem_mb=1000,
     script:
@@ -316,12 +311,11 @@ if config["enable"]["retrieve"] and config["enable"].get("retrieve_cost_data", T
 
 rule build_mobility_demand:
     params:
-        db_name=config_provider("iiasa_database", "db_name"),
         reference_scenario=config_provider("iiasa_database", "reference_scenario"),
         planning_horizons=config_provider("scenario", "planning_horizons"),
         leitmodelle=config_provider("iiasa_database", "leitmodelle"),
     input:
-        ariadne=resources("ariadne_database.csv"),
+        ariadne="resources/ariadne_database.csv",
         clustered_pop_layout=resources("pop_layout_base_s_{clusters}.csv"),
     output:
         mobility_demand=resources(
@@ -358,9 +352,7 @@ rule prepare_district_heating_subnodes:
         baseyear=config_provider("scenario", "planning_horizons", 0),
     input:
         heating_technologies_nuts3=resources("heating_technologies_nuts3.geojson"),
-        regions_onshore=resources(
-            "regions_onshore_base_s_{clusters}.geojson"
-        ),
+        regions_onshore=resources("regions_onshore_base_s_{clusters}.geojson"),
         fernwaermeatlas="data/fernwaermeatlas/fernwaermeatlas.xlsx",
         cities="data/fernwaermeatlas/cities_geolocations.geojson",
         lau_regions="data/lau_regions.zip",
@@ -375,8 +367,8 @@ rule prepare_district_heating_subnodes:
         natura=ancient("data/bundle/natura/natura.tiff"),
         groundwater_depth=storage(
             "http://thredds-gfnl.usc.es/thredds/fileServer/GLOBALWTDFTP/annualmeans/EURASIA_WTD_annualmean.nc",
-            keep_local=True
-            ),
+            keep_local=True,
+        ),
     output:
         district_heating_subnodes=resources(
             "district_heating_subnodes_base_s_{clusters}.geojson"
@@ -387,44 +379,43 @@ rule prepare_district_heating_subnodes:
         regions_onshore_restricted=resources(
             "regions_onshore_base-restricted_s_{clusters}.geojson"
         ),
-
     resources:
         mem_mb=20000,
     script:
         "scripts/pypsa-de/prepare_district_heating_subnodes.py"
 
+
 baseyear_value = config["scenario"]["planning_horizons"][0]
+
 
 rule add_district_heating_subnodes:
     params:
         district_heating=config_provider("sector", "district_heating"),
         baseyear=config_provider("scenario", "planning_horizons", 0),
         sector=config_provider("sector"),
-        heat_pump_sources=config_provider("sector", "heat_pump_sources", "urban central"),
+        heat_pump_sources=config_provider(
+            "sector", "heat_pump_sources", "urban central"
+        ),
         heat_utilisation_potentials=config_provider(
-        "sector", "district_heating", "heat_utilisation_potentials"
+            "sector", "district_heating", "heat_utilisation_potentials"
         ),
         direct_utilisation_heat_sources=config_provider(
             "sector", "district_heating", "direct_utilisation_heat_sources"
         ),
-        adjustments=config_provider( "adjustments", "sector"),
+        adjustments=config_provider("adjustments", "sector"),
     input:
         unpack(input_heat_source_power),
         network=resources(
-        "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc"
-    ),
-        subnodes=resources(
-            "district_heating_subnodes_base_s_{clusters}.geojson"
+            "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc"
         ),
+        subnodes=resources("district_heating_subnodes_base_s_{clusters}.geojson"),
         nuts3=resources("nuts3_shapes.geojson"),
-        regions_onshore=resources(
-            "regions_onshore_base_s_{clusters}.geojson"
-        ),
+        regions_onshore=resources("regions_onshore_base_s_{clusters}.geojson"),
         fernwaermeatlas="data/fernwaermeatlas/fernwaermeatlas.xlsx",
         cities="data/fernwaermeatlas/cities_geolocations.geojson",
         cop_profiles=resources("cop_profiles_base_s_{clusters}_{planning_horizons}.nc"),
         direct_heat_source_utilisation_profiles=resources(
-        "direct_heat_source_utilisation_profiles_base_s_{clusters}_{planning_horizons}.nc"
+            "direct_heat_source_utilisation_profiles_base_s_{clusters}_{planning_horizons}.nc"
         ),
         existing_heating_distribution=resources(
             f"existing_heating_distribution_base_s_{{clusters}}_{baseyear_value}.csv"
@@ -432,7 +423,7 @@ rule add_district_heating_subnodes:
         lau_regions="data/lau_regions.zip",
     output:
         network=resources(
-        "networks/base-extended_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc"
+            "networks/base-extended_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc"
         ),
         district_heating_subnodes=resources(
             "district_heating_subnodes_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.geojson"
@@ -542,8 +533,9 @@ rule modify_prenetwork:
         offshore_connection_points="ariadne-data/offshore_connection_points.csv",
         reference_network=f"results/{run['prefix']}/{run['scenarios']['reference']}/networks/base_s_{{clusters}}_{{opts}}_{{sector_opts}}_{{planning_horizons}}.nc" if run['scenarios']['fix_reference_investments_nonDE'] and run['scenarios']['reference'] not in "{run}" else [],
     output:
-        network=RESULTS
-        + "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_final.nc",
+        network=resources(
+            "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_final.nc"
+        ),
     resources:
         mem_mb=4000,
     log:
@@ -560,11 +552,8 @@ rule modify_existing_heating:
     params:
         iiasa_reference_scenario=config_provider("iiasa_database", "reference_scenario"),
         leitmodelle=config_provider("iiasa_database", "leitmodelle"),
-        fallback_reference_scenario=config_provider(
-            "iiasa_database", "fallback_reference_scenario"
-        ),
     input:
-        ariadne=resources("ariadne_database.csv"),
+        ariadne="resources/ariadne_database.csv",
         existing_heating="data/existing_infrastructure/existing_heating_raw.csv",
     output:
         existing_heating=resources("existing_heating.csv"),
@@ -593,8 +582,8 @@ rule retrieve_mastr:
 
 rule build_existing_chp_de:
     params:
-        add_district_heating_subnodes=config_provider(
-            "sector", "district_heating", "add_subnodes"
+        district_heating_subnodes=config_provider(
+            "sector", "district_heating", "subnodes"
         ),
     input:
         mastr_biomass="data/mastr/bnetza_open_mastr_2023-08-08_B_biomass.csv",
@@ -605,16 +594,12 @@ rule build_existing_chp_de:
         ),
         regions=resources("regions_onshore_base_s_{clusters}.geojson"),
         district_heating_subnodes=(
-            resources(
-                "district_heating_subnodes_base_s_{clusters}.geojson"
-            )
-            if config["sector"]["district_heating"].get("add_subnodes", True)
+            resources("district_heating_subnodes_base_s_{clusters}.geojson")
+            if config_provider("sector", "district_heating", "subnodes", "enable")
             else []
         ),
     output:
-        german_chp=resources(
-            "german_chp_base_s_{clusters}.csv"
-        ),
+        german_chp=resources("german_chp_base_s_{clusters}.csv"),
     log:
         logs("build_existing_chp_de_{clusters}.log"),
     script:
@@ -623,10 +608,9 @@ rule build_existing_chp_de:
 
 rule modify_industry_demand:
     params:
-        db_name=config_provider("iiasa_database", "db_name"),
         reference_scenario=config_provider("iiasa_database", "reference_scenario"),
     input:
-        ariadne=resources("ariadne_database.csv"),
+        ariadne="resources/ariadne_database.csv",
         industrial_production_per_country_tomorrow=resources(
             "industrial_production_per_country_tomorrow_{planning_horizons}.csv"
         ),
@@ -695,7 +679,7 @@ rule download_ariadne_template:
             keep_local=True,
         ),
     output:
-        resources("template_ariadne_database.xlsx"),
+        "data/template_ariadne_database.xlsx",
     run:
         move(input[0], output[0])
 
@@ -714,7 +698,7 @@ rule export_ariadne_variables:
         NEP_year=config_provider("costs", "NEP"),
         NEP_transmission=config_provider("costs", "transmission"),
     input:
-        template=resources("template_ariadne_database.xlsx"),
+        template="data/template_ariadne_database.xlsx",
         industry_demands=expand(
             resources(
                 "industrial_energy_demand_base_s_{clusters}_{planning_horizons}.csv"
@@ -761,12 +745,10 @@ rule export_ariadne_variables:
 rule plot_ariadne_variables:
     params:
         iiasa_scenario=config_provider("iiasa_database", "reference_scenario"),
-        fallback_reference_scenario=config_provider(
-            "iiasa_database", "fallback_reference_scenario"
-        ),
+        reference_scenario=config_provider("iiasa_database", "reference_scenario"),
     input:
         exported_variables_full=RESULTS + "ariadne/exported_variables_full.xlsx",
-        ariadne_database=resources("ariadne_database.csv"),
+        ariadne_database="resources/ariadne_database.csv",
     output:
         primary_energy=RESULTS + "ariadne/primary_energy.png",
         primary_energy_detailed=RESULTS + "ariadne/primary_energy_detailed.png",
@@ -830,11 +812,10 @@ rule ariadne_all:
 
 rule build_scenarios:
     params:
-        scenarios=config_provider("run", "name"),
-        db_name=config_provider("iiasa_database", "db_name"),
-        leitmodelle=config_provider("iiasa_database", "leitmodelle"),
+        scenarios=config["run"]["name"],
+        leitmodelle=config["iiasa_database"]["leitmodelle"],
     input:
-        ariadne_database=resources("ariadne_database.csv"),
+        ariadne_database="resources/ariadne_database.csv",
         scenario_yaml=config["run"]["scenarios"]["manual_file"],
     output:
         scenario_yaml=config["run"]["scenarios"]["file"],
@@ -900,13 +881,13 @@ rule plot_ariadne_report:
             **config["scenario"],
             allow_missing=True,
         ),
+        exported_variables_full=RESULTS + "ariadne/exported_variables_full.xlsx",
     output:
         elec_price_duration_curve=RESULTS
         + "ariadne/report/elec_price_duration_curve.pdf",
         elec_price_duration_hist=RESULTS + "ariadne/report/elec_price_duration_hist.pdf",
         backup_capacity=RESULTS + "ariadne/report/backup_capacity.pdf",
         backup_generation=RESULTS + "ariadne/report/backup_generation.pdf",
-        elec_prices_spatial_de=RESULTS + "ariadne/report/elec_prices_spatial_de.pdf",
         results=directory(RESULTS + "ariadne/report"),
         elec_transmission=directory(RESULTS + "ariadne/report/elec_transmission"),
         h2_transmission=directory(RESULTS + "ariadne/report/h2_transmission"),
@@ -915,7 +896,7 @@ rule plot_ariadne_report:
         heat_balances=directory(RESULTS + "ariadne/report/heat_balance_timeseries"),
         nodal_balances=directory(RESULTS + "ariadne/report/balance_timeseries_2045"),
     resources:
-        mem_mb=30000,
+        mem_mb=32000,
     log:
         RESULTS + "logs/plot_ariadne_report.log",
     script:

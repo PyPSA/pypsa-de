@@ -15,11 +15,9 @@ logger = logging.getLogger(__name__)
 
 
 def get_transport_growth(df, planning_horizons):
-    try:
-        aviation = df.loc["Final Energy|Bunkers|Aviation", "PJ/yr"]
-    except KeyError:
-        aviation = df.loc["Final Energy|Bunkers|Aviation", "TWh/yr"] * 3.6  # TWh to PJ
+    aviation = df.loc["Final Energy|Bunkers|Aviation", "TWh/yr"]
 
+    aviation[2020] = 111.25  # Ariadne2-internal DB, Aladin model
     aviation_growth_factor = aviation / aviation[2020]
 
     return aviation_growth_factor[planning_horizons]
@@ -31,18 +29,11 @@ def get_primary_steel_share(df, planning_horizons):
     total_steel = df.loc[model, "Production|Steel"]
     primary_steel = df.loc[model, "Production|Steel|Primary"]
 
+    total_steel[2020] = 40.621  # Ariadne2-internal DB, FORECAST, 2021
+    primary_steel[2020] = 28.53  # Ariadne2-internal DB, FORECAST, 2021
+
     primary_steel_share = primary_steel / total_steel
     primary_steel_share = primary_steel_share[planning_horizons]
-
-    if (
-        model == "FORECAST v1.0"
-        and (planning_horizons[0] == 2020)
-        and snakemake.params.db_name == "ariadne2_intern"
-    ):
-        logger.warning(
-            "FORECAST v1.0 does not have data for 2020. Using 2021 data for Production|Steel instead."
-        )
-        primary_steel_share[2020] = primary_steel[2021] / total_steel[2021]
 
     return primary_steel_share.set_index(pd.Index(["Primary_Steel_Share"]))
 
@@ -54,14 +45,10 @@ def get_DRI_share(df, planning_horizons):
     # Assuming that only hydrogen DRI steel is sustainable and DRI using natural gas is phased out
     DRI_steel = df.loc[model, "Production|Steel|Primary|Direct Reduction Hydrogen"]
 
+    total_steel[2020] = 40.621  # Ariadne2-internal DB, FORECAST, 2021
+    DRI_steel[2020] = 0  # Ariadne2-internal DB, FORECAST, 2021
+
     DRI_steel_share = DRI_steel / total_steel
-
-    if model == "FORECAST v1.0" and planning_horizons[0] == 2020:
-        logger.warning(
-            "FORECAST v1.0 does not have data for 2020. Using 2021 data for DRI fraction instead."
-        )
-        DRI_steel_share[2020] = DRI_steel_share[2021] / total_steel[2021]
-
     DRI_steel_share = DRI_steel_share[planning_horizons]
 
     return DRI_steel_share.set_index(pd.Index(["DRI_Steel_Share"]))
@@ -135,6 +122,9 @@ def get_co2_budget(df, source):
     targets_pypsa = targets_co2 - nonco2
 
     target_fractions_pypsa = targets_pypsa.loc[targets_co2.index] / baseline_pypsa
+    target_fractions_pypsa[2020] = (
+        0.671  # Hard-coded based on REMIND data from ariadne2-internal DB
+    )
 
     return target_fractions_pypsa.round(3)
 
@@ -145,10 +135,20 @@ def write_to_scenario_yaml(input, output, scenarios, df):
     file_path = Path(input)
     config = yaml.load(file_path)
     for scenario in scenarios:
-        reference_scenario = config[scenario]["iiasa_database"]["reference_scenario"]
-        # fallback_reference_scenario = config[scenario]["iiasa_database"][
-        #     "fallback_reference_scenario"
-        # ]
+        if config.get(scenario) is None:
+            logger.warning(
+                f"Found an empty scenario config for {scenario}. Using default config `pypsa.de.yaml`."
+            )
+            config[scenario] = {}
+
+        reference_scenario = (
+            config[scenario]
+            .get("iiasa_database", {})
+            .get(
+                "reference_scenario",
+                snakemake.config["iiasa_database"]["reference_scenario"],
+            )  # Using the default reference scenario from pypsa.de.yaml
+        )
 
         planning_horizons = [
             2020,
@@ -159,23 +159,22 @@ def write_to_scenario_yaml(input, output, scenarios, df):
             2045,
             2050,
         ]
+        logger.info(
+            "Using hard-coded values for the year 2020 for aviation demand, steel shares and non-co2 emissions. Source: Model results in the Ariadne2-internal database"
+        )
 
         aviation_demand_factor = get_transport_growth(
             df.loc[snakemake.params.leitmodelle["transport"], reference_scenario, :],
             planning_horizons,
         )
+        if not config[scenario].get("co2_budget_DE_source"):
+            logger.info(
+                f"No CO2 budget source for DE specified in the scenario config. Using KSG targets and REMIND emissions from {reference_scenario} for the {scenario} scenario."
+            )
+            co2_budget_source = "KSG"
+        else:
+            co2_budget_source = config[scenario]["co2_budget_DE_source"]
 
-        # if reference_scenario.startswith(
-        #     "KN2045plus"
-        # ):  # Still waiting for REMIND uploads
-        #     fallback_reference_scenario = reference_scenario
-
-        co2_budget_source = config[scenario]["co2_budget_DE_source"]
-
-        # if fallback_reference_scenario != reference_scenario:
-        #     logger.warning(
-        #         f"For CO2 budget: Using {fallback_reference_scenario} as fallback reference scenario for {scenario}."
-        #     )
         co2_budget_fractions = get_co2_budget(
             df.loc[snakemake.params.leitmodelle["general"], reference_scenario],
             co2_budget_source,
@@ -184,41 +183,64 @@ def write_to_scenario_yaml(input, output, scenarios, df):
         if not config[scenario].get("sector"):
             config[scenario]["sector"] = {}
 
-        config[scenario]["sector"]["aviation_demand_factor"] = {}
+        if config[scenario]["sector"].get("aviation_demand_factor") is not None:
+            logger.warning(f"Overwriting aviation_demand_factor in {scenario} scenario")
+        else:
+            config[scenario]["sector"]["aviation_demand_factor"] = {}
+
         for year in planning_horizons:
             config[scenario]["sector"]["aviation_demand_factor"][year] = round(
                 aviation_demand_factor.loc[year].item(), 4
             )
 
-        if not snakemake.params.db_name == "ariadne":
-            st_primary_fraction = get_primary_steel_share(
-                df.loc[:, reference_scenario, :], planning_horizons
-            )
+        st_primary_fraction = get_primary_steel_share(
+            df.loc[:, reference_scenario, :], planning_horizons
+        )
 
-            dri_fraction = get_DRI_share(
-                df.loc[:, reference_scenario, :], planning_horizons
-            )
+        dri_fraction = get_DRI_share(
+            df.loc[:, reference_scenario, :], planning_horizons
+        )
+        if not config[scenario].get("industry"):
+            config[scenario]["industry"] = {}
 
+        if config[scenario]["industry"].get("St_primary_fraction") is not None:
+            logger.warning(f"Overwriting St_primary_fraction in {scenario} scenario")
+        else:
             config[scenario]["industry"]["St_primary_fraction"] = {}
+
+        for year in st_primary_fraction.columns:
+            config[scenario]["industry"]["St_primary_fraction"][year] = round(
+                st_primary_fraction.loc["Primary_Steel_Share", year].item(), 4
+            )
+
+        if config[scenario]["industry"].get("DRI_fraction") is not None:
+            logger.warning(f"Overwriting DRI_fraction in {scenario} scenario")
+        else:
             config[scenario]["industry"]["DRI_fraction"] = {}
-            for year in st_primary_fraction.columns:
-                config[scenario]["industry"]["St_primary_fraction"][year] = round(
-                    st_primary_fraction.loc["Primary_Steel_Share", year].item(), 4
-                )
-                config[scenario]["industry"]["DRI_fraction"][year] = round(
-                    dri_fraction.loc["DRI_Steel_Share", year].item(), 4
-                )
 
-        if "solving" not in config[scenario]:
+        for year in dri_fraction.columns:
+            config[scenario]["industry"]["DRI_fraction"][year] = round(
+                dri_fraction.loc["DRI_Steel_Share", year].item(), 4
+            )
+        if not config[scenario].get("solving"):
             config[scenario]["solving"] = {}
-        if "constraints" not in config[scenario]["solving"]:
+        if not config[scenario]["solving"].get("constraints"):
             config[scenario]["solving"]["constraints"] = {}
+        if not config[scenario]["solving"]["constraints"].get("co2_budget_national"):
+            config[scenario]["solving"]["constraints"]["co2_budget_national"] = {}
+        if (
+            config[scenario]["solving"]["constraints"]["co2_budget_national"].get("DE")
+            is not None
+        ):
+            logger.warning(
+                f"Overwriting co2_budget_national for DE in {scenario} scenario"
+            )
+        else:
+            config[scenario]["solving"]["constraints"]["co2_budget_national"]["DE"] = {}
 
-        config[scenario]["solving"]["constraints"]["co2_budget_national"] = {}
         for year, target in co2_budget_fractions.items():
-            config[scenario]["solving"]["constraints"]["co2_budget_national"][year] = {}
-            config[scenario]["solving"]["constraints"]["co2_budget_national"][year][
-                "DE"
+            config[scenario]["solving"]["constraints"]["co2_budget_national"]["DE"][
+                year
             ] = target
 
     # write back to yaml file

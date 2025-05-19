@@ -4,8 +4,6 @@ import pandas as pd
 
 from scripts._helpers import mock_snakemake
 
-TWh2PJ = 3.6
-
 
 def plot_trade(
     df,
@@ -15,31 +13,29 @@ def plot_trade(
     # WARNING i just asked COPILOT to reformat the two plots below
     # load data and convert to TWh
     h2_balance = (
-        df.loc["Trade|Secondary Energy|Hydrogen|Volume"] / TWh2PJ * -1
+        df.loc["Trade|Secondary Energy|Hydrogen|Volume"] * -1
     )  # exports-imports
-    h2_import = df.loc["Trade|Secondary Energy|Hydrogen|Gross Import|Volume"] / TWh2PJ
+    h2_import = df.loc["Trade|Secondary Energy|Hydrogen|Gross Import|Volume"]
     h2_export = h2_balance - h2_import
 
     elec_balance = (
-        df.loc["Trade|Secondary Energy|Electricity|Volume"] / TWh2PJ * -1
+        df.loc["Trade|Secondary Energy|Electricity|Volume"] * -1
     )  # exports-imports
-    elec_import = (
-        df.loc["Trade|Secondary Energy|Electricity|Gross Import|Volume"] / TWh2PJ
-    )
+    elec_import = df.loc["Trade|Secondary Energy|Electricity|Gross Import|Volume"]
     elec_export = elec_balance - elec_import
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
 
     # Plot Electricity Trade
     ax1.bar(
-        elec_import.columns, elec_import.loc["PJ/yr"], color="#70af1d", label="Import"
+        elec_import.columns, elec_import.loc["TWh/yr"], color="#70af1d", label="Import"
     )
     ax1.bar(
-        elec_export.columns, elec_export.loc["PJ/yr"], color="#3f630f", label="Export"
+        elec_export.columns, elec_export.loc["TWh/yr"], color="#3f630f", label="Export"
     )
     ax1.scatter(
         elec_balance.columns,
-        elec_balance.loc["PJ/yr"],
+        elec_balance.loc["TWh/yr"],
         color="black",
         marker="x",
         label="Netto",
@@ -52,11 +48,11 @@ def plot_trade(
     ax1.legend(loc="upper left")
 
     # Plot Hydrogen Trade
-    ax2.bar(h2_import.columns, h2_import.loc["PJ/yr"], color="#f081dc", label="Import")
-    ax2.bar(h2_export.columns, h2_export.loc["PJ/yr"], color="#6b3161", label="Export")
+    ax2.bar(h2_import.columns, h2_import.loc["TWh/yr"], color="#f081dc", label="Import")
+    ax2.bar(h2_export.columns, h2_export.loc["TWh/yr"], color="#6b3161", label="Export")
     ax2.scatter(
         h2_balance.columns,
-        h2_balance.loc["PJ/yr"],
+        h2_balance.loc["TWh/yr"],
         color="black",
         marker="x",
         label="Netto",
@@ -78,17 +74,17 @@ def plot_h2_trade(
 ):
     # load data and convert to TWh
     h2_balance = (
-        df.loc["Trade|Secondary Energy|Hydrogen|Volume"] / TWh2PJ * -1
+        df.loc["Trade|Secondary Energy|Hydrogen|Volume"] * -1
     )  # exports-imports
-    h2_import = df.loc["Trade|Secondary Energy|Hydrogen|Gross Import|Volume"] / TWh2PJ
+    h2_import = df.loc["Trade|Secondary Energy|Hydrogen|Gross Import|Volume"]
     h2_export = h2_balance - h2_import
 
     fig, ax = plt.subplots(figsize=(6, 4))
-    ax.bar(h2_import.columns, h2_import.loc["PJ/yr"], color="#f081dc", label="Import")
-    ax.bar(h2_export.columns, h2_export.loc["PJ/yr"], color="#6b3161", label="Export")
+    ax.bar(h2_import.columns, h2_import.loc["TWh/yr"], color="#f081dc", label="Import")
+    ax.bar(h2_export.columns, h2_export.loc["TWh/yr"], color="#6b3161", label="Export")
     ax.scatter(
         h2_balance.columns,
-        h2_balance.loc["PJ/yr"],
+        h2_balance.loc["TWh/yr"],
         color="black",
         marker="x",
         label="Netto",
@@ -111,23 +107,21 @@ def plot_elec_trade(
 ):
     # load data and convert to TWh
     elec_balance = (
-        df.loc["Trade|Secondary Energy|Electricity|Volume"] / TWh2PJ * -1
+        df.loc["Trade|Secondary Energy|Electricity|Volume"] * -1
     )  # exports-imports
-    elec_import = (
-        df.loc["Trade|Secondary Energy|Electricity|Gross Import|Volume"] / TWh2PJ
-    )
+    elec_import = df.loc["Trade|Secondary Energy|Electricity|Gross Import|Volume"]
     elec_export = elec_balance - elec_import
 
     fig, ax = plt.subplots(figsize=(6, 4))
     ax.bar(
-        elec_import.columns, elec_import.loc["PJ/yr"], color="#70af1d", label="Import"
+        elec_import.columns, elec_import.loc["TWh/yr"], color="#70af1d", label="Import"
     )
     ax.bar(
-        elec_export.columns, elec_export.loc["PJ/yr"], color="#3f630f", label="Export"
+        elec_export.columns, elec_export.loc["TWh/yr"], color="#3f630f", label="Export"
     )
     ax.scatter(
         elec_balance.columns,
-        elec_balance.loc["PJ/yr"],
+        elec_balance.loc["TWh/yr"],
         color="black",
         marker="x",
         label="Netto",
@@ -589,7 +583,7 @@ def within_plot(
     select_regex=r"",
     drop_regex=r"",
     write_sum=False,
-    unit="EUR_2020/GJ",
+    unit="EUR_2020/MWh",
     **kwargs,
 ):
     df = df.T.copy()
@@ -707,17 +701,17 @@ def elec_val_plot(df, savepath):
     ]  # https://energy-charts.info/charts/installed_power/chart.htm?l=en&c=DE&year=2020
     elec_capacities["pypsa"] = [
         0,
-        df.loc[("Capacity|Electricity|Hydro", "GW"), "2020"],
+        df.loc[("Capacity|Electricity|Hydro", "GW"), 2020],
         0,
-        df.loc[("Capacity|Electricity|Biomass", "GW"), "2020"],
-        df.loc[("Capacity|Electricity|Nuclear", "GW"), "2020"],
-        df.loc[("Capacity|Electricity|Coal|Lignite", "GW"), "2020"],
-        df.loc[("Capacity|Electricity|Coal|Hard Coal", "GW"), "2020"],
-        df.loc[("Capacity|Electricity|Oil", "GW"), "2020"],
-        df.loc[("Capacity|Electricity|Gas", "GW"), "2020"],
-        df.loc[("Capacity|Electricity|Wind|Onshore", "GW"), "2020"],
-        df.loc[("Capacity|Electricity|Wind|Offshore", "GW"), "2020"],
-        df.loc[("Capacity|Electricity|Solar", "GW"), "2020"],
+        df.loc[("Capacity|Electricity|Biomass", "GW"), 2020],
+        df.loc[("Capacity|Electricity|Nuclear", "GW"), 2020],
+        df.loc[("Capacity|Electricity|Coal|Lignite", "GW"), 2020],
+        df.loc[("Capacity|Electricity|Coal|Hard Coal", "GW"), 2020],
+        df.loc[("Capacity|Electricity|Oil", "GW"), 2020],
+        df.loc[("Capacity|Electricity|Gas", "GW"), 2020],
+        df.loc[("Capacity|Electricity|Wind|Onshore", "GW"), 2020],
+        df.loc[("Capacity|Electricity|Wind|Offshore", "GW"), 2020],
+        df.loc[("Capacity|Electricity|Solar", "GW"), 2020],
     ]
 
     elec_generation["real (gross)"] = [
@@ -757,18 +751,18 @@ def elec_val_plot(df, savepath):
     # https://energy-charts.info/charts/energy/chart.htm?l=en&c=DE&interval=year&year=2020&source=total
 
     elec_generation["pypsa (net)"] = [
-        -df.loc[("Trade|Secondary Energy|Electricity|Volume", "PJ/yr"), "2020"] / 3.6,
+        -df.loc[("Trade|Secondary Energy|Electricity|Volume", "TWh/yr"), 2020],
         0,
-        df.loc[("Secondary Energy|Electricity|Hydro", "PJ/yr"), "2020"] / 3.6,
+        df.loc[("Secondary Energy|Electricity|Hydro", "TWh/yr"), 2020],
         0,
-        df.loc[("Secondary Energy|Electricity|Biomass", "PJ/yr"), "2020"] / 3.6,
-        df.loc[("Secondary Energy|Electricity|Nuclear", "PJ/yr"), "2020"] / 3.6,
-        df.loc[("Secondary Energy|Electricity|Coal|Lignite", "PJ/yr"), "2020"] / 3.6,
-        df.loc[("Secondary Energy|Electricity|Coal|Hard Coal", "PJ/yr"), "2020"] / 3.6,
-        df.loc[("Secondary Energy|Electricity|Oil", "PJ/yr"), "2020"] / 3.6,
-        df.loc[("Secondary Energy|Electricity|Gas", "PJ/yr"), "2020"] / 3.6,
-        df.loc[("Secondary Energy|Electricity|Wind", "PJ/yr"), "2020"] / 3.6,
-        df.loc[("Secondary Energy|Electricity|Solar", "PJ/yr"), "2020"] / 3.6,
+        df.loc[("Secondary Energy|Electricity|Biomass", "TWh/yr"), 2020],
+        df.loc[("Secondary Energy|Electricity|Nuclear", "TWh/yr"), 2020],
+        df.loc[("Secondary Energy|Electricity|Coal|Lignite", "TWh/yr"), 2020],
+        df.loc[("Secondary Energy|Electricity|Coal|Hard Coal", "TWh/yr"), 2020],
+        df.loc[("Secondary Energy|Electricity|Oil", "TWh/yr"), 2020],
+        df.loc[("Secondary Energy|Electricity|Gas", "TWh/yr"), 2020],
+        df.loc[("Secondary Energy|Electricity|Wind", "TWh/yr"), 2020],
+        df.loc[("Secondary Energy|Electricity|Solar", "TWh/yr"), 2020],
     ]
 
     # elec_generation.loc["sum/10"] = elec_generation.sum().div(10)
@@ -806,7 +800,7 @@ if __name__ == "__main__":
             ll="v1.2",
             sector_opts="None",
             planning_horizons="2045",
-            run="KN2045_Bal_v4",
+            run="KN2045_Mix",
             # configfiles="config/config.public.yaml"
         )
 
@@ -820,22 +814,22 @@ if __name__ == "__main__":
         .groupby(["Variable", "Unit"], dropna=False)
         .sum()
     ).round(5)
+    elec_val_plot(df, savepath=snakemake.output.elec_val_2020)
 
+    df.drop(columns=[2020], inplace=True)
     df.columns = df.columns.astype(str)
     leitmodell = "REMIND-EU v1.1"
 
     dfremind = pd.read_csv(
         snakemake.input.ariadne_database,
         index_col=["model", "scenario", "region", "variable", "unit"],
-    ).loc[leitmodell, snakemake.params.fallback_reference_scenario, "Deutschland"][
-        df.columns
-    ]
+    ).loc[leitmodell, snakemake.params.reference_scenario, "Deutschland"][df.columns]
     dfremind.index.names = df.index.names
 
     side_by_side_plot(
         df,
         dfremind,
-        "Primary Energy in PJ_yr",
+        "Primary Energy in TWh_yr",
         savepath=snakemake.output.primary_energy,
         select_regex=r"Primary Energy\|[^|]*$",
         drop_regex=r"^(?!.*(Fossil|Price)).+",
@@ -844,7 +838,7 @@ if __name__ == "__main__":
     side_by_side_plot(
         df,
         dfremind,
-        "Detailed Primary Energy in PJ_yr",
+        "Detailed Primary Energy in TWh_yr",
         savepath=snakemake.output.primary_energy_detailed,
         select_regex=r"Primary Energy\|[^|]*\|[^|]*$",
         drop_regex=r"^(?!.*(CCS|Price|Volume)).+",
@@ -853,7 +847,7 @@ if __name__ == "__main__":
     side_by_side_plot(
         df,
         dfremind,
-        "Secondary Energy in PJ_yr",
+        "Secondary Energy in TWh_yr",
         savepath=snakemake.output.secondary_energy,
         select_regex=r"Secondary Energy\|[^|]*$",
         drop_regex=r"^(?!.*(Price)).+",
@@ -862,7 +856,7 @@ if __name__ == "__main__":
     side_by_side_plot(
         df,
         dfremind,
-        "Detailed Secondary Energy in PJ_yr",
+        "Detailed Secondary Energy in TWh_yr",
         savepath=snakemake.output.secondary_energy_detailed,
         # Secondary Energy|Something|Something (exactly two pipes)
         select_regex=r"Secondary Energy\|[^|]*\|[^|]*$",
@@ -870,11 +864,6 @@ if __name__ == "__main__":
         drop_regex=r"^(?!.*(Fossil|Renewables|Losses|Price|Volume)).+",
     )
 
-    if df.loc["Final Energy|Industry excl Non-Energy Use|Hydrogen", "2020"].item() < 0:
-        val = df.loc["Final Energy|Industry excl Non-Energy Use|Hydrogen", "2020"]
-        df.loc["Final Energy|Industry excl Non-Energy Use|Hydrogen", "2020"] = 0
-        df.loc["Final Energy|Hydrogen", "2020"] = 0
-        print("WARNING! NEGATIVE HYDROGEN DEMAND IN INDUSTRY IN 2020! ", val)
     if df.loc["Final Energy|Industry excl Non-Energy Use|Hydrogen", "2025"].item() < 0:
         val = df.loc["Final Energy|Industry excl Non-Energy Use|Hydrogen", "2025"]
         df.loc["Final Energy|Industry excl Non-Energy Use|Hydrogen", "2025"] = 0
@@ -883,7 +872,7 @@ if __name__ == "__main__":
     side_by_side_plot(
         df,
         dfremind,
-        "Final Energy in PJ_yr",
+        "Final Energy in TWh_yr",
         savepath=snakemake.output.final_energy,
         select_regex=r"Final Energy\|[^|]*$",
         rshift=1.45,
@@ -893,7 +882,7 @@ if __name__ == "__main__":
     side_by_side_plot(
         df,
         dfremind,
-        "Detailed Final Energy in PJ_yr",
+        "Detailed Final Energy in TWh_yr",
         savepath=snakemake.output.final_energy_detailed,
         select_regex=r"Final Energy\|[^|]*\|[^|]*$",
         rshift=1.7,
@@ -1038,14 +1027,12 @@ if __name__ == "__main__":
         write_sum=True,
     )
 
-    elec_val_plot(df, savepath=snakemake.output.elec_val_2020)
-
     within_plot(
         df[df.index.get_level_values("Variable").str.startswith("Trade")],
         dfremind,
         title="Trade",
         savepath=snakemake.output.trade,
-        unit="PJ/yr",
+        unit="TWh/yr",
     )
 
     plot_NEP(df, savepath=snakemake.output.NEP_plot)
