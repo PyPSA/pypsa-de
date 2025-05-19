@@ -267,13 +267,13 @@ rule retrieve_egon_data:
 
 rule retrieve_ariadne_database:
     params:
-        db_name=config_provider("iiasa_database", "db_name"),
-        leitmodelle=config_provider("iiasa_database", "leitmodelle"),
-        scenarios=config_provider("iiasa_database", "scenarios"),
+        db_name=config["iiasa_database"]["db_name"],
+        leitmodelle=config["iiasa_database"]["leitmodelle"],
+        scenarios=config["iiasa_database"]["scenarios"],
     output:
-        data=resources("ariadne_database.csv"),
+        data="resources/ariadne_database.csv",
     log:
-        "logs/pypsa-de/retrieve_ariadne_database.log",
+        "logs/retrieve_ariadne_database.log",
     resources:
         mem_mb=1000,
     script:
@@ -312,12 +312,11 @@ if config["enable"]["retrieve"] and config["enable"].get("retrieve_cost_data", T
 
 rule build_mobility_demand:
     params:
-        db_name=config_provider("iiasa_database", "db_name"),
         reference_scenario=config_provider("iiasa_database", "reference_scenario"),
         planning_horizons=config_provider("scenario", "planning_horizons"),
         leitmodelle=config_provider("iiasa_database", "leitmodelle"),
     input:
-        ariadne=resources("ariadne_database.csv"),
+        ariadne="resources/ariadne_database.csv",
         clustered_pop_layout=resources("pop_layout_base_s_{clusters}.csv"),
     output:
         mobility_demand=resources(
@@ -454,11 +453,8 @@ rule modify_existing_heating:
     params:
         iiasa_reference_scenario=config_provider("iiasa_database", "reference_scenario"),
         leitmodelle=config_provider("iiasa_database", "leitmodelle"),
-        fallback_reference_scenario=config_provider(
-            "iiasa_database", "fallback_reference_scenario"
-        ),
     input:
-        ariadne=resources("ariadne_database.csv"),
+        ariadne="resources/ariadne_database.csv",
         existing_heating="data/existing_infrastructure/existing_heating_raw.csv",
     output:
         existing_heating=resources("existing_heating.csv"),
@@ -504,10 +500,9 @@ rule build_existing_chp_de:
 
 rule modify_industry_demand:
     params:
-        db_name=config_provider("iiasa_database", "db_name"),
         reference_scenario=config_provider("iiasa_database", "reference_scenario"),
     input:
-        ariadne=resources("ariadne_database.csv"),
+        ariadne="resources/ariadne_database.csv",
         industrial_production_per_country_tomorrow=resources(
             "industrial_production_per_country_tomorrow_{planning_horizons}.csv"
         ),
@@ -576,7 +571,7 @@ rule download_ariadne_template:
             keep_local=True,
         ),
     output:
-        resources("template_ariadne_database.xlsx"),
+        "data/template_ariadne_database.xlsx",
     run:
         move(input[0], output[0])
 
@@ -595,7 +590,7 @@ rule export_ariadne_variables:
         NEP_year=config_provider("costs", "NEP"),
         NEP_transmission=config_provider("costs", "transmission"),
     input:
-        template=resources("template_ariadne_database.xlsx"),
+        template="data/template_ariadne_database.xlsx",
         industry_demands=expand(
             resources(
                 "industrial_energy_demand_base_s_{clusters}_{planning_horizons}.csv"
@@ -642,12 +637,10 @@ rule export_ariadne_variables:
 rule plot_ariadne_variables:
     params:
         iiasa_scenario=config_provider("iiasa_database", "reference_scenario"),
-        fallback_reference_scenario=config_provider(
-            "iiasa_database", "fallback_reference_scenario"
-        ),
+        reference_scenario=config_provider("iiasa_database", "reference_scenario"),
     input:
         exported_variables_full=RESULTS + "ariadne/exported_variables_full.xlsx",
-        ariadne_database=resources("ariadne_database.csv"),
+        ariadne_database="resources/ariadne_database.csv",
     output:
         primary_energy=RESULTS + "ariadne/primary_energy.png",
         primary_energy_detailed=RESULTS + "ariadne/primary_energy_detailed.png",
@@ -711,11 +704,10 @@ rule ariadne_all:
 
 rule build_scenarios:
     params:
-        scenarios=config_provider("run", "name"),
-        db_name=config_provider("iiasa_database", "db_name"),
-        leitmodelle=config_provider("iiasa_database", "leitmodelle"),
+        scenarios=config["run"]["name"],
+        leitmodelle=config["iiasa_database"]["leitmodelle"],
     input:
-        ariadne_database=resources("ariadne_database.csv"),
+        ariadne_database="resources/ariadne_database.csv",
         scenario_yaml=config["run"]["scenarios"]["manual_file"],
     output:
         scenario_yaml=config["run"]["scenarios"]["file"],

@@ -1491,8 +1491,6 @@ def plot_elec_prices_spatial(
     region="DE",
     lang="ger",
 ):
-    # onshore_regions = gpd.read_file("/home/julian-geis/repos/pypsa-ariadne-1/resources/20241203-force-onwind-south-49cl-disc/KN2045_Bal_v4/regions_onshore_base_s_49.geojson")
-    # onshore_regions = onshore_regions.set_index('name')
     if lang == "ger":
         title1 = "Durchschnittspreis, NEP Ausbau [EUR/MWh]"
         cbar1_label = "Börsenstrompreis zzgl. durchschnittlichem Netzentgelt [EUR/MWh]"
@@ -2768,7 +2766,7 @@ if __name__ == "__main__":
             opts="",
             ll="vopt",
             sector_opts="None",
-            run="KN2045_Bal_v4",
+            run="KN2045_Mix",
         )
 
     configure_logging(snakemake)

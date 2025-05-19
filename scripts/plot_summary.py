@@ -92,12 +92,15 @@ def plot_costs():
 
     fig, ax = plt.subplots(figsize=(12, 8))
 
-    df.loc[new_index].T.plot(
-        kind="bar",
-        ax=ax,
-        stacked=True,
-        color=[snakemake.params.plotting["tech_colors"][i] for i in new_index],
-    )
+    if df.empty:
+        ax.bar([], [])
+    else:
+        df.loc[new_index].T.plot(
+            kind="bar",
+            ax=ax,
+            stacked=True,
+            color=[snakemake.params.plotting["tech_colors"][i] for i in new_index],
+        )
 
     handles, labels = ax.get_legend_handles_labels()
 
