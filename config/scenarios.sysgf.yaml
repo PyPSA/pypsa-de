@@ -9,6 +9,11 @@ Baseline:
     reference_scenario: KN2045_Mix
   co2_budget_DE_source: UBA
 
+LowDH:
+  sector:
+    district_heating:
+      potential: 0.3
+
 No_PTES:
   adjustments:
     electricity: false

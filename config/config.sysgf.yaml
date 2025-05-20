@@ -3,10 +3,11 @@
 # SPDX-License-Identifier: CC0-1.0
 
 run:
-  prefix: 20250514_dhsubnodes
+  prefix: 20250520_dhsubnodes_fix_neighbours
   name:
   - Baseline
-  # - No_PTES
+  - No_PTES
+  - LowDH
   # - LowPTESCAPEX
   # - HighPTESCAPEX
   # - LowStandingLosses
@@ -19,6 +20,8 @@ run:
     enable: true
     manual_file: config/scenarios.sysgf.yaml
     file: config/scenarios.automated.yaml
+    reference: Baseline
+    fix_foreign_reference_investments: true
   shared_resources:
     policy: base #stops recalculating
     exclude:
@@ -56,7 +59,7 @@ adjustments:
   electricity: false
   sector:
     absolute:
-      StorageUnit:
+      Store:
         urban central water pits:
           standing_loss: 0.00012121
         urban central water tanks:
