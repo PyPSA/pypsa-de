@@ -1055,9 +1055,9 @@ def force_connection_nep_offshore(n, current_year, costs):
 
     if int(snakemake.params.offshore_nep_force["delay_years"]) != 0:
         # Modify 'Inbetriebnahmejahr' by adding the delay years for rows where 'Inbetriebnahmejahr' > 2025
-        offshore.loc[offshore["Inbetriebnahmejahr"] > 2025, "Inbetriebnahmejahr"] += (
-            int(snakemake.params.offshore_nep_force["delay_years"])
-        )
+        offshore.loc[
+            offshore["Inbetriebnahmejahr"] > 2025, "Inbetriebnahmejahr"
+        ] += int(snakemake.params.offshore_nep_force["delay_years"])
         logger.info(
             f"Delaying NEP offshore connection points by {snakemake.params.offshore_nep_force['delay_years']} years."
         )
@@ -1265,6 +1265,77 @@ def scale_capacity(n, scaling):
                 ]
 
 
+def fix_foreign_reference_investments(n, n_ref):
+    """
+    Fix reference investments for non-DE components.
+    """
+    # List of component types that can have investment decisions
+    investment_components = ["Generator", "StorageUnit", "Store", "Link", "Line"]
+
+    # For each component type
+    for c in investment_components:
+        if c == "StorageUnit":
+            component = getattr(n, "storage_units")
+            baseline_component = getattr(n_ref, "storage_units")
+        else:
+            component = getattr(n, c.lower() + "s")
+            baseline_component = getattr(n_ref, c.lower() + "s")
+
+        # Identify non-German nodes
+        if c in ["Line", "Link"]:
+            # For lines, and links, check both buses
+            non_german = (
+                component.filter(regex="bus[012]")
+                .apply(lambda x: ~x.str.startswith("DE"), axis=1)
+                .any(axis=1)
+            )
+        else:
+            # For other components, check if bus is not in Germany
+            non_german = ~component.bus.str.startswith("DE")
+
+        # Only fix extendable components
+        extendable = (
+            component.e_nom_extendable
+            if c == "Store"
+            else (
+                component.s_nom_extendable
+                if c == "Line"
+                else component.p_nom_extendable
+            )
+        )
+        to_fix = non_german & extendable
+
+        if not any(to_fix):
+            continue
+
+        indices = component.index[to_fix]
+
+        # Copy the optimized capacity from baseline to fixed capacity
+        if c == "Store":
+            n.stores.loc[indices, "e_nom_min"] = baseline_component.loc[
+                indices, "e_nom_opt"
+            ]
+            n.stores.loc[indices, "e_nom_max"] = baseline_component.loc[
+                indices, "e_nom_opt"
+            ]
+        elif c == "Line":
+            n.lines.loc[indices, "s_nom_min"] = baseline_component.loc[
+                indices, "s_nom_opt"
+            ]
+            n.lines.loc[indices, "s_nom_max"] = baseline_component.loc[
+                indices, "s_nom_opt"
+            ]
+        else:
+            n.df(c).loc[indices, "p_nom_min"] = baseline_component.loc[
+                indices, "p_nom_opt"
+            ]
+            n.df(c).loc[indices, "p_nom_max"] = baseline_component.loc[
+                indices, "p_nom_opt"
+            ]
+
+        logger.info(f"Fixed {sum(to_fix)} {c} components outside Germany")
+
+
 if __name__ == "__main__":
     if "snakemake" not in globals():
         snakemake = mock_snakemake(
@@ -1346,5 +1417,15 @@ if __name__ == "__main__":
     scale_capacity(n, snakemake.params.scale_capacity)
 
     sanitize_custom_columns(n)
+
+    if (
+        snakemake.params["fix_foreign_reference_investments"]
+        and snakemake.wildcards.run != snakemake.params["reference_scenario"]
+    ):
+        logger.info(
+            "Fixing investments for components outside Germany based on the reference scenario."
+        )
+        n_ref = pypsa.Network(snakemake.input.reference_network)
+        fix_foreign_reference_investments(n, n_ref)
 
     n.export_to_netcdf(snakemake.output.network)

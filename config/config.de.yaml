@@ -16,6 +16,8 @@ run:
     enable: true
     manual_file: config/scenarios.manual.yaml
     file: config/scenarios.automated.yaml
+    reference: KN2045_Mix
+    fix_foreign_reference_investments: false
   shared_resources:
     policy: base #stops recalculating
     exclude:
