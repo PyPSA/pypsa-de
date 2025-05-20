@@ -1267,7 +1267,29 @@ def scale_capacity(n, scaling):
 
 def fix_foreign_reference_investments(n, n_ref):
     """
-    Fix reference investments for non-DE components.
+    For all extendable components located outside Germany, this function sets their
+    minimum and maximum capacity limits to match the optimized capacity from a
+    reference network. This effectively fixes the investment decisions for these
+    components to their reference values.
+
+    Components are identified as non-German based on their bus location:
+    - For Line and Link: any connected bus is outside Germany
+    - For other components: the primary bus is outside Germany
+
+    Only components with extendable capacity are modified (those with
+    [p|s|e]_nom_extendable set to True).
+
+    Parameters
+    ----------
+    n : pypsa.Network
+        Network object to modify
+    n_ref : pypsa.Network
+        Reference network object containing optimized capacity values
+
+    Returns
+    -------
+    None
+        Network is modified in-place with updated capacity limits
     """
     # List of component types that can have investment decisions
     investment_components = ["Generator", "StorageUnit", "Store", "Link", "Line"]
