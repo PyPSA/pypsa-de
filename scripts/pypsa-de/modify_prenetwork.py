@@ -1265,7 +1265,7 @@ def scale_capacity(n, scaling):
                 ]
 
 
-def fix_reference_investments_nonDE(n, n_ref):
+def fix_foreign_reference_investments(n, n_ref):
     """
     Fix reference investments for non-DE components.
     """
@@ -1419,13 +1419,13 @@ if __name__ == "__main__":
     sanitize_custom_columns(n)
 
     if (
-        snakemake.params["fix_reference_investments_nonDE"]
+        snakemake.params["fix_foreign_reference_investments"]
         and snakemake.wildcards.run != snakemake.params["reference_scenario"]
     ):
         logger.info(
-            "Fixing investments for non-DE components based on the reference scenario."
+            "Fixing investments for components outside Germany based on the reference scenario."
         )
         n_ref = pypsa.Network(snakemake.input.reference_network)
-        fix_reference_investments_nonDE(n, n_ref)
+        fix_foreign_reference_investments(n, n_ref)
 
     n.export_to_netcdf(snakemake.output.network)
