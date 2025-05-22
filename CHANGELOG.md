@@ -1,4 +1,5 @@
 # Changelog
+- Provide option to fix foreign investments outside Germany to optimized capacities of reference scenario
 - Simplified scenarion definition and made `Mix` the default scenario
 - 0.3: workflow is all public now, no longer requires credentials to internal data
 - Allowing myopic optimization until 2050
