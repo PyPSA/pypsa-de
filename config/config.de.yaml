@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20250514_dhsubnodes
+  prefix: 20250522_fix_neighbours
   name:
   # - ExPol
   - KN2045_Mix
@@ -16,8 +16,9 @@ run:
     enable: true
     manual_file: config/scenarios.manual.yaml
     file: config/scenarios.automated.yaml
-    reference: KN2045_Mix
-    fix_foreign_reference_investments: false
+    fix_foreign_investments:
+      enable: false
+      reference_scenario: KN2045_Mix
   shared_resources:
     policy: base #stops recalculating
     exclude:

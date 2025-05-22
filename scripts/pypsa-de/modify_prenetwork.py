@@ -1265,7 +1265,7 @@ def scale_capacity(n, scaling):
                 ]
 
 
-def fix_foreign_reference_investments(n, n_ref):
+def fix_foreign_investments(n, n_ref):
     """
     Fix reference investments for non-DE components.
     """
@@ -1286,12 +1286,12 @@ def fix_foreign_reference_investments(n, n_ref):
             # For lines, and links, check both buses
             non_german = (
                 component.filter(regex="bus[012]")
-                .apply(lambda x: ~x.str.startswith("DE"), axis=1)
+                .apply(lambda x: ~x.str.startswith(("DE", "EU")), axis=1)
                 .any(axis=1)
             )
         else:
             # For other components, check if bus is not in Germany
-            non_german = ~component.bus.str.startswith("DE")
+            non_german = ~component.bus.str.startswith(("DE", "EU"))
 
         # Only fix extendable components
         extendable = (
@@ -1310,28 +1310,29 @@ def fix_foreign_reference_investments(n, n_ref):
 
         indices = component.index[to_fix]
 
-        # Copy the optimized capacity from baseline to fixed capacity
+        # Copy the optimized capacity from baseline to fixed capacity rounding values
+        # to the nearest integer to avoid constraint violations
         if c == "Store":
             n.stores.loc[indices, "e_nom_min"] = baseline_component.loc[
                 indices, "e_nom_opt"
-            ]
+            ].apply(np.floor)
             n.stores.loc[indices, "e_nom_max"] = baseline_component.loc[
                 indices, "e_nom_opt"
-            ]
+            ].apply(np.ceil)
         elif c == "Line":
             n.lines.loc[indices, "s_nom_min"] = baseline_component.loc[
                 indices, "s_nom_opt"
-            ]
+            ].apply(np.floor)
             n.lines.loc[indices, "s_nom_max"] = baseline_component.loc[
                 indices, "s_nom_opt"
-            ]
+            ].apply(np.ceil)
         else:
             n.df(c).loc[indices, "p_nom_min"] = baseline_component.loc[
                 indices, "p_nom_opt"
-            ]
+            ].apply(np.floor)
             n.df(c).loc[indices, "p_nom_max"] = baseline_component.loc[
                 indices, "p_nom_opt"
-            ]
+            ].apply(np.ceil)
 
         logger.info(f"Fixed {sum(to_fix)} {c} components outside Germany")
 
@@ -1419,13 +1420,13 @@ if __name__ == "__main__":
     sanitize_custom_columns(n)
 
     if (
-        snakemake.params["fix_foreign_reference_investments"]
+        snakemake.params["fix_foreign_investments"]
         and snakemake.wildcards.run != snakemake.params["reference_scenario"]
     ):
         logger.info(
             "Fixing investments for components outside Germany based on the reference scenario."
         )
         n_ref = pypsa.Network(snakemake.input.reference_network)
-        fix_foreign_reference_investments(n, n_ref)
+        fix_foreign_investments(n, n_ref)
 
     n.export_to_netcdf(snakemake.output.network)

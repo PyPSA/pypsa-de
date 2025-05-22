@@ -466,12 +466,12 @@ rule modify_district_heat_share:
 
 
 def get_reference_network(w):
-    ref_scenario = config["run"]["scenarios"]["reference"]
+    ref_scenario = config["run"]["scenarios"]["fix_foreign_investments"]["reference_scenario"]
     if (
-        config["run"]["scenarios"]["fix_foreign_reference_investments"]
+        config_provider("run", "scenarios", "fix_foreign_investments", "enable")
         and w.run != ref_scenario
     ):
-        return f"results/{config['run']['prefix']}/{ref_scenario}/networks/base_s_{w.clusters}_{w.opts}_{w.sector_opts}_{w.planning_horizons}.nc"
+        return f"results/{config["run"]["prefix"]}/{ref_scenario}/networks/base_s_{w.clusters}_{w.opts}_{w.sector_opts}_{w.planning_horizons}.nc"
     else:
         return []
 
@@ -509,10 +509,10 @@ rule modify_prenetwork:
         shipping_methanol_share=config_provider("sector", "shipping_methanol_share"),
         mwh_meoh_per_tco2=config_provider("sector", "MWh_MeOH_per_tCO2"),
         scale_capacity=config_provider("scale_capacity"),
-        fix_foreign_reference_investments=config_provider(
-            "run", "scenarios", "fix_foreign_reference_investments"
+        fix_foreign_investments=config_provider(
+            "run", "scenarios", "fix_foreign_investments"
         ),
-        reference_scenario=config_provider("run", "scenarios", "reference"),
+        reference_scenario=config_provider("run", "scenarios", "fix_foreign_investments", "reference_scenario"),
     input:
         costs_modifications="ariadne-data/costs_{planning_horizons}-modifications.csv",
         network=resources(
