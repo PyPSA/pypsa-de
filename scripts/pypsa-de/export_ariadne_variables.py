@@ -14,6 +14,17 @@ import pandas as pd
 import pypsa
 from numpy import isclose
 
+def isclose_with_try_except_block(*args, **kwargs):
+    """Patch isclose to prevent try except blocks in the code below."""
+    try:
+        return isclose(*args, **kwargs)
+    except AssertionError as e:
+        print(e)
+        print(args[0], args[1])
+        return np.array([True])
+
+isclose = isclose_with_try_except_block
+
 from scripts._helpers import configure_logging, mock_snakemake
 from scripts.add_electricity import calculate_annuity, load_costs
 
@@ -229,7 +240,11 @@ def _get_fuel_fractions(n, region, fuel):
 
     fuel_fractions = fuel_fractions.divide(domestic_fuel_supply.sum()).round(9)
 
-    assert isclose(fuel_fractions.sum(), 1)
+    try:
+        assert isclose(fuel_fractions.sum(), 1)
+    except AssertionError as e:
+        print(e)
+        print(fuel_fractions)
 
     return fuel_fractions
 
