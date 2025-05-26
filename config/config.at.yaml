@@ -4,9 +4,9 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: v2025.01
+  prefix: v2025.02
   name:
-  - KN2045_Bal_v4
+  - KN2045_Mix
   scenarios:
     enable: true
     manual_file: config/scenarios.manual.yaml

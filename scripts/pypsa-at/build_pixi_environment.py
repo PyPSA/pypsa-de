@@ -18,7 +18,7 @@ def main():
     shutil.rmtree(".pixi")
 
     # re-create pixi files from environment.yaml
-    run(["pixi", "init", "--import", "envs/environment.yaml"], check=True)
+    run(["pixi", "init", "--import", "envs/linux-pinned.yaml"], check=True)
     run(["pixi", "install"], check=True)
 
     # add pypsa-at packages
