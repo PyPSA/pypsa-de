@@ -640,14 +640,14 @@ def add_h2_derivate_limit(n, investment_year, limits_volume_max):
             [
                 "EU renewable oil -> DE oil",
                 "EU methanol -> DE methanol",
-                "EU renewable gas -> DE gas",
+                # "EU renewable gas -> DE gas",
             ]
         ].index
         outgoing = n.links.loc[
             [
                 "DE renewable oil -> EU oil",
                 "DE methanol -> EU methanol",
-                "DE renewable gas -> EU gas",
+                # "DE renewable gas -> EU gas",
             ]
         ].index
 
