@@ -1366,13 +1366,13 @@ if __name__ == "__main__":
         from scripts._helpers import mock_snakemake
 
         snakemake = mock_snakemake(
-            "solve_network",
+            "solve_sector_network_myopic",
             run="KN2045_Mix",
             opts="",
             clusters="adm",
             configfiles="config/config.at.yaml",
             sector_opts="",
-            planning_horizons="2020",
+            planning_horizons=["2020", "2025", "2030", "2035", "2040", "2045"],
         )
     configure_logging(snakemake)
     set_scenario_config(snakemake)
