@@ -1308,7 +1308,7 @@ if __name__ == "__main__":
 
     unravel_carbonaceous_fuels(n)
 
-    unravel_gasbus(n, costs)
+    # unravel_gasbus(n, costs)
 
     if snakemake.params.enable_kernnetz:
         fn = snakemake.input.wkn
