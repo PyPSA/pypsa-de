@@ -18,6 +18,7 @@ import logging
 import pandas as pd
 
 from scripts._helpers import configure_logging, mock_snakemake
+from mods.modify_industry_demand_at import update_austrian_industry_demand
 
 logger = logging.getLogger(__name__)
 if __name__ == "__main__":
@@ -67,18 +68,16 @@ if __name__ == "__main__":
                 index_col=["model", "scenario", "region", "variable", "unit"],
             )
             .loc[
-                leitmodell,
-                snakemake.params.reference_scenario,
-                "Deutschland",
-                :,
-                "Mt/yr",
+            leitmodell,
+            snakemake.params.reference_scenario,
+            "Deutschland",
+            :,
+            "Mt/yr",
             ]
             .multiply(1000)
         )
 
-    logger.info(
-        "German industry demand before modification",
-    )
+    logger.info(f"German industry demand {year} before modification")
     logger.info(
         existing_industry.loc[
             "DE",
@@ -109,21 +108,21 @@ if __name__ == "__main__":
 
     # get ratio of pulp and paper production
     pulp_ratio = existing_industry.loc["DE", "Pulp production"] / (
-        existing_industry.loc["DE", "Pulp production"]
-        + existing_industry.loc["DE", "Paper production"]
+            existing_industry.loc["DE", "Pulp production"]
+            + existing_industry.loc["DE", "Paper production"]
     )
 
     existing_industry.loc["DE", "Pulp production"] = (
-        ariadne.loc["Production|Pulp and Paper", year] * pulp_ratio
+            ariadne.loc["Production|Pulp and Paper", year] * pulp_ratio
     )
     existing_industry.loc["DE", "Paper production"] = ariadne.loc[
-        "Production|Pulp and Paper", year
-    ] * (1 - pulp_ratio)
+                                                          "Production|Pulp and Paper", year
+                                                      ] * (1 - pulp_ratio)
 
     # non-metallic minerals
     existing_industry.loc["DE", "Ceramics & other NMM"] = (
-        ariadne.loc["Production|Non-Metallic Minerals", year]
-        - ariadne.loc["Production|Non-Metallic Minerals|Cement", year]
+            ariadne.loc["Production|Non-Metallic Minerals", year]
+            - ariadne.loc["Production|Non-Metallic Minerals|Cement", year]
     )
 
     # get steel ratios from existing_industry
@@ -137,7 +136,7 @@ if __name__ == "__main__":
         "DE", ["Electric arc", "Integrated steelworks", "DRI + Electric arc"]
     ] = ratio * ariadne.loc["Production|Steel", year]
 
-    logger.info("German demand after modification")
+    logger.info(f"German demand {year} after modification")
     logger.info(
         existing_industry.loc[
             "DE",
@@ -154,6 +153,8 @@ if __name__ == "__main__":
             ],
         ],
     )
+
+    existing_industry = update_austrian_industry_demand(existing_industry, year)
 
     existing_industry.to_csv(
         snakemake.output.industrial_production_per_country_tomorrow

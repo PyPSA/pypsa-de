@@ -20,7 +20,7 @@ Todo Notes
 """
 
 
-def view_grid_capactiy(
+def view_grid_capacity(
     result_path: str | Path,
     networks: dict,
     config: dict,

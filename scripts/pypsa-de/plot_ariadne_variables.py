@@ -796,11 +796,11 @@ if __name__ == "__main__":
         snakemake = mock_snakemake(
             "plot_ariadne_variables",
             simpl="",
-            clusters=49,
+            clusters="adm",
             opts="",
-            ll="v1.2",
-            sector_opts="None",
-            planning_horizons="2045",
+            ll="",
+            sector_opts="",
+            # planning_horizons="2045",
             run="KN2045_Mix",
             # configfiles="config/config.public.yaml"
         )
@@ -865,11 +865,12 @@ if __name__ == "__main__":
         drop_regex=r"^(?!.*(Fossil|Renewables|Losses|Price|Volume)).+",
     )
 
-    if df.loc["Final Energy|Industry excl Non-Energy Use|Hydrogen", "2025"].item() < 0:
+    if "2025" in df and df.loc["Final Energy|Industry excl Non-Energy Use|Hydrogen", "2025"].item() < 0:
         val = df.loc["Final Energy|Industry excl Non-Energy Use|Hydrogen", "2025"]
         df.loc["Final Energy|Industry excl Non-Energy Use|Hydrogen", "2025"] = 0
         df.loc["Final Energy|Hydrogen", "2025"] = 0
         print("WARNING! NEGATIVE HYDROGEN DEMAND IN INDUSTRY IN 2025! ", val)
+
     side_by_side_plot(
         df,
         dfremind,
