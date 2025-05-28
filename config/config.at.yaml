@@ -238,7 +238,7 @@ sector:
   regional_methanol_demand: true  #set to true if regional CO2 constraints needed
   regional_oil_demand: true  #set to true if regional CO2 constraints needed
   regional_coal_demand: true  #set to true if regional CO2 constraints needed
-  gas_network: false  # todo: wanted
+  gas_network: true  # todo: wanted
   regional_gas_demand: true
   H2_retrofit: true
   biogas_upgrading_cc: true
