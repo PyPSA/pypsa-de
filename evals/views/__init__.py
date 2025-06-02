@@ -22,7 +22,7 @@ __all__ = [
     "view_capacity_electricity_production",
     "view_balance_carbon",
     "view_balance_electricity",
-    "view_balance_hydrogen",
+    "view_balance_hydrogen",  # continue here
     "view_balance_methane",
     "view_balance_heat",
     "view_demand_heat",
