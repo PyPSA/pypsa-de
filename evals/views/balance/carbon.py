@@ -8,7 +8,7 @@ from evals.constants import (
     TradeTypes,
 )
 from evals.fileio import Exporter
-from evals.plots import ESMGroupedBarChart
+from evals.plots import ESMBarChart
 from evals.statistic import collect_myopic_statistics
 from evals.utils import rename_aggregate
 
@@ -28,8 +28,8 @@ def view_balance_carbon(
     """
     unit = "t_co2"
     # storage and sequestration
-    # bus_carrier = ["co2", "co2 sequestered", "co2 stored"]
-    bus_carrier = "co2"
+    bus_carrier = ["co2", "co2 sequestered", "co2 stored"]
+    # bus_carrier = "co2"
 
     supply = collect_myopic_statistics(
         networks,
@@ -78,7 +78,8 @@ def view_balance_carbon(
     )
     # todo: split storage in and storage out
 
-    exporter.defaults.plotly.chart = ESMGroupedBarChart
+    # exporter.defaults.plotly.chart = ESMGroupedBarChart
+    exporter.defaults.plotly.chart = ESMBarChart
     exporter.defaults.plotly.xaxis_title = ""
     exporter.defaults.plotly.pattern = dict.fromkeys(
         [

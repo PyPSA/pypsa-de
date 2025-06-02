@@ -108,11 +108,39 @@ exports = ["csv"]
 [view.balance.carbon]
 name = "Carbon Dioxide Balance"
 unit = "Mt_co2"
-file_name = "nodal_balance_carbon_{location}"
+file_name = "balance_carbon_{location}"
 cutoff = 0.001
 legend_order = [
     # production ordered from zero to outside
-
+    "Fischer-Tropsch",
+    "Bioliquids",
+    "SynGas",
+    "SynGas (CC)",
+    "DAC",
+    "Agriculture",
+    "CHP",
+    "Sabatier",
+    "Bioliquids (CC)",
+    "Gas Compression",
+    "Biogas (CC)",
+    "CO2 Sequestration",
+    "Biofuels",
+    "HVC",
+    "Methanol Steam Reforming",
+    "Biogas",
+    "Methanolisation",
+    "SMR",
+    "CO2 Budget",
+    "CO2 ventilation",
+    "Oil Refining",
+    "Transport",
+    "CO2 Store",
+    "Electricity",
+    "CHP (CC)",
+    "Industry (CC)",
+    "Waste",
+    "Heat",
+    "Industry",
     "Import Domestic",
     "Import Foreign",
     # demand ordered from zero to outside:
@@ -120,14 +148,15 @@ legend_order = [
     "Export Domestic",
     "Export Foreign",
 ]
-checks = ["balances_almost_zero"]
+checks = []  # "balances_almost_zero" deactivated, because it is not applicable for carbon budgets
 exports = []
 
 [view.balance.carbon.categories]
 "co2" = "CO2 Budget"
 "biogas to gas" = "Biogas"
+"biogas to gas CC" = "Biogas (CC)"
 "biomass to liquid" = "Bioliquids"
-
+"biomass to liquid CC" = "Bioliquids (CC)"
 "BioSNG" = "SynGas"
 "BioSNG CC" = "SynGas (CC)"
 "CCGT" = "Electricity"

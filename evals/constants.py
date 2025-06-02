@@ -1275,6 +1275,7 @@ UNITS: frozendict = frozendict(
         "currency": 1,
         "EUR": 1,  # base currency
         "t_co2": 1,
+        "t": 1,  # alias
         "kt_co2": 1e3,
         "Mt_co2": 1e6,
     }
@@ -1357,6 +1358,47 @@ class COLOUR:
 
 
 # cannot freeze, because plotly manipulates the dictionary
+
+ALIAS_COUNTRY: frozendict = frozendict(
+    {
+        "EU": "Europe",
+        "AL": "Albania",
+        "AT": "Austria",
+        "BA": "Bosnia and Herzegovina",
+        "BE": "Belgium",
+        "BG": "Bulgaria",
+        "CH": "Switzerland",
+        "CZ": "Czech Republic",
+        "DE": "Germany",
+        "DK": "Denmark",
+        "EE": "Estonia",
+        "ES": "Spain",
+        "FI": "Finland",
+        "FR": "France",
+        "GB": "Great Britain",
+        "GR": "Greece",
+        "HR": "Croatia",
+        "HU": "Hungary",
+        "IE": "Ireland",
+        "IT": "Italy",
+        "LT": "Lithuania",
+        "LU": "Luxembourg",
+        "LV": "Latvia",
+        "ME": "Montenegro",
+        "MK": "North Macedonia",
+        "NL": "Netherlands",
+        "NO": "Norway",
+        "PL": "Poland",
+        "PT": "Portugal",
+        "RO": "Romania",
+        "RS": "Serbia",
+        "SE": "Sweden",
+        "SI": "Slovenia",
+        "SK": "Slovakia",
+        "XK": "Kosovo",
+    }
+)
+ALIAS_COUNTRY_REV: frozendict = frozendict({v: k for k, v in ALIAS_COUNTRY.items()})
 COLOUR_SCHEME_BMK: dict = {
     # dark blue - coal
     Group.coal: COLOUR.blue_dark,
@@ -1372,7 +1414,13 @@ COLOUR_SCHEME_BMK: dict = {
     "Oil CHP": COLOUR.red,
     # dark green - biogas
     "Biogas": COLOUR.green,
+    "Biogas (CC)": COLOUR.green,
     "Bio Methane Processing": COLOUR.green,
+    "Bioliquids": COLOUR.green_ocean,
+    "Bioliquids (CC)": COLOUR.green_ocean,
+    "Biofuels": COLOUR.red_deep,
+    "SynGas": COLOUR.green_light,
+    "SynGas (CC)": COLOUR.green_light,
     # light green - biomass
     Group.biomass: COLOUR.green_light,
     "Wet Biomass": COLOUR.green_light,
@@ -1382,8 +1430,10 @@ COLOUR_SCHEME_BMK: dict = {
     # brown - methane
     "Methane": COLOUR.brown,
     "Gas PP": COLOUR.brown,
+    "Gas Compression": COLOUR.brown_sallow,
     Group.chp_ch4: COLOUR.brown_dark,
     "CHP": COLOUR.brown_dark,
+    "CHP (CC)": COLOUR.brown_dark,
     "Methanation": COLOUR.brown,
     "Gas Boiler": COLOUR.brown_sallow,
     Group.chp_ch4_cc: COLOUR.brown_light,
@@ -1448,7 +1498,13 @@ COLOUR_SCHEME_BMK: dict = {
     "Miscellaneous": COLOUR.grey_dark,
     "Losses": COLOUR.grey_silver,
     "Storage": COLOUR.grey_light,
+    "DAC": COLOUR.red_chestnut,
     "co2 vent": COLOUR.grey_silver,
+    "CO2 ventilation": COLOUR.grey_silver,
+    "CO2 Budget": COLOUR.grey_cool,
+    "CO2 Sequestration": COLOUR.grey_silver,
+    "CO2 Store": COLOUR.grey_silver,
+    "HVC": COLOUR.blue_moonstone,
     Group.import_foreign: COLOUR.grey_silver,
     Group.export_foreign: COLOUR.grey_silver,
     Group.import_domestic: COLOUR.blue_lavender,
@@ -1457,9 +1513,11 @@ COLOUR_SCHEME_BMK: dict = {
     "Grid Losses": COLOUR.grey_silver,
     # Sectors
     "Industry": COLOUR.red,
+    "Oil Refining": COLOUR.red_bright,
     "Households & Services": COLOUR.grey_neutral,
     "Transport": COLOUR.grey_deep,
     "Industry CC": COLOUR.red_deep,
+    "Industry (CC)": COLOUR.red_deep,
     # Time Series
     "Inflexible Demand": COLOUR.black,
     "Base Load": COLOUR.yellow_golden,
@@ -1490,47 +1548,6 @@ COLOUR_SCHEME_BMK: dict = {
     "Methanol Steam Reforming": COLOUR.salmon,
     "H2 from Solid Biomass": COLOUR.green_mint,
 }
-
-ALIAS_COUNTRY: frozendict = frozendict(
-    {
-        "EU": "Europe",
-        "AL": "Albania",
-        "AT": "Austria",
-        "BA": "Bosnia and Herzegovina",
-        "BE": "Belgium",
-        "BG": "Bulgaria",
-        "CH": "Switzerland",
-        "CZ": "Czech Republic",
-        "DE": "Germany",
-        "DK": "Denmark",
-        "EE": "Estonia",
-        "ES": "Spain",
-        "FI": "Finland",
-        "FR": "France",
-        "GB": "Great Britain",
-        "GR": "Greece",
-        "HR": "Croatia",
-        "HU": "Hungary",
-        "IE": "Ireland",
-        "IT": "Italy",
-        "LT": "Lithuania",
-        "LU": "Luxembourg",
-        "LV": "Latvia",
-        "ME": "Montenegro",
-        "MK": "North Macedonia",
-        "NL": "Netherlands",
-        "NO": "Norway",
-        "PL": "Poland",
-        "PT": "Portugal",
-        "RO": "Romania",
-        "RS": "Serbia",
-        "SE": "Sweden",
-        "SI": "Slovenia",
-        "SK": "Slovakia",
-        "XK": "Kosovo",
-    }
-)
-ALIAS_COUNTRY_REV: frozendict = frozendict({v: k for k, v in ALIAS_COUNTRY.items()})
 
 ALIAS_REGION: frozendict = frozendict(
     {
