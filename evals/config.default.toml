@@ -338,7 +338,8 @@ legend_order = [
     "Direct Air Capture",
     "Pumped Hydro Storage",
     "Export Domestic",
-    "Export Foreign"
+    "Export Foreign",
+    "Storage",
 
 ]
 checks = ["balances_almost_zero"]
@@ -367,6 +368,7 @@ exports = []
 "gas pipeline" = "Methane Compression"
 "hydro" = "Hydro Power"
 "industry electricity" = "Industry"
+"land transport EV" = "Transport"
 "lignite" = "Coal"
 "methanolisation" = "Methanolisation"
 "nuclear" = "Nuclear Power"
@@ -381,6 +383,7 @@ exports = []
 "solar rooftop" = "Solar Power"
 "solar-hsat" = "Solar Power"
 "solid biomass" = "Solid Biomass"
+"Storage losses" = "Storage"
 "urban central CHP" = "Methane"
 "urban central air heat pump" = "Heat"
 "urban central coal CHP" = "Coal"

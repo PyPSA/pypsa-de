@@ -26,7 +26,6 @@ def view_balance_electricity(
     bus_carrier = ["AC", "low voltage", "home battery", "battery", "EV battery"]
     transmission_carrier = ["AC", "DC"]
     storage_carrier = ["PHS", "BEV charger", "EV battery", "V2G"]
-    # storage_carrier = dict()
 
     supply = (
         collect_myopic_statistics(
@@ -35,9 +34,8 @@ def view_balance_electricity(
             bus_carrier=bus_carrier,
         )
         .drop(transmission_carrier, level=DataModel.CARRIER)
-        .pipe(rename_aggregate, dict.fromkeys(storage_carrier, Group.storage_out))
+        .pipe(rename_aggregate, dict.fromkeys(storage_carrier, "Storage losses"))
     )
-    # supply.attrs["unit"] = "MWh"
 
     demand = (
         collect_myopic_statistics(
@@ -46,10 +44,9 @@ def view_balance_electricity(
             bus_carrier=bus_carrier,
         )
         .drop(transmission_carrier, level=DataModel.CARRIER)
-        .pipe(rename_aggregate, dict.fromkeys(storage_carrier, Group.storage_in))
+        .pipe(rename_aggregate, dict.fromkeys(storage_carrier, "Storage losses"))
         .mul(-1)
     )
-    # demand.attrs["unit"] = "MWh"
 
     trade_statistics = []
     for scope, direction, alias in [
@@ -80,8 +77,8 @@ def view_balance_electricity(
     )
 
     # exporter.defaults.plotly.chart = ESMGroupedBarChart
+    # exporter.defaults.plotly.xaxis_title = ""
     exporter.defaults.plotly.chart = ESMBarChart
-    exporter.defaults.plotly.xaxis_title = ""
     exporter.defaults.plotly.pattern = dict.fromkeys(
         [
             Group.import_foreign,
@@ -91,6 +88,12 @@ def view_balance_electricity(
         ],
         "/",
     )
+
+    if exporter.defaults.plotly.chart == ESMBarChart:
+        # combine bus carrier to export netted technologies, although
+        # they have difference bus_carrier, e.g. electricity distribution grid
+        exporter.statistics[0] = rename_aggregate(demand, "AC", level="bus_carrier")
+        exporter.statistics[1] = rename_aggregate(supply, "AC", level="bus_carrier")
 
     # todo: electricity load split
     # todo: split Transport input and output
