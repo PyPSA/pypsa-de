@@ -1426,6 +1426,7 @@ COLOUR_SCHEME_BMK: dict = {
     "Electricity": COLOUR.blue_celestial,
     "Electricity CHP": COLOUR.blue_celestial,
     "Battery Storage": COLOUR.coral,
+    "Car Battery": COLOUR.coral,
     "Electricity Import": COLOUR.blue_celestial,
     "Electricity OCGT": COLOUR.blue_celestial,
     # purple - heat supply

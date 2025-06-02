@@ -558,12 +558,18 @@ name = "Power Storage Volumes"
 unit = "TWh"
 file_name = "capacity_ac_storage_{location}"
 cutoff = 0.00001  # 1 MWh
-legend_order = []
+legend_order = [
+    "Pumped Hydro Storage",
+    "Run-of-River",
+    "Car Battery"
+]
 checks = []
 exports = []
 
 [view.capacity.electricity_storage.categories]
-"" = ""
+"EV battery" = "Car Battery"
+"PHS" = "Pumped Hydro Storage"
+"hydro" = "Run-of-River"
 
 [view.capacity.gas_storage]
 name = "Gas Storage Volumes"

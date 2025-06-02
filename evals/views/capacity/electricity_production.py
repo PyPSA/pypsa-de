@@ -44,6 +44,9 @@ def view_capacity_electricity_production(
     )
     ac_capacity = ac_capacity[ac_capacity > 0]  # drop zeros after clipping
 
+    # correct units for AC capacities
+    ac_capacity.attrs["unit"] = ac_capacity.attrs["unit"].replace("MWh", "MW")
+
     metric = Exporter(
         statistics=[ac_capacity],
         view_config=config["view"],
