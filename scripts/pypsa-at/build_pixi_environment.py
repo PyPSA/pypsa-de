@@ -14,11 +14,23 @@ def main():
         if fp.is_file():
             move(fp, f"{fp.stem}.bak{fp.suffix}")
 
-    # purge existing packages
-    shutil.rmtree(".pixi")
+    # purge existing installation
+    if Path(".pixi").is_dir():
+        shutil.rmtree(".pixi")
 
     # re-create pixi files from environment.yaml
     run(["pixi", "init", "--import", "envs/linux-pinned.yaml"], check=True)
+
+    # import time
+    # time.sleep(2)
+    output = run(["sed", "-i", "'s/pypsa-de/pypsa-at/g'", "pixi.toml"])
+    # output = run(["sed -i 's/pypsa-de/pypsa-at/g' pixi.toml"])
+    # print(output)
+    #
+    # correct the environment name
+    pixi_toml = Path("pixi.toml")
+    pixi_toml.write_text(pixi_toml.read_text().replace("pypsa-de", "pypsa-at"))
+
     run(["pixi", "install"], check=True)
 
     # add pypsa-at packages
@@ -41,11 +53,11 @@ def main():
         "xlsxwriter",
     ]
     run(["pixi", "add"] + packages, check=True)
-    # print(output.stdout)
 
     pypi_packages = ["highspy", "xpress", "tsam", "mkdocs-badges"]
     run(["pixi", "add", "--pypi"] + pypi_packages, check=True)
-    # print(output.stdout)
+
+    run(["pixi", "shell"])
 
 
 if __name__ == "__main__":
