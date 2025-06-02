@@ -22,9 +22,7 @@ def view_capacity_electricity_storage(
         bus_carrier=BusCarrier.ac_stores(),
     )
 
-    metric = Exporter(
-        statistics=[ac_storage], statistics_unit="MWh", view_config=config["view"]
-    )
+    metric = Exporter(statistics=[ac_storage], view_config=config["view"])
 
     metric.defaults.plotly.chart = ESMBarChart
     # prevent dropping empty years

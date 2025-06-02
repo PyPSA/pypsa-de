@@ -202,12 +202,13 @@ def collect_myopic_statistics(
     if kwargs.get("aggregate_time") is False:
         statistic.columns.name = DataModel.SNAPSHOTS
 
-    if drop_zero_rows and isinstance(statistic, pd.Series):
-        statistic = statistic.loc[statistic != 0]
-    elif drop_zero_rows and isinstance(statistic, pd.DataFrame):
-        statistic = statistic.loc[(statistic != 0).any(axis=1)]
-    else:
-        raise TypeError(f"Unknown statistic type '{type(statistic)}'")
+    if drop_zero_rows:
+        if isinstance(statistic, pd.Series):
+            statistic = statistic.loc[statistic != 0]
+        elif isinstance(statistic, pd.DataFrame):
+            statistic = statistic.loc[(statistic != 0).any(axis=1)]
+        else:
+            raise TypeError(f"Unknown statistic type '{type(statistic)}'")
 
     # assign the correct unit the statistic if possible
     if "unit" in statistic.index.names:

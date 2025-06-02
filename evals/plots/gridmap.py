@@ -3,7 +3,6 @@
 import base64
 import pathlib
 from dataclasses import dataclass, field
-from importlib import resources
 from math import copysign
 from pathlib import Path
 
@@ -297,7 +296,7 @@ class TransmissionGridMap:
         """Add common background layer to the map."""
         self._add_wms_tiles()
         self._load_geojson(
-            "nodes.geojson",
+            "regions_onshore_base_s_adm.geojson",
             style={
                 "weight": 1,
                 "color": "grey",
@@ -305,15 +304,16 @@ class TransmissionGridMap:
                 "opacity": 0.5,
             },
         )
-        self._load_geojson(
-            "neighbors.geojson",
-            style={
-                "weight": 0.5,
-                "color": "black",
-                "fillColor": "black",
-                "opacity": 0.2,
-            },
-        )
+
+        # self._load_geojson(
+        #     "neighbors.geojson",
+        #     style={
+        #         "weight": 0.5,
+        #         "color": "black",
+        #         "fillColor": "black",
+        #         "opacity": 0.2,
+        #     },
+        # )
 
     def draw_country_markers(self) -> None:
         """
@@ -604,8 +604,11 @@ class TransmissionGridMap:
         style
             The style dictionary to pass to the geojson layer.
         """
-        res = resources.files("evals") / "data"
-        gdf = gpd.read_file(res / file_name).to_crs(crs=f"EPSG:{self.cfg.crs}")
+        # res = resources.files("evals") / "data"
+        # gdf = gpd.read_file(res / file_name).to_crs(crs=f"EPSG:{self.cfg.crs}")
+        gdf = gpd.read_file(Path("resources") / file_name).to_crs(
+            crs=f"EPSG:{self.cfg.crs}"
+        )
         if style:  # applies the same style to all features
             gdf["style"] = [style] * gdf.shape[0]
 

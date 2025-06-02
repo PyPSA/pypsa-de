@@ -1369,6 +1369,7 @@ COLOUR_SCHEME_BMK: dict = {
     "Oil PP": COLOUR.red,
     "Fischer-Tropsch": COLOUR.red,
     "Oil Import": COLOUR.red,
+    "Oil CHP": COLOUR.red,
     # dark green - biogas
     "Biogas": COLOUR.green,
     "Bio Methane Processing": COLOUR.green,
@@ -1382,6 +1383,7 @@ COLOUR_SCHEME_BMK: dict = {
     "Methane": COLOUR.brown,
     "Gas PP": COLOUR.brown,
     Group.chp_ch4: COLOUR.brown_dark,
+    "CHP": COLOUR.brown_dark,
     "Methanation": COLOUR.brown,
     "Gas Boiler": COLOUR.brown_sallow,
     Group.chp_ch4_cc: COLOUR.brown_light,
@@ -1434,6 +1436,7 @@ COLOUR_SCHEME_BMK: dict = {
     "HH and Services (Heat)": COLOUR.salmon,
     # orange - ambient heat
     "Ambient Heat": COLOUR.red_bright,
+    "Heat Vent": COLOUR.grey_charcoal,
     # light green - DAC, Fuel cell
     "Heat for DAC": COLOUR.green_mint,
     "Direct Air Capture": COLOUR.green_mint,
@@ -1473,6 +1476,7 @@ COLOUR_SCHEME_BMK: dict = {
     "Accumulated Natural Inflow": COLOUR.blue_cerulean,
     "Residualload": COLOUR.red_fire,
     "Waste": COLOUR.raspberry,
+    "Waste CHP": COLOUR.raspberry,
     "Methanolisation": COLOUR.salmon,
     "Methane Compression": COLOUR.brown,
     "Hydrogen Compression": COLOUR.blue_pastel,

@@ -1,6 +1,6 @@
 [global]
 
-[view.capacity.heat]
+[view.capacity.heat_production]
 name = "District Heat Production Capacities"
 unit = "GW"
 file_name = "capacity_heat_{location}"
@@ -29,7 +29,7 @@ legend_order = [
 checks = []
 exports = ["csv", "excel"]
 
-[view.capacity.heat.categories]
+[view.capacity.heat_production.categories]
 "DAC" = "Direct Air Capture"
 "Fischer-Tropsch" = "Fischer-Tropsch"
 "Haber-Bosch" = "Haber-Bosch"
@@ -51,8 +51,10 @@ exports = ["csv", "excel"]
 "urban central solid biomass CHP" = "Biomass CHP"
 "urban central water tanks charger" = "Storage In"
 "urban central water tanks discharger" = "Storage Out"
+"urban central water pits charger" = "Storage In"
+"urban central water pits discharger" = "Storage Out"
 
-[view.capacity.ac_production]
+[view.capacity.electricity_production]
 name = "Optimal Capacity Electricity"
 unit = "GW"
 file_name = "capacity_ac_production_{location}"
@@ -74,7 +76,7 @@ legend_order = [
 checks = []
 exports = ["csv"]
 
-[view.capacity.ac_production.categories]
+[view.capacity.electricity_production.categories]
 "CCGT" = "Thermal Powerplants"
 "H2 OCGT" = "Hydrogen"
 "H2 turbine" = "Hydrogen"
@@ -551,7 +553,7 @@ exports = []
 "Storage In" = "Storage In"
 "Storage Out" = "Storage Out"
 
-[view.capacity.ac_storage]
+[view.capacity.electricity_storage]
 name = "Power Storage Volumes"
 unit = "TWh"
 file_name = "capacity_ac_storage_{location}"
@@ -560,7 +562,7 @@ legend_order = []
 checks = []
 exports = []
 
-[view.capacity.ac_storage.categories]
+[view.capacity.electricity_storage.categories]
 "" = ""
 
 [view.capacity.gas_storage]

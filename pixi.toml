@@ -1,4 +1,5 @@
 [project]
+authors = ["Philip Worschischek <philip.worschischek@aggm.at>"]
 channels = ["conda-forge", "bioconda"]
 name = "pypsa-at"
 platforms = ["linux-64"]

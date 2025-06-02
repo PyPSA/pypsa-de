@@ -248,12 +248,12 @@ if __name__ == "__main__":
         snakemake = mock_snakemake(
             "plot_gas_network",
             opts="",
-            clusters="61",
-            ll="vopt",
+            clusters="adm",
+            # ll="vopt",
             sector_opts="none",
-            planning_horizons=2020,
-            run="8Gt_Bal_v3",
-            configfiles="config/config.public.yaml",
+            planning_horizons="2030",
+            run="KN2045_Mix",
+            configfiles="config/config.at.yaml",
         )
 
     configure_logging(snakemake)

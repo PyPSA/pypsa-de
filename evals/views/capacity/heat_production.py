@@ -37,6 +37,9 @@ def view_capacity_heat_production(
         bus_carrier=BusCarrier.HEAT_URBAN_CENTRAL,
     ).clip(lower=0)
 
+    # correct unit to Power
+    heat_capacity.attrs["unit"] = heat_capacity.attrs["unit"].replace("MWh", "MW")
+
     metric = Exporter(
         statistics=[heat_capacity],
         view_config=config["view"],

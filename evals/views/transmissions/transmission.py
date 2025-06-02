@@ -62,7 +62,7 @@ def view_grid_capacity(
         networks,
         statistic="supply",
         comps="Generator",
-        bus_carrier=[BusCarrier.CH4, BusCarrier.H2],
+        bus_carrier=[BusCarrier.CH4, BusCarrier.H2, "biogas", "gas primary", "AC"],
     ).drop("2015", level=DataModel.YEAR, errors="ignore")
     import_energy *= 1e-6
     import_energy.attrs["name"] = "Import Energy"
@@ -77,7 +77,7 @@ def view_grid_capacity(
         networks,
         statistic="supply",
         comps="Generator",
-        bus_carrier=[BusCarrier.CH4, BusCarrier.H2],
+        bus_carrier=[BusCarrier.CH4, BusCarrier.H2, "biogas", "gas primary"],
         aggregate_time="max",
     ).drop("2015", level=DataModel.YEAR, errors="ignore")
     import_capacity *= 1e-3

@@ -23,7 +23,6 @@ run_eval "/opt/data/esm/results"
 """
 
 import logging
-import pathlib
 import sys
 from time import time
 
@@ -156,5 +155,5 @@ def run_tests() -> None:
 
 if __name__ == "__main__":
     # debugging entry point
-    # args = ("../results/evals-dev", "-n", "view_heat_primary_energy")
+    # args = ("../results/evals-dev", "-n", "view_grid_capacity")
     run_eval(sys.argv[1:])
