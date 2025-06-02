@@ -157,8 +157,8 @@ clustering:
   mode: administrative
   administrative:
     level: 0 # countries
-    AT: 2 # + 8 regions
-    DE: 1 # + 15 regions
+    AT: 2 # 10 regions
+    DE: 1 # 16 regions
     DK: 1 # +1 islands
     GB: 1 # +1 North Ireland
     FR: 1 # +1 islands
