@@ -602,7 +602,6 @@ pypsa_eur:
   - hydro
   Store: []
 
-
 co2_price_add_on_fossils:
   # 2020: 25
   # 2025: 60
@@ -632,3 +631,7 @@ scale_capacity:
     DE:
       CCGT: 10000
       "urban central gas CHP": 22000
+
+# pypsa-at modifications
+modify_nuts3_shapes:
+  enable: true
