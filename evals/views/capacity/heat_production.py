@@ -40,12 +40,9 @@ def view_capacity_heat_production(
     # correct unit to Power
     heat_capacity.attrs["unit"] = heat_capacity.attrs["unit"].replace("MWh", "MW")
 
-    metric = Exporter(
-        statistics=[heat_capacity],
-        view_config=config["view"],
-    )
+    exporter = Exporter(statistics=[heat_capacity], view_config=config["view"])
 
     # constant view specific settings
-    metric.defaults.plotly.chart = ESMBarChart
+    exporter.defaults.plotly.chart = ESMBarChart
 
-    metric.export(result_path, subdir)
+    exporter.export(result_path, subdir)
