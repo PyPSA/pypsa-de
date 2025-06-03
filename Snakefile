@@ -147,6 +147,7 @@ rule all:
                 **config["scenario"],
             ),
         ),
+        # RESULTS+ "evaluation/exported_iamc_variables.xlsx",
     default_target: True
 
 
@@ -801,3 +802,61 @@ rule ariadne_report_only:
             RESULTS + "ariadne/report/elec_price_duration_curve.pdf",
             run=config_provider("run", "name"),
         ),
+
+
+rule export_iamc_variables:
+    params:
+        planning_horizons=config_provider("scenario", "planning_horizons"),
+        hours=config_provider("clustering", "temporal", "resolution_sector"),
+        max_hours=config_provider("electricity", "max_hours"),
+        costs=config_provider("costs"),
+        config_industry=config_provider("industry"),
+        energy_totals_year=config_provider("energy", "energy_totals_year"),
+        co2_price_add_on_fossils=config_provider("co2_price_add_on_fossils"),
+        co2_sequestration_cost=config_provider("sector", "co2_sequestration_cost"),
+        post_discretization=config_provider("solving", "options", "post_discretization"),
+        NEP_year=config_provider("costs", "NEP"),
+        NEP_transmission=config_provider("costs", "transmission"),
+    input:
+        template="data/template_ariadne_database.xlsx",
+        industry_demands=expand(
+            resources(
+                "industrial_energy_demand_base_s_{clusters}_{planning_horizons}.csv"
+            ),
+            **config["scenario"],
+            allow_missing=True,
+        ),
+        networks=expand(
+            RESULTS
+            + "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
+            **config["scenario"],
+            allow_missing=True,
+        ),
+        costs=expand(
+            resources("costs_{planning_horizons}.csv"),
+            **config["scenario"],
+            allow_missing=True,
+        ),
+        industrial_production_per_country_tomorrow=expand(
+            resources(
+                "industrial_production_per_country_tomorrow_{planning_horizons}-modified.csv"
+            ),
+            **config["scenario"],
+            allow_missing=True,
+        ),
+        industry_sector_ratios=expand(
+            resources("industry_sector_ratios_{planning_horizons}.csv"),
+            **config["scenario"],
+            allow_missing=True,
+        ),
+        industrial_production=resources("industrial_production_per_country.csv"),
+        energy_totals=resources("energy_totals.csv"),
+    output:
+        exported_variables=RESULTS + "evaluation/exported_iamc_variables.xlsx",
+        exported_variables_full=RESULTS + "evaluation/exported_iamc_variables_full.xlsx",
+    resources:
+        mem_mb=16000,
+    log:
+        RESULTS + "logs/export_iamc_variables.log",
+    script:
+        "scripts/pypsa-at/export_iamc_variables.py"
