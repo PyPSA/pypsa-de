@@ -276,7 +276,6 @@ def plot_balances():
             snakemake.output.balances[:-10] + bus_carrier + ".svg", bbox_inches="tight"
         )
         plt.close(fig)
-        df.to_csv(snakemake.output.balances[:-10] + bus_carrier + ".csv")
 
 
 def historical_emissions(countries):
