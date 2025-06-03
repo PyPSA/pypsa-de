@@ -148,7 +148,7 @@ rule all:
             ),
         ),
         expand(
-            RESULTS + "evaluation/exported_iamc_variables.xlsx",
+            RESULTS + "evaluation/HTML/sankey_diagram_EU_2050.html",
             run=config["run"]["name"],
         ),
     default_target: True
