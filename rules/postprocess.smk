@@ -1,7 +1,6 @@
 # SPDX-FileCopyrightText: Contributors to PyPSA-Eur <https://github.com/pypsa/pypsa-eur>
 #
 # SPDX-License-Identifier: MIT
-from Snakefile import RESULTS
 
 
 if config["foresight"] != "perfect":

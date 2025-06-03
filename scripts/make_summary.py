@@ -10,12 +10,16 @@ import logging
 
 import pandas as pd
 import pypsa
+from pypsa.statistics import groupers
 
+from evals.statistic import get_location
 from scripts._helpers import configure_logging, set_scenario_config
 
 pd.set_option("future.no_silent_downcasting", True)
 idx = pd.IndexSlice
 logger = logging.getLogger(__name__)
+
+groupers.add_grouper("location", get_location)
 
 OUTPUTS = [
     "costs",
