@@ -1306,7 +1306,7 @@ if __name__ == "__main__":
 
     first_technology_occurrence(n)
 
-    unravel_carbonaceous_fuels(n)
+    # unravel_carbonaceous_fuels(n)
 
     # unravel_gasbus(n, costs)
 

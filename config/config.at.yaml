@@ -213,9 +213,9 @@ costs:
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#sector
 sector:
   chp:
-    enable: false # This should only deactivate the CHPs from prepare_sector_network, not those from add_existing_baseyear
-  v2g: false  # todo: wanted
-  solar_thermal: false  # todo: wanted
+    enable: true # why was this disabled in pspsa-de?
+  v2g: true
+  solar_thermal: true
   district_heating:
     potential: 0.3
     progress:
@@ -232,19 +232,51 @@ sector:
     rural: true
   co2_spatial: true
   biomass_spatial: true
+  biomass_transport: true
   #TBD what to include in config
   #relax so no infeasibility in 2050 with no land transport demand
   min_part_load_fischer_tropsch: 0.
   regional_methanol_demand: true  #set to true if regional CO2 constraints needed
   regional_oil_demand: true  #set to true if regional CO2 constraints needed
   regional_coal_demand: true  #set to true if regional CO2 constraints needed
-  gas_network: true  # todo: wanted
+  gas_network: true
   regional_gas_demand: true
   H2_retrofit: true
   biogas_upgrading_cc: true
   biomass_to_liquid: true
   biomass_to_liquid_cc: true
+  electrobiofuels: true
+  biosng: true
+  biosng_cc: true
+  bioH2: true
+  municipal_solid_waste: true
   cluster_heat_buses: true
+  hydrogen_turbines: true
+  methanol:
+    regional_methanol_demand: true
+    methanol_reforming: true
+    methanol_reforming_cc: true
+    methanol_to_kerosene: true
+    methanol_to_power:
+      ccgt: true
+      ccgt_cc: true
+      ocgt: true
+      allam: true
+    biomass_to_methanol: true
+    biomass_to_methanol_cc: true
+  ammonia: true
+  regional_co2_sequestration_potential:
+    enable: true
+    attribute:
+    - conservative estimate Mt
+    - conservative estimate GAS Mt
+    - conservative estimate OIL Mt
+    - conservative estimate aquifer Mt
+    include_onshore: false
+    min_size: 3
+    max_size: 25
+    years_of_storage: 25
+  co2_network: true
   # calculated based on ariadne "Stock|Space Heating"
   # and then 2% of buildings renovated per year to reduce their demand by 80%
   reduce_space_heat_exogenously_factor:
@@ -279,7 +311,8 @@ sector:
     2040: 0.25
     2045: 0.1
     2050: 0.0
-
+  imports:
+    enable: true
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#industry
 industry:
   ammonia: false
