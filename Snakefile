@@ -147,7 +147,10 @@ rule all:
                 **config["scenario"],
             ),
         ),
-        # RESULTS+ "evaluation/exported_iamc_variables.xlsx",
+        expand(
+            RESULTS + "evaluation/exported_iamc_variables.xlsx",
+            run=config["run"]["name"],
+        ),
     default_target: True
 
 
@@ -860,3 +863,16 @@ rule export_iamc_variables:
         RESULTS + "logs/export_iamc_variables.log",
     script:
         "scripts/pypsa-at/export_iamc_variables.py"
+
+
+rule plot_iamc_variables:
+    input:
+        iamc_variables=RESULTS + "evaluation/exported_iamc_variables.xlsx",
+    output:
+        sankey=RESULTS + "evaluation/HTML/sankey_diagram_EU_2050.html",
+    resources:
+        mem_mb=16000,
+    log:
+        RESULTS + "logs/plot_iamc_variables.log",
+    script:
+        "scripts/pypsa-at/plot_iamc_variables.py"
