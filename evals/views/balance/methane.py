@@ -31,7 +31,7 @@ def view_balance_methane(
     See eval module docstring for parameter description.
     """
     unit = "MWh_LHV"
-    bus_carrier = ["gas", "gas primary", "biogas", "gas for industry", "renewable gas"]
+    bus_carrier = ["gas", "gas primary", "biogas", "gas for industry"]
 
     supply = collect_myopic_statistics(
         networks,

@@ -89,6 +89,4 @@ def view_balance_hydrogen(
         "/",
     )
 
-    # todo: split storage in and storage out
-
     metric.export(result_path, subdir)
