@@ -4,7 +4,7 @@ from pathlib import Path
 
 from evals.constants import DataModel, Group, TradeTypes
 from evals.fileio import Exporter
-from evals.plots import ESMBarChart
+from evals.plots import ESMBarChart, ESMGroupedBarChart
 from evals.statistic import collect_myopic_statistics
 from evals.utils import filter_by, rename_aggregate
 
@@ -34,7 +34,7 @@ def view_balance_electricity(
             bus_carrier=bus_carrier,
         )
         .drop(transmission_carrier, level=DataModel.CARRIER)
-        .pipe(rename_aggregate, dict.fromkeys(storage_carrier, "Storage losses"))
+        .pipe(rename_aggregate, dict.fromkeys(storage_carrier, Group.storage_out))
     )
 
     demand = (
@@ -44,7 +44,7 @@ def view_balance_electricity(
             bus_carrier=bus_carrier,
         )
         .drop(transmission_carrier, level=DataModel.CARRIER)
-        .pipe(rename_aggregate, dict.fromkeys(storage_carrier, "Storage losses"))
+        .pipe(rename_aggregate, dict.fromkeys(storage_carrier, Group.storage_in))
         .mul(-1)
     )
 
@@ -76,9 +76,9 @@ def view_balance_electricity(
         view_config=config["view"],
     )
 
-    # exporter.defaults.plotly.chart = ESMGroupedBarChart
-    # exporter.defaults.plotly.xaxis_title = ""
-    exporter.defaults.plotly.chart = ESMBarChart
+    exporter.defaults.plotly.chart = ESMGroupedBarChart
+    exporter.defaults.plotly.xaxis_title = ""
+    # exporter.defaults.plotly.chart = ESMBarChart
     exporter.defaults.plotly.pattern = dict.fromkeys(
         [
             Group.import_foreign,

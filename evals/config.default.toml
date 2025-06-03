@@ -239,7 +239,7 @@ legend_order = [
     "SMR",
     "H2 from Solid Biomass",
     "Ammonia Cracking",
-    "Storage",
+    "Storage Out",
     "Import Domestic",
     "Import Foreign",
     # demand ordered from zero to outside:
@@ -252,6 +252,7 @@ legend_order = [
     "Fischer-Tropsch",
     "Sabatier",
     "Synth. Fuels",
+    "Storage In",
     "Export Domestic",
     "Export Foreign",
 ]
@@ -268,7 +269,9 @@ exports = []
 "H2 OCGT" = "Electricity"
 "H2 for industry" = "Industry"
 "H2 turbine" = "Electricity"
-"H2 Store" = "Storage"
+#"H2 Store" = "Storage"
+"Storage In" = "Storage In"
+"Storage Out" = "Storage Out"
 "Haber-Bosch" = "Haber-Bosch"
 "Import Foreign" = "Import Foreign"
 "Import Domestic" = "Import Domestic"
@@ -320,6 +323,7 @@ legend_order = [
     "Methane",
     "Hydrogen",
     "Oil",
+    "Storage In",
     "Import Domestic",
     "Import Foreign",
     # demand ordered from zero to outside
@@ -337,9 +341,10 @@ legend_order = [
     "Electrolysis",
     "Direct Air Capture",
     "Pumped Hydro Storage",
+    "Storage Out",
     "Export Domestic",
     "Export Foreign",
-    "Storage",
+
 
 ]
 checks = ["balances_almost_zero"]
@@ -383,7 +388,8 @@ exports = []
 "solar rooftop" = "Solar Power"
 "solar-hsat" = "Solar Power"
 "solid biomass" = "Solid Biomass"
-"Storage losses" = "Storage"
+"Storage In" = "Storage In"
+"Storage Out" = "Storage Out"
 "urban central CHP" = "Methane"
 "urban central air heat pump" = "Heat"
 "urban central coal CHP" = "Coal"

@@ -31,16 +31,15 @@ def view_balance_hydrogen(
     -----
     See eval module docstring for parameter description.
     """
-    unit = "MWh_LHV"
-
     supply = collect_myopic_statistics(
         networks,
         statistic="supply",
         bus_carrier=BusCarrier.H2,
     )
     pipelines = supply.filter(like="pipeline", axis=0).index.unique(DataModel.CARRIER)
-    supply = supply.drop(pipelines, level=DataModel.CARRIER)
-    # supply.attrs["unit"] = unit
+    supply = supply.drop(pipelines, level=DataModel.CARRIER).pipe(
+        rename_aggregate, {"H2 Store": Group.storage_out}
+    )
 
     demand = (
         collect_myopic_statistics(
@@ -50,8 +49,8 @@ def view_balance_hydrogen(
         )
         .mul(-1)
         .drop(pipelines, level=DataModel.CARRIER)
+        .pipe(rename_aggregate, {"H2 Store": Group.storage_in})
     )
-    # demand.attrs["unit"] = unit
 
     trade_statistics = []
     for scope, direction, alias in [
@@ -71,7 +70,7 @@ def view_balance_hydrogen(
             .filter(like="pipeline", axis=0)
             .pipe(rename_aggregate, alias)
         )
-        trade.attrs["unit"] = unit
+        trade.attrs["unit"] = "MWh_LHV"
         trade_statistics.append(trade)
 
     metric = Exporter(
