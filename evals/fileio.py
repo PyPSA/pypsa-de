@@ -975,8 +975,8 @@ def get_resources_directory(n: pypsa.Network) -> Callable:
     )
 
 
-def read_nodal_energy_totals_csv(
-    result_path: str | Path, sub_directory: str = "csvs"
+def read_pypsa_csv(
+    result_path: str | Path, kind: str, index_cols: int, sub_directory: str = "csvs"
 ) -> pd.Series:
     """
     Read nodal energy totals from CSV files.
@@ -986,6 +986,10 @@ def read_nodal_energy_totals_csv(
     result_path
         Absolute or relative path to the results folder in the project
         root directory.
+    kind
+        The kind of nodal energy totals to read, e.g. "energy_balance".
+    index_cols
+        The number of index columns in the CSV file.
     sub_directory
         The subdirectory relative to the result path where the CSV
         files are located.
@@ -996,21 +1000,30 @@ def read_nodal_energy_totals_csv(
         Nodal energy totals as a Series.
     """
     df = pd.read_csv(
-        Path(result_path) / sub_directory / "nodal_energy_balance.csv",
-        index_col=list(range(4)),
+        Path(result_path) / sub_directory / f"{kind}.csv",
+        index_col=list(range(index_cols)),
         header=0,
         skiprows=[0, 1, 3],
     )
-    df.index.names = [DataModel.COMPONENT] + DataModel.IDX_NAMES
+    df.index.names = [
+        DataModel.COMPONENT,
+        DataModel.CARRIER,
+        DataModel.LOCATION,
+        DataModel.BUS_CARRIER,
+    ]
     df.columns.name = DataModel.YEAR
-    ser = (
-        df.pivot_table(index=DataModel.IDX_NAMES, aggfunc="sum")
-        .stack()
-        .reorder_levels(DataModel.YEAR_IDX_NAMES)
+    ser = df.stack().reorder_levels(  # .pivot_table(index=DataModel.IDX_NAMES, aggfunc="sum")
+        [
+            DataModel.YEAR,
+            DataModel.COMPONENT,
+            DataModel.LOCATION,
+            DataModel.CARRIER,
+            DataModel.BUS_CARRIER,
+        ]
     )
 
-    name = "energy_balance"
-    unit = "MWh"
+    name = kind
+    unit = "undefined"
 
     ser.name = f"{name} ({unit})"
     ser.attrs["name"] = name

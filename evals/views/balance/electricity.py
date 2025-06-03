@@ -23,11 +23,18 @@ def view_balance_electricity(
       - "Link" supply with AC bus_carrier, and
       - Pump-Hydro-Storage and Run-Of-River inflows
     """
-    # energy_totals = read_nodal_energy_totals_csv(result_path)
-
-    bus_carrier = ["AC", "low voltage", "home battery", "battery", "EV battery"]
+    bus_carrier = ["AC", "low voltage", "EV battery"]
     transmission_carrier = ["AC", "DC"]
     storage_carrier = ["PHS", "BEV charger", "EV battery", "V2G"]
+
+    # todo: read csvs and compare with calculated results to test the code
+    # supply = read_pypsa_csv(result_path, "nodal_supply", index_cols=4) #.drop(transmission_carrier, level=DataModel.CARRIER)
+    # demand = read_pypsa_csv(result_path, "nodal_withdrawal", index_cols=4)# .drop(transmission_carrier, level=DataModel.CARRIER)
+    # print(filter_by(supply, year="2050", bus_carrier="AC").sum() / 1e6)
+    # print(filter_by(demand, year="2050", bus_carrier="AC").sum() / 1e6)
+    #
+    # balance = read_pypsa_csv(result_path, "nodal_energy_balance", index_cols=4)
+    # print(filter_by(balance, year="2050", bus_carrier="AC").drop(transmission_carrier, level=DataModel.CARRIER).sum() / 1e6)
 
     supply = (
         collect_myopic_statistics(
@@ -36,8 +43,10 @@ def view_balance_electricity(
             bus_carrier=bus_carrier,
         )
         .drop(transmission_carrier, level=DataModel.CARRIER)
+        # .pipe(rename_aggregate, dict.fromkeys(transmission_carrier, "Import"))
         .pipe(rename_aggregate, dict.fromkeys(storage_carrier, Group.storage_out))
     )
+    print(filter_by(supply, year="2050", bus_carrier="AC").sum() / 1e6)
 
     demand = (
         collect_myopic_statistics(
@@ -46,6 +55,7 @@ def view_balance_electricity(
             bus_carrier=bus_carrier,
         )
         .drop(transmission_carrier, level=DataModel.CARRIER)
+        # .pipe(rename_aggregate, dict.fromkeys(transmission_carrier, "Export"))
         .pipe(rename_aggregate, dict.fromkeys(storage_carrier, Group.storage_in))
         .mul(-1)
     )
