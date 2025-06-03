@@ -38,9 +38,13 @@ def view_balance_methane(
         statistic="supply",
         bus_carrier=bus_carrier,
     )
-    pipelines = supply.filter(like="pipeline", axis=0).index.unique(DataModel.CARRIER)
+    pipelines = (
+        supply.filter(like="pipeline", axis=0)
+        .index.unique(DataModel.CARRIER)
+        .pipe(rename_aggregate, {"gas Store": Group.storage_out})
+    )
     supply = supply.drop(pipelines, level=DataModel.CARRIER, errors="ignore")
-    supply.attrs["unit"] = unit  # renewable gas lacks unit (unit is '')
+    # supply.attrs["unit"] = unit  # renewable gas lacks unit (unit is '')
 
     demand = (
         collect_myopic_statistics(
@@ -50,8 +54,9 @@ def view_balance_methane(
         )
         .mul(-1)
         .drop(pipelines, level=DataModel.CARRIER, errors="ignore")
+        .pipe(rename_aggregate, {"gas Store": Group.storage_out})
     )
-    demand.attrs["unit"] = unit  # renewable gas lacks unit (unit is '')
+    # demand.attrs["unit"] = unit  # renewable gas lacks unit (unit is '')
 
     trade_statistics = []
     if any(pipelines):
@@ -80,11 +85,9 @@ def view_balance_methane(
         view_config=config["view"],
     )
 
-    # todo: split storage in and storage out
-
     exporter.defaults.plotly.chart = ESMGroupedBarChart
-    # exporter.defaults.plotly.chart = ESMBarChart
     exporter.defaults.plotly.xaxis_title = ""
+    # exporter.defaults.plotly.chart = ESMBarChart
     exporter.defaults.plotly.pattern = dict.fromkeys(
         [
             Group.export_foreign,
