@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: Contributors to PyPSA-Eur <https://github.com/pypsa/pypsa-eur>
 #
 # SPDX-License-Identifier: MIT
+from Snakefile import RESULTS
 
 
 if config["foresight"] != "perfect":
@@ -191,6 +192,10 @@ rule make_summary:
         + "csvs/individual/market_values_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.csv",
         metrics=RESULTS
         + "csvs/individual/metrics_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.csv",
+        nodal_supply=RESULTS
+        + "csvs/individual/nodal_supply_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.csv",
+        nodal_withdrawal=RESULTS
+        + "csvs/individual/nodal_withdrawal_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.csv",
     threads: 1
     resources:
         mem_mb=8000,
@@ -297,6 +302,18 @@ rule make_global_summary:
             **config["scenario"],
             allow_missing=True,
         ),
+        nodal_supply=expand(
+            RESULTS
+            + "csvs/individual/nodal_supply_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.csv",
+            **config["scenario"],
+            allow_missing=True,
+        ),
+        nodal_withdrawal=expand(
+            RESULTS
+            + "csvs/individual/nodal_withdrawal_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.csv",
+            **config["scenario"],
+            allow_missing=True,
+        ),
     output:
         costs=RESULTS + "csvs/costs.csv",
         capacities=RESULTS + "csvs/capacities.csv",
@@ -312,6 +329,8 @@ rule make_global_summary:
         nodal_capacities=RESULTS + "csvs/nodal_capacities.csv",
         nodal_energy_balance=RESULTS + "csvs/nodal_energy_balance.csv",
         nodal_capacity_factors=RESULTS + "csvs/nodal_capacity_factors.csv",
+        nodal_supply=RESULTS + "csvs/nodal_supply.csv",
+        nodal_withdrawal=RESULTS + "csvs/nodal_withdrawal.csv",
     threads: 1
     resources:
         mem_mb=8000,

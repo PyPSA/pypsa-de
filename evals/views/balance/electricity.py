@@ -23,6 +23,8 @@ def view_balance_electricity(
       - "Link" supply with AC bus_carrier, and
       - Pump-Hydro-Storage and Run-Of-River inflows
     """
+    # energy_totals = read_nodal_energy_totals_csv(result_path)
+
     bus_carrier = ["AC", "low voltage", "home battery", "battery", "EV battery"]
     transmission_carrier = ["AC", "DC"]
     storage_carrier = ["PHS", "BEV charger", "EV battery", "V2G"]
@@ -91,11 +93,11 @@ def view_balance_electricity(
 
     if exporter.defaults.plotly.chart == ESMBarChart:
         # combine bus carrier to export netted technologies, although
-        # they have difference bus_carrier, e.g. electricity distribution grid
+        # they have difference bus_carrier in index , e.g.
+        # electricity distribution grid, (AC, low voltage)
         exporter.statistics[0] = rename_aggregate(demand, "AC", level="bus_carrier")
         exporter.statistics[1] = rename_aggregate(supply, "AC", level="bus_carrier")
 
     # todo: electricity load split
-    # todo: split Transport input and output
 
     exporter.export(result_path, subdir)

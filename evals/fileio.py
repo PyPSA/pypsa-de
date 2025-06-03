@@ -879,7 +879,7 @@ class Exporter:
                 )
 
     def default_checks(self) -> None:
-        """"""
+        """Perform integrity checks for views."""
         category = self.defaults.plotly.plot_category
         categories = self.view_config["categories"]
 
@@ -973,3 +973,47 @@ def get_resources_directory(n: pypsa.Network) -> Callable:
         run["shared_resources"]["policy"],
         run["shared_resources"]["exclude"],
     )
+
+
+def read_nodal_energy_totals_csv(
+    result_path: str | Path, sub_directory: str = "csvs"
+) -> pd.Series:
+    """
+    Read nodal energy totals from CSV files.
+
+    Parameters
+    ----------
+    result_path
+        Absolute or relative path to the results folder in the project
+        root directory.
+    sub_directory
+        The subdirectory relative to the result path where the CSV
+        files are located.
+
+    Returns
+    -------
+    :
+        Nodal energy totals as a Series.
+    """
+    df = pd.read_csv(
+        Path(result_path) / sub_directory / "nodal_energy_balance.csv",
+        index_col=list(range(4)),
+        header=0,
+        skiprows=[0, 1, 3],
+    )
+    df.index.names = [DataModel.COMPONENT] + DataModel.IDX_NAMES
+    df.columns.name = DataModel.YEAR
+    ser = (
+        df.pivot_table(index=DataModel.IDX_NAMES, aggfunc="sum")
+        .stack()
+        .reorder_levels(DataModel.YEAR_IDX_NAMES)
+    )
+
+    name = "energy_balance"
+    unit = "MWh"
+
+    ser.name = f"{name} ({unit})"
+    ser.attrs["name"] = name
+    ser.attrs["unit"] = unit
+
+    return ser
