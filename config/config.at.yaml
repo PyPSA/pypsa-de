@@ -373,6 +373,12 @@ industry:
     2050: 0.6
   waste_to_energy: true
   waste_to_energy_cc: true
+  # gas compression seems incompatible with gas network. Pipeline connect
+  # gas buses, however Generators in '{node} gas primary' buses introduce gas
+  # energy at local nodes, which is then compressed to the local gas bus.
+  # As a result, gas is not transported via pipelines. (might be t)
+#  oil_refining_emissions: 0  # 0.013
+  gas_compression_losses: 0  # 0.04
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#solving
 solving:
