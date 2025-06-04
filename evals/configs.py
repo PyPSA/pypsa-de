@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass, field
 
-from evals.constants import COLOUR_SCHEME_BMK, DataModel
+from evals.constants import COLOUR_SCHEME_BMK, DataModel, Group
 
 
 @dataclass()
@@ -32,7 +32,17 @@ class PlotConfig:
 
     category_orders: tuple = ()
     colors: dict = field(default_factory=lambda: COLOUR_SCHEME_BMK)
-    pattern: dict = field(default_factory=dict)
+    pattern: dict = field(
+        default_factory=lambda: dict.fromkeys(
+            [
+                Group.import_foreign,
+                Group.export_foreign,
+                Group.import_domestic,
+                Group.export_domestic,
+            ],
+            "/",
+        )
+    )
     fill: dict = field(default_factory=dict)
     stacked: bool = True
     line_dash: dict = field(default_factory=dict)

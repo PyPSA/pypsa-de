@@ -7,6 +7,7 @@ from decimal import ROUND_HALF_UP, Decimal, localcontext
 
 import numpy as np
 import pandas as pd
+from pypsa.statistics import get_transmission_carriers
 
 from evals.constants import (
     ALIAS_COUNTRY,
@@ -190,7 +191,7 @@ def get_trade_type(bus_a: str, bus_b: str) -> str:
     elif loc_a[0] == loc_b[0]:
         # transformation link in same region, e.g. heat
         return TradeTypes.LOCAL
-    elif loc_a[0][:2] == loc_b[0][:2]:  # only country codes match
+    elif loc_a[0][:2] == loc_b[0][:2]:  # country codes match
         return TradeTypes.DOMESTIC
     else:
         return TradeTypes.FOREIGN
@@ -1102,3 +1103,73 @@ def combine_statistics(
     verify_metric_format(df)
 
     return df
+
+
+def get_storage_carriers(networks: dict) -> list[str]:
+    """
+    Get the storage carriers from the networks.
+
+    Parameters
+    ----------
+    networks
+        The loaded networks.
+
+    Returns
+    -------
+    :
+        A list of storage carrier names.
+    """
+    storage_carriers = set()
+    for n in networks.values():
+        for c in ("Store", "StorageUnit"):
+            storage_carriers = storage_carriers.union(n.static(c)["carrier"].unique())
+
+    return sorted(storage_carriers)
+
+
+def get_transmission_techs(networks: dict, bus_carrier: str | list = None) -> list[str]:
+    """
+    Get the transmission technologies from the networks.
+
+    Parameters
+    ----------
+    networks
+        The loaded networks.
+    bus_carrier
+        The bus carrier to filter for.
+
+    Returns
+    -------
+    :
+        A list of transmission technology names.
+    """
+    transmission_techs = set()
+    for n in networks.values():
+        transmission_techs = transmission_techs.union(
+            get_transmission_carriers(n, bus_carrier)
+        )
+
+    return sorted(transmission_techs)
+
+
+# def get_bus_carrier_names(
+#     networks: dict, sector: str
+# ) -> list[str]:
+#     """
+#     Get the bus carrier names from the networks.
+#
+#     Parameters
+#     ----------
+#     networks
+#         The loaded networks.
+#     sector
+#         The energy sector to return bus_carrier names for.
+#
+#     Returns
+#     -------
+#     :
+#         A list of bus carrier names.
+#     """
+#     bus_carrier = set()
+#     for n in networks.values():
+#         n.static("Bus").query("carrier.str.contains(@sector)", engine="python", inplace=True)

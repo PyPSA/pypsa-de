@@ -642,7 +642,7 @@ class ESMStatistics(StatisticsAccessor):
 
             results_comp.append(insert_index_level(p, c, "component"))
 
-        result = pd.concat(results_comp).groupby(DataModel.IDX_NAMES).sum()
+        result = pd.concat(results_comp)  # .groupby(DataModel.IDX_NAMES).sum()
 
         if aggregate_time:
             # assuming Link and Line have the same weights

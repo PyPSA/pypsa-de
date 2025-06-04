@@ -206,7 +206,7 @@ class TransmissionGridMap:
         )
 
         self.draw_country_markers()
-        self.draw_import_locations()
+        # self.draw_import_locations()
         self.add_control_widgets()
 
     def add_control_widgets(self) -> None:

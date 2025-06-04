@@ -1,4 +1,5 @@
 [global]
+subdir = "evaluation"
 
 [view.capacity.heat_production]
 name = "District Heat Production Capacities"
@@ -288,6 +289,8 @@ exports = []
 name = "Methane Energy Balance"
 unit = "TWh"
 file_name = "nodal_balance_methane_{location}"
+bus_carrier = ["gas", "biogas", "gas for industry"]  # "gas primary"
+chart = "ESMGroupedBarChart"
 cutoff = 0.001
 legend_order = [
     # production ordered from zero to outside
@@ -309,13 +312,15 @@ exports = []
 name = "Electricity Energy Balance"
 unit = "TWh_el"
 file_name = "nodal_balance_electricity_{location}"
+bus_carrier = ["AC", "low voltage", "EV battery"]
+storage_links = ["BEV charger", "V2G"]
+chart = "ESMBarChart"
 cutoff = 0.01  # TWh
 legend_order = [
     # production ordered from zero to outside
-    "Hydro Power",
     "Nuclear Power",
     "Wind Power",
-    "Distribution Grid", # demand and production!
+    "Hydro Power",
     "Solar Power",
     "Solid Biomass",
     "Waste",
@@ -323,29 +328,27 @@ legend_order = [
     "Methane",
     "Hydrogen",
     "Oil",
-    "Storage In",
+    "Storage Out",
     "Import Domestic",
     "Import Foreign",
     # demand ordered from zero to outside
-
     "Base Load",
-    "Agriculture",
     "Industry",
     "Transport",
     "Hydrogen",
     "Heat",
+    "Distribution Grid", # demand and production!
     "Hydrogen Compression",
     "Methane Compression",
     "Methanolisation",
+    "Agriculture",
     "Haber-Bosch",
     "Electrolysis",
     "Direct Air Capture",
     "Pumped Hydro Storage",
-    "Storage Out",
+    "Storage In",
     "Export Domestic",
     "Export Foreign",
-
-
 ]
 checks = ["balances_almost_zero"]
 exports = []
@@ -400,6 +403,8 @@ exports = []
 "urban central solid biomass CHP" = "Solid Biomass"
 "urban decentral air heat pump" = "Heat"
 "urban decentral resistive heater" = "Heat"
+"urban central H2 CHP" = "Heat"
+"urban central H2 retrofit CHP" = "Heat"
 "waste CHP" = "Waste"
 "waste CHP CC" = "Waste"
 
