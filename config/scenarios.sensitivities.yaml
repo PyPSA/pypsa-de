@@ -1,130 +1,20 @@
-Mix: # default scenario without changes
+Mix1996:
+  weather_year: 1996
 
 Mix2010:
-  atlite:
-    default_cutout: europe-2010-sarah3-era5
-    cutouts:
-      europe-2010-sarah3-era5:
-        module: [sarah, era5] # in priority order
-        x: [-12., 42.]
-        y: [33., 72]
-        dx: 0.3
-        dy: 0.3
-        time: ['2010', '2010']
+  weather_year: 2010
 
-  snapshots:
-    start: "2010-01-01"
-    end: "2011-01-01"
-    inclusive: 'left'
+Mix2012:
+  weather_year: 2012
 
-  renewable:
-    onwind:
-      cutout: europe-2010-sarah3-era5
-    offwind-ac:
-      cutout: europe-2010-sarah3-era5
-    offwind-dc:
-      cutout: europe-2010-sarah3-era5
-    offwind-float:
-      cutout: europe-2010-sarah3-era5
-    solar:
-      cutout: europe-2010-sarah3-era5
-    solar-hsat:
-      cutout: europe-2010-sarah3-era5
-    hydro:
-      cutout: europe-2010-sarah3-era5
+Mix2013:
+  weather_year: 2013
 
-  lines:
-    dynamic_line_rating:
-      cutout: europe-2010-sarah3-era5
+Mix2019:
+  weather_year: 2019
 
-NoREStargets:
-  solving:
-    constraints:
-      limits_capacity_min:
-        Generator:
-          onwind:
-            DE:
-              2030: 0    # Wind-an-Land Law 2028
-              2035: 0   # Wind-an-Land Law 2030
-              2040: 0   # target 2035
-              2045: 0   # target 2040
-          offwind:
-            DE:
-              2030: 0 # The projects built until 2030 get forced in nevertheless
-              2035: 0
-              2040: 0
-              2045: 0
-          solar:
-            DE:
-              2025: 0
-          Link:
-            H2 Electrolysis:
-              DE:
-                2030: 0
-  electricity:
-    H2_plants_DE:
-      force: 2055 # i.e. never
+Mix2020:
+  weather_year: 2020
 
-NoREStargets2010:
-  atlite:
-    default_cutout: europe-2010-sarah3-era5
-    cutouts:
-      europe-2010-sarah3-era5:
-        module: [sarah, era5] # in priority order
-        x: [-12., 42.]
-        y: [33., 72]
-        dx: 0.3
-        dy: 0.3
-        time: ['2010', '2010']
-
-  snapshots:
-    start: "2010-01-01"
-    end: "2011-01-01"
-    inclusive: 'left'
-
-  renewable:
-    onwind:
-      cutout: europe-2010-sarah3-era5
-    offwind-ac:
-      cutout: europe-2010-sarah3-era5
-    offwind-dc:
-      cutout: europe-2010-sarah3-era5
-    offwind-float:
-      cutout: europe-2010-sarah3-era5
-    solar:
-      cutout: europe-2010-sarah3-era5
-    solar-hsat:
-      cutout: europe-2010-sarah3-era5
-    hydro:
-      cutout: europe-2010-sarah3-era5
-
-  lines:
-    dynamic_line_rating:
-      cutout: europe-2010-sarah3-era5
-
-  solving:
-    constraints:
-      limits_capacity_min:
-        Generator:
-          onwind:
-            DE:
-              2030: 0    # Wind-an-Land Law 2028
-              2035: 0   # Wind-an-Land Law 2030
-              2040: 0   # target 2035
-              2045: 0   # target 2040
-          offwind:
-            DE:
-              2030: 0 # The projects built until 2030 get forced in nevertheless
-              2035: 0
-              2040: 0
-              2045: 0
-          solar:
-            DE:
-              2025: 0
-          Link:
-            H2 Electrolysis:
-              DE:
-                2030: 0
-  electricity:
-    H2_plants_DE:
-      force: 2055 # i.e. never
+Mix2023:
+  weather_year: 2023

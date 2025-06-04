@@ -6,11 +6,18 @@
 run:
   prefix: 20250604_weather_sensitivities
   name:
-  # - ExPol
-  - Mix
+  - Mix1996
   - Mix2010
-  - NoREStargets
-  - NoREStargets2010
+  - Mix2012
+  - Mix2013
+  - Mix2019
+  - Mix2020
+  - Mix2023
+  # - ExPol
+  # - Mix
+  # - Mix2010
+  # - NoREStargets
+  # - NoREStargets2010
   # - KN2045_Elek
   # - KN2045_H2
   # - KN2045_NFniedrig
