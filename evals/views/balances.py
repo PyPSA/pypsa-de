@@ -1,13 +1,11 @@
-"""Evaluate nodal heat balances."""
-
 from pathlib import Path
 
 import pandas as pd
 
-import evals.plots as plots
+from evals import plots as plots
 from evals.constants import DataModel as DM
 from evals.fileio import Exporter
-from evals.plots.facetbars import ESMGroupedBarChart
+from evals.plots import ESMGroupedBarChart
 from evals.statistic import collect_myopic_statistics
 from evals.utils import (
     calculate_input_share,
@@ -16,6 +14,42 @@ from evals.utils import (
     rename_aggregate,
     split_urban_heat_losses_and_consumption,
 )
+from evals.views.common import simple_bus_balance
+
+
+def view_balance_carbon(
+    result_path: str | Path,
+    networks: dict,
+    config: dict,
+) -> None:
+    """
+    Evaluate the carbon balance.
+
+    Returns
+    -------
+    :
+    """
+    simple_bus_balance(networks, config, result_path)
+
+
+def view_balance_electricity(
+    result_path: str | Path,
+    networks: dict,
+    config: dict,
+) -> None:
+    """
+    Evaluate the electricity production & demand by country and year.
+
+    Returns
+    -------
+    :
+
+    Notes
+    -----
+    Balances do nat add up to zero, because of transmission losses and
+    storage cycling (probably).
+    """
+    simple_bus_balance(networks, config, result_path)
 
 
 def view_balance_heat(
@@ -93,3 +127,37 @@ def view_balance_heat(
         )
 
     exporter.export(result_path, config["global"]["subdir"])
+
+
+def view_balance_hydrogen(
+    result_path: str | Path,
+    networks: dict,
+    config: dict,
+) -> None:
+    """
+    Evaluate the Hydrogen balance.
+
+    Returns
+    -------
+    :
+
+    Notes
+    -----
+    See eval module docstring for parameter description.
+    """
+    simple_bus_balance(networks, config, result_path)
+
+
+def view_balance_methane(
+    result_path: str | Path,
+    networks: dict,
+    config: dict,
+) -> None:
+    """
+    Evaluate the methane balance.
+
+    Returns
+    -------
+    :
+    """
+    simple_bus_balance(networks, config, result_path)
