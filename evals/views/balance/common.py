@@ -1,3 +1,5 @@
+"""Common functions to generate balances."""
+
 from evals import plots as plots
 from evals.constants import DataModel as DM
 from evals.constants import Group, TradeTypes

@@ -552,11 +552,33 @@ exports = ["excel"]
 [view.fed.total.categories]
 "" = ""
 
+[view.timeseries.electricity]
+name = "Electricity Production and Demand"
+unit = "MWh_el"
+file_name = "timeseries_methane_{location}_{year}"
+bus_carrier = ["AC", "low voltage", "EV battery"]
+storage_links = ["BEV charger", "V2G"]
+chart = "ESMTimeSeriesChart"
+cutoff = 1  # MWh
+legend_order = [
+    "Net Import",
+    "Storage Out",
+    # --- zero ---
+    "Storage In",
+    "Net Export",
+]
+checks = ["balances_almost_zero"]
+exports = []
+
+[view.timeseries.electricity.categories]
+
 [view.timeseries.hydrogen]
 name = "Hydrogen Production and Demand"
 unit = "MWh_LHV"
 file_name = "timeseries_hydrogen_{location}_{year}"
-cutoff = 0.001
+bus_carrier = "H2"
+chart = "ESMTimeSeriesChart"
+cutoff = 1  # MWh
 legend_order = [
     "Net Import",
     "Sabatier",
@@ -599,6 +621,25 @@ exports = []
 "Net Import" = "Net Import"
 "Storage In" = "Storage In"
 "Storage Out" = "Storage Out"
+
+[view.timeseries.methane]
+name = "Methane Production and Demand"
+unit = "MWh_LHV"
+file_name = "timeseries_methane_{location}_{year}"
+bus_carrier = ["gas", "biogas", "gas for industry"]
+chart = "ESMTimeSeriesChart"
+cutoff = 1  # MWh
+legend_order = [
+    "Net Import",
+    "Storage Out",
+    # --- zero ---
+    "Storage In",
+    "Net Export",
+]
+checks = ["balances_almost_zero"]
+exports = []
+
+[view.timeseries.methane.categories]
 
 [view.capacity.electricity_storage]
 name = "Power Storage Volumes"

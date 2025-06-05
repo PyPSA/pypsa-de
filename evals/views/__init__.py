@@ -13,7 +13,9 @@ from evals.views.capacity.heat_production import view_capacity_heat_production
 from evals.views.capacity.hydrogen_storage import view_capacity_gas_storage
 from evals.views.demand.heat_production import view_demand_heat
 from evals.views.fed.total import view_final_energy_demand
+from evals.views.timeseries.electricity import view_timeseries_electricity
 from evals.views.timeseries.hydrogen import view_timeseries_hydrogen
+from evals.views.timeseries.methane import view_timeseries_methane
 from evals.views.transmissions.transmission import view_grid_capacity
 
 __all__ = [
@@ -27,6 +29,8 @@ __all__ = [
     "view_balance_heat",
     "view_demand_heat",
     "view_timeseries_hydrogen",
+    "view_timeseries_methane",
+    "view_timeseries_electricity",
     "view_capacity_gas_storage",
     "view_grid_capacity",
     "view_final_energy_demand",
