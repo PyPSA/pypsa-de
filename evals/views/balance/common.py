@@ -1,4 +1,4 @@
-import evals.plots as plots
+from evals import plots as plots
 from evals.constants import DataModel as DM
 from evals.constants import Group, TradeTypes
 from evals.fileio import Exporter

@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from evals.plotting import simple_bus_balance
+from evals.views.balance.common import simple_bus_balance
 
 
 def view_balance_hydrogen(
