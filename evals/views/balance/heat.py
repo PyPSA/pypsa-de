@@ -5,7 +5,6 @@ from pathlib import Path
 import pandas as pd
 
 import evals.plots as plots
-from evals.constants import BusCarrier
 from evals.constants import DataModel as DM
 from evals.fileio import Exporter
 from evals.plots.facetbars import ESMGroupedBarChart
@@ -32,6 +31,7 @@ def view_balance_heat(
     :
     """
     bus_carrier = config["view"]["bus_carrier"]
+    # todo: storage links
 
     link_energy_balance = collect_myopic_statistics(
         networks,
@@ -41,7 +41,7 @@ def view_balance_heat(
 
     # for every heat bus, calculate the amounts of supply for heat
     to_concat = []
-    for bc in BusCarrier.heat_buses():
+    for bc in bus_carrier:
         p = (
             link_energy_balance.pipe(filter_for_carrier_connected_to, bc)
             # CO2 supply are CO2 emissions that do not help heat production
@@ -62,16 +62,13 @@ def view_balance_heat(
         collect_myopic_statistics(
             networks,
             statistic="withdrawal",
-            bus_carrier=BusCarrier.heat_buses(),
+            bus_carrier=bus_carrier,
         )
         .pipe(split_urban_heat_losses_and_consumption, heat_loss_factor)
         .mul(-1)
     )
 
-    exporter = Exporter(
-        statistics=supply + [demand],
-        view_config=config["view"],
-    )
+    exporter = Exporter(statistics=[supply, demand], view_config=config["view"])
 
     # static view settings:
     exporter.defaults.plotly.chart = ESMGroupedBarChart

@@ -416,6 +416,7 @@ exports = []
 name = "Heat Energy Balance"
 unit = "TWh_th"
 file_name = "nodal_balance_heat_{location}"
+bus_carrier = ["urban central heat", "urban decentral heat", "rural heat"]
 cutoff = 0.001
 legend_order = [
     # production ordered from zero to outside
