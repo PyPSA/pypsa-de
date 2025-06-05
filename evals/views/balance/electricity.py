@@ -9,7 +9,6 @@ def view_balance_electricity(
     result_path: str | Path,
     networks: dict,
     config: dict,
-    subdir: str | Path = "evaluation",
 ) -> None:
     """
     Evaluate the electricity production & demand by country and year.

@@ -9,7 +9,6 @@ def view_balance_hydrogen(
     result_path: str | Path,
     networks: dict,
     config: dict,
-    subdir: str | Path = "evaluation",
 ) -> None:
     """
     Evaluate the Hydrogen balance.

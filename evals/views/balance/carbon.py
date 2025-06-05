@@ -9,7 +9,6 @@ def view_balance_carbon(
     result_path: str | Path,
     networks: dict,
     config: dict,
-    subdir: str | Path = "evaluation",
 ) -> None:
     """
     Evaluate the carbon balance.

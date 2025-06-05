@@ -19,7 +19,6 @@ def view_balance_heat(
     result_path: str | Path,
     networks: dict,
     config: dict,
-    subdir: str | Path = "evaluation",
 ) -> None:
     """
     Evaluate the heat balance.
@@ -78,4 +77,4 @@ def view_balance_heat(
     exporter.defaults.plotly.xaxis_title = ""
     exporter.defaults.plotly.pattern = {"Demand": "/"}
 
-    exporter.export(result_path, subdir)
+    exporter.export(result_path, config["global"]["subdir"])

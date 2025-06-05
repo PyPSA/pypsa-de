@@ -20,6 +20,12 @@ run_eval "/opt/data/esm/results" -n "eval_capacity_factor" -n "eval_transmission
 # run all evaluations
 run_eval "/opt/data/esm/results"
 ```
+
+``` shell
+# run evaluations as a script and from project root without installing the package
+(but with your virtual env activated of course)
+PYTHONPATH="./" python evals/cli.py "results/v2025.02/KN2045_Mix" -n "view_balance_heat"
+```
 """
 
 import logging
@@ -83,7 +89,7 @@ def run_eval(
         Note, that running on copied result folders might fail
         due to missing resource files.
     sub_directory
-        The subdirectory with the network files.
+        The subdirectory in the results folder that contains the network files.
     names
         A list of evaluation name, e.g. "eval_electricity_amounts",
         optional. Defaults to running all evaluations from
