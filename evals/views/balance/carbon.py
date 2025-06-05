@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from evals.views.balance.common import simple_bus_balance
+from evals.views.common import simple_bus_balance
 
 
 def view_balance_carbon(

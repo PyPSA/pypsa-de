@@ -39,6 +39,9 @@ class PlotConfig:
                 Group.export_foreign,
                 Group.import_domestic,
                 Group.export_domestic,
+                Group.import_net,
+                Group.export_net,
+                Group.import_global,
             ],
             "/",
         )

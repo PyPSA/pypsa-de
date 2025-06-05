@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from evals.views.timeseries.common import simple_timeseries
+from evals.views.common import simple_timeseries
 
 
 def view_timeseries_methane(
