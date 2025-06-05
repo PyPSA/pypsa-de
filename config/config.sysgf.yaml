@@ -3,19 +3,18 @@
 # SPDX-License-Identifier: CC0-1.0
 
 run:
-  prefix: 20250520_dhsubnodes_fix_neighbours
+  prefix: 20250604_sysgfplots
   name:
   - Baseline
   - No_PTES
-  - LowDH
-  # - LowPTESCAPEX
-  # - HighPTESCAPEX
-  # - LowStandingLosses
-  # - HighStandingLosses
-  # - LowGroundWaterDepth
-  # - HighGroundWaterDepth
-  # - LowEtPRatio
-  # - HighEtPRatio
+  - LowPTESCAPEX
+  - HighPTESCAPEX
+  - LowStandingLosses
+  - HighStandingLosses
+  - LowGroundWaterDepth
+  - HighGroundWaterDepth
+  - LowEtPRatio
+  - HighEtPRatio
   scenarios:
     enable: true
     manual_file: config/scenarios.sysgf.yaml
@@ -98,3 +97,61 @@ solving:
     limits_volume_max: {}
     limits_volume_min: {}
     limits_power_max: {}
+
+plotting:
+  dual_comparison:
+    enable: true
+    scenario_A: No_PTES
+    scenario_B: Baseline
+  sensitivities:
+    enable: true
+    reference: Baseline
+    runs: [
+      PTESCAPEX,
+      StandingLosses,
+      GroundWaterDepth,
+      EtPRatio
+    ]
+  sysgf_summary:
+    enable: true
+    reference: Baseline
+    runs: [
+      No_PTES,
+      Baseline,
+      LowPTESCAPEX,
+      HighPTESCAPEX,
+      LowStandingLosses,
+      HighStandingLosses,
+      LowGroundWaterDepth,
+      HighGroundWaterDepth,
+      LowEtPRatio,
+      HighEtPRatio
+    ]
+  save_png: true
+  save_pdf: true
+  override_tech_colors:
+    urban central water tanks charger: "cornflowerblue"
+    urban central water tanks discharger: "cornflowerblue"
+    urban central water tanks: "cornflowerblue"
+    urban central water pits charger: "blue"
+    urban central water pits discharger: "blue"
+    urban central water pits: "blue"
+    urban central water tanks load: "cornflowerblue"
+    urban central water tanks generation: "cornflowerblue"
+    urban central water pits load: "blue"
+    urban central water pits generation: "blue"
+    urban central solid biomass CHP: "forestgreen"
+    urban central solid biomass CHP CC: "palegreen"
+    urban central lignite CHP: "grey"
+    urban central coal CHP: "dimgrey"
+    urban central oil CHP: "darkolivegreen"
+    urban central H2 CHP: "purple"
+    urban central geothermal heat direct utilisation: "olive"
+    urban central geothermal heat pump: "khaki"
+    urban central heat vent: "red"
+    urban central resistive heater: "mediumaquamarine"
+    urban central air heat pump: "gold"
+    low-temperature heat for industry: "darkgrey"
+    waste CHP: "plum"
+    Fischer-Tropsch: "slateblue"
+

@@ -919,3 +919,102 @@ rule ariadne_report_only:
             RESULTS + "ariadne/report/elec_price_duration_curve.pdf",
             run=config_provider("run", "name"),
         ),
+
+rule plot_sysgf_summary:
+    params:
+        plotting=config_provider("plotting"),
+        run=config_provider("run", "prefix"),
+        scenarios=config_provider("plotting", "sysgf_summary", "runs"),
+        reference_scenario=config_provider("plotting", "sysgf_summary", "reference"),
+        sensitivity_runs=config_provider("plotting", "sensitivities", "runs"),
+        planning_horizons=config_provider("scenario", "planning_horizons"),
+    input:
+        # We don't need explicit network inputs as the script will find them based on the run name
+        # This is a dependency to make sure all networks are solved before plotting
+        networks=expand(
+            RESULTS
+            + "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
+            run=config["run"]["name"],
+            **config["scenario"],
+            allow_missing=False,
+        ),
+    output:
+        sysgf_summary="results/" + config["run"]["prefix"] + "/sysgf/sysgf_summary.pdf",
+    resources:
+        mem_mb=10000,
+    log:
+        "results/" + config["run"]["prefix"] + "/sysgf/logs/plot_sysgf_summary.log",
+    script:
+        "scripts/pypsa-de/plot_sysgf_summary.py"
+        
+rule sysgf_all:
+    input:
+        expand(
+            "results/" + config["run"]["prefix"] + "/sysgf/sysgf_summary.pdf",
+        ),
+        expand(RESULTS + "graphs/costs.svg", run=config["run"]["name"]),
+        expand(
+            resources("maps/power-network-s-{clusters}.pdf"),
+            run=config["run"]["name"],
+            **config["scenario"],
+        ),
+        expand(
+            RESULTS
+            + "maps/base_s_{clusters}_{opts}_{sector_opts}-costs-all_{planning_horizons}.pdf",
+            run=config["run"]["name"],
+            **config["scenario"],
+        ),
+        lambda w: expand(
+            (
+                RESULTS
+                + "maps/base_s_{clusters}_{opts}_{sector_opts}-h2_network_{planning_horizons}.pdf"
+                if config_provider("sector", "H2_network")(w)
+                else []
+            ),
+            run=config["run"]["name"],
+            **config["scenario"],
+        ),
+        lambda w: expand(
+            (
+                RESULTS
+                + "maps/base_s_{clusters}_{opts}_{sector_opts}-ch4_network_{planning_horizons}.pdf"
+                if config_provider("sector", "gas_network")(w)
+                else []
+            ),
+            run=config["run"]["name"],
+            **config["scenario"],
+        ),
+        lambda w: expand(
+            (
+                RESULTS + "csvs/cumulative_costs.csv"
+                if config_provider("foresight")(w) == "myopic"
+                else []
+            ),
+            run=config["run"]["name"],
+        ),
+        lambda w: expand(
+            (
+                RESULTS
+                + "maps/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}-balance_map_{carrier}.pdf"
+            ),
+            **config["scenario"],
+            run=config["run"]["name"],
+            carrier=config_provider("plotting", "balance_map", "bus_carriers")(w),
+        ),
+        directory(
+            expand(
+                RESULTS
+                + "graphics/balance_timeseries/s_{clusters}_{opts}_{sector_opts}_{planning_horizons}",
+                run=config["run"]["name"],
+                **config["scenario"],
+            ),
+        ),
+        directory(
+            expand(
+                RESULTS
+                + "graphics/heatmap_timeseries/s_{clusters}_{opts}_{sector_opts}_{planning_horizons}",
+                run=config["run"]["name"],
+                **config["scenario"],
+            ),
+        ),
+    default_target: False
