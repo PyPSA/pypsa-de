@@ -105,10 +105,10 @@ def simple_bus_balance(
         # they have difference bus_carrier in index , e.g.
         # electricity distribution grid, (AC, low voltage)
         exporter.statistics[0] = rename_aggregate(
-            demand, bus_carrier[0], level="bus_carrier"
+            demand, bus_carrier[0], level=DM.BUS_CARRIER
         )
         exporter.statistics[1] = rename_aggregate(
-            supply, bus_carrier[0], level="bus_carrier"
+            supply, bus_carrier[0], level=DM.BUS_CARRIER
         )
 
     exporter.export(result_path, config["global"]["subdir"])

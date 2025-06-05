@@ -414,7 +414,7 @@ exports = []
 
 [view.balance.heat]
 name = "Heat Energy Balance"
-unit = "TWh"
+unit = "TWh_th"
 file_name = "nodal_balance_heat_{location}"
 cutoff = 0.001
 legend_order = [
