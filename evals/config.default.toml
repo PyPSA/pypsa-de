@@ -110,7 +110,9 @@ exports = ["csv"]
 name = "Carbon Dioxide Balance"
 unit = "Mt_co2"
 file_name = "balance_carbon_{location}"
-cutoff = 0.001
+bus_carrier = ["co2", "co2 sequestered", "co2 stored"]
+chart = "ESMBarChart"
+cutoff = 0.1
 legend_order = [
     # production ordered from zero to outside
     "Fischer-Tropsch",
@@ -233,7 +235,9 @@ exports = []
 name = "Hydrogen Energy Balance"
 unit = "TWh"
 file_name = "nodal_balance_hydrogen_{location}"
-cutoff = 0.001
+bus_carrier = "H2"
+chart = "ESMBarChart"
+cutoff = 0.1
 legend_order = [
     # production ordered from zero to outside
     "Electrolysis",
@@ -289,9 +293,9 @@ exports = []
 name = "Methane Energy Balance"
 unit = "TWh"
 file_name = "nodal_balance_methane_{location}"
-bus_carrier = ["gas", "biogas", "gas for industry"]  # "gas primary"
-chart = "ESMGroupedBarChart"
-cutoff = 0.001
+bus_carrier = ["gas", "biogas", "gas for industry"]
+chart = "ESMBarChart"
+cutoff = 0.1
 legend_order = [
     # production ordered from zero to outside
 
@@ -315,7 +319,7 @@ file_name = "nodal_balance_electricity_{location}"
 bus_carrier = ["AC", "low voltage", "EV battery"]
 storage_links = ["BEV charger", "V2G"]
 chart = "ESMBarChart"
-cutoff = 0.01  # TWh
+cutoff = 0.1  # TWh
 legend_order = [
     # production ordered from zero to outside
     "Nuclear Power",

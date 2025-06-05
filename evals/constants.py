@@ -402,6 +402,7 @@ class Group:
     solid_biomass_boiler: str = "Solid Biomass Boiler"
     storage_in: str = "Storage In"
     storage_out: str = "Storage Out"
+    storage_net: str = "Storage Net"
     synth_fuels: str = "Synth. Fuels"
     transport: str = "Transport"
     co2_vent: str = "co2 vent"

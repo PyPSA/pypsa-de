@@ -1,4 +1,5 @@
 import evals.plots as plots
+from evals.constants import DataModel as DM
 from evals.constants import Group, TradeTypes
 from evals.fileio import Exporter
 from evals.statistic import collect_myopic_statistics
@@ -10,7 +11,7 @@ from evals.utils import (
 )
 
 
-def plot_bus_balance(
+def simple_bus_balance(
     networks: dict,
     config: dict,
     result_path,
@@ -22,15 +23,6 @@ def plot_bus_balance(
     storage_carrier = get_storage_carriers(networks) + config["view"].get(
         "storage_links", []
     )
-
-    # todo: read csvs and compare with calculated results to test the code
-    # supply = read_pypsa_csv(result_path, "nodal_supply", index_cols=4) #.drop(transmission_carrier, level=DM.CARRIER)
-    # demand = read_pypsa_csv(result_path, "nodal_withdrawal", index_cols=4)# .drop(transmission_carrier, level=DM.CARRIER)
-    # print(filter_by(supply, year="2050", bus_carrier="AC").sum() / 1e6)
-    # print(filter_by(demand, year="2050", bus_carrier="AC").sum() / 1e6)
-    #
-    # balance = read_pypsa_csv(result_path, "nodal_energy_balance", index_cols=4)
-    # print(filter_by(balance, year="2050", bus_carrier="AC").drop(transmission_carrier, level=DM.CARRIER).sum() / 1e6)
 
     supply = (
         collect_myopic_statistics(
@@ -45,9 +37,8 @@ def plot_bus_balance(
             carrier=transmission_carrier,
             exclude=True,
         )
-        # .drop(transmission_carrier, level=DM.CARRIER)
-        # .pipe(rename_aggregate, dict.fromkeys(transmission_carrier, "Import"))
         .pipe(rename_aggregate, dict.fromkeys(storage_carrier, Group.storage_out))
+        .droplevel(DM.COMPONENT)
     )
 
     demand = (
@@ -63,10 +54,9 @@ def plot_bus_balance(
             carrier=transmission_carrier,
             exclude=True,
         )
-        # .drop(transmission_techs, level=DM.CARRIER)
-        # .pipe(rename_aggregate, dict.fromkeys(transmission_carrier, "Export"))
         .pipe(rename_aggregate, dict.fromkeys(storage_carrier, Group.storage_in))
         .mul(-1)
+        .droplevel(DM.COMPONENT)
     )
 
     trade_statistics = []
@@ -93,6 +83,7 @@ def plot_bus_balance(
                 carrier=transmission_carrier,
             )
             .pipe(rename_aggregate, alias)
+            .droplevel(DM.COMPONENT)
         )
         trade.attrs["unit"] = supply.attrs["unit"]
         trade_statistics.append(trade)
@@ -107,53 +98,15 @@ def plot_bus_balance(
 
     if chart_class == plots.ESMGroupedBarChart:
         exporter.defaults.plotly.xaxis_title = ""
-
-    # exporter.defaults.plotly.pattern = dict.fromkeys(
-    #     [
-    #         Group.import_foreign,
-    #         Group.export_foreign,
-    #         Group.import_domestic,
-    #         Group.export_domestic,
-    #     ],
-    #     "/",
-    # )
+    elif chart_class == plots.ESMBarChart:
+        # combine bus carrier to export netted technologies, although
+        # they have difference bus_carrier in index , e.g.
+        # electricity distribution grid, (AC, low voltage)
+        exporter.statistics[0] = rename_aggregate(
+            demand, bus_carrier[0], level="bus_carrier"
+        )
+        exporter.statistics[1] = rename_aggregate(
+            supply, bus_carrier[0], level="bus_carrier"
+        )
 
     exporter.export(result_path, config["global"]["subdir"])
-
-
-if __name__ == "__main__":
-    from pathlib import Path
-
-    from evals.fileio import read_networks, read_views_config
-    from evals.views import (
-        view_balance_electricity,
-        view_balance_hydrogen,
-        view_balance_methane,
-    )
-
-    _result_path = Path("results/v2025.02/KN2045_Mix")
-    _networks = read_networks(_result_path)
-
-    # evaluations = [
-    #     (
-    #         "Electricity",
-    #         ["AC", "low voltage", "EV battery", "DC"],
-    #         ["BEV charger", "V2G"],
-    #     ),
-    #     ("Hydrogen", ["H2"], []),
-    #     (
-    #         "Methane",
-    #         [
-    #             "gas",
-    #         ],
-    #     ),
-    # ]
-
-    for func in [view_balance_electricity, view_balance_methane, view_balance_hydrogen][
-        :1
-    ]:
-        _config = read_views_config(func)
-        plot_bus_balance(_networks, _config, _result_path)
-
-    # for _name, _bus_carrier, _additional_storage_techs in evaluations:
-    #     plot_bus_balance(_networks, _config, _result_path)
