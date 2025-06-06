@@ -924,8 +924,8 @@ rule plot_sysgf_summary:
     params:
         plotting=config_provider("plotting"),
         run=config_provider("run", "prefix"),
-        scenarios=config_provider("plotting", "sysgf_summary", "runs"),
-        reference_scenario=config_provider("plotting", "sysgf_summary", "reference"),
+        scenarios=config_provider("run", "name"),
+        reference_scenario=config_provider("plotting", "sensitivities", "reference"),
         sensitivity_runs=config_provider("plotting", "sensitivities", "runs"),
         planning_horizons=config_provider("scenario", "planning_horizons"),
     input:
@@ -939,7 +939,7 @@ rule plot_sysgf_summary:
             allow_missing=False,
         ),
     output:
-        sysgf_summary="results/" + config["run"]["prefix"] + "/sysgf/sysgf_summary.pdf",
+        sysgf_summary="results/" + config["run"]["prefix"] + "/sysgf/summary_metrics.csv",
     resources:
         mem_mb=10000,
     log:

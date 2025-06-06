@@ -112,21 +112,6 @@ plotting:
       GroundWaterDepth,
       EtPRatio
     ]
-  sysgf_summary:
-    enable: true
-    reference: Baseline
-    runs: [
-      No_PTES,
-      Baseline,
-      LowPTESCAPEX,
-      HighPTESCAPEX,
-      LowStandingLosses,
-      HighStandingLosses,
-      LowGroundWaterDepth,
-      HighGroundWaterDepth,
-      LowEtPRatio,
-      HighEtPRatio
-    ]
   save_png: true
   save_pdf: true
   override_tech_colors:
@@ -154,4 +139,14 @@ plotting:
     low-temperature heat for industry: "darkgrey"
     waste CHP: "plum"
     Fischer-Tropsch: "slateblue"
+    urban central water tanks losses: "mediumspringgreen"
+    urban central water pits losses: "mediumseagreen"
+    other technologies: "dimgrey"
+    neighbour countries: "#D3D3D3"
+    CHP: "brown"
+    PV: "yellow"
+    wind power: "skyblue"
+    H2 OCGT: "#8A2BE2"
+    decentral heat pump: "#556B2F"
+    power grid: "navy"
 
