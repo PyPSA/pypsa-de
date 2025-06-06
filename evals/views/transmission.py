@@ -45,13 +45,11 @@ def view_grid_capacity(
 
     grid_capactiy = collect_myopic_statistics(
         networks,
-        statistic="grid_capactiy",
+        statistic="grid_capacity",
         drop_zero_rows=False,
         comps=["Link", "Line"],
     )
 
-    # enable line below when working with ESM
-    # grid_capactiy = grid_capactiy.drop("2015", level=DataModel.YEAR, errors="ignore")
     # cannot use utils.scale(), because of the additional "line" column
     col = "Capacity (MW)"
     grid_capactiy[col] = grid_capactiy[col] * 1e-3
@@ -63,7 +61,7 @@ def view_grid_capacity(
         statistic="supply",
         comps="Generator",
         bus_carrier=[BusCarrier.CH4, BusCarrier.H2, "biogas", "AC"],  # "gas primary",
-    ).drop("2015", level=DataModel.YEAR, errors="ignore")
+    )
     import_energy *= 1e-6
     import_energy.attrs["name"] = "Import Energy"
     import_energy.attrs["unit"] = "TWh"

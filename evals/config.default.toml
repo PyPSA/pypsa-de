@@ -1,7 +1,7 @@
 [global]
 subdir = "evaluation"
 
-[view.capacity.heat_production]
+[view_capacity_heat_production]
 name = "District Heat Production Capacities"
 unit = "GW"
 file_name = "capacity_heat_{location}"
@@ -30,7 +30,7 @@ legend_order = [
 checks = []
 exports = ["csv", "excel"]
 
-[view.capacity.heat_production.categories]
+[view_capacity_heat_production.categories]
 "DAC" = "Direct Air Capture"
 "Fischer-Tropsch" = "Fischer-Tropsch"
 "Haber-Bosch" = "Haber-Bosch"
@@ -55,10 +55,13 @@ exports = ["csv", "excel"]
 "urban central water pits charger" = "Storage In"
 "urban central water pits discharger" = "Storage Out"
 
-[view.capacity.electricity_production]
+[view_capacity_electricity_production]
 name = "Optimal Capacity Electricity"
 unit = "GW"
 file_name = "capacity_ac_production_{location}"
+bus_carrier = ["AC", "low voltage", "EV battery", "home battery"]
+#storage_links = ["BEV charger", "V2G", "home battery charger", "home battery discharger"]
+chart = "ESMBarChart"
 cutoff = 0.0001
 legend_order = [
     "Nuclear Power",
@@ -77,7 +80,7 @@ legend_order = [
 checks = []
 exports = ["csv"]
 
-[view.capacity.electricity_production.categories]
+[view_capacity_electricity_production.categories]
 "CCGT" = "Thermal Powerplants"
 "H2 OCGT" = "Hydrogen"
 "H2 turbine" = "Hydrogen"
@@ -106,7 +109,7 @@ exports = ["csv"]
 "waste CHP" = "Thermal Powerplants"
 "waste CHP CC" = "Thermal Powerplants"
 
-[view.balance.carbon]
+[view_balance_carbon]
 name = "Carbon Dioxide Balance"
 unit = "Mt_co2"
 file_name = "balance_carbon_{location}"
@@ -154,7 +157,7 @@ legend_order = [
 checks = []  # "balances_almost_zero" deactivated, because it is not applicable for carbon budgets
 exports = []
 
-[view.balance.carbon.categories]
+[view_balance_carbon.categories]
 "co2" = "CO2 Budget"
 "biogas to gas" = "Biogas"
 "biogas to gas CC" = "Biogas (CC)"
@@ -211,7 +214,7 @@ exports = []
 "waste CHP" = "CHP"
 "waste CHP CC" = "CHP (CC)"
 
-[view.balance.fuels]
+[view_balance_fuels]
 name = "Fuel Balance"
 unit = "MWh_LHV"
 file_name = "nodal_balance_fuels_{location}"
@@ -229,9 +232,9 @@ legend_order = [
 checks = ["balances_almost_zero"]
 exports = []
 
-[view.balance.fuels.categories]
+[view_balance_fuels.categories]
 
-[view.balance.hydrogen]
+[view_balance_hydrogen]
 name = "Hydrogen Energy Balance"
 unit = "TWh"
 file_name = "nodal_balance_hydrogen_{location}"
@@ -264,7 +267,7 @@ legend_order = [
 checks = ["balances_almost_zero"]
 exports = []
 
-[view.balance.hydrogen.categories]
+[view_balance_hydrogen.categories]
 "ammonia cracker" = "Ammonia Cracking"
 "Export Foreign" = "Export Foreign"
 "Export Domestic" = "Export Domestic"
@@ -289,7 +292,7 @@ exports = []
 "Methanol steam reforming" = "Methanol Steam Reforming"
 "solid biomass to hydrogen" = "H2 from Solid Biomass"
 
-[view.balance.methane]
+[view_balance_methane]
 name = "Methane Energy Balance"
 unit = "TWh"
 file_name = "nodal_balance_methane_{location}"
@@ -310,9 +313,9 @@ legend_order = [
 checks = ["balances_almost_zero"]
 exports = []
 
-[view.balance.methane.categories]
+[view_balance_methane.categories]
 
-[view.balance.electricity]
+[view_balance_electricity]
 name = "Electricity Energy Balance"
 unit = "TWh_el"
 file_name = "nodal_balance_electricity_{location}"
@@ -357,7 +360,7 @@ legend_order = [
 checks = ["balances_almost_zero"]
 exports = []
 
-[view.balance.electricity.categories]
+[view_balance_electricity.categories]
 "BEV charger" = "Transport"
 "CCGT" = "Methane"
 "DAC" = "Direct Air Capture"
@@ -412,7 +415,7 @@ exports = []
 "waste CHP" = "Waste"
 "waste CHP CC" = "Waste"
 
-[view.balance.heat]
+[view_balance_heat]
 name = "Heat Energy Balance"
 unit = "TWh_th"
 file_name = "nodal_balance_heat_{location}"
@@ -448,7 +451,7 @@ legend_order = [
 checks = ["balances_almost_zero"]
 exports = []
 
-[view.balance.heat.categories]
+[view_balance_heat.categories]
 #"AC" = "Electricity"
 #"H2" = "Hydrogen"
 #"co2 stored" = "CO2"
@@ -504,7 +507,7 @@ exports = []
 #"waste CHP CC" = "Waste"
 
 
-[view.demand.heat_production]
+[view_demand_heat_production]
 name = "Energy Demand for Heat Production"
 unit = "TWh"
 file_name = "nodal_demand_heat_production_{location}"
@@ -523,7 +526,7 @@ legend_order = [
 checks = []
 exports = ["excel"]
 
-[view.demand.heat_production.categories]
+[view_demand_heat_production.categories]
 "AC" = "Electricity"
 "H2" = "Hydrogen"
 "coal" = "Coal"
@@ -538,7 +541,7 @@ exports = ["excel"]
 "urban central heat" = "Solar Power"
 "urban decentral heat" = "Solar Power"
 
-[view.fed.total]
+[view_fed_total]
 name = "Final Energy Demand"
 unit = "TWh"
 file_name = "nodal_fed_total_{location}"
@@ -550,10 +553,10 @@ legend_order = [
 checks = []
 exports = ["excel"]
 
-[view.fed.total.categories]
+[view_fed_total.categories]
 "" = ""
 
-[view.timeseries.electricity]
+[view_timeseries_electricity]
 name = "Electricity Production and Demand"
 unit = "MWh_el"
 file_name = "timeseries_methane_{location}_{year}"
@@ -571,9 +574,9 @@ legend_order = [
 checks = ["balances_almost_zero"]
 exports = []
 
-[view.timeseries.electricity.categories]
+[view_timeseries_electricity.categories]
 
-[view.timeseries.hydrogen]
+[view_timeseries_hydrogen]
 name = "Hydrogen Production and Demand"
 unit = "MWh_LHV"
 file_name = "timeseries_hydrogen_{location}_{year}"
@@ -602,7 +605,7 @@ legend_order = [
 checks = ["balances_almost_zero"]
 exports = []
 
-[view.timeseries.hydrogen.categories]
+[view_timeseries_hydrogen.categories]
 "ammonia cracker" = "Ammonia Cracking"
 "Fischer-Tropsch" = "Fischer-Tropsch"
 "H2 Electrolysis" = "Electrolysis"
@@ -623,7 +626,7 @@ exports = []
 "Storage In" = "Storage In"
 "Storage Out" = "Storage Out"
 
-[view.timeseries.methane]
+[view_timeseries_methane]
 name = "Methane Production and Demand"
 unit = "MWh_LHV"
 file_name = "timeseries_methane_{location}_{year}"
@@ -640,9 +643,9 @@ legend_order = [
 checks = ["balances_almost_zero"]
 exports = []
 
-[view.timeseries.methane.categories]
+[view_timeseries_methane.categories]
 
-[view.capacity.electricity_storage]
+[view_capacity_electricity_storage]
 name = "Power Storage Volumes"
 unit = "TWh"
 file_name = "capacity_ac_storage_{location}"
@@ -655,25 +658,26 @@ legend_order = [
 checks = []
 exports = []
 
-[view.capacity.electricity_storage.categories]
+[view_capacity_electricity_storage.categories]
 "EV battery" = "Car Battery"
 "PHS" = "Pumped Hydro Storage"
 "hydro" = "Run-of-River"
 
-[view.capacity.gas_storage]
+[view_capacity_gas_storage]
 name = "Gas Storage Volumes"
 unit = "TWh"
 file_name = "capacity_gas_storage_{location}"
+bus_carrier = ["H2", "gas"]  # "co2 sequestered"
 cutoff = 0.00001  # 1 MWh
 legend_order = ["Methane Store", "Hydrogen Store"]
 checks = ["balances_almost_zero"]
 exports = []
 
-[view.capacity.gas_storage.categories]
+[view_capacity_gas_storage.categories]
 "H2 Store" = "Hydrogen Store"
 "gas" = "Methane Store"
 
-[view.transmissions.transmission]
+[view_grid_capacity]
 name = "Transmission_test"
 unit = "TWh"
 file_name = "grid_test_{location}"
@@ -682,5 +686,5 @@ legend_order = []
 checks = []
 exports = []
 
-[view.transmissions.transmission.categories]
+[view_grid_capacity.categories]
 "" = ""

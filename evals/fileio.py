@@ -1,6 +1,5 @@
 """Input - Output related functions."""
 
-import inspect
 import logging
 import re
 from functools import cached_property
@@ -99,24 +98,17 @@ def read_views_config(
         The default configuration with optional overrides from
         a second configuration file.
     """
-    func_fp = Path(inspect.getmodule(func).__file__)
-    func_name = func_fp.stem
-    func_module = func_fp.parent.stem
-    defaults_fp = resources.files("evals") / "config.default.toml"
-    default = tomllib.load(defaults_fp.open("rb"))
+    default_fp = resources.files("evals") / "config.default.toml"
+    default = tomllib.load(default_fp.open("rb"))
     default_global = default["global"]
-    default_view = default["view"][func_module][func_name]
+    default_view = default[func.__name__]
 
     if config_override:
         override_fp = Path(resources.files("evals")) / config_override
         override = tomllib.load(override_fp.open("rb"))
         default_global = deep_update(default_global, override["global"])
 
-        if (
-            override_view := override.get("view", {})
-            .get(func_module, {})
-            .get(func_name)
-        ):
+        if override_view := override.get(func.__name__, {}):
             default_view = deep_update(default_view, override_view)
 
     config = {"global": default_global, "view": default_view}

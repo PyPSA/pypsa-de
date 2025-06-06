@@ -20,11 +20,10 @@ def simple_bus_balance(
 ) -> None:
     (
         bus_carrier,
-        transmission_techs,
         transmission_comps,
         transmission_carrier,
         storage_carrier,
-    ) = _get_view_setup(networks, config)
+    ) = _parse_view_config_items(networks, config)
 
     supply = (
         collect_myopic_statistics(
@@ -116,16 +115,14 @@ def simple_timeseries(
     networks: dict,
     config: dict,
     result_path: str | Path,
-    subdir: str | Path = "evaluation",
 ) -> None:
     """Export simple time series views."""
     (
         bus_carrier,
-        transmission_techs,
         transmission_comps,
         transmission_carrier,
         storage_carrier,
-    ) = _get_view_setup(networks, config)
+    ) = _parse_view_config_items(networks, config)
 
     supply = (
         collect_myopic_statistics(
@@ -202,10 +199,58 @@ def simple_timeseries(
     ]
     exporter.defaults.plotly.xaxis_title = ""
 
-    exporter.export(result_path, subdir)
+    exporter.export(result_path, config["global"]["subdir"])
 
 
-def _get_view_setup(networks: dict, config: dict) -> tuple:
+def simple_optimal_capacity(
+    networks: dict, config: dict, result_path: str | Path, kind: str = None
+) -> None:
+    """Export optimal capacities for production or demand or both."""
+    (
+        bus_carrier,
+        transmission_comps,
+        transmission_carrier,
+        storage_carrier,
+    ) = _parse_view_config_items(networks, config)
+
+    optimal_capacity = (
+        collect_myopic_statistics(
+            networks,
+            statistic="optimal_capacity",
+            bus_carrier=bus_carrier,
+            aggregate_components=None,
+        )
+        .pipe(
+            filter_by,
+            component=transmission_comps,
+            carrier=transmission_carrier,
+            exclude=True,
+        )
+        .drop(storage_carrier, level=DM.CARRIER, errors="ignore")
+        .droplevel(DM.COMPONENT)
+    )
+
+    if kind == "production":
+        optimal_capacity = optimal_capacity[optimal_capacity > 0]
+    elif kind == "demand":
+        optimal_capacity = optimal_capacity[optimal_capacity < 0]
+
+    # correct units for AC capacities
+    optimal_capacity.attrs["unit"] = optimal_capacity.attrs["unit"].replace("MWh", "MW")
+
+    exporter = Exporter(
+        statistics=[optimal_capacity],
+        view_config=config["view"],
+    )
+
+    # view specific constant settings
+    chart_class = getattr(plots, config["view"]["chart"])
+    exporter.defaults.plotly.chart = chart_class
+
+    exporter.export(result_path, config["global"]["subdir"])
+
+
+def _parse_view_config_items(networks: dict, config: dict) -> tuple:
     bus_carrier = config["view"]["bus_carrier"]
     transmission_techs = get_transmission_techs(networks, bus_carrier)
     transmission_comps = [comp for comp, carr in transmission_techs]
@@ -215,7 +260,6 @@ def _get_view_setup(networks: dict, config: dict) -> tuple:
     )
     return (
         bus_carrier,
-        transmission_techs,
         transmission_comps,
         transmission_carrier,
         storage_carrier,
