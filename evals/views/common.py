@@ -22,7 +22,7 @@ def simple_bus_balance(
         bus_carrier,
         transmission_comps,
         transmission_carrier,
-        storage_carrier,
+        storage_links,
     ) = _parse_view_config_items(networks, config)
 
     supply = (
@@ -38,7 +38,7 @@ def simple_bus_balance(
             carrier=transmission_carrier,
             exclude=True,
         )
-        .pipe(rename_aggregate, dict.fromkeys(storage_carrier, Group.storage_out))
+        .pipe(rename_aggregate, dict.fromkeys(storage_links, Group.storage_out))
         .droplevel(DM.COMPONENT)
     )
 
@@ -55,7 +55,7 @@ def simple_bus_balance(
             carrier=transmission_carrier,
             exclude=True,
         )
-        .pipe(rename_aggregate, dict.fromkeys(storage_carrier, Group.storage_in))
+        .pipe(rename_aggregate, dict.fromkeys(storage_links, Group.storage_in))
         .mul(-1)
         .droplevel(DM.COMPONENT)
     )
@@ -121,7 +121,7 @@ def simple_timeseries(
         bus_carrier,
         transmission_comps,
         transmission_carrier,
-        storage_carrier,
+        storage_links,
     ) = _parse_view_config_items(networks, config)
 
     supply = (
@@ -138,7 +138,7 @@ def simple_timeseries(
             carrier=transmission_carrier,
             exclude=True,
         )
-        .pipe(rename_aggregate, dict.fromkeys(storage_carrier, Group.storage_out))
+        .pipe(rename_aggregate, dict.fromkeys(storage_links, Group.storage_out))
         .droplevel(DM.COMPONENT)
     )
 
@@ -156,7 +156,7 @@ def simple_timeseries(
             carrier=transmission_carrier,
             exclude=True,
         )
-        .pipe(rename_aggregate, dict.fromkeys(storage_carrier, Group.storage_in))
+        .pipe(rename_aggregate, dict.fromkeys(storage_links, Group.storage_in))
         .droplevel(DM.COMPONENT)
         .mul(-1)
     )
@@ -210,7 +210,7 @@ def simple_optimal_capacity(
         bus_carrier,
         transmission_comps,
         transmission_carrier,
-        storage_carrier,
+        storage_links,
     ) = _parse_view_config_items(networks, config)
 
     optimal_capacity = (
@@ -226,7 +226,7 @@ def simple_optimal_capacity(
             carrier=transmission_carrier,
             exclude=True,
         )
-        .drop(storage_carrier, level=DM.CARRIER, errors="ignore")
+        .pipe(filter_by, carrier=storage_links, exclude=True)
         .droplevel(DM.COMPONENT)
     )
 
@@ -235,7 +235,7 @@ def simple_optimal_capacity(
     elif kind == "demand":
         optimal_capacity = optimal_capacity[optimal_capacity < 0]
 
-    # correct units for AC capacities
+    # 'optimal_capacity' wrongly returns MWh as a unit, but it is MW.
     optimal_capacity.attrs["unit"] = optimal_capacity.attrs["unit"].replace("MWh", "MW")
 
     exporter = Exporter(
@@ -247,6 +247,46 @@ def simple_optimal_capacity(
     chart_class = getattr(plots, config["view"]["chart"])
     exporter.defaults.plotly.chart = chart_class
 
+    if chart_class == plots.ESMGroupedBarChart:
+        exporter.defaults.plotly.xaxis_title = ""
+    elif chart_class == plots.ESMBarChart:
+        # combine bus carrier to export netted technologies, although
+        # they have difference bus_carrier in index , e.g.
+        # electricity distribution grid, (AC, low voltage)
+        exporter.statistics = [
+            rename_aggregate(s, bus_carrier[0], level=DM.BUS_CARRIER)
+            for s in exporter.statistics
+        ]
+
+    exporter.export(result_path, config["global"]["subdir"])
+
+
+def simple_storage_capacity(
+    networks: dict, config: dict, result_path: str | Path
+) -> None:
+    """Export optimal storage capacities."""
+    (
+        bus_carrier,
+        transmission_comps,
+        transmission_carrier,
+        storage_links,
+    ) = _parse_view_config_items(networks, config)
+
+    stores = collect_myopic_statistics(
+        networks,
+        statistic="optimal_capacity",
+        bus_carrier=bus_carrier,
+        storage=True,
+    ).pipe(filter_by, carrier=storage_links)
+
+    exporter = Exporter(
+        statistics=[stores],
+        view_config=config["view"],
+    )
+
+    exporter.defaults.plotly.chart = getattr(plots, config["view"]["chart"])
+    exporter.defaults.plotly.cutoff_drop = False  # prevent dropping empty years
+
     exporter.export(result_path, config["global"]["subdir"])
 
 
@@ -255,12 +295,12 @@ def _parse_view_config_items(networks: dict, config: dict) -> tuple:
     transmission_techs = get_transmission_techs(networks, bus_carrier)
     transmission_comps = [comp for comp, carr in transmission_techs]
     transmission_carrier = [carr for comp, carr in transmission_techs]
-    storage_carrier = get_storage_carriers(networks) + config["view"].get(
+    storage_links = get_storage_carriers(networks) + config["view"].get(
         "storage_links", []
     )
     return (
         bus_carrier,
         transmission_comps,
         transmission_carrier,
-        storage_carrier,
+        storage_links,
     )

@@ -1,19 +1,18 @@
 from pathlib import Path
 
-from evals.fileio import Exporter
-from evals.plots import ESMBarChart
-from evals.statistic import collect_myopic_statistics
-from evals.views.common import _parse_view_config_items, simple_optimal_capacity
+from evals.views.common import (
+    simple_optimal_capacity,
+    simple_storage_capacity,
+)
 
 
 def view_capacity_gas_storage(
     result_path: str | Path,
     networks: dict,
     config: dict,
-    subdir: str | Path = "evaluation",
 ) -> None:
     """
-    Evaluate optimal storage capacities for CH4 and H2.
+    Evaluate optimal storage capacities for gas stores (CH4, H2).
 
     Returns
     -------
@@ -23,30 +22,37 @@ def view_capacity_gas_storage(
     -----
     FixMe: No Hydrogen Storage with current config?
     """
-    (
-        bus_carrier,
-        transmission_comps,
-        transmission_carrier,
-        storage_carrier,
-    ) = _parse_view_config_items(networks, config)
+    simple_storage_capacity(networks, config, result_path)
 
-    gas_stores = collect_myopic_statistics(
-        networks,
-        statistic="optimal_capacity",
-        storage=True,
-        bus_carrier=bus_carrier,
-    )
 
-    metric = Exporter(
-        statistics=[gas_stores],
-        view_config=config["view"],
-    )
+def view_capacity_hydrogen_production(
+    result_path: str | Path,
+    networks: dict,
+    config: dict,
+) -> None:
+    """
+    Evaluate the optimal capacity for technologies that produce Hydrogen.
 
-    metric.defaults.plotly.chart = ESMBarChart
-    # prevent dropping empty years
-    metric.defaults.plotly.cutoff_drop = False
+    Returns
+    -------
+    :
+    """
+    simple_optimal_capacity(networks, config, result_path, kind="production")
 
-    metric.export(result_path, subdir)
+
+def view_capacity_gas_production(
+    result_path: str | Path,
+    networks: dict,
+    config: dict,
+) -> None:
+    """
+    Evaluate the optimal capacity for technologies that produce Methane.
+
+    Returns
+    -------
+    :
+    """
+    simple_optimal_capacity(networks, config, result_path, kind="production")
 
 
 def view_capacity_electricity_production(
@@ -55,7 +61,56 @@ def view_capacity_electricity_production(
     config: dict,
 ) -> None:
     """
-    Evaluate the optimal capacity for AC technologies.
+    Evaluate the optimal capacity for AC technologies that produce electricity.
+
+    Returns
+    -------
+    :
+    """
+    simple_optimal_capacity(networks, config, result_path, kind="production")
+
+
+def view_capacity_electricity_demand(
+    result_path: str | Path,
+    networks: dict,
+    config: dict,
+) -> None:
+    """
+    Evaluate the optimal capacity for AC technologies that withdraw electricity.
+
+    Returns
+    -------
+    :
+    """
+    simple_optimal_capacity(networks, config, result_path, kind="demand")
+
+
+def view_capacity_electricity_storage(
+    result_path: str | Path,
+    networks: dict,
+    config: dict,
+) -> None:
+    """
+    Evaluate the optimal capacity for AC technologies that store electricity.
+
+    Returns
+    -------
+    :
+
+    Notes
+    -----
+    Fixme: Run-of-River is much too high.
+    """
+    simple_storage_capacity(networks, config, result_path)
+
+
+def view_capacity_heat_production(
+    result_path: str | Path,
+    networks: dict,
+    config: dict,
+) -> None:
+    """
+    Evaluate the optimal capacity for technologies that produce heat.
 
     Returns
     -------
@@ -63,3 +118,19 @@ def view_capacity_electricity_production(
         Writes 2 Excel files and 1 BarChart per country.
     """
     simple_optimal_capacity(networks, config, result_path, kind="production")
+
+
+def view_capacity_heat_demand(
+    result_path: str | Path,
+    networks: dict,
+    config: dict,
+) -> None:
+    """
+    Evaluate the optimal capacity for technologies that withdraw heat.
+
+    Returns
+    -------
+    :
+        Writes 2 Excel files and 1 BarChart per country.
+    """
+    simple_optimal_capacity(networks, config, result_path, kind="demand")

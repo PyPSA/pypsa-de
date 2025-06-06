@@ -1,10 +1,12 @@
 [global]
 subdir = "evaluation"
 
+# Capacities
+
 [view_capacity_heat_production]
 name = "District Heat Production Capacities"
 unit = "GW"
-file_name = "capacity_heat_{location}"
+file_name = "capacity_heat_production_{location}"
 cutoff = 0.0001
 legend_order = [
     "Storage Out",
@@ -55,12 +57,66 @@ exports = ["csv", "excel"]
 "urban central water pits charger" = "Storage In"
 "urban central water pits discharger" = "Storage Out"
 
+[view_capacity_heat_demand]
+name = "District Heat Demand Capacities"
+unit = "GW"
+file_name = "capacity_heat_production_{location}"
+cutoff = 0.0001
+legend_order = [
+    "Storage Out",
+    "Solar Thermal",
+    "Fischer-Tropsch",
+    "Biomass CHP",
+    "Oil CHP",
+    "Waste CHP",
+    "Electrolysis",
+    "Haber-Bosch",
+    "Direct Air Capture",
+    "CHP",
+    "Heat Vent",
+    "Methanolisation",
+    "Fuel Cell",
+    "Resistive Heater",
+    "Gas Boiler",
+    "Gas CHP",
+    "Coal CHP",
+    "Heat Pump",
+    "Storage In",
+]
+checks = []
+exports = ["csv", "excel"]
+
+[view_capacity_heat_demand.categories]
+"DAC" = "Direct Air Capture"
+"Fischer-Tropsch" = "Fischer-Tropsch"
+"Haber-Bosch" = "Haber-Bosch"
+"H2 Electrolysis" = "Electrolysis"
+"H2 Fuel Cell" = "Fuel Cell"
+"methanolisation" = "Methanolisation"
+"urban central air heat pump" = "Heat Pump"
+"urban central CHP" = "CHP"
+"urban central coal CHP" = "Coal CHP"
+"urban central gas CHP" = "Gas CHP"
+"urban central oil CHP" = "Oil CHP"
+"waste CHP" = "Waste CHP"
+"waste CHP CC" = "Waste CHP"
+"urban central gas boiler" = "Gas Boiler"
+"urban central heat vent" = "Heat Vent"
+"urban central lignite CHP" = "Coal CHP"
+"urban central resistive heater" = "Resistive Heater"
+"urban central solar thermal" = "Solar Thermal"
+"urban central solid biomass CHP" = "Biomass CHP"
+"urban central water tanks charger" = "Storage In"
+"urban central water tanks discharger" = "Storage Out"
+"urban central water pits charger" = "Storage In"
+"urban central water pits discharger" = "Storage Out"
+
 [view_capacity_electricity_production]
 name = "Optimal Capacity Electricity"
 unit = "GW"
 file_name = "capacity_ac_production_{location}"
 bus_carrier = ["AC", "low voltage", "EV battery", "home battery"]
-#storage_links = ["BEV charger", "V2G", "home battery charger", "home battery discharger"]
+storage_links = ["BEV charger", "V2G"]
 chart = "ESMBarChart"
 cutoff = 0.0001
 legend_order = [
@@ -98,16 +154,82 @@ exports = ["csv"]
 "onwind" = "Wind Power"
 "ror" = "Run-of-River"
 "solar" = "Solar Power"
+"solar rooftop" = "Solar Power"
 "solar-hsat" = "Solar Power"
 "solid biomass" = "Solid Biomass"
 "urban central CHP" = "Thermal Powerplants"
 "urban central coal CHP" = "Thermal Powerplants"
 "urban central gas CHP" = "Thermal Powerplants"
+"urban central H2 CHP" = "Thermal Powerplants"
+"urban central H2 retrofit CHP" = "Thermal Powerplants"
 "urban central lignite CHP" = "Thermal Powerplants"
 "urban central oil CHP" = "Thermal Powerplants"
 "urban central solid biomass CHP" = "Thermal Powerplants"
 "waste CHP" = "Thermal Powerplants"
 "waste CHP CC" = "Thermal Powerplants"
+
+[view_capacity_electricity_storage]
+name = "Power Storage Volumes"
+unit = "TWh"
+file_name = "capacity_ac_storage_{location}"
+bus_carrier = ["AC", "low voltage", "EV battery", "home battery"]
+chart = "ESMBarChart"
+cutoff = 0.1  # TWh
+legend_order = [
+    "Pumped Hydro Storage",
+    "Run-of-River",
+    "Car Battery"
+]
+checks = []
+exports = []
+
+[view_capacity_electricity_storage.categories]
+"EV battery" = "Car Battery"
+"PHS" = "Pumped Hydro Storage"
+"hydro" = "Run-of-River"
+
+[view_capacity_gas_storage]
+name = "Gas Storage Volumes"
+unit = "TWh"
+file_name = "capacity_gas_storage_{location}"
+bus_carrier = ["H2", "gas"]  # "co2 sequestered"
+cutoff = 0.00001  # 1 MWh
+legend_order = ["Methane Store", "Hydrogen Store"]
+checks = ["balances_almost_zero"]
+exports = []
+
+[view_capacity_gas_storage.categories]
+"H2 Store" = "Hydrogen Store"
+"gas" = "Methane Store"
+
+[view_capacity_hydrogen_production]
+name = "Optimal Capacity Hydrogen Production"
+unit = "GW"
+file_name = "capacity_hydrogen_production_{location}"
+bus_carrier = "H2"
+chart = "ESMBarChart"
+cutoff = 0.1  # GW
+legend_order = []
+checks = []
+exports = []
+
+[view_capacity_hydrogen_production.categories]
+
+[view_capacity_gas_production]
+name = "Optimal Capacity Methane Production"
+unit = "GW"
+file_name = "capacity_gas_production_{location}"
+bus_carrier = ["gas"]
+storage_links = ["gas", "import gas"]  # drops Generator and Storage Components
+chart = "ESMBarChart"
+cutoff = 0.1  # GW
+legend_order = []
+checks = []
+exports = []
+
+[view_capacity_gas_production.categories]
+
+# Balances
 
 [view_balance_carbon]
 name = "Carbon Dioxide Balance"
@@ -644,38 +766,6 @@ checks = ["balances_almost_zero"]
 exports = []
 
 [view_timeseries_methane.categories]
-
-[view_capacity_electricity_storage]
-name = "Power Storage Volumes"
-unit = "TWh"
-file_name = "capacity_ac_storage_{location}"
-cutoff = 0.00001  # 1 MWh
-legend_order = [
-    "Pumped Hydro Storage",
-    "Run-of-River",
-    "Car Battery"
-]
-checks = []
-exports = []
-
-[view_capacity_electricity_storage.categories]
-"EV battery" = "Car Battery"
-"PHS" = "Pumped Hydro Storage"
-"hydro" = "Run-of-River"
-
-[view_capacity_gas_storage]
-name = "Gas Storage Volumes"
-unit = "TWh"
-file_name = "capacity_gas_storage_{location}"
-bus_carrier = ["H2", "gas"]  # "co2 sequestered"
-cutoff = 0.00001  # 1 MWh
-legend_order = ["Methane Store", "Hydrogen Store"]
-checks = ["balances_almost_zero"]
-exports = []
-
-[view_capacity_gas_storage.categories]
-"H2 Store" = "Hydrogen Store"
-"gas" = "Methane Store"
 
 [view_grid_capacity]
 name = "Transmission_test"
