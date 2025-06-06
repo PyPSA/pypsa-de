@@ -370,6 +370,19 @@ rule modify_district_heat_share:
         "scripts/pypsa-de/modify_district_heat_share.py"
 
 
+def get_reference_network(w):
+    ref_scenario = config["run"]["scenarios"]["fix_foreign_investments"][
+        "reference_scenario"
+    ]
+    if (
+        config_provider("run", "scenarios", "fix_foreign_investments", "enable")
+        and w.run != ref_scenario
+    ):
+        return f"results/{config["run"]["prefix"]}/{ref_scenario}/networks/base_s_{w.clusters}_{w.opts}_{w.sector_opts}_{w.planning_horizons}.nc"
+    else:
+        return []
+
+
 rule modify_prenetwork:
     params:
         efuel_export_ban=config_provider("solving", "constraints", "efuel_export_ban"),
@@ -404,6 +417,12 @@ rule modify_prenetwork:
         shipping_methanol_share=config_provider("sector", "shipping_methanol_share"),
         mwh_meoh_per_tco2=config_provider("sector", "MWh_MeOH_per_tCO2"),
         scale_capacity=config_provider("scale_capacity"),
+        fix_foreign_investments=config_provider(
+            "run", "scenarios", "fix_foreign_investments"
+        ),
+        reference_scenario=config_provider(
+            "run", "scenarios", "fix_foreign_investments", "reference_scenario"
+        ),
     input:
         costs_modifications="ariadne-data/costs_{planning_horizons}-modifications.csv",
         network=resources(
@@ -432,6 +451,7 @@ rule modify_prenetwork:
         regions_onshore=resources("regions_onshore_base_s_{clusters}.geojson"),
         regions_offshore=resources("regions_offshore_base_s_{clusters}.geojson"),
         offshore_connection_points="ariadne-data/offshore_connection_points.csv",
+        reference_network=get_reference_network,
     output:
         network=resources(
             "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_final.nc"

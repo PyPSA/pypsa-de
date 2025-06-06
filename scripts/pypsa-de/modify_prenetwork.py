@@ -1265,6 +1265,100 @@ def scale_capacity(n, scaling):
                 ]
 
 
+def fix_foreign_investments(n, n_ref):
+    """
+    For all extendable components located outside Germany, this function sets their
+    minimum and maximum capacity limits to match the optimized capacity from a
+    reference network. This effectively fixes the investment decisions for these
+    components to their reference values.
+
+    Components are identified as non-German based on their bus location:
+    - For Line and Link: any connected bus is outside Germany
+    - For other components: the primary bus is outside Germany
+
+    Only components with extendable capacity are modified (those with
+    [p|s|e]_nom_extendable set to True).
+
+    Parameters
+    ----------
+    n : pypsa.Network
+        Network object to modify
+    n_ref : pypsa.Network
+        Reference network object containing optimized capacity values
+
+    Returns
+    -------
+    None
+        Network is modified in-place with updated capacity limits
+    """
+    # List of component types that can have investment decisions
+    investment_components = ["Generator", "StorageUnit", "Store", "Link", "Line"]
+
+    # For each component type
+    for c in investment_components:
+        if c == "StorageUnit":
+            component = getattr(n, "storage_units")
+            baseline_component = getattr(n_ref, "storage_units")
+        else:
+            component = getattr(n, c.lower() + "s")
+            baseline_component = getattr(n_ref, c.lower() + "s")
+
+        # Identify non-German nodes
+        if c in ["Line", "Link"]:
+            # For lines, and links, check both buses
+            non_german = (
+                component.filter(regex="bus[012]")
+                .apply(lambda x: ~x.str.startswith(("DE", "EU")), axis=1)
+                .any(axis=1)
+            )
+        else:
+            # For other components, check if bus is not in Germany
+            non_german = ~component.bus.str.startswith(("DE", "EU"))
+
+        # Only fix extendable components
+        extendable = (
+            component.e_nom_extendable
+            if c == "Store"
+            else (
+                component.s_nom_extendable
+                if c == "Line"
+                else component.p_nom_extendable
+            )
+        )
+        to_fix = non_german & extendable
+
+        if not any(to_fix):
+            continue
+
+        indices = component.index[to_fix]
+
+        # Copy the optimized capacity from baseline to fixed capacity rounding values
+        # to the nearest integer to avoid constraint violations
+        if c == "Store":
+            n.stores.loc[indices, "e_nom_min"] = baseline_component.loc[
+                indices, "e_nom_opt"
+            ].apply(np.floor)
+            n.stores.loc[indices, "e_nom_max"] = baseline_component.loc[
+                indices, "e_nom_opt"
+            ].apply(np.ceil)
+        elif c == "Line":
+            n.lines.loc[indices, "s_nom_min"] = baseline_component.loc[
+                indices, "s_nom_opt"
+            ].apply(np.floor)
+            n.lines.loc[indices, "s_nom_max"] = baseline_component.loc[
+                indices, "s_nom_opt"
+            ].apply(np.ceil)
+        else:
+            n.df(c).loc[indices, "p_nom_min"] = baseline_component.loc[
+                indices, "p_nom_opt"
+            ].apply(np.floor)
+            n.df(c).loc[indices, "p_nom_max"] = baseline_component.loc[
+                indices, "p_nom_opt"
+            ].apply(np.ceil)
+
+        logger.info(f"Fixed {sum(to_fix)} {c} components outside Germany")
+
+
 if __name__ == "__main__":
     if "snakemake" not in globals():
         snakemake = mock_snakemake(
@@ -1346,5 +1440,15 @@ if __name__ == "__main__":
     scale_capacity(n, snakemake.params.scale_capacity)
 
     sanitize_custom_columns(n)
+
+    if (
+        snakemake.params["fix_foreign_investments"]
+        and snakemake.wildcards.run != snakemake.params["reference_scenario"]
+    ):
+        logger.info(
+            "Fixing investments for components outside Germany based on the reference scenario."
+        )
+        n_ref = pypsa.Network(snakemake.input.reference_network)
+        fix_foreign_investments(n, n_ref)
 
     n.export_to_netcdf(snakemake.output.network)
