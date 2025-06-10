@@ -950,7 +950,7 @@ rule plot_sysgf_summary:
 rule sysgf_all:
     input:
         expand(
-            "results/" + config["run"]["prefix"] + "/sysgf/sysgf_summary.pdf",
+            "results/" + config["run"]["prefix"] + "/sysgf/summary_metrics.csv",
         ),
         expand(RESULTS + "graphs/costs.svg", run=config["run"]["name"]),
         expand(
