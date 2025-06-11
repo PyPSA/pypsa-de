@@ -348,7 +348,7 @@ class ESMStatistics(StatisticsAccessor):
             #  the amounts should be clipped.)
             p[homes_and_trade] = p[homes_and_trade].clip(upper=0)
 
-        # rename to avoid mixing up electricity with
+        # rename electricity base load to avoid mixing it up
         p = p.rename({"electricity": "industry + hh & services load"}, axis=1)
 
         df = insert_index_level(p.stack(), "low voltage", DataModel.BUS_CARRIER)

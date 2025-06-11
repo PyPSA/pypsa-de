@@ -1,10 +1,8 @@
-"""Module for primary energy heat demand."""
-
 from pathlib import Path
 
 from evals.constants import BusCarrier, DataModel
 from evals.fileio import Exporter
-from evals.plots.barchart import ESMBarChart
+from evals.plots import ESMBarChart
 from evals.statistic import collect_myopic_statistics
 from evals.utils import (
     calculate_input_share,

@@ -21,13 +21,13 @@ from evals.views.capacities import (
     view_capacity_heat_demand,
     view_capacity_hydrogen_production,
 )
-from evals.views.demand.heat_production import view_demand_heat
-from evals.views.fed.total import view_final_energy_demand
+from evals.views.demand import view_demand_heat
+from evals.views.demand_fed import view_final_energy_demand
 from evals.views.transmission import view_grid_capacity
 
 __all__ = [
-    "view_final_energy_demand",
     "view_demand_heat",
+    "view_final_energy_demand",
     # capacities
     "view_capacity_gas_storage",
     "view_capacity_heat_demand",

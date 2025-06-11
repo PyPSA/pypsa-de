@@ -821,6 +821,7 @@ rule export_iamc_variables:
         NEP_year=config_provider("costs", "NEP"),
         NEP_transmission=config_provider("costs", "transmission"),
     input:
+        results_path=RESULTS,
         template="data/template_ariadne_database.xlsx",
         industry_demands=expand(
             resources(

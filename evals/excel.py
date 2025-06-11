@@ -208,7 +208,7 @@ def _write_categories_sheet(
     df.columns.name = "Carrier"
     df.to_excel(writer, sheet_name=sheet_name, float_format="%0.4f")
     ws = writer.sheets.get(sheet_name)
-    _delete_index_name_row(ws, df, start_row=0)  # delete index name row
+    _delete_index_name_row(ws, df, start_row=0)
     _expand_column_to_fit_content(ws, df, 0)
     _expand_column_to_fit_content(ws, df, 1)
 
@@ -394,6 +394,10 @@ def _expand_column_to_fit_content(ws: Worksheet, df: pd.DataFrame, col: int) -> 
         The data added to the worksheet.
     col
         The index of the column that should become expanded.
+
+    Returns
+    -------
+    :
     """
     xl_col = xl_col_to_name(col)
     series = df.index if col == 0 else df[df.columns[col - 1]]

@@ -778,3 +778,7 @@ exports = []
 
 [view_grid_capacity.categories]
 "" = ""
+
+[view_final_energy_demand]
+
+[view_final_energy_demand.catagories]

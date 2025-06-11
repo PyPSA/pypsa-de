@@ -66,6 +66,8 @@ def read_networks(result_path: str | Path, sub_directory: str = "networks") -> d
         year = re.search(r"\d{4}$", file_path.stem).group()
         n = pypsa.Network(file_path)
         n.statistics = ESMStatistics(n, result_path)
+        n.name = f"PyPSA-AT Network {year}"
+        n.year = year
         networks[year] = n
 
     assert networks, f"No networks found in {input_path}."

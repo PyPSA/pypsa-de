@@ -1,10 +1,8 @@
-"""Evaluate the nodal final energy demand by bus carrier."""
-
 from pathlib import Path
 
 from evals.constants import BusCarrier, Carrier, DataModel
 from evals.fileio import Exporter
-from evals.plots.barchart import ESMBarChart
+from evals.plots import ESMBarChart
 from evals.statistic import collect_myopic_statistics
 from evals.utils import (
     calculate_input_share,
@@ -47,7 +45,7 @@ def view_final_energy_demand(
             comps="Link",
             statistic="energy_balance",
         )
-        .pipe(filter_for_carrier_connected_to, BusCarrier.HEAT_RURAL, kind="supply")
+        .pipe(filter_for_carrier_connected_to, BusCarrier.HEAT_RURAL)  # , kind="supply"
         .pipe(calculate_input_share, BusCarrier.HEAT_RURAL)
     )
 
@@ -83,25 +81,41 @@ def view_final_energy_demand(
     ).pipe(filter_by, carrier=Carrier.domestic_homes_and_trade)
 
     # todo: couldn't his be much easier? If we simply query for withdrawal at heat buses?
-    from evals.utils import filter_by
+    # from evals.utils import filter_by
 
-    _ = (
-        collect_myopic_statistics(
-            networks,
-            comps=("Generator", "Load"),
-            statistic="energy_balance",
-            bus_carrier=BusCarrier.heat_buses(),
-            aggregate_time=False,
-        )
-        .pipe(
-            filter_by,
-            carrier="urban decentral biomass boiler",
-            year="2020",
-            location="CH",
-        )
-        .T
-    )
-    # fixme: "urban decentral biomass boiler" supplies to solid biomass and draws from heat!!!
+    # _ = (
+    #     collect_myopic_statistics(
+    #         networks,
+    #         comps=("Generator", "Load", "Link"),
+    #         statistic="energy_balance",
+    #         bus_carrier=BusCarrier.heat_buses(),
+    #         aggregate_time=False,
+    #     )
+    #     .pipe(
+    #         filter_by,
+    #         carrier="urban decentral biomass boiler",
+    #         year="2020",
+    #         location="CH",
+    #     )
+    #     .T
+    # )
+    # # fixme: "urban decentral biomass boiler" supplies to solid biomass and draws from heat!!!
+    #
+    # n = networks["2030"]
+    # gen = (
+    #     n.generators.assign(g=n.generators_t.p.mean())
+    #     .groupby(["bus", "carrier"])
+    #     .g.sum()
+    # )
+    # n.plot(
+    #     bus_sizes=gen / 5e4,
+    #     # bus_colors={"gas": "indianred", "wind": "midnightblue"},
+    #     margin=0.5,
+    #     line_widths=0.1,
+    #     line_flow="mean",
+    #     link_widths=0,
+    # )
+    # plt.show()
 
     # todo: need to map carrier names to sector names in grouped barchart
     exporter = Exporter(
@@ -111,7 +125,6 @@ def view_final_energy_demand(
             load_split_urban_heat,
             fed_homes_and_trade,
         ],
-        statistics_unit="MWh",
         view_config=config["view"],
     )
 
