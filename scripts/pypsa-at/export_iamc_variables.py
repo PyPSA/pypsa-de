@@ -155,22 +155,57 @@ def get_primary_energy(n, year) -> pd.DataFrame:
     # "Primary Energy|Gas|Hydrogen"
     # "Primary Energy|Gas|Gases" (?) Sabatier?
 
-    # 'gas', 'biogas', 'gas for industry'
-    gas_trade = n.statistics.trade_energy(
-        bus_carrier="gas", direction="import", scope=("foreign", "domestic")
+    gas_trade_foreign = n.statistics.trade_energy(
+        bus_carrier="gas", direction="import", scope="foreign"
     )
-    gas_trade = gas_trade[gas_trade.gt(0)].groupby("location").sum()
+    gas_trade_domestic = n.statistics.trade_energy(
+        bus_carrier="gas", direction="import", scope="domestic"
+    )
+
+    gas_trade_foreign = (
+        gas_trade_foreign[gas_trade_foreign.gt(0)].groupby("location").sum()
+    )
+    gas_trade_domestic = (
+        gas_trade_domestic[gas_trade_domestic.gt(0)].groupby("location").sum()
+    )
+
     eu_gas_import = n.statistics.supply(
         groupby="location", bus_carrier="gas", comps="Generator"
     )
-    primary_gas = gas_trade.add(eu_gas_import, fill_value=0)
-    var["Primary Energy|Gas"] = primary_gas
+    var["Primary Energy|Gas|Foreign Import"] = gas_trade_foreign
+    var["Primary Energy|Gas|Domestic Import"] = gas_trade_domestic
     var["Primary Energy|Gas|EU Import"] = eu_gas_import
+    var["Primary Energy|Gas"] = (
+        pd.concat([gas_trade_foreign, gas_trade_domestic, eu_gas_import])
+        .groupby("location")
+        .sum()
+    )
 
+    # non-sequestered HVC + municipal solid waste
+    # municipal solid waste is generated regionally
+    # municipal solid waste supplies to HVC bus + draws from CO2 atmosphere
+    # naphtha for industry withdraws from oil and supplies naphtha + waste to HVC bus + process emissions
+    # waste CHP only draws from HVC bus
+    # Primary Energy|Waste is only municipal solid waste Generators, the rest is secondary energy
+    # plus 'municipal solid waste transport' import amounts
+    # n.statistics.supply(groupby=["location", "carrier", "bus_carrier"], bus_carrier=["non-sequestered HVC", "municipal solid waste"])
+    waste_generation = n.statistics.supply(
+        groupby="location", bus_carrier="municipal solid waste", comps="Generator"
+    )
+    waste_import = n.statistics.trade_energy(
+        bus_carrier="municipal solid waste",
+        direction="import",
+        scope=("domestic", "foreign"),
+    )
+    waste_import = waste_import[waste_import.gt(0)].groupby("location").sum()
+
+    var["Primary Energy|Waste"] = waste_generation.add(waste_import, fill_value=0)
+    var["Primary Energy|Waste|Import"] = waste_import
     # "Primary Energy|Waste"  (= non-sequestered HVC)
     # "Primary Energy|Waste|Heat"
     # "Primary Energy|Waste|Electricity"
 
+    # similar to oil, but without refining losses
     # Primary Energy|Coal
     # Primary Energy|Coal|Hard Coal
     # Primary Energy|Coal|Lignite
