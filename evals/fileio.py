@@ -25,7 +25,9 @@ from evals.utils import (
 from scripts._helpers import get_rdir, path_provider
 
 
-def read_networks(result_path: str | Path, sub_directory: str = "networks") -> dict:
+def read_networks(
+    result_path: str | Path | list, sub_directory: str = "networks"
+) -> dict:
     """
     Read network results from NetCDF (.nc) files.
 
@@ -60,17 +62,22 @@ def read_networks(result_path: str | Path, sub_directory: str = "networks") -> d
     # delayed import to prevent circular dependency error
     from evals.statistic import ESMStatistics
 
-    input_path = Path(result_path) / sub_directory
+    if isinstance(result_path, list):
+        file_paths = [Path(p) for p in result_path]  # assuming snakemake.input.networks
+    else:
+        input_path = Path(result_path) / sub_directory
+        file_paths = input_path.glob(r"*[0-9].nc")
+
     networks = {}
-    for file_path in input_path.glob(r"*[0-9].nc"):
-        year = re.search(r"\d{4}$", file_path.stem).group()
+    for file_path in file_paths:
+        year = re.search(Regex.year, file_path.stem).group()
         n = pypsa.Network(file_path)
         n.statistics = ESMStatistics(n, result_path)
         n.name = f"PyPSA-AT Network {year}"
         n.year = year
         networks[year] = n
 
-    assert networks, f"No networks found in {input_path}."
+    assert networks, f"No networks found in {file_paths}."
 
     return networks
 
