@@ -87,52 +87,85 @@ def get_primary_energy(n, year) -> pd.DataFrame:
     # "Primary Energy|Oil|Liquids" (= Oil minus rest)
     # what about Fischer-Tropsch?
 
-    # increase oil demand by this factor to account for refining losses
+    # need to reduce primary energy by renewable oil production in the same region
+    # renewable_oil_production = n.statistics.supply(
+    #     groupby=["location", "carrier", "bus_carrier"], comps="Link", bus_carrier="oil"
+    # ).drop(
+    #     ["unsustainable bioliquids", "oil refining", "import oil"],
+    #     axis=0,
+    #     level="carrier",
+    #     errors="ignore",
+    # )
+    # oil_usage = (
+    #     n.statistics.withdrawal(
+    #         groupby=["location", "carrier", "bus_carrier"], bus_carrier="oil"
+    #     )
+    #     .drop("Store", axis=0, level="component", errors="ignore")
+    #     .droplevel("component")
+    #     .mul(-1)  # withdrawal is negative
+    # )
+    #
+    # # assuming that regional oil production is consumed in the same region
+    # oil_saldo = (
+    #     oil_usage.groupby("location")
+    #     .sum()
+    #     .add(renewable_oil_production.groupby("location").sum(), fill_value=0)
+    # )
+    # oil_import = oil_saldo[oil_saldo.le(0)]
+    # oil_export = oil_saldo[oil_saldo.gt(0)]
+    #
+    # var["Primary Energy|Oil"] = oil_import.divide(oil_refining_efficiency)
+    # var["Final Energy|Oil"] = oil_export
+
+    oil_balance = n.statistics.energy_balance(
+        groupby="location", bus_carrier="oil", comps="Link"
+    ).drop("EU", errors="ignore")
+    liquids = oil_balance[oil_balance.le(0)].abs()
+
+    # increase fossil oil demand by this factor to account for refining losses
     oil_refining_efficiency = (
         port_efficiency(n, "Link", "1").filter(like="oil refining").item()
     )
-    # need to reduce primary energy by renewable oil production in this region by Fischer-Tropsch
-    renewable_oil_production = n.statistics.supply(
-        groupby=["location", "carrier", "bus_carrier"], comps="Link", bus_carrier="oil"
-    ).drop(
-        ["unsustainable bioliquids", "oil refining", "import oil"],
-        axis=0,
-        level="carrier",
-        errors="ignore",
-    )
-    oil_usage = (
-        n.statistics.withdrawal(
-            groupby=["location", "carrier", "bus_carrier"], bus_carrier="oil"
-        )
-        .drop("Store", axis=0, level="component", errors="ignore")
-        .droplevel("component")
-        .mul(-1)  # withdrawal is negative
-    )
-
-    # assuming that regional oil production is consumed in the same region
-    oil_saldo = (
-        oil_usage.groupby("location")
-        .sum()
-        .add(renewable_oil_production.groupby("location").sum(), fill_value=0)
-    )
-    oil_import = oil_saldo[oil_saldo.gt(0)]
-    oil_export = oil_saldo[oil_saldo.le(0)]
-
-    var["Primary Energy|Oil"] = oil_import.divide(oil_refining_efficiency)
-    var["Final Energy|Oil"] = oil_export
-
-    oil_energy_balance = n.statistics.energy_balance(
-        groupby="location", bus_carrier="oil", comps="Link"
-    ).drop("EU", errors="ignore")
-    var["Primary Energy|Oil"] = oil_energy_balance[oil_energy_balance.gt(0)]
+    # calculate the split of fossil oil generation to liquids production and assume
+    # the same split for all regions
+    oil_fossil_eu = n.statistics.supply(bus_carrier="oil primary").item()
+    oil_supply_all_regions = n.statistics.supply(
+        groupby="bus_carrier", bus_carrier="oil", comps="Link"
+    ).item()
+    fossil_amount = liquids * oil_fossil_eu / oil_supply_all_regions
+    # increase fossil oil share by refining losses
+    liquids_w_losses = liquids - fossil_amount + fossil_amount / oil_refining_efficiency
+    # assuming that regional oil production is consumed in the same region, the netted
+    # energy balance becomes the primary energy (import) and final energy (export) of
+    # the region. It is important to note that this is not the same as fossil oil imports,
+    # but all oil imports including renewable oil production from other regions.
+    # Lacking an oil network that connects regions, we assume that all oil is consumed
+    # locally and only oil production surplus becomes exported as final energy.
+    var["Primary Energy|Liquids"] = liquids_w_losses
+    var["Primary Energy|Liquids|oil refining losses"] = liquids_w_losses - liquids
 
     # TEST: oil import must be same as total sum of oil primary
+    # pd.testing.assert_series_equal(
+    #     oil_import, oil_energy_balance[oil_energy_balance.le(0)], check_names=False
+    # )  # PASS -> its the same
 
     # "Primary Energy|Gas"
     # "Primary Energy|Gas|Heat"
     # "Primary Energy|Gas|Electricity"
     # "Primary Energy|Gas|Hydrogen"
     # "Primary Energy|Gas|Gases" (?) Sabatier?
+
+    # 'gas', 'biogas', 'gas for industry'
+    gas_trade = n.statistics.trade_energy(
+        bus_carrier="gas", direction="import", scope=("foreign", "domestic")
+    )
+    gas_trade = gas_trade[gas_trade.gt(0)].groupby("location").sum()
+    eu_gas_import = n.statistics.supply(
+        groupby="location", bus_carrier="gas", comps="Generator"
+    )
+    primary_gas = gas_trade.add(eu_gas_import, fill_value=0)
+    var["Primary Energy|Gas"] = primary_gas
+    var["Primary Energy|Gas|EU Import"] = eu_gas_import
 
     # "Primary Energy|Waste"  (= non-sequestered HVC)
     # "Primary Energy|Waste|Heat"
