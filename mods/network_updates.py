@@ -2,10 +2,15 @@
 
 from logging import getLogger
 
+import pandas as pd
+import pypsa
+
 logger = getLogger(__name__)
 
 
-def update_austrian_grid_capacities(n, snakemake):
+def update_austrian_transmission_capacities(
+    n: pypsa.Network, austrian_transmission_capacities: str
+):
     """
     Update transmission capacities for Austria.
 
@@ -17,23 +22,36 @@ def update_austrian_grid_capacities(n, snakemake):
     ----------
     n
         The pre-network to update during rule `modify_prenetwork`.
-    snakemake
-        The Snakemake object.
+
+    austrian_transmission_capacities
+        The path to the data file used to update the capacities.
 
     Returns
     -------
     :
     """
     logger.info("Updating grid capacities for Austria.")
-    # for every year:
-    # transmission carrier:
-    # 'AC',
-    # 'gas pipeline new'
-    # 'gas pipeline',
-    # 'DC',
-    # 'H2 pipeline',
-    # 'H2 pipeline (Kernnetz)',
-    # 'H2 pipeline retrofitted'
+
+    # transmission_carrier = get_transmission_carriers(n)
+    # to_concat = []
+    # for component, carrier in transmission_carrier:
+    #     capacity_column = f"{'p' if component == 'Link' else 's'}_nom"
+    #     to_concat.append(
+    #         n.static(component).query(f"carrier == @carrier "
+    #                                   f"& (bus0.str.startswith('AT') "
+    #                                   f"| bus1.str.startswith('AT'))")[["bus0", "bus1", capacity_column]]
+    #     )
+    # template = pd.concat(to_concat).sort_index()
+    # template.to_csv(austrian_grid_capacities)
+
+    capacities = pd.read_csv(austrian_transmission_capacities, index_col=0).sort_index()
+
+    for c in n.branch_components:
+        p = f"{'p' if c == 'Link' else 's'}_nom"
+        overwrite = capacities[["bus0", "bus1", p]].dropna(subset=[p])
+        n.static(c).update(overwrite)
+
+    # todo: test if 2020 capacities are in result network
 
 
 def update_austrian_industry_demand(existing_industry, year):

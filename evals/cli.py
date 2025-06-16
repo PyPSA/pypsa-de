@@ -161,5 +161,5 @@ def run_tests() -> None:
 
 if __name__ == "__main__":
     # debugging entry point
-    # args = ("../results/evals-dev", "-n", "view_grid_capacity")
+    # args = (__file__, "../results/evals-dev", "-n", "view_grid_capacity")
     run_eval(sys.argv[1:])

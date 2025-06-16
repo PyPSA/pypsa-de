@@ -698,5 +698,5 @@ scale_capacity:  # in MW
 modify_nuts3_shapes:
   enable: true
 
-update_austrian_grid_capacities:
+update_austrian_transmission_capacities:
   enable: true
