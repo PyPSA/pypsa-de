@@ -786,7 +786,7 @@ class ESMStatistics(StatisticsAccessor):
 
         return ambient_heat
 
-    def grid_capactiy(
+    def grid_capacity(
         self,
         comps: list = None,
         bus_carrier: list = None,

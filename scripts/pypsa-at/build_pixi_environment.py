@@ -23,7 +23,7 @@ def main():
 
     # import time
     # time.sleep(2)
-    output = run(["sed", "-i", "'s/pypsa-de/pypsa-at/g'", "pixi.toml"])
+    run(["sed", "-i", "'s/pypsa-de/pypsa-at/g'", "pixi.toml"])
     # output = run(["sed -i 's/pypsa-de/pypsa-at/g' pixi.toml"])
     # print(output)
     #
@@ -51,6 +51,7 @@ def main():
         "pymdown-extensions",
         "pytest",
         "xlsxwriter",
+        "git-delta",
     ]
     run(["pixi", "add"] + packages, check=True)
 

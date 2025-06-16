@@ -598,6 +598,7 @@ mknotebooks = ">=0.8.0,<0.9"
 pixi-pycharm = ">=0.0.8,<0.0.9"
 plotly = ">=6.1.2,<7"
 pymdown-extensions = ">=10.15,<11"
+git-delta = ">=0.18.2,<0.19"
 
 [pypi-dependencies]
 gurobipy = "==12.0.1"

@@ -1,7 +1,7 @@
 """Modify the NUTS3 shapefile for custom administrative clustering."""
 
-import sys
 import logging
+import sys
 
 import geopandas as gpd
 
@@ -28,6 +28,7 @@ def override_nuts(nuts_code: str | tuple, override: str, level: str = "level1") 
     -------
     :
     """
+    logger.debug(f"Overriding regions with code {nuts_code} to {override}.")
     mask = nuts3_regions.index.str.startswith(nuts_code)
     nuts3_regions.loc[mask, level] = override
 
