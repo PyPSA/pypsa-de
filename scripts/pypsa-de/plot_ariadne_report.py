@@ -4,7 +4,6 @@ import sys
 
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 from itertools import compress, islice
-from multiprocessing import Pool
 
 import cartopy
 import cartopy.crs as ccrs
@@ -376,8 +375,8 @@ def plot_nodal_elec_balance(
     tech_colors,
     savepath,
     carriers=["AC", "low voltage"],
-    start_date="2019-01-01 00:00:00",
-    end_date="2019-12-31 00:00:00",
+    start_date="01-01 00:00:00",
+    end_date="12-31 23:00:00",
     regions=["DE"],
     model_run="Model run",
     c1_groups=c1_groups,
@@ -413,6 +412,9 @@ def plot_nodal_elec_balance(
             "Temporal resolution does not allow for daily resampling! Please use hihger resolution results or change the 'resample' flag."
         )
         return
+
+    start_date = str(network.generators_t.p.index[0])[:4] + "-" + start_date
+    end_date = str(network.generators_t.p.index[-1])[:4] + "-" + end_date
 
     period = network.generators_t.p.index[
         (network.generators_t.p.index >= start_date)
@@ -535,11 +537,14 @@ def plot_nodal_elec_balance(
         df_pos[import_label] = (
             df["Electricity trade"].where(df["Electricity trade"] > 0).fillna(0)
         )
+    except KeyError:
+        print("Skipping Electricity import because it is too small")
+    try:
         df_neg[export_label] = (
             df["Electricity trade"].where(df["Electricity trade"] < 0).fillna(0)
         )
     except KeyError:
-        print("Skipping Electricity trade because it is too small")
+        print("Skipping Electricity export because it is too small")
     df_pos = df_pos.drop(columns=["Electricity trade"], errors="ignore")
     df_pos = df_pos.rename(columns={"urban central H2 CHP": "H2 CHP"})
     df_pos["other"] = df_pos.drop(columns=preferred_order_pos, errors="ignore").sum(
@@ -714,8 +719,8 @@ def plot_nodal_heat_balance(
     tech_colors,
     savepath,
     carriers=["AC", "low voltage"],
-    start_date="2019-01-01 00:00:00",
-    end_date="2019-12-31 00:00:00",
+    start_date="01-01 00:00:00",
+    end_date="12-31 23:00:00",
     regions=["DE"],
     model_run="Model run",
     c1_groups=c1_groups,
@@ -732,6 +737,9 @@ def plot_nodal_heat_balance(
     ylabel="total electricity balance [GW]",
     title="Electricity balance",
 ):
+    start_date = str(network.generators_t.p.index[0])[:4] + "-" + start_date
+    end_date = str(network.generators_t.p.index[-1])[:4] + "-" + end_date
+
     carriers = carriers
     loads = loads
     start_date = start_date
@@ -992,12 +1000,15 @@ def plot_storage(
     tech_colors,
     savepath,
     model_run="Model run",
-    start_date="2019-01-01 00:00:00",
-    end_date="2019-12-31 00",
+    start_date="01-01 00:00:00",
+    end_date="12-31 23:00:00",
     regions=["DE"],
 ):
     # State of charge [per unit of max] (all stores and storage units)
     # Ratio of total generation of max state of charge
+
+    start_date = str(network.generators_t.p.index[0])[:4] + "-" + start_date
+    end_date = str(network.generators_t.p.index[-1])[:4] + "-" + end_date
 
     n = network
     n.remove("Link", n.links.index[n.links.index.str[:2] != "DE"])
@@ -1520,6 +1531,7 @@ def plot_elec_prices_spatial(
             2035: 4.27 + 27.51,
             2040: 5.60 + 27.51,
             2045: 6.53 + 27.51,
+            2050: 0.0,  # dummy value to make the function work for 2050
         }
     )
     nep_annuität = pd.Series(
@@ -1530,6 +1542,7 @@ def plot_elec_prices_spatial(
             2035: 13.05 + 27.51,
             2040: 15.39 + 27.51,
             2045: 15.82 + 27.51,
+            2050: 0.0,  #  dummy value to make the function work for 2050
         }
     )
     electricity_demand = exported_variables.loc["Demand|Electricity"].iloc[0, :] / 1000
@@ -2888,8 +2901,8 @@ if __name__ == "__main__":
             network=network,
             nodal_balance=balance,
             tech_colors=tech_colors,
-            start_date="2019-01-01 00:00:00",
-            end_date="2019-12-31 00:00:00",
+            start_date="01-01 00:00:00",
+            end_date="12-31 23:00:00",
             savepath=f"{snakemake.output.elec_balances}/elec-all-year-DE-{year}.pdf",
             model_run=snakemake.wildcards.run,
             resample="D",
@@ -2907,8 +2920,8 @@ if __name__ == "__main__":
             network=network,
             nodal_balance=balance,
             tech_colors=tech_colors,
-            start_date="2019-01-01 00:00:00",
-            end_date="2019-01-31 00:00:00",
+            start_date="01-01 00:00:00",
+            end_date="01-31 23:00:00",
             savepath=f"{snakemake.output.elec_balances}/elec-Jan-DE-{year}.pdf",
             model_run=snakemake.wildcards.run,
             german_carriers=True,
@@ -2923,8 +2936,8 @@ if __name__ == "__main__":
             network=network,
             nodal_balance=balance,
             tech_colors=tech_colors,
-            start_date="2019-01-01 00:00:00",
-            end_date="2019-01-31 00:00:00",
+            start_date="01-01 00:00:00",
+            end_date="01-31 23:00:00",
             savepath=f"{snakemake.output.elec_balances}/elec-Jan-DE-{year}.pdf",
             model_run=snakemake.wildcards.run,
             german_carriers=False,
@@ -2939,8 +2952,8 @@ if __name__ == "__main__":
             network=network,
             nodal_balance=balance,
             tech_colors=tech_colors,
-            start_date="2019-05-01 00:00:00",
-            end_date="2019-05-31 00:00:00",
+            start_date="05-01 00:00:00",
+            end_date="05-31 23:00:00",
             savepath=f"{snakemake.output.elec_balances}/elec-May-DE-{year}.pdf",
             model_run=snakemake.wildcards.run,
             german_carriers=True,
@@ -2958,8 +2971,8 @@ if __name__ == "__main__":
                 network=network,
                 nodal_balance=balance,
                 tech_colors=tech_colors,
-                start_date="2019-01-01 00:00:00",
-                end_date="2019-12-31 00:00:00",
+                start_date="01-01 00:00:00",
+                end_date="12-31 23:00:00",
                 savepath=f"{snakemake.output.heat_balances}/heat-all-year-DE-{carriers}-{year}.pdf",
                 model_run=snakemake.wildcards.run,
                 resample="D",
@@ -2978,8 +2991,8 @@ if __name__ == "__main__":
                 network=network,
                 nodal_balance=balance,
                 tech_colors=tech_colors,
-                start_date="2019-01-01 00:00:00",
-                end_date="2019-01-31 00:00:00",
+                start_date="01-01 00:00:00",
+                end_date="01-31 23:00:00",
                 savepath=f"{snakemake.output.heat_balances}/heat-Jan-DE-{carriers}-{year}.pdf",
                 model_run=snakemake.wildcards.run,
                 plot_lmps=False,
@@ -2995,8 +3008,8 @@ if __name__ == "__main__":
                 network=network,
                 nodal_balance=balance,
                 tech_colors=tech_colors,
-                start_date="2019-05-01 00:00:00",
-                end_date="2019-05-31 00:00:00",
+                start_date="05-01 00:00:00",
+                end_date="05-31 23:00:00",
                 savepath=f"{snakemake.output.heat_balances}/heat-May-DE-{carriers}-{year}.pdf",
                 model_run=snakemake.wildcards.run,
                 plot_lmps=False,
@@ -3013,8 +3026,8 @@ if __name__ == "__main__":
         plot_storage(
             network=network,
             tech_colors=tech_colors,
-            start_date="2019-01-01 00:00:00",
-            end_date="2019-12-31 00:00:00",
+            start_date="01-01 00:00:00",
+            end_date="12-31 23:00:00",
             savepath=f"{snakemake.output.results}/storage-DE-{year}.pdf",
             model_run=snakemake.wildcards.run,
         )
@@ -3162,79 +3175,3 @@ if __name__ == "__main__":
         tech_colors,
         savepath=f"{snakemake.output.elec_transmission}/elec-trade-DE.pdf",
     )
-
-    ## nodal balances general (might not be very robust)
-    logger.info("Plotting nodal balances")
-    plt.style.use(["bmh", snakemake.input.rc])
-
-    year = 2045
-    network = networks[planning_horizons.index(year)].copy()
-    n = network
-
-    months = pd.date_range(freq="ME", **snakemake.config["snapshots"]).map(
-        lambda x: x.strftime("%Y-%m")
-    )
-
-    # only DE
-    ct = "DE"
-    buses = n.buses.index[(n.buses.index.str[:2] == ct)].drop("DE")
-    balance = (
-        n.statistics.energy_balance(
-            aggregate_time=False,
-            groupby=["bus", "carrier", "bus_carrier"],
-        )
-        .loc[:, buses, :, :]
-        .droplevel("bus")
-    )
-
-    n.carriers.color.update(snakemake.config["plotting"]["tech_colors"])
-    n.carriers.color.update(tech_colors)
-    colors = n.carriers.color.rename(n.carriers.nice_name)
-    # replace empty values TODO add empty values with colors to plotting config
-    colors[colors.values == ""] = "lightgrey"
-
-    # wrap in function for multiprocessing
-    def process_group(group, carriers, balance, months, colors):
-        if not isinstance(carriers, list):
-            carriers = [carriers]
-
-        mask = balance.index.get_level_values("bus_carrier").isin(carriers)
-        df = balance[mask].groupby("carrier").sum().div(1e3).T
-
-        # daily resolution for each carrier
-        plot_energy_balance_timeseries(
-            df,
-            resample="D",
-            ylabel=group,
-            colors=colors,
-            threshold=THRESHOLD,
-            dir=dir,
-        )
-
-        # monthly resolution for each carrier
-        plot_energy_balance_timeseries(
-            df,
-            resample="M",
-            ylabel=group,
-            colors=colors,
-            threshold=THRESHOLD,
-            dir=dir,
-        )
-
-        # native resolution for each month and carrier
-        for month in months:
-            plot_energy_balance_timeseries(
-                df,
-                time=month,
-                ylabel=group,
-                colors=colors,
-                threshold=THRESHOLD,
-                dir=dir,
-            )
-
-    args = [
-        (group, carriers, balance, months, colors)
-        for group, carriers in CARRIER_GROUPS.items()
-    ]
-    with Pool(processes=snakemake.threads) as pool:
-        pool.starmap(process_group, args)

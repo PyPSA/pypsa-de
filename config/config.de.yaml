@@ -297,7 +297,6 @@ sector:
   biomass_spatial: true
   #relax so no infeasibility in 2050 with no land transport demand
   min_part_load_fischer_tropsch: 0.
-  regional_methanol_demand: true  #set to true if regional CO2 constraints needed
   regional_oil_demand: true  #set to true if regional CO2 constraints needed
   regional_coal_demand: true  #set to true if regional CO2 constraints needed
   gas_network: false
