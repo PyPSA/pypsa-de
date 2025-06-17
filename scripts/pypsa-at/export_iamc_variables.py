@@ -15,8 +15,9 @@ import pypsa
 from pyam import IamDataFrame
 from pypsa.statistics import port_efficiency
 
+from evals.constants import TradeTypes
 from evals.fileio import read_networks
-from evals.utils import insert_index_level
+from evals.utils import filter_by, insert_index_level
 from scripts._helpers import configure_logging, mock_snakemake
 
 
@@ -120,7 +121,7 @@ def get_primary_energy(n, year) -> pd.DataFrame:
     oil_balance = n.statistics.energy_balance(
         groupby="location", bus_carrier="oil", comps="Link"
     ).drop("EU", errors="ignore")
-    liquids = oil_balance[oil_balance.le(0)].abs()
+    liquids_all = oil_balance[oil_balance.le(0)].abs()
 
     # increase fossil oil demand by this factor to account for refining losses
     oil_refining_efficiency = (
@@ -129,12 +130,14 @@ def get_primary_energy(n, year) -> pd.DataFrame:
     # calculate the split of fossil oil generation to liquids production and assume
     # the same split for all regions
     oil_fossil_eu = n.statistics.supply(bus_carrier="oil primary").item()
-    oil_supply_all_regions = n.statistics.supply(
+    renewable_liquids = n.statistics.supply(
         groupby="bus_carrier", bus_carrier="oil", comps="Link"
     ).item()
-    fossil_amount = liquids * oil_fossil_eu / oil_supply_all_regions
+    fossil_fraction = liquids_all * oil_fossil_eu / renewable_liquids
     # increase fossil oil share by refining losses
-    liquids_w_losses = liquids - fossil_amount + fossil_amount / oil_refining_efficiency
+    liquids_w_losses = (
+        liquids_all - fossil_fraction + fossil_fraction / oil_refining_efficiency
+    )
     # assuming that regional oil production is consumed in the same region, the netted
     # energy balance becomes the primary energy (import) and final energy (export) of
     # the region. It is important to note that this is not the same as fossil oil imports,
@@ -142,7 +145,7 @@ def get_primary_energy(n, year) -> pd.DataFrame:
     # Lacking an oil network that connects regions, we assume that all oil is consumed
     # locally and only oil production surplus becomes exported as final energy.
     var["Primary Energy|Liquids"] = liquids_w_losses
-    var["Primary Energy|Liquids|oil refining losses"] = liquids_w_losses - liquids
+    var["Primary Energy|Liquids|oil refining losses"] = liquids_w_losses - liquids_all
 
     # TEST: oil import must be same as total sum of oil primary
     # pd.testing.assert_series_equal(
@@ -155,28 +158,45 @@ def get_primary_energy(n, year) -> pd.DataFrame:
     # "Primary Energy|Gas|Hydrogen"
     # "Primary Energy|Gas|Gases" (?) Sabatier?
 
-    gas_trade_foreign = n.statistics.trade_energy(
-        bus_carrier="gas", direction="import", scope="foreign"
-    )
-    gas_trade_domestic = n.statistics.trade_energy(
-        bus_carrier="gas", direction="import", scope="domestic"
-    )
+    for scope in (TradeTypes.DOMESTIC, TradeTypes.FOREIGN):
+        gas_trade = n.statistics.trade_energy(
+            bus_carrier="gas", direction="import", scope=scope
+        )
+        gas_trade = gas_trade[gas_trade.gt(0)].groupby("location").sum()
+        var[f"Primary Energy|Gas|Import {scope.title()}"] = gas_trade
 
-    gas_trade_foreign = (
-        gas_trade_foreign[gas_trade_foreign.gt(0)].groupby("location").sum()
-    )
-    gas_trade_domestic = (
-        gas_trade_domestic[gas_trade_domestic.gt(0)].groupby("location").sum()
-    )
+    # gas_trade_foreign = n.statistics.trade_energy(
+    #     bus_carrier="gas", direction="import", scope="foreign"
+    # )
+    # gas_trade_domestic = n.statistics.trade_energy(
+    #     bus_carrier="gas", direction="import", scope="domestic"
+    # )
+    #
+    # gas_trade_foreign = (
+    #     gas_trade_foreign[gas_trade_foreign.gt(0)].groupby("location").sum()
+    # )
+    # gas_trade_domestic = (
+    #     gas_trade_domestic[gas_trade_domestic.gt(0)].groupby("location").sum()
+    # )
 
-    eu_gas_import = n.statistics.supply(
-        groupby="location", bus_carrier="gas", comps="Generator"
+    gas_generation = n.statistics.supply(
+        groupby=["location", "carrier"], bus_carrier="gas", comps="Generator"
     )
-    var["Primary Energy|Gas|Foreign Import"] = gas_trade_foreign
-    var["Primary Energy|Gas|Domestic Import"] = gas_trade_domestic
-    var["Primary Energy|Gas|EU Import"] = eu_gas_import
+    # var["Primary Energy|Gas|Import Foreign"] = gas_trade_foreign
+    # var["Primary Energy|Gas|Import Domestic"] = gas_trade_domestic
+    var["Primary Energy|Gas|Production"] = filter_by(gas_generation, carrier="gas")
+    var["Primary Energy|Gas|Import Global"] = filter_by(
+        gas_generation, carrier="import gas"
+    )
+    # /IdeaProjects/pypsa-at/resources/v2025.02/KN2045_Mix/gas_input_locations_s_adm_simplified.csv
     var["Primary Energy|Gas"] = (
-        pd.concat([gas_trade_foreign, gas_trade_domestic, eu_gas_import])
+        pd.concat(
+            [
+                var[f"Primary Energy|Gas|Import {TradeTypes.FOREIGN}"],
+                var[f"Primary Energy|Gas|Import {TradeTypes.DOMESTIC}"],
+                gas_generation,
+            ]
+        )
         .groupby("location")
         .sum()
     )
@@ -268,11 +288,11 @@ if __name__ == "__main__":
     if "snakemake" not in globals():
         snakemake = mock_snakemake(
             "export_iamc_variables",
-            simpl="",
-            clusters="adm",
-            opts="",
-            ll="vopt",
-            sector_opts="None",
+            # simpl="",
+            # clusters="adm",
+            # opts="",
+            # ll="vopt",
+            # sector_opts="None",
             run="KN2045_Mix",
         )
     configure_logging(snakemake)
