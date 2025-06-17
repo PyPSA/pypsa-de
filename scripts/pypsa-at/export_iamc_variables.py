@@ -184,9 +184,11 @@ def get_primary_energy(n, year) -> pd.DataFrame:
     )
     # var["Primary Energy|Gas|Import Foreign"] = gas_trade_foreign
     # var["Primary Energy|Gas|Import Domestic"] = gas_trade_domestic
-    var["Primary Energy|Gas|Production"] = filter_by(gas_generation, carrier="gas")
-    var["Primary Energy|Gas|Import Global"] = filter_by(
-        gas_generation, carrier="import gas"
+    var["Primary Energy|Gas|Production"] = (
+        filter_by(gas_generation, carrier="gas").groupby("location").sum()
+    )
+    var["Primary Energy|Gas|Import Global"] = (
+        filter_by(gas_generation, carrier="import gas").groupby("location").sum()
     )
     # /IdeaProjects/pypsa-at/resources/v2025.02/KN2045_Mix/gas_input_locations_s_adm_simplified.csv
     var["Primary Energy|Gas"] = (
