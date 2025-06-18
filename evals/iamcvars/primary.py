@@ -131,15 +131,17 @@ def primary_gas(n, var):
 
 
 def primary_waste(n, var):
-    # non-sequestered HVC + municipal solid waste
-    # municipal solid waste is generated regionally
-    # municipal solid waste supplies to HVC bus + draws from CO2 atmosphere
-    # naphtha for industry withdraws from oil and supplies naphtha + waste to HVC bus + process emissions
-    # waste CHP only draws from HVC bus
-    # Primary Energy|Waste is only municipal solid waste Generators, the rest is secondary energy
-    # plus 'municipal solid waste transport' import amounts
-    # n.statistics.supply(groupby=["location", "carrier", "bus_carrier"], bus_carrier=["non-sequestered HVC", "municipal solid waste"])
+    """
 
+    Parameters
+    ----------
+    n
+    var
+
+    Returns
+    -------
+    :
+    """
     _get_traded_energy(n, var, "municipal solid waste", "import", "Waste")
 
     var["Primary Energy|Waste|Solid"] = n.statistics.supply(
@@ -271,7 +273,14 @@ def primary_hydro(n, var):
         hydro, carrier="PHS Dispatched Power from Inflow"
     )
     var["Primary Energy|Hydro|Hydro"] = filter_by(
-        hydro, carrier="hydro Dispatched Power"
+        hydro, carrier="hydro Dispatched Power from Inflow"
+    )
+    var["Primary Energy|Hydro|ror"] = (
+        n.statistics.supply(
+            groupby=["location", "carrier"], comps="Generator", bus_carrier="AC"
+        )
+        .pipe(filter_by, carrier="ror")
+        .droplevel("carrier")
     )
     var["Primary Energy|Hydro"] = _get_sum_by_subcategory(var, "Hydro")
 
@@ -293,6 +302,22 @@ def primary_solar(n, var):
     :
         The updated variables' collection.
     """
+    solar = n.statistics.supply(
+        groupby=["location", "carrier"],
+        comps="Generator",
+        bus_carrier=["AC", "low voltage"],
+    )
+    var["Primary Energy|Solar|solar"] = filter_by(solar, carrier="solar").droplevel(
+        "carrier"
+    )
+    var["Primary Energy|Solar|solar-hsat"] = filter_by(
+        solar, carrier="solar-hsat"
+    ).droplevel("carrier")
+    var["Primary Energy|Solar|solar rooftop"] = filter_by(
+        solar, carrier="solar rooftop"
+    ).droplevel("carrier")
+    var["Primary Energy|Solar"] = _get_sum_by_subcategory(var, "Solar")
+
     return var
 
 
@@ -365,4 +390,10 @@ def primary_heat(n, var):
     :
         The updated variables' collection.
     """
+
+    # ambient heat from heat pumps
+    # latent heat from CHPs
+    # Solar heat
+    # Geothermal
+
     return var
