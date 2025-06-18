@@ -5,48 +5,48 @@ from evals.constants import TradeTypes
 from evals.utils import filter_by
 
 
-def primary_liquids(n, var):
-    # "Primary Energy|Oil"  (= sum of all oil variables)
-    # "Primary Energy|Oil|Heat"
-    # "Primary Energy|Oil|Electricity"
-    # "Primary Energy|Oil|Liquids" (= Oil minus rest)
-    # what about Fischer-Tropsch?
+def primary_fossil_oil(n, var):
+    """
+    Calculate the amounts of oil entering a region.
 
-    # need to reduce primary energy by renewable oil production in the same region
-    # renewable_oil_production = n.statistics.supply(
-    #     groupby=["location", "carrier", "bus_carrier"], comps="Link", bus_carrier="oil"
-    # ).drop(
-    #     ["unsustainable bioliquids", "oil refining", "import oil"],
-    #     axis=0,
-    #     level="carrier",
-    #     errors="ignore",
-    # )
-    # oil_usage = (
-    #     n.statistics.withdrawal(
-    #         groupby=["location", "carrier", "bus_carrier"], bus_carrier="oil"
-    #     )
-    #     .drop("Store", axis=0, level="component", errors="ignore")
-    #     .droplevel("component")
-    #     .mul(-1)  # withdrawal is negative
-    # )
-    #
-    # # assuming that regional oil production is consumed in the same region
-    # oil_saldo = (
-    #     oil_usage.groupby("location")
-    #     .sum()
-    #     .add(renewable_oil_production.groupby("location").sum(), fill_value=0)
-    # )
-    # oil_import = oil_saldo[oil_saldo.le(0)]
-    # oil_export = oil_saldo[oil_saldo.gt(0)]
-    #
-    # var["Primary Energy|Oil"] = oil_import.divide(oil_refining_efficiency)
-    # var["Final Energy|Oil"] = oil_export
+    Assuming that regional oil production is consumed in the same region, the netted
+    energy balance becomes the primary energy (import) and final energy (export) of
+    the region. It is important to note that this is not the same as fossil oil imports,
+    but all oil imports including renewable oil production from other regions.
+    Lacking an oil network that connects regions, we assume that all oil is consumed
+    locally and only oil production surplus becomes exported as final energy.
 
-    # FixMe: broken, I think
-    oil_balance = n.statistics.energy_balance(
+
+    There are a few caveats here:
+    1. the EU oil bus mixes fossil oil and renewable liquids
+    2. It is not possible to distinguish oil types anymore
+       once they enter the EU bus
+    3. Regional transformation Links are connected to the EU bus
+    4. Anything other than "oil import" is considered "liquids"
+    5. liquids may, or may not be renewable, depending on the input
+       of the transformation technology
+    6. We assume, that all liquids produced in a region are consumed in that region
+       (This is why the energy_balance is calculated instead of the supply)
+    6. the same consumption split (oil vs liquids) is used for all regions,
+       because the regional split cannot be calculated.
+    7. All oil imported to EU is fossil oil
+
+    Parameters
+    ----------
+    n
+        A solved network.
+    var
+        The collection to append new variables in.
+
+    Returns
+    -------
+    :
+        The updated variables' collection.
+    """
+    netted_liquids = n.statistics.energy_balance(
         groupby="location", bus_carrier="oil", comps="Link"
     ).drop("EU", errors="ignore")
-    liquids_all = oil_balance[oil_balance.le(0)].abs()
+    liquids_consumption = netted_liquids[netted_liquids.le(0)].abs()
 
     # increase fossil oil demand by this factor to account for refining losses
     oil_refining_efficiency = (
@@ -54,32 +54,21 @@ def primary_liquids(n, var):
     )
     # calculate the split of fossil oil generation to liquids production and assume
     # the same split for all regions
-    oil_fossil_eu = n.statistics.supply(bus_carrier="oil primary").item()
-    renewable_liquids = n.statistics.supply(
+    total_oil_import = n.statistics.supply(bus_carrier="oil primary").item()
+    total_liquids_production = n.statistics.supply(
         groupby="bus_carrier", bus_carrier="oil", comps="Link"
     ).item()
-    fossil_fraction = liquids_all * oil_fossil_eu / renewable_liquids
-    # increase fossil oil share by refining losses
-    liquids_w_losses = (
-        liquids_all - fossil_fraction + fossil_fraction / oil_refining_efficiency
-    )
-    # assuming that regional oil production is consumed in the same region, the netted
-    # energy balance becomes the primary energy (import) and final energy (export) of
-    # the region. It is important to note that this is not the same as fossil oil imports,
-    # but all oil imports including renewable oil production from other regions.
-    # Lacking an oil network that connects regions, we assume that all oil is consumed
-    # locally and only oil production surplus becomes exported as final energy.
-    var["Primary Energy|Liquids"] = liquids_w_losses
-    var["Primary Energy|Liquids|oil refining losses"] = liquids_w_losses - liquids_all
+    fossil_share = total_oil_import / total_liquids_production
+    oil = liquids_consumption * fossil_share / oil_refining_efficiency
+
+    liquids = liquids_consumption * (1 - fossil_share)
 
     # should be
-    # var["Primary Energy|Oil"]
-    # var["Primary Energy|Oil|Refining Losses"]
+    var["Primary Energy|Oil"] = oil + liquids
+    var["Primary Energy|Oil|Fossil"] = oil
+    var["Primary Energy|Oil|Liquids"] = liquids
+    var["Primary Energy|Oil|Refining Losses"] = oil * (1 - oil_refining_efficiency)
 
-    # TEST: oil import must be same as total sum of oil primary
-    # pd.testing.assert_series_equal(
-    #     oil_import, oil_energy_balance[oil_energy_balance.le(0)], check_names=False
-    # )  # PASS -> its the same
     return var
 
 
@@ -143,36 +132,177 @@ def primary_waste(n, var):
 
 
 def primary_coal(n, var):
+    """
+    Calculate the amounts of coal consumed in a region.
+
+    Coal is not produced by any Link, therefore it's safe to assume
+    all withdrawal is imported fossil coal or lignite.
+
+    Parameters
+    ----------
+    n
+        A solved network.
+    var
+        The collection to append new variables in.
+
+    Returns
+    -------
+    :
+        The updated variables' collection.
+    """
+
+    var["Primary Energy|Coal|Hard"] = n.statistics.withdrawal(
+        groupby="location", bus_carrier="coal"
+    ).drop("Store")
+    var["Primary Energy|Coal|Lignite"] = n.statistics.withdrawal(
+        groupby="location", bus_carrier="lignite"
+    ).drop("Store")
+    var["Primary Energy|Coal"] = (
+        var["Primary Energy|Coal|Hard"] + var["Primary Energy|Coal|Lignite"]
+    )
+
     return var
 
 
-def primary_hydrogen(n, vars):
-    return vars
+def primary_hydrogen(n, var):
+    """
+
+    Parameters
+    ----------
+    n
+        A solved network.
+    var
+        The collection to append new variables in.
+
+    Returns
+    -------
+    :
+        The updated variables' collection.
+    """
+    return var
 
 
-def primary_biomass(n, vars):
-    return vars
+def primary_biomass(n, var):
+    """
+
+    Parameters
+    ----------
+    n
+        A solved network.
+    var
+        The collection to append new variables in.
+
+    Returns
+    -------
+    :
+        The updated variables' collection.
+    """
+    return var
 
 
-def primary_hydro(n, vars):
-    return vars
+def primary_hydro(n, var):
+    """
+
+    Parameters
+    ----------
+    n
+        A solved network.
+    var
+        The collection to append new variables in.
+
+    Returns
+    -------
+    :
+        The updated variables' collection.
+    """
+    return var
 
 
-def primary_solar(n, vars):
-    return vars
+def primary_solar(n, var):
+    """
+
+    Parameters
+    ----------
+    n
+        A solved network.
+    var
+        The collection to append new variables in.
+
+    Returns
+    -------
+    :
+        The updated variables' collection.
+    """
+    return var
 
 
-def primary_nuclear(n, vars):
-    return vars
+def primary_nuclear(n, var):
+    """
+
+    Parameters
+    ----------
+    n
+        A solved network.
+    var
+        The collection to append new variables in.
+
+    Returns
+    -------
+    :
+        The updated variables' collection.
+    """
+    return var
 
 
-def primary_ammonia(n, vars):
-    return vars
+def primary_ammonia(n, var):
+    """
+
+    Parameters
+    ----------
+    n
+        A solved network.
+    var
+        The collection to append new variables in.
+
+    Returns
+    -------
+    :
+        The updated variables' collection.
+    """
+    return var
 
 
-def primary_wind(n, vars):
-    return vars
+def primary_wind(n, var):
+    """
+
+    Parameters
+    ----------
+    n
+        A solved network.
+    var
+        The collection to append new variables in.
+
+    Returns
+    -------
+    :
+        The updated variables' collection.
+    """
+    return var
 
 
-def primary_heat(n, vars):
-    return vars
+def primary_heat(n, var):
+    """
+
+    Parameters
+    ----------
+    n
+        A solved network.
+    var
+        The collection to append new variables in.
+
+    Returns
+    -------
+    :
+        The updated variables' collection.
+    """
+    return var
