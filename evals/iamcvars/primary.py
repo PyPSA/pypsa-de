@@ -5,6 +5,30 @@ from evals.constants import TradeTypes
 from evals.utils import filter_by
 
 
+def _get_traded_energy(n, var, bus_carrier, direction, subcat):
+    """
+    Calculate the trade statistics.
+
+    Parameters
+    ----------
+    n
+    var
+    bus_carrier
+    direction
+    subcat
+
+    Returns
+    -------
+    :
+    """
+    for scope in (TradeTypes.DOMESTIC, TradeTypes.FOREIGN):
+        trade = n.statistics.trade_energy(
+            bus_carrier=bus_carrier, direction=direction, scope=scope
+        )
+        trade = trade[trade.gt(0)].groupby("location").sum()
+        var[f"Primary Energy|{subcat}|{direction.title()} {scope.title()}"] = trade
+
+
 def primary_fossil_oil(n, var):
     """
     Calculate the amounts of oil entering a region.
@@ -73,12 +97,13 @@ def primary_fossil_oil(n, var):
 
 
 def primary_gas(n, var):
-    for scope in (TradeTypes.DOMESTIC, TradeTypes.FOREIGN):
-        gas_trade = n.statistics.trade_energy(
-            bus_carrier="gas", direction="import", scope=scope
-        )
-        gas_trade = gas_trade[gas_trade.gt(0)].groupby("location").sum()
-        var[f"Primary Energy|Gas|Import {scope.title()}"] = gas_trade
+    # for scope in (TradeTypes.DOMESTIC, TradeTypes.FOREIGN):
+    #     gas_trade = n.statistics.trade_energy(
+    #         bus_carrier="gas", direction="import", scope=scope
+    #     )
+    #     gas_trade = gas_trade[gas_trade.gt(0)].groupby("location").sum()
+    #     var[f"Primary Energy|Gas|Import {scope.title()}"] = gas_trade
+    _get_traded_energy(n, var, "gas", "import", "Gas")
 
     gas_generation = n.statistics.supply(
         groupby=["location", "carrier"], bus_carrier="gas", comps="Generator"
@@ -91,6 +116,7 @@ def primary_gas(n, var):
     var["Primary Energy|Gas|Import Global"] = (
         filter_by(gas_generation, carrier="import gas").groupby("location").sum()
     )
+    # summing up does not work bc of misaligned indices. Need to concat.
     var["Primary Energy|Gas"] = (
         pd.concat(
             [
@@ -166,6 +192,11 @@ def primary_coal(n, var):
 
 def primary_hydrogen(n, var):
     """
+    Calculate the amounts of hydrogen imported into a region.
+
+    There are global import of Hydrogen, found in `Generator`
+    components, and various types of H2 pipelines, that bring
+    Hydrogen into regions.
 
     Parameters
     ----------
@@ -179,6 +210,9 @@ def primary_hydrogen(n, var):
     :
         The updated variables' collection.
     """
+
+    _get_traded_energy(n, var, "H2", "import", "Hydrogen")
+
     return var
 
 

@@ -12,6 +12,7 @@ from pandas import DataFrame
 from pypsa.statistics import (
     StatisticsAccessor,
     aggregate_timeseries,
+    get_transmission_carriers,
     get_weightings,
     groupers,
 )
@@ -613,12 +614,21 @@ class ESMStatistics(StatisticsAccessor):
             _bc = [bus_carrier] if isinstance(bus_carrier, str) else bus_carrier
             buses = buses.query("carrier in @_bc")
 
-        for port, c in product((0, 1), ("Link", "Line")):
-            mask = trade_mask(n.static(c), scope).to_numpy()
+        transmission_carrier = get_transmission_carriers(n, bus_carrier).unique(  # Noqa: F841
+            "carrier"
+        )
+        transmission_components = get_transmission_carriers(n, bus_carrier).unique(
+            "component"
+        )
+
+        for port, c in product((0, 1), transmission_components):
+            mask = trade_mask(
+                n.static(c), scope
+            ).to_numpy()  # .query("carrier.isin(@transmission_carrier)")
             comp = n.static(c)[mask].reset_index()
 
             p = buses.merge(
-                comp,
+                comp.query("carrier.isin(@transmission_carrier)"),
                 left_on="Bus",
                 right_on=f"bus{port}",
                 suffixes=("_bus", ""),

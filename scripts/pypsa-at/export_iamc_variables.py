@@ -91,19 +91,19 @@ def collect_primary_energy(n, year) -> pd.DataFrame:
     :
         The primary energy in MWh for all regions and
     """
-
-    var = primary_fossil_oil(n, {})
-    var = primary_gas(n, var)
-    var = primary_hydrogen(n, var)
-    var = primary_waste(n, var)
-    var = primary_coal(n, var)
-    var = primary_biomass(n, var)
-    var = primary_hydro(n, var)
-    var = primary_solar(n, var)
-    var = primary_nuclear(n, var)
-    var = primary_ammonia(n, var)
-    var = primary_wind(n, var)
-    var = primary_heat(n, var)
+    var = {}
+    primary_fossil_oil(n, var)
+    primary_gas(n, var)
+    primary_hydrogen(n, var)
+    primary_waste(n, var)
+    primary_coal(n, var)
+    primary_biomass(n, var)
+    primary_hydro(n, var)
+    primary_solar(n, var)
+    primary_nuclear(n, var)
+    primary_ammonia(n, var)
+    primary_wind(n, var)
+    primary_heat(n, var)
 
     # "Primary Energy|Gas"
     # "Primary Energy|Gas|Heat"
