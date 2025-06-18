@@ -213,6 +213,10 @@ def primary_hydrogen(n, var):
 
     _get_traded_energy(n, var, "H2", "import", "Hydrogen")
 
+    var["Primary Energy|Hydrogen|Import Global"] = n.statistics.supply(
+        groupby=["location", "carrier"], bus_carrier="H2", comps="Generator"
+    ).pipe(filter_by, carrier="import H2")
+
     return var
 
 
