@@ -29,6 +29,14 @@ def _get_traded_energy(n, var, bus_carrier, direction, subcat):
         var[f"Primary Energy|{subcat}|{direction.title()} {scope.title()}"] = trade
 
 
+def _get_sum_by_subcategory(var, subcat):
+    return (
+        pd.concat([var[v] for v in var.keys() if f"|{subcat}|" in v])
+        .groupby("location")
+        .sum()
+    )
+
+
 def primary_fossil_oil(n, var):
     """
     Calculate the amounts of oil entering a region.
@@ -117,17 +125,7 @@ def primary_gas(n, var):
         filter_by(gas_generation, carrier="import gas").groupby("location").sum()
     )
     # summing up does not work bc of misaligned indices. Need to concat.
-    var["Primary Energy|Gas"] = (
-        pd.concat(
-            [
-                var[f"Primary Energy|Gas|Import {TradeTypes.FOREIGN.title()}"],
-                var[f"Primary Energy|Gas|Import {TradeTypes.DOMESTIC.title()}"],
-                gas_generation.droplevel("carrier"),
-            ]
-        )
-        .groupby("location")
-        .sum()
-    )
+    var["Primary Energy|Gas"] = _get_sum_by_subcategory(var, "Gas")
 
     return var
 
@@ -141,18 +139,13 @@ def primary_waste(n, var):
     # Primary Energy|Waste is only municipal solid waste Generators, the rest is secondary energy
     # plus 'municipal solid waste transport' import amounts
     # n.statistics.supply(groupby=["location", "carrier", "bus_carrier"], bus_carrier=["non-sequestered HVC", "municipal solid waste"])
-    waste_generation = n.statistics.supply(
+
+    _get_traded_energy(n, var, "municipal solid waste", "import", "Waste")
+
+    var["Primary Energy|Waste|Solid"] = n.statistics.supply(
         groupby="location", bus_carrier="municipal solid waste", comps="Generator"
     )
-    waste_import = n.statistics.trade_energy(
-        bus_carrier="municipal solid waste",
-        direction="import",
-        scope=("domestic", "foreign"),
-    )
-    waste_import = waste_import[waste_import.gt(0)].groupby("location").sum()
-
-    var["Primary Energy|Waste"] = waste_generation.add(waste_import, fill_value=0)
-    var["Primary Energy|Waste|Import"] = waste_import
+    var["Primary Energy|Waste"] = _get_sum_by_subcategory(var, "Waste")
 
     return var
 
@@ -213,15 +206,22 @@ def primary_hydrogen(n, var):
 
     _get_traded_energy(n, var, "H2", "import", "Hydrogen")
 
-    var["Primary Energy|Hydrogen|Import Global"] = n.statistics.supply(
-        groupby=["location", "carrier"], bus_carrier="H2", comps="Generator"
-    ).pipe(filter_by, carrier="import H2")
+    var["Primary Energy|Hydrogen|Import Global"] = (
+        n.statistics.supply(
+            groupby=["location", "carrier"], bus_carrier="H2", comps="Generator"
+        )
+        .pipe(filter_by, carrier="import H2")
+        .droplevel("carrier")
+    )
+
+    var["Primary Energy|Hydrogen"] = _get_sum_by_subcategory(var, "Hydrogen")
 
     return var
 
 
 def primary_biomass(n, var):
     """
+    Calculate the amounts of biomass generated in a region.
 
     Parameters
     ----------
@@ -235,6 +235,17 @@ def primary_biomass(n, var):
     :
         The updated variables' collection.
     """
+
+    _get_traded_energy(n, var, "solid biomass", "import", "Biomass")
+
+    var["Primary Energy|Biomass|Solid"] = n.statistics.supply(
+        groupby="location", bus_carrier="solid biomass", comps="Generator"
+    )
+    var["Primary Energy|Biomass|Biogas"] = n.statistics.supply(
+        groupby="location", bus_carrier="biogas", comps="Generator"
+    )
+    var["Primary Energy|Biomass"] = _get_sum_by_subcategory(var, "Biomass")
+
     return var
 
 
@@ -253,6 +264,17 @@ def primary_hydro(n, var):
     :
         The updated variables' collection.
     """
+
+    hydro = n.statistics.phs_split()
+
+    var["Primary Energy|Hydro|PHS"] = filter_by(
+        hydro, carrier="PHS Dispatched Power from Inflow"
+    )
+    var["Primary Energy|Hydro|Hydro"] = filter_by(
+        hydro, carrier="hydro Dispatched Power"
+    )
+    var["Primary Energy|Hydro"] = _get_sum_by_subcategory(var, "Hydro")
+
     return var
 
 

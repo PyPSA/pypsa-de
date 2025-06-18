@@ -11,7 +11,6 @@ import pypsa
 from pandas import DataFrame
 from pypsa.statistics import (
     StatisticsAccessor,
-    aggregate_timeseries,
     get_transmission_carriers,
     get_weightings,
     groupers,
@@ -461,7 +460,9 @@ class ESMStatistics(StatisticsAccessor):
         for time_series in ("p_dispatch", "p_store", "spill", "inflow"):
             p = n.pnl("StorageUnit")[time_series].reindex(columns=idx, fill_value=0)
             weights = get_weightings(n, "StorageUnit")
-            phs[time_series] = aggregate_timeseries(p, weights, agg=aggregate_time)
+            phs[time_series] = n.statistics._aggregate_timeseries(
+                p, weights, agg=aggregate_time
+            )
 
         efficiency = phs["p_store"] * n.static("StorageUnit")["efficiency_dispatch"]
         part_inflow = phs["inflow"] / (phs["inflow"] + efficiency)
