@@ -614,21 +614,19 @@ class ESMStatistics(StatisticsAccessor):
             _bc = [bus_carrier] if isinstance(bus_carrier, str) else bus_carrier
             buses = buses.query("carrier in @_bc")
 
-        transmission_carrier = get_transmission_carriers(n, bus_carrier).unique(  # Noqa: F841
+        carrier = get_transmission_carriers(n, bus_carrier).unique(  # Noqa: F841
             "carrier"
         )
-        transmission_components = get_transmission_carriers(n, bus_carrier).unique(
-            "component"
-        )
+        comps = get_transmission_carriers(n, bus_carrier).unique("component")
 
-        for port, c in product((0, 1), transmission_components):
+        for port, c in product((0, 1), comps):
             mask = trade_mask(
                 n.static(c), scope
             ).to_numpy()  # .query("carrier.isin(@transmission_carrier)")
             comp = n.static(c)[mask].reset_index()
 
             p = buses.merge(
-                comp.query("carrier.isin(@transmission_carrier)"),
+                comp.query("carrier.isin(@carrier)"),
                 left_on="Bus",
                 right_on=f"bus{port}",
                 suffixes=("_bus", ""),
