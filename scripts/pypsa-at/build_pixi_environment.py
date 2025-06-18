@@ -21,12 +21,6 @@ def main():
     # re-create pixi files from environment.yaml
     run(["pixi", "init", "--import", "envs/linux-pinned.yaml"], check=True)
 
-    # import time
-    # time.sleep(2)
-    run(["sed", "-i", "'s/pypsa-de/pypsa-at/g'", "pixi.toml"])
-    # output = run(["sed -i 's/pypsa-de/pypsa-at/g' pixi.toml"])
-    # print(output)
-    #
     # correct the environment name
     pixi_toml = Path("pixi.toml")
     pixi_toml.write_text(pixi_toml.read_text().replace("pypsa-de", "pypsa-at"))
@@ -50,8 +44,13 @@ def main():
         "plotly",
         "pymdown-extensions",
         "pytest",
+        "pytest-html",
+        "pytest-cov",
+        "pytest-xdist",
+        "pytest-metadata",
         "xlsxwriter",
         "git-delta",
+        "pandas-stubs",
     ]
     run(["pixi", "add"] + packages, check=True)
 
