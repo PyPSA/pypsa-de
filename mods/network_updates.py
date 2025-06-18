@@ -8,7 +8,7 @@ import pypsa
 logger = getLogger(__name__)
 
 
-def update_austrian_transmission_capacities(
+def modify_austrian_transmission_capacities(
     n: pypsa.Network, austrian_transmission_capacities: str
 ):
     """
@@ -30,7 +30,7 @@ def update_austrian_transmission_capacities(
     -------
     :
     """
-    logger.info("Updating grid capacities for Austria.")
+    logger.info("Modifying grid capacities for Austria.")
 
     # transmission_carrier = get_transmission_carriers(n)
     # to_concat = []
@@ -54,9 +54,21 @@ def update_austrian_transmission_capacities(
     # todo: test if 2020 capacities are in result network
 
 
-def update_austrian_industry_demand(existing_industry, year):
+def modify_austrian_industry_demand(existing_industry, year):
     """Update the industry demand in the PyPSA-AT model for Austria."""
 
     logger.info("Updating industry demand for Austria.")
 
     return existing_industry
+
+
+def modify_austrian_gas_storage_capacities():
+    """Update gas and H2 storage capacities for Austria."""
+
+
+def modify_biomass_potentials():
+    """Update biomass potentials."""
+
+
+def modify_heat_demand():
+    """Update heat demands."""
