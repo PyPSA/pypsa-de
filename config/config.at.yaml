@@ -695,8 +695,7 @@ scale_capacity:  # in MW
       "urban central gas CHP": 22000
 
 # pypsa-at modifications
-modify_nuts3_shapes:
-  enable: true
-
-update_austrian_transmission_capacities:
-  enable: true
+mods:
+  modify_nuts3_shapes: true
+  modify_austrian_transmission_capacities: true  # scale_capacity does not work for Line components
+  modify_population_layouts: true
