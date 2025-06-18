@@ -9,9 +9,9 @@ rule build_population_layouts:
         urban_percent="data/worldbank/API_SP.URB.TOTL.IN.ZS_DS2_en_csv_v2.csv",
         cutout=lambda w: input_cutout(w),
     output:
-        pop_layout_total=resources("pop_layout_total.nc"),
-        pop_layout_urban=resources("pop_layout_urban.nc"),
-        pop_layout_rural=resources("pop_layout_rural.nc"),
+        pop_layout_total=resources("pop_layout_total-raw.nc"),
+        pop_layout_urban=resources("pop_layout_urban-raw.nc"),
+        pop_layout_rural=resources("pop_layout_rural-raw.nc"),
     log:
         logs("build_population_layouts.log"),
     resources:
