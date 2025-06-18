@@ -620,9 +620,7 @@ class ESMStatistics(StatisticsAccessor):
         comps = get_transmission_carriers(n, bus_carrier).unique("component")
 
         for port, c in product((0, 1), comps):
-            mask = trade_mask(
-                n.static(c), scope
-            ).to_numpy()  # .query("carrier.isin(@transmission_carrier)")
+            mask = trade_mask(n.static(c), scope).to_numpy()
             comp = n.static(c)[mask].reset_index()
 
             p = buses.merge(
@@ -640,7 +638,7 @@ class ESMStatistics(StatisticsAccessor):
             p = p.set_index([_location, DataModel.CARRIER, "carrier_bus"])
             p.index.names = DataModel.IDX_NAMES
             # branch components have reversed sign
-            p = p.filter(n.snapshots, axis=1).mul(-1.0)
+            p = p.filter(n.snapshots, axis=1).mul(-1)
             if direction == "export":
                 p = p.clip(upper=0)  # keep negative values (withdrawal)
             elif direction == "import":
