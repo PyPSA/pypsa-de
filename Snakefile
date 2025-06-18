@@ -378,8 +378,8 @@ rule modify_district_heat_share:
 
 rule modify_prenetwork:
     params:
-        update_austrian_transmission_capacities=config_provider(
-            "update_austrian_transmission_capacities", "enable"
+        modify_austrian_transmission_capacities=config_provider(
+            "mods", "modify_austrian_transmission_capacities"
         ),
         efuel_export_ban=config_provider("solving", "constraints", "efuel_export_ban"),
         enable_kernnetz=config_provider("wasserstoff_kernnetz", "enable"),
