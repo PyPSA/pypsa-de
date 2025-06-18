@@ -19,12 +19,12 @@ from evals.iamcvars.primary import (
     primary_ammonia,
     primary_biomass,
     primary_coal,
-    primary_fossil_oil,
     primary_gas,
     primary_heat,
     primary_hydro,
     primary_hydrogen,
     primary_nuclear,
+    primary_oil,
     primary_solar,
     primary_waste,
     primary_wind,
@@ -92,7 +92,7 @@ def collect_primary_energy(n, year) -> pd.DataFrame:
         The primary energy in MWh for all regions and
     """
     var = {}
-    primary_fossil_oil(n, var)
+    primary_oil(n, var)
     primary_gas(n, var)
     primary_hydrogen(n, var)
     primary_waste(n, var)

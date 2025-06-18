@@ -37,7 +37,7 @@ def _get_sum_by_subcategory(var, subcat):
     )
 
 
-def primary_fossil_oil(n, var):
+def primary_oil(n, var):
     """
     Calculate the amounts of oil entering a region.
 
@@ -95,10 +95,9 @@ def primary_fossil_oil(n, var):
 
     liquids = liquids_consumption * (1 - fossil_share)
 
-    # should be
-    var["Primary Energy|Oil"] = oil + liquids
-    var["Primary Energy|Oil|Fossil"] = oil
+    var["Primary Energy|Oil|Fossil"] = oil  # including losses
     var["Primary Energy|Oil|Liquids"] = liquids
+    var["Primary Energy|Oil"] = oil + liquids
     var["Primary Energy|Oil|Refining Losses"] = oil * (1 - oil_refining_efficiency)
 
     return var
@@ -397,3 +396,21 @@ def primary_heat(n, var):
     # Geothermal
 
     return var
+
+
+def get_renewable_generation(var):
+    """
+
+    Parameters
+    ----------
+    var
+
+    Returns
+    -------
+    :
+    """
+    # solar
+    # wind
+    # biomass
+    # heat?
+    #
