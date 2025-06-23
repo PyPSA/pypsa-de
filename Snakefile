@@ -590,7 +590,7 @@ rule build_existing_chp_de:
         regions=resources("regions_onshore_base_s_{clusters}.geojson"),
         district_heating_subnodes=(
             resources("district_heating_subnodes_base_s_{clusters}.geojson")
-            if config_provider("sector", "district_heating", "subnodes", "enable")
+            if config_provider("sector", "district_heating", "subnodes", "enable") == True
             else []
         ),
     output:

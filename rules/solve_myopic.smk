@@ -19,7 +19,7 @@ rule add_existing_baseyear:
             resources(
                 "networks/base-extended_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc"
             )
-            if config_provider("sector", "district_heating", "subnodes", "enable")
+            if config_provider("sector", "district_heating", "subnodes", "enable") == True
             else resources(
                 "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc"
             )
@@ -38,7 +38,7 @@ rule add_existing_baseyear:
             resources(
                 "existing_heating_distribution_base-extended_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.csv"
             )
-            if config_provider("sector", "district_heating", "subnodes", "enable")
+            if config_provider("sector", "district_heating", "subnodes", "enable") == True
             else resources(
                 "existing_heating_distribution_base_s_{clusters}_{planning_horizons}.csv"
             )
@@ -102,7 +102,7 @@ rule add_brownfield:
             resources(
                 "networks/base-extended_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc"
             )
-            if config_provider("sector", "district_heating", "subnodes", "enable")
+            if config_provider("sector", "district_heating", "subnodes", "enable") == True
             else resources(
                 "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc"
             )

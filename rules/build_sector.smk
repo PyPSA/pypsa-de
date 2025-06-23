@@ -201,7 +201,7 @@ rule build_temperature_profiles:
         pop_layout=resources("pop_layout_total.nc"),
         regions_onshore=(
             resources("regions_onshore_base-extended_s_{clusters}.geojson")
-            if config_provider("sector", "district_heating", "subnodes", "enable")
+            if config_provider("sector", "district_heating", "subnodes", "enable") == True
             else resources("regions_onshore_base_s_{clusters}.geojson")
         ),
         cutout=lambda w: input_cutout(
@@ -274,7 +274,7 @@ rule build_central_heating_temperature_profiles:
         temp_air_total=resources("temp_air_total_base_s_{clusters}.nc"),
         regions_onshore=(
             resources("regions_onshore_base-extended_s_{clusters}.geojson")
-            if config_provider("sector", "district_heating", "subnodes", "enable")
+            if config_provider("sector", "district_heating", "subnodes", "enable") == True
             else resources("regions_onshore_base_s_{clusters}.geojson")
         ),
     output:
@@ -322,7 +322,7 @@ rule build_geothermal_heat_potential:
         isi_heat_potentials="data/isi_heat_utilisation_potentials.xlsx",
         regions_onshore=(
             resources("regions_onshore_base-restricted_s_{clusters}.geojson")
-            if config_provider("sector", "district_heating", "subnodes", "enable")
+            if config_provider("sector", "district_heating", "subnodes", "enable") == True
             else resources("regions_onshore_base_s_{clusters}.geojson")
         ),
         lau_regions="data/lau_regions.zip",
@@ -369,7 +369,7 @@ rule build_cop_profiles:
         temp_air_total=resources("temp_air_total_base_s_{clusters}.nc"),
         regions_onshore=(
             resources("regions_onshore_base-extended_s_{clusters}.geojson")
-            if config_provider("sector", "district_heating", "subnodes", "enable")
+            if config_provider("sector", "district_heating", "subnodes", "enable") == True
             else resources("regions_onshore_base_s_{clusters}.geojson")
         ),
     output:
