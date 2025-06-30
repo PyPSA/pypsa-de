@@ -51,6 +51,7 @@ def main():
         "xlsxwriter",
         "git-delta",
         "pandas-stubs",
+        "starship",
     ]
     run(["pixi", "add"] + packages, check=True)
 
