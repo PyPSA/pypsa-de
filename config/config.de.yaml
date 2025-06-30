@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20250507_simple_scenarios
+  prefix: 20253006_fix_chp_lifetime
   name:
   # - ExPol
   - KN2045_Mix

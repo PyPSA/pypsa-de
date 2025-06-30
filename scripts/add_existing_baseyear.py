@@ -510,6 +510,10 @@ def add_chp_plants(n, grouping_years, costs, baseyear):
     chp["lifetime"] = (chp.DateOut - chp["grouping_year"] + 1).fillna(
         snakemake.params.costs["fill_values"]["lifetime"]
     )
+    chp.loc[chp.Fueltype == "gas", "lifetime"] = (
+        chp.DateOut - chp["grouping_year"] + 1
+    ).fillna(40)
+
     chp = chp.loc[
         chp.grouping_year + chp.lifetime > baseyear
     ]  # in add_brownfield this is build_year + lifetime <= baseyear
@@ -885,12 +889,19 @@ def add_heating_capacities_installed_before_baseyear(
 
             assert valid_grouping_years.is_monotonic_increasing
 
-            # get number of years of each interval
-            _years = valid_grouping_years.diff()
-            # Fill NA from .diff() with value for the first interval
-            _years[0] = valid_grouping_years[0] - baseyear + default_lifetime
-            # Installation is assumed to be linear for the past
-            ratios = _years / _years.sum()
+            if len(valid_grouping_years) == 0:
+                logger.warning(
+                    f"No valid grouping years found for {heat_system}. "
+                    "No existing capacities will be added."
+                )
+                ratios = []
+            else:
+                # get number of years of each interval
+                _years = valid_grouping_years.diff()
+                # Fill NA from .diff() with value for the first interval
+                _years[0] = valid_grouping_years[0] - baseyear + default_lifetime
+                # Installation is assumed to be linear for the past
+                ratios = _years / _years.sum()
 
         for ratio, grouping_year in zip(ratios, valid_grouping_years):
             # Add heat pumps
