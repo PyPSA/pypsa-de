@@ -38,10 +38,14 @@ Outputs
 
 import pandas as pd
 import xarray as xr
-from CentralHeatingCopApproximator import CentralHeatingCopApproximator
-from DecentralHeatingCopApproximator import DecentralHeatingCopApproximator
 
 from scripts._helpers import set_scenario_config
+from scripts.build_cop_profiles.CentralHeatingCopApproximator import (
+    CentralHeatingCopApproximator,
+)
+from scripts.build_cop_profiles.DecentralHeatingCopApproximator import (
+    DecentralHeatingCopApproximator,
+)
 from scripts.definitions.heat_system_type import HeatSystemType
 
 
@@ -108,7 +112,7 @@ if __name__ == "__main__":
     for heat_system_type, heat_sources in snakemake.params.heat_pump_sources.items():
         cop_this_system_type = []
         for heat_source in heat_sources:
-            if heat_source in ["ground", "air"]:
+            if heat_source in ["ground", "air", "ptes"]:
                 source_inlet_temperature_celsius = xr.open_dataarray(
                     snakemake.input[
                         f"temp_{heat_source.replace('ground', 'soil')}_total"

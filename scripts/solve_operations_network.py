@@ -10,13 +10,13 @@ import logging
 
 import numpy as np
 import pypsa
-from solve_network import prepare_network, solve_network
 
 from scripts._helpers import (
     configure_logging,
     set_scenario_config,
     update_config_from_wildcards,
 )
+from scripts.solve_network import prepare_network, solve_network
 
 logger = logging.getLogger(__name__)
 

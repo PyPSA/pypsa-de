@@ -61,6 +61,7 @@ import xarray as xr
 from pypsa.clustering.spatial import DEFAULT_ONE_PORT_STRATEGIES, normed_or_uniform
 
 from scripts._helpers import (
+    PYPSA_V1,
     configure_logging,
     get_snapshots,
     rename_techs,
@@ -443,7 +444,9 @@ def attach_load(
     )
 
     # apply clustering busmap
-    busmap = pd.read_csv(busmap_fn, dtype=str).set_index("Bus").squeeze()
+    busmap = pd.read_csv(busmap_fn, dtype=str)
+    index_col = "name" if PYPSA_V1 else "Bus"
+    busmap = busmap.set_index(index_col).squeeze()
     load = load.groupby(busmap).sum().T
 
     logger.info(f"Load data scaled by factor {scaling}.")
@@ -590,12 +593,22 @@ def attach_wind_and_solar(
                     + landfall_length * underground_investment
                 )
 
-                capital_cost = (
-                    costs.at["offwind", "capital_cost"]
-                    + costs.at[car + "-station", "capital_cost"]
-                    + connection_cost
-                )
-                overnight_cost = costs.at["offwind", "investment"]
+                # Take 'offwind-float' capital cost for 'float', and 'offwind' capital cost for the rest ('ac' and 'dc')
+                midcar = car.split("-", 2)[1]
+                if midcar == "float":
+                    capital_cost = (
+                        costs.at[car, "capital_cost"]
+                        + costs.at[car + "-station", "capital_cost"]
+                        + connection_cost
+                    )
+                    overnight_cost = costs.at[car, "investment"]
+                else:
+                    capital_cost = (
+                        costs.at["offwind", "capital_cost"]
+                        + costs.at[car + "-station", "capital_cost"]
+                        + connection_cost
+                    )
+                    overnight_cost = costs.at["offwind", "investment"]
                 connection_overnight_cost += costs.at[car + "-station", "investment"]
                 logger.info(
                     f"Added connection cost of {connection_cost.min():0.0f}-{connection_cost.max():0.0f} Eur/MW/a to {car}"

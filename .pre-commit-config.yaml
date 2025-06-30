@@ -27,7 +27,7 @@ repos:
   rev: v2.4.1
   hooks:
   - id: codespell
-    args: ['--ignore-regex="(\b[A-Z]+\b)"', '--ignore-words-list=fom,appartment,bage,ore,setis,tabacco,berfore,vor,pris,GuD,Dezember,Juni,Juli,Produktion,WorstCase'] # Ignore capital case words, e.g. country codes
+    args: ['--ignore-regex="(\b[A-Z]+\b)"', '--ignore-words-list=fom,appartment,bage,ore,setis,tabacco,berfore,vor,pris,bund,GuD,Dezember,Juni,Juli,Produktion,WorstCase'] # Ignore capital case words, e.g. country codes
     types_or: [python, rst, markdown]
     files: ^(scripts|doc)/
 
@@ -43,7 +43,7 @@ repos:
   rev: v2.14.0
   hooks:
   - id: pretty-format-yaml
-    exclude: pinned\.yaml$
+    exclude: (pinned\.yaml|\.lock\.yaml)$
     args: [--autofix, --indent, "2", --preserve-quotes]
 
   # Format Snakemake rule / workflow files
