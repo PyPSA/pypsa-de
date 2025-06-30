@@ -618,6 +618,11 @@ def add_chp_plants(n, grouping_years, costs, baseyear):
                 if generator != "urban central solid biomass CHP":
                     # lignite CHPs are not in DEA database - use coal CHP parameters
                     key = keys[generator]
+                    # for DE we observed that many of the gas CHPs keep running after 25 years
+                    # hence, to fix a mismatch between model capacity and real capacity:
+                    lifetime = (
+                        40 if key == "central gas CHP" else costs.at[key, "lifetime"]
+                    )
                     if "EU" in vars(spatial)[generator].locations:
                         bus0 = vars(spatial)[generator].nodes[0]
                     else:
@@ -641,7 +646,7 @@ def add_chp_plants(n, grouping_years, costs, baseyear):
                         efficiency2=efficiency_heat.dropna().loc[bus],
                         efficiency3=costs.at[generator, "CO2 intensity"],
                         build_year=grouping_year,
-                        lifetime=costs.at[key, "lifetime"],
+                        lifetime=lifetime,
                     )
                 else:
                     key = "central solid biomass CHP"
