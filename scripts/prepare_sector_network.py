@@ -3031,7 +3031,9 @@ def add_heat(
         # 1e3 converts from W/m^2 to MW/(1000m^2) = kW/m^2
         solar_thermal = options["solar_cf_correction"] * solar_thermal / 1e3
 
-    for heat_system in (
+    for (
+        heat_system
+    ) in (
         HeatSystem
     ):  # this loops through all heat systems defined in _entities.HeatSystem
         overdim_factor = options["overdimension_heat_generators"][
@@ -3300,6 +3302,10 @@ def add_heat(
                     heat_system.central_or_decentral + " water tank storage",
                     "capital_cost",
                 ],
+                overnight_cost=costs.at[
+                    heat_system.central_or_decentral + " water tank storage",
+                    "investment",
+                ],
                 lifetime=costs.at[
                     heat_system.central_or_decentral + " water tank storage", "lifetime"
                 ],
@@ -3377,6 +3383,7 @@ def add_heat(
                     carrier=f"{heat_system} water pits",
                     standing_loss=1 - np.exp(-1 / 24 / tes_time_constant_days),
                     capital_cost=costs.at["central water pit storage", "capital_cost"],
+                    overnight_cost=costs.at["central water pit storage", "investment"],
                     lifetime=costs.at["central water pit storage", "lifetime"],
                 )
 
@@ -6011,9 +6018,9 @@ def add_enhanced_geothermal(
         * Nyears
     )
 
-    assert (egs_potentials["capital_cost"] > 0).all(), (
-        "Error in EGS cost, negative values found."
-    )
+    assert (
+        egs_potentials["capital_cost"] > 0
+    ).all(), "Error in EGS cost, negative values found."
 
     orc_annuity = calculate_annuity(costs.at["organic rankine cycle", "lifetime"], dr)
     orc_capital_cost = (orc_annuity + FOM / (1 + FOM)) * orc_capex * Nyears
