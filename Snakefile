@@ -385,8 +385,7 @@ rule prepare_district_heating_subnodes:
         "scripts/pypsa-de/prepare_district_heating_subnodes.py"
 
 
-baseyear_value = config["scenario"]["planning_horizons"][0]
-
+baseyear_value = config_provider("scenario", "planning_horizons", 0)
 
 rule add_district_heating_subnodes:
     params:
