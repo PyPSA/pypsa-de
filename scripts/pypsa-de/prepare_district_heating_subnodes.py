@@ -54,24 +54,6 @@ def load_census_data(census_path: str) -> gpd.GeoDataFrame:
     return census
 
 
-# Function to encode city names in UTF-8
-def encode_utf8(city_name: str) -> bytes:
-    """
-    Encode a city name as a UTF-8 byte string.
-
-    Parameters
-    ----------
-    city_name : str
-        The name of the city to be encoded.
-
-    Returns
-    -------
-    bytes
-        The UTF-8 encoded byte string of the city name.
-    """
-    return city_name.encode("utf-8")
-
-
 def get_chunked_raster(
     dataset_path: str,
     bounds: tuple[float, float, float, float],
@@ -346,6 +328,7 @@ def process_district_heating_areas(
 def refine_dh_areas_from_census_data(
     subnodes: gpd.GeoDataFrame,
     census: gpd.GeoDataFrame,
+    min_dh_share: float,
     **processing_config: dict[str, any],
 ) -> gpd.GeoDataFrame:
     """
@@ -354,19 +337,23 @@ def refine_dh_areas_from_census_data(
     Parameters
     ----------
     subnodes : gpd.GeoDataFrame
-        GeoDataFrame containing information about district heating subnodes.
+        GeoDataFrame containing information about district heating subnodes, including city and LAU shapes.
     census : gpd.GeoDataFrame
         GeoDataFrame containing census data about geographical distribution of heating systems.
+    min_dh_share : float
+        Minimum share of district heating required to include a raster cell of census data.
+    processing_config : dict[str, any]
+        Configuration parameters for processing district heating areas, including minimum area and buffer factor.
 
     Returns
     -------
     gpd.GeoDataFrame
-        Updated GeoDataFrame with refined district heating areas.
+        Updated GeoDataFrame with refined district heating areas, processed and filtered based on census data.
     """
-    # Keep rows where share of district heating is larger than 1%
+    # Keep rows where share of district heating is larger than the specified threshold
     census = census[
         census["Fernheizung"].astype(int) / census["Insgesamt_Heizungsart"].astype(int)
-        > 0.01
+        > min_dh_share
     ]
 
     # Add buffer, so tiles are 100x100m
@@ -378,10 +365,10 @@ def refine_dh_areas_from_census_data(
 
     # Explode to single geometries
     census = census.explode().reset_index(drop=True)
-    # Assign to subnodes lau_regions
+    # Assign to subnodes LAU regions
     census = gpd.overlay(subnodes, census, how="intersection")
 
-    # Add lau_shape from subnodes to census
+    # Add LAU shapes from subnodes to census
     lau_shape_dict = dict(zip(subnodes["Stadt"], subnodes["lau_shape"]))
     census["lau_shape"] = census["Stadt"].map(lau_shape_dict)
 
@@ -664,11 +651,14 @@ if __name__ == "__main__":
         # Parameters for processing of census data is read from config file.
         # Default values were chosen to yield district heating areas with high
         # geographic accordance to the ones publicly available e.g. Berlin, Hamburg.
+        min_dh_share = snakemake.params.district_heating["subnodes"]["census_areas"][
+            "min_district_heating_share"
+        ]
         processing_config = snakemake.params.district_heating["subnodes"][
             "census_areas"
         ]["processing"]
         subnodes = refine_dh_areas_from_census_data(
-            subnodes, census, **processing_config
+            subnodes, census, min_dh_share, **processing_config
         )
 
     if snakemake.params.district_heating["subnodes"]["limit_ptes_potential"]["enable"]:
