@@ -6,7 +6,18 @@ import pandas as pd
 import pypsa
 from shapely.geometry import Point
 
-from scripts._helpers import configure_logging, mock_snakemake, sanitize_custom_columns
+import os
+import sys
+
+sys.path.append(os.getcwd())
+
+from scripts._helpers import (
+    configure_logging,
+    mock_snakemake,
+    sanitize_custom_columns,
+    set_scenario_config,
+    update_config_from_wildcards,
+)
 from scripts.add_electricity import load_costs
 from scripts.prepare_sector_network import lossy_bidirectional_links
 
@@ -1265,7 +1276,11 @@ def scale_capacity(n, scaling):
                 ]
 
 
-def fix_foreign_investments(n, n_ref):
+def fix_foreign_investments(
+    n,
+    n_ref,
+    slack=0,
+):
     """
     Fix reference investments for non-DE components.
     """
@@ -1284,14 +1299,14 @@ def fix_foreign_investments(n, n_ref):
         # Identify non-German nodes
         if c in ["Line", "Link"]:
             # For lines, and links, check both buses
-            non_german = (
-                component.filter(regex="bus[012]")
-                .apply(lambda x: ~x.str.startswith(("DE", "EU")), axis=1)
-                .any(axis=1)
+            non_german = component.filter(regex="bus[012]").apply(
+                lambda x: (~x.str.startswith("DE").any())
+                & (not x.name.startswith("EU")),
+                axis=1,
             )
         else:
             # For other components, check if bus is not in Germany
-            non_german = ~component.bus.str.startswith(("DE", "EU"))
+            non_german = ~component.bus.str.startswith(("DE", "EU", "co2"))
 
         # Only fix extendable components
         extendable = (
@@ -1310,29 +1325,36 @@ def fix_foreign_investments(n, n_ref):
 
         indices = component.index[to_fix]
 
-        # Copy the optimized capacity from baseline to fixed capacity rounding values
-        # to the nearest integer to avoid constraint violations
+        # Set optimized capacity from reference network as lower and upper
+        # bound rounding values to the nearest integer and inserting slack
+        # to avoid constraint violations
         if c == "Store":
-            n.stores.loc[indices, "e_nom_min"] = baseline_component.loc[
-                indices, "e_nom_opt"
-            ].apply(np.floor)
-            n.stores.loc[indices, "e_nom_max"] = baseline_component.loc[
-                indices, "e_nom_opt"
-            ].apply(np.ceil)
+            n.stores.loc[indices, "e_nom_min"] = baseline_component.loc[indices].apply(
+                lambda row: max(row["e_nom_opt"] * (1 - slack), row["e_nom_min"]),
+                axis=1,
+            )
+            n.stores.loc[indices, "e_nom_max"] = baseline_component.loc[indices].apply(
+                lambda row: min(row["e_nom_opt"] * (1 + slack), row["e_nom_max"]),
+                axis=1,
+            )
         elif c == "Line":
-            n.lines.loc[indices, "s_nom_min"] = baseline_component.loc[
-                indices, "s_nom_opt"
-            ].apply(np.floor)
-            n.lines.loc[indices, "s_nom_max"] = baseline_component.loc[
-                indices, "s_nom_opt"
-            ].apply(np.ceil)
+            n.lines.loc[indices, "s_nom_min"] = baseline_component.loc[indices].apply(
+                lambda row: max(row["s_nom_opt"] * (1 - slack), row["s_nom_min"]),
+                axis=1,
+            )
+            n.lines.loc[indices, "s_nom_max"] = baseline_component.loc[indices].apply(
+                lambda row: min(row["s_nom_opt"] * (1 + slack), row["s_nom_max"]),
+                axis=1,
+            )
         else:
-            n.df(c).loc[indices, "p_nom_min"] = baseline_component.loc[
-                indices, "p_nom_opt"
-            ].apply(np.floor)
-            n.df(c).loc[indices, "p_nom_max"] = baseline_component.loc[
-                indices, "p_nom_opt"
-            ].apply(np.ceil)
+            n.df(c).loc[indices, "p_nom_min"] = baseline_component.loc[indices].apply(
+                lambda row: max(row["p_nom_opt"] * (1 - slack), row["p_nom_min"]),
+                axis=1,
+            )
+            n.df(c).loc[indices, "p_nom_max"] = baseline_component.loc[indices].apply(
+                lambda row: min(row["p_nom_opt"] * (1 + slack), row["p_nom_max"]),
+                axis=1,
+            )
 
         logger.info(f"Fixed {sum(to_fix)} {c} components outside Germany")
 
@@ -1346,11 +1368,13 @@ if __name__ == "__main__":
             opts="",
             ll="vopt",
             sector_opts="none",
-            planning_horizons="2025",
-            run="KN2045_Mix",
+            planning_horizons="2045",
+            run="No_PTES",
         )
 
     configure_logging(snakemake)
+    set_scenario_config(snakemake)
+    update_config_from_wildcards(snakemake.config, snakemake.wildcards)
     logger.info("Adding Ariadne-specific functionality")
 
     n = pypsa.Network(snakemake.input.network)
@@ -1420,13 +1444,13 @@ if __name__ == "__main__":
     sanitize_custom_columns(n)
 
     if (
-        snakemake.params["fix_foreign_investments"]
+        snakemake.params["fix_foreign_investments"]["enable"]
         and snakemake.wildcards.run != snakemake.params["reference_scenario"]
     ):
         logger.info(
             "Fixing investments for components outside Germany based on the reference scenario."
         )
         n_ref = pypsa.Network(snakemake.input.reference_network)
-        fix_foreign_investments(n, n_ref)
+        fix_foreign_investments(n, n_ref, snakemake.params["slack"])
 
     n.export_to_netcdf(snakemake.output.network)

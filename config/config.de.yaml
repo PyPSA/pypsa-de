@@ -4,21 +4,25 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20250522_fix_neighbours
+  prefix: 20250617_80dhsystems
   name:
-  # - ExPol
-  - KN2045_Mix
-  # - KN2045_Elek
-  # - KN2045_H2
-  # - KN2045_NFniedrig
-  # - KN2045_NFhoch
+  - Baseline
+  - No_PTES
+  - LowPTESCAPEX
+  - HighPTESCAPEX
+  - LowStandingLosses
+  - HighStandingLosses
+  - LowGroundWaterDepth
+  - HighGroundWaterDepth
+  - LowEtPRatio
+  - HighEtPRatio
   scenarios:
     enable: true
-    manual_file: config/scenarios.manual.yaml
+    manual_file: config/scenarios.sysgf.yaml
     file: config/scenarios.automated.yaml
     fix_foreign_investments:
       enable: false
-      reference_scenario: KN2045_Mix
+      reference_scenario: Baseline
   shared_resources:
     policy: base #stops recalculating
     exclude:
@@ -243,7 +247,7 @@ co2_budget:
   2050: 0.000 # climate-neutral by 2050
 
 wasserstoff_kernnetz:
-  enable: true
+  enable: false
   reload_locations: false
   divide_pipes: true
   pipes_segment_length: 50

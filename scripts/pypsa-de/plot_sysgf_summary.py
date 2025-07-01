@@ -174,15 +174,11 @@ def calc_ic_capex_correction(n, country):
 
     ic_links_bus0_mask = get_component_mask(n.links, country, other_countries, bus=0)
     ic_links_bus0 = n.links.loc[ic_links_bus0_mask]
-    capex_ic_links_bus0 = ic_links_bus0.p_nom_opt.sub(ic_links_bus0.p_nom).mul(
-        ic_links_bus0.capital_cost
-    )
+    capex_ic_links_bus0 = ic_links_bus0.p_nom_opt.mul(ic_links_bus0.capital_cost)
 
     ic_links_bus1_mask = get_component_mask(n.links, country, other_countries, bus=1)
     ic_links_bus1 = n.links.loc[ic_links_bus1_mask]
-    capex_ic_links_bus1 = ic_links_bus1.p_nom_opt.sub(ic_links_bus1.p_nom).mul(
-        ic_links_bus1.capital_cost
-    )
+    capex_ic_links_bus1 = ic_links_bus1.p_nom_opt.mul(ic_links_bus1.capital_cost)
 
     ic_links = pd.concat([capex_ic_links_bus0, capex_ic_links_bus1], axis=0)
     ic_links["capex"] = 0.5 * (
@@ -192,15 +188,11 @@ def calc_ic_capex_correction(n, country):
 
     ic_lines_bus0_mask = get_component_mask(n.lines, country, other_countries, bus=0)
     ic_lines_bus0 = n.lines.loc[ic_lines_bus0_mask]
-    capex_ic_links_bus0 = ic_lines_bus0.s_nom_opt.sub(ic_lines_bus0.s_nom).mul(
-        ic_lines_bus0.capital_cost
-    )
+    capex_ic_links_bus0 = ic_lines_bus0.s_nom_opt.mul(ic_lines_bus0.capital_cost)
 
     ic_lines_bus1_mask = get_component_mask(n.lines, country, other_countries, bus=1)
     ic_lines_bus1 = n.lines.loc[ic_lines_bus1_mask]
-    capex_ic_links_bus1 = ic_lines_bus1.s_nom_opt.sub(ic_lines_bus1.s_nom).mul(
-        ic_lines_bus1.capital_cost
-    )
+    capex_ic_links_bus1 = ic_lines_bus1.s_nom_opt.mul(ic_lines_bus1.capital_cost)
 
     ic_lines = pd.concat([capex_ic_links_bus0, capex_ic_links_bus1], axis=0)
     ic_lines["capex"] = 0.5 * (
@@ -220,15 +212,47 @@ def calc_ic_capex_correction(n, country):
 def calc_system_costs_country(n, country):
     """Calculate system costs for a country."""
     s = n.statistics
-    capex_country = s.expanded_capex(groupby=["bus", "carrier"]).filter(
-        regex=country, axis=0
-    )
+    capex_country = s.capex(groupby=["bus", "carrier"]).filter(regex=country, axis=0)
     opex_country = s.opex(groupby=["bus", "carrier"]).filter(regex=country, axis=0)
 
     system_costs_country = capex_country.sum().sum() + opex_country.sum().sum()
     ic_costs_correction = calc_ic_capex_correction(n, country).sum()
 
     return system_costs_country + ic_costs_correction
+
+
+def calculate_district_heating_costs(n: pypsa.Network) -> float:
+    district_heating_carriers = np.array([])
+    for c in n.iterate_components():
+        if c.name in ["Store", "Link", "Generator"]:
+            # Filter rows where any column contains "urban central"
+            district_heating_carriers = np.append(
+                district_heating_carriers,
+                c.df[
+                    c.df.apply(
+                        lambda x: x.astype(str)
+                        .str.contains("urban central", case=False)
+                        .any(),
+                        axis=1,
+                    )
+                ].carrier.unique(),
+            )
+
+    capex = n.statistics.capex(
+        groupby=["bus", "carrier", "bus_carrier"], nice_names=False
+    ).filter(like="DE0 ")
+    opex = n.statistics.opex(
+        groupby=["bus", "carrier", "bus_carrier"], nice_names=False
+    ).filter(like="DE0 ")
+
+    capex_dh = capex[
+        capex.index.get_level_values("carrier").isin(district_heating_carriers)
+    ]
+    opex_dh = opex[
+        opex.index.get_level_values("carrier").isin(district_heating_carriers)
+    ]
+
+    return capex_dh.sum() + opex_dh.sum()
 
 
 def calc_h2_store_capacity(n):
@@ -239,9 +263,9 @@ def calc_h2_store_capacity(n):
 
 def calc_costs_per_tech_country(n, country):
     """Calculate costs per technology for a specific country."""
-    capex = n.statistics.expanded_capex(
-        groupby=["bus", "carrier"], nice_names=False
-    ).filter(regex=country, axis=0)
+    capex = n.statistics.capex(groupby=["bus", "carrier"], nice_names=False).filter(
+        regex=country, axis=0
+    )
 
     opex = n.statistics.opex(groupby=["bus", "carrier"], nice_names=False).filter(
         regex=country, axis=0
@@ -388,6 +412,7 @@ def create_summary_df(networks):
             "year",
             "total_system_costs_bnEUR",
             "total_system_costs_DE_bnEUR",
+            "district_heating_costs_DE_bnEUR",
             "PTES_capacity_TWh",
             "PTES_capacity_GW",
             "PTES_no_cycles",
@@ -417,9 +442,16 @@ def create_summary_df(networks):
                         {
                             "scenario": scenario,
                             "year": year,
-                            "total_system_costs_bnEUR": n.objective / 1e9,
+                            "total_system_costs_bnEUR": (
+                                n.statistics.capex().sum() + n.statistics.opex().sum()
+                            )
+                            / 1e9,
                             "total_system_costs_DE_bnEUR": calc_system_costs_country(
                                 n, "DE"
+                            )
+                            / 1e9,
+                            "district_heating_costs_DE_bnEUR": (
+                                calculate_district_heating_costs(n)
                             )
                             / 1e9,
                             "PTES_capacity_TWh": n.stores.filter(
@@ -495,7 +527,9 @@ def create_cost_aggregation(networks):
         networks_scenario = networks[scenario]
         for year, n in networks_scenario.items():
             costs_de = calc_costs_per_tech_country(n, "DE").sum(axis=1)
-            costs_de["neighbour countries"] = n.objective - costs_de.sum()
+            costs_de["neighbour countries"] = (
+                n.statistics.capex().sum() + n.statistics.opex().sum() - costs_de.sum()
+            )
             costs_de["scenario"] = scenario
             costs_de["year"] = year
             costs_de = costs_de.to_frame().T.set_index("scenario")

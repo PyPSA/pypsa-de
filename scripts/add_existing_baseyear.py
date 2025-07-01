@@ -16,7 +16,10 @@ import pandas as pd
 import powerplantmatching as pm
 import pypsa
 import xarray as xr
+import sys
+import os
 
+sys.path.append(os.getcwd())
 from scripts._helpers import (
     configure_logging,
     sanitize_custom_columns,
@@ -599,6 +602,8 @@ def add_chp_plants(n, grouping_years, costs, baseyear):
             efficiency_heat = mastr_chp_efficiency_heat.loc[grouping_year, generator]
 
             for bus in p_nom.index:
+                if "Erlangen" in bus:
+                    print("test")
                 # check if link already exists and set p_nom_min and efficiency
                 if generator != "urban central solid biomass CHP":
                     suffix = f" urban central {generator} CHP-{grouping_year}"
@@ -1075,13 +1080,13 @@ if __name__ == "__main__":
 
         snakemake = mock_snakemake(
             "add_existing_baseyear",
-            configfiles=["config/test/config.dach.yaml"],
-            clusters="5",
-            ll="v1.5",
+            # configfiles=["config/test/config.dach.yaml"],
+            clusters="27",
+            ll="vopt",
             opts="",
             sector_opts="none",
             planning_horizons="2020",
-            run="KN2045_Mix",
+            run="Baseline",
         )
 
     configure_logging(snakemake)  # pylint: disable=E0606

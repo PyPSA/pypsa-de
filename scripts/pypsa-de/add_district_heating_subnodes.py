@@ -625,7 +625,7 @@ if __name__ == "__main__":
             ll="vopt",
             sector_opts="none",
             planning_horizons="2045",
-            run="Baseline",
+            run="No_PTES",
         )
 
     configure_logging(snakemake)
@@ -638,6 +638,7 @@ if __name__ == "__main__":
 
     lau = gpd.read_file(
         f"{snakemake.input.lau_regions}!LAU_RG_01M_2019_3035.geojson",
+        # "/home/cpschau/Downloads/ref-lau-2019-01m.geojson/LAU_RG_01M_2019_3035.geojson",
         crs="EPSG:3035",
     ).to_crs("EPSG:4326")
 

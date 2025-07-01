@@ -676,7 +676,7 @@ central gas boiler,investment,63.4933,EUR/kW_th,"Danish Energy Agency, inputs/te
 central gas boiler,lifetime,25.0,years,"Danish Energy Agency, inputs/technology_data_for_el_and_dh.xlsx",44 Natural Gas DH Only:  Technical lifetime,2015.0
 central geothermal heat source,FOM,1.4715,%/year,"Danish Energy Agency, inputs/technology_data_for_el_and_dh.xlsx","45.1.a Geothermal DH, 1200m, E:  Fixed O&M",2015.0
 central geothermal heat source,VOM,6.0281,EUR/MWh,"Danish Energy Agency, inputs/technology_data_for_el_and_dh.xlsx","45.1.a Geothermal DH, 1200m, E:  Variable O&M",2015.0
-central geothermal heat source,investment,1625.2908,EUR/kW,"Danish Energy Agency, inputs/technology_data_for_el_and_dh.xlsx","45.1.a Geothermal DH, 1200m, E:  Nominal investment",2015.0
+central geothermal heat source,investment,3008.7285,EUR/kW,"Danish Energy Agency, inputs/technology_data_for_el_and_dh.xlsx","45.1.a Geothermal DH, 1200m, E:  Nominal investment",2015.0
 central geothermal heat source,lifetime,25.0,years,"Danish Energy Agency, inputs/technology_data_for_el_and_dh.xlsx","45.1.a Geothermal DH, 1200m, E:  Technical lifetime",2015.0
 central geothermal-sourced heat pump,FOM,3.3935,%/year,"Danish Energy Agency, inputs/technology_data_for_el_and_dh.xlsx","45.1.a Geothermal DH, 1200m, E:  Fixed O&M",2015.0
 central geothermal-sourced heat pump,VOM,6.0281,EUR/MWh_th,"Danish Energy Agency, inputs/technology_data_for_el_and_dh.xlsx","45.1.a Geothermal DH, 1200m, E:  Variable O&M",2015.0
@@ -727,9 +727,9 @@ central solid biomass CHP powerboost CC,investment,3740.4387,EUR/kW_e,"Danish En
 central solid biomass CHP powerboost CC,lifetime,25.0,years,"Danish Energy Agency, inputs/technology_data_for_el_and_dh.xlsx","09a Wood Chips, Large 50 degree:  Technical lifetime",2015.0
 central water pit charger,efficiency,1.0,per unit,"Danish Energy Agency, inputs/technology_data_catalogue_for_energy_storage.xlsx",:  Charger efficiency,2015.0
 central water pit discharger,efficiency,1.0,per unit,"Danish Energy Agency, inputs/technology_data_catalogue_for_energy_storage.xlsx",:  Discharger efficiency,2015.0
-central water pit storage,FOM,0.5176,%/year,"Danish Energy Agency, inputs/technology_data_catalogue_for_energy_storage.xlsx",140 PTES seasonal:  Fixed O&M,2015.0
+central water pit storage,FOM,0.2354,%/year,"Danish Energy Agency, inputs/technology_data_catalogue_for_energy_storage.xlsx",140 PTES seasonal:  Fixed O&M,2015.0
 central water pit storage,energy to power ratio,150.0,h,"Danish Energy Agency, inputs/technology_data_catalogue_for_energy_storage.xlsx",140 PTES seasonal:  Ratio between energy storage and input capacity,2015.0
-central water pit storage,investment,0.6133,EUR/kWhCapacity,"Danish Energy Agency, inputs/technology_data_catalogue_for_energy_storage.xlsx",140 PTES seasonal:  Specific investment,2015.0
+central water pit storage,investment,1.0622,EUR/kWhCapacity,"Danish Energy Agency, inputs/technology_data_catalogue_for_energy_storage.xlsx",140 PTES seasonal:  Specific investment,2015.0
 central water pit storage,lifetime,20.0,years,"Danish Energy Agency, inputs/technology_data_catalogue_for_energy_storage.xlsx",140 PTES seasonal:  Technical lifetime,2015.0
 central water tank charger,efficiency,1.0,per unit,"Danish Energy Agency, inputs/technology_data_catalogue_for_energy_storage.xlsx",:  Charger efficiency,2015.0
 central water tank discharger,efficiency,1.0,per unit,"Danish Energy Agency, inputs/technology_data_catalogue_for_energy_storage.xlsx",:  Discharger efficiency,2015.0

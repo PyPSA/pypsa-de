@@ -45,6 +45,10 @@ from _benchmark import memory_logger
 from pypsa.descriptors import get_activity_mask
 from pypsa.descriptors import get_switchable_as_dense as get_as_dense
 
+import sys
+import os
+
+sys.path.append(os.getcwd())
 from scripts._helpers import (
     configure_logging,
     get,
@@ -547,9 +551,9 @@ def add_CCL_constraints(
         agg_p_nom_limits: data/agg_p_nom_minmax.csv
     """
 
-    assert planning_horizons is not None, (
-        "add_CCL_constraints are not implemented for perfect foresight, yet"
-    )
+    assert (
+        planning_horizons is not None
+    ), "add_CCL_constraints are not implemented for perfect foresight, yet"
 
     agg_p_nom_minmax = pd.read_csv(
         config["solving"]["agg_p_nom_limits"]["file"], index_col=[0, 1], header=[0, 1]
@@ -1366,12 +1370,13 @@ if __name__ == "__main__":
         from scripts._helpers import mock_snakemake
 
         snakemake = mock_snakemake(
-            "solve_sector_network",
+            "solve_sector_network_myopic",
             opts="",
-            clusters="5",
-            configfiles="config/test/config.overnight.yaml",
-            sector_opts="",
-            planning_horizons="2030",
+            clusters="27",
+            sector_opts="none",
+            ll="vopt",
+            planning_horizons="2045",
+            run="No_PTES",
         )
     configure_logging(snakemake)
     set_scenario_config(snakemake)

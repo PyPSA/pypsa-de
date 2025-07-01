@@ -4,16 +4,87 @@
 # SPDX-License-Identifier: MIT
 
 Baseline:
-  foresight: myopic
-  iiasa_database:
-    reference_scenario: KN2045_Mix
-  co2_budget_DE_source: UBA
+  
+
+Baseline_fix_foreign_investments:
+  run:
+    scenarios:
+      fix_foreign_investments:
+        enable: true
+        reference_scenario: Baseline
+        slack: 0.2
+
+Baseline_fix_foreign_investments_largeslack:
+  run:
+    scenarios:
+      fix_foreign_investments:
+        enable: true
+        reference_scenario: Baseline
+        slack: 0.05
+
+Baseline_control:
 
 LowDH:
   sector:
     district_heating:
       potential: 0.3
 
+PTES_DE_leq_0TWh:
+  solving:
+    constraints:
+      limits_capacity_max:
+        Store:
+          urban central water pits:
+            DE:
+              2020: 0        
+              2025: 0        
+              2030: 0        
+              2035: 0        
+              2040: 0        
+              2045: 0        
+
+PTES_DE_leq_10TWh:
+  solving:
+    constraints:
+      limits_capacity_max:
+        Store:
+          urban central water pits:
+            DE:
+              2020: 10000        
+              2025: 10000        
+              2030: 10000        
+              2035: 10000        
+              2040: 10000        
+              2045: 10000        
+
+PTES_DE_leq_3TWh:
+  solving:
+    constraints:
+      limits_capacity_max:
+        Store:
+          urban central water pits:
+            DE:
+              2020: 3000        
+              2025: 3000        
+              2030: 3000        
+              2035: 3000        
+              2040: 3000        
+              2045: 3000        
+
+PTES_DE_leq_1TWh:
+  solving:
+    constraints:
+      limits_capacity_max:
+        Store:
+          urban central water pits:
+            DE:
+              2020: 1000        
+              2025: 1000        
+              2030: 1000        
+              2035: 1000        
+              2040: 1000        
+              2045: 1000        
+              
 No_PTES:
   adjustments:
     electricity: false
@@ -22,6 +93,28 @@ No_PTES:
         Store:
           urban central water pits:
             e_nom_max: 0
+            
+TES_DE_leq_0TWh:
+  solving:
+    constraints:
+      limits_capacity_max:
+        Store:
+          urban central water pits:
+            DE:
+              2020: 0        
+              2025: 0        
+              2030: 0        
+              2035: 0        
+              2040: 0        
+              2045: 0
+          urban central water tanks:
+            DE:
+              2020: 0        
+              2025: 0        
+              2030: 0        
+              2035: 0        
+              2040: 0        
+              2045: 0
 
 LowPTESCAPEX:
   adjustments:

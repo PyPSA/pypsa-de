@@ -743,22 +743,22 @@ def additional_functionality(n, snapshots, snakemake):
         n, investment_year, constraints["limits_capacity_max"], "maximum"
     )
 
-    add_power_limits(n, investment_year, constraints["limits_power_max"])
+    # add_power_limits(n, investment_year, constraints["limits_power_max"])
 
-    if snakemake.wildcards.clusters != "1":
-        h2_import_limits(n, investment_year, constraints["limits_volume_max"])
+    # if snakemake.wildcards.clusters != "1":
+    #     h2_import_limits(n, investment_year, constraints["limits_volume_max"])
 
-        electricity_import_limits(n, investment_year, constraints["limits_volume_max"])
+    #     electricity_import_limits(n, investment_year, constraints["limits_volume_max"])
 
-    if investment_year >= 2025:
-        h2_production_limits(
-            n,
-            investment_year,
-            constraints["limits_volume_min"],
-            constraints["limits_volume_max"],
-        )
+    # if investment_year >= 2025:
+    #     h2_production_limits(
+    #         n,
+    #         investment_year,
+    #         constraints["limits_volume_min"],
+    #         constraints["limits_volume_max"],
+    #     )
 
-    add_h2_derivate_limit(n, investment_year, constraints["limits_volume_max"])
+    # add_h2_derivate_limit(n, investment_year, constraints["limits_volume_max"])
 
     # force_boiler_profiles_existing_per_load(n)
     force_boiler_profiles_existing_per_boiler(n)

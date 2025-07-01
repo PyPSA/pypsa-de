@@ -247,7 +247,9 @@ def assign_subnode(
     subnodes.index.rename("city", inplace=True)
 
     # Assign subnode to CHP plants based on the nuts3 region
-    CHP_de = CHP_de.sjoin(subnodes, how="left", predicate="within")
+    CHP_de = CHP_de.sjoin(subnodes, how="left", predicate="within").drop(
+        "yearly_heat_demand_MWh", axis=1
+    )
     # Insert leading whitespace for citynames where not nan
     CHP_de["city"] = CHP_de["city"].apply(lambda x: " " + x if pd.notna(x) else "")
     CHP_de["bus"] = CHP_de["bus"] + CHP_de["city"]

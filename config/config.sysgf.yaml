@@ -3,24 +3,32 @@
 # SPDX-License-Identifier: CC0-1.0
 
 run:
-  prefix: 20250604_sysgfplots
+  prefix: 20250630_fix_neighbours
   name:
   - Baseline
-  - No_PTES
-  - LowPTESCAPEX
-  - HighPTESCAPEX
-  - LowStandingLosses
-  - HighStandingLosses
-  - LowGroundWaterDepth
-  - HighGroundWaterDepth
-  - LowEtPRatio
-  - HighEtPRatio
+  - Baseline_control
+  - Baseline_fix_foreign_investments
+  - Baseline_fix_foreign_investments_largeslack
+  # - TES_DE_leq_0TWh
+  # - PTES_DE_leq_0TWh
+  # - PTES_DE_leq_3TWh
+  # - PTES_DE_leq_1TWh
+  # - LowPTESCAPEX
+  # - HighPTESCAPEX
+  # - LowStandingLosses
+  # - HighStandingLosses
+  # - LowGroundWaterDepth
+  # - HighGroundWaterDepth
+  # - LowEtPRatio
+  # - HighEtPRatio
   scenarios:
     enable: true
     manual_file: config/scenarios.sysgf.yaml
     file: config/scenarios.automated.yaml
-    reference: Baseline
-    fix_foreign_reference_investments: true
+    fix_foreign_investments:
+      enable: false
+      reference_scenario: Baseline
+      slack: 0.2
   shared_resources:
     policy: base #stops recalculating
     exclude:
@@ -43,7 +51,7 @@ scenario:
   sector_opts:
   - none
   planning_horizons:
-  # - 2020
+  - 2020
   # - 2025
   # - 2030
   # - 2035
@@ -60,18 +68,20 @@ adjustments:
     absolute:
       Store:
         urban central water pits:
-          standing_loss: 0.00012121
+          standing_loss: 0.000078
         urban central water tanks:
-          standing_loss: 0.00015476
-
+          standing_loss: 0.000077
 wasserstoff_kernnetz:
   enable: false
 
 sector:
+  chp:
+    enable: true
   district_heating:
     potential: 0.5
     subnodes:
       enable: true
+      nlargest: 40
     limited_heat_sources:
       geothermal:
         ignore_missing_regions: true
@@ -86,6 +96,7 @@ sector:
     - ground
 
 solving:
+  mem_mb: 140000
   constraints:
     CCL: false
     EQ: false
@@ -97,14 +108,26 @@ solving:
     limits_volume_max: {}
     limits_volume_min: {}
     limits_power_max: {}
+    limits_capacity_max:
+      Generator: {}
+    limits_capacity_min:
+      Generator: {}
+  options:
+    noisy_costs: false
+  solver_options:
+    gurobi-default:
+      Seed: 123
+      BarConvTol: 1.e-8
+      FeasibilityTol: 1.e-8
+
 
 plotting:
   dual_comparison:
     enable: true
-    scenario_A: No_PTES
-    scenario_B: Baseline
+    scenario_A: Baseline
+    scenario_B: Baseline_control
   sensitivities:
-    enable: true
+    enable: false
     reference: Baseline
     runs: [
       PTESCAPEX,

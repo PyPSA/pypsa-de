@@ -466,12 +466,12 @@ rule modify_district_heat_share:
 
 
 def get_reference_network(w):
-    ref_scenario = config["run"]["scenarios"]["fix_foreign_investments"]["reference_scenario"]
+    ref_scenario = config_provider("run", "scenarios", "fix_foreign_investments", "reference_scenario")(w)
     if (
-        config_provider("run", "scenarios", "fix_foreign_investments", "enable")
+        config_provider("run", "scenarios", "fix_foreign_investments", "enable")(w)
         and w.run != ref_scenario
     ):
-        return f"results/{config["run"]["prefix"]}/{ref_scenario}/networks/base_s_{w.clusters}_{w.opts}_{w.sector_opts}_{w.planning_horizons}.nc"
+        return f"results/{config_provider("run", "prefix")(w)}/{ref_scenario}/networks/base_s_{w.clusters}_{w.opts}_{w.sector_opts}_{w.planning_horizons}.nc"
     else:
         return []
 
@@ -513,6 +513,7 @@ rule modify_prenetwork:
             "run", "scenarios", "fix_foreign_investments"
         ),
         reference_scenario=config_provider("run", "scenarios", "fix_foreign_investments", "reference_scenario"),
+        slack=config_provider("run", "scenarios", "fix_foreign_investments", "slack"),
     input:
         costs_modifications="ariadne-data/costs_{planning_horizons}-modifications.csv",
         network=resources(
