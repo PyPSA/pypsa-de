@@ -388,6 +388,7 @@ rule prepare_district_heating_subnodes:
 def baseyear_value(wildcards):
     return config_provider("scenario", "planning_horizons", 0)(wildcards)
 
+
 rule add_district_heating_subnodes:
     params:
         district_heating=config_provider("sector", "district_heating"),
@@ -417,7 +418,7 @@ rule add_district_heating_subnodes:
         direct_heat_source_utilisation_profiles=resources(
             "direct_heat_source_utilisation_profiles_base_s_{clusters}_{planning_horizons}.nc"
         ),
-        existing_heating_distribution=lambda w:resources(
+        existing_heating_distribution=lambda w: resources(
             f"existing_heating_distribution_base_s_{{clusters}}_{baseyear_value(w)}.csv"
         ),
         lau_regions="data/lau_regions.zip",
