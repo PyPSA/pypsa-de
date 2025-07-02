@@ -56,6 +56,28 @@ def add_buses(n: pypsa.Network, subnode: pd.Series, name: str) -> None:
     n.add("Bus", buses.index, **buses)
 
 
+def get_district_heating_loads(n: pypsa.Network):
+    """
+    Get the district heating loads from the network.
+    Parameters
+    ----------
+    n : pypsa.Network
+        The PyPSA network object from which to extract district heating loads.
+    Returns
+    -------
+    float
+        The total district heating load in MWh/a.
+    """
+    return (
+        n.snapshot_weightings.generators
+        @ n.loads_t.p_set.filter(
+            like=f"urban central heat",
+        )
+    ).sum() + n.loads.filter(like=f"low-temperature heat for industry", axis=0)[
+        "p_set"
+    ].sum() * 8760
+
+
 def add_loads(
     n: pypsa.Network,
     n_copy: pypsa.Network,
@@ -523,6 +545,7 @@ def add_subnodes(
 
     n_copy = n.copy()
 
+    dh_loads_before = get_district_heating_loads(n)
     # Add subnodes to network
     for _, subnode in subnodes_head.iterrows():
         name = f'{subnode["cluster"]} {subnode["Stadt"]} urban central'
@@ -552,6 +575,11 @@ def add_subnodes(
             limited_heat_sources,
             heat_source_potentials,
         )
+    dh_loads_after = get_district_heating_loads(n)
+    # Check if the total district heating load is preserved
+    assert (
+        dh_loads_before == dh_loads_after
+    ), "Total district heating load is not preserved after adding subnodes."
 
 
 def extend_heating_distribution(
