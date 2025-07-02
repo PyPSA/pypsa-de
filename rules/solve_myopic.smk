@@ -15,11 +15,11 @@ rule add_existing_baseyear:
             "sector", "district_heating", "subnodes", "enable"
         ),
     input:
-        network=(
+        network=lambda w: (
             resources(
                 "networks/base-extended_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc"
             )
-            if config_provider("sector", "district_heating", "subnodes", "enable") == True
+            if config_provider("sector", "district_heating", "subnodes", "enable")(w)
             else resources(
                 "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc"
             )
@@ -34,11 +34,11 @@ rule add_existing_baseyear:
             )
         ),
         cop_profiles=resources("cop_profiles_base_s_{clusters}_{planning_horizons}.nc"),
-        existing_heating_distribution=(
+        existing_heating_distribution=lambda w: (
             resources(
                 "existing_heating_distribution_base-extended_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.csv"
             )
-            if config_provider("sector", "district_heating", "subnodes", "enable") == True
+            if config_provider("sector", "district_heating", "subnodes", "enable")(w)
             else resources(
                 "existing_heating_distribution_base_s_{clusters}_{planning_horizons}.csv"
             )
@@ -98,11 +98,11 @@ rule add_brownfield:
         unpack(input_profile_tech_brownfield),
         simplify_busmap=resources("busmap_base_s.csv"),
         cluster_busmap=resources("busmap_base_s_{clusters}.csv"),
-        network=(
+        network=lambda w: (
             resources(
                 "networks/base-extended_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc"
             )
-            if config_provider("sector", "district_heating", "subnodes", "enable") == True
+            if config_provider("sector", "district_heating", "subnodes", "enable")(w)
             else resources(
                 "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc"
             )

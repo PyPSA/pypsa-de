@@ -385,7 +385,8 @@ rule prepare_district_heating_subnodes:
         "scripts/pypsa-de/prepare_district_heating_subnodes.py"
 
 
-baseyear_value = config_provider("scenario", "planning_horizons", 0)
+def baseyear_value(wildcards):
+    return config_provider("scenario", "planning_horizons", 0)(wildcards)
 
 rule add_district_heating_subnodes:
     params:
@@ -416,8 +417,8 @@ rule add_district_heating_subnodes:
         direct_heat_source_utilisation_profiles=resources(
             "direct_heat_source_utilisation_profiles_base_s_{clusters}_{planning_horizons}.nc"
         ),
-        existing_heating_distribution=resources(
-            f"existing_heating_distribution_base_s_{{clusters}}_{baseyear_value}.csv"
+        existing_heating_distribution=lambda w:resources(
+            f"existing_heating_distribution_base_s_{{clusters}}_{baseyear_value(w)}.csv"
         ),
         lau_regions="data/lau_regions.zip",
     output:
@@ -587,9 +588,9 @@ rule build_existing_chp_de:
             keep_local=True,
         ),
         regions=resources("regions_onshore_base_s_{clusters}.geojson"),
-        district_heating_subnodes=(
+        district_heating_subnodes=lambda w: (
             resources("district_heating_subnodes_base_s_{clusters}.geojson")
-            if config_provider("sector", "district_heating", "subnodes", "enable") == True
+            if config_provider("sector", "district_heating", "subnodes", "enable")(w)
             else []
         ),
     output:
