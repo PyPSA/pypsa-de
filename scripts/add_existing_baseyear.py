@@ -193,8 +193,6 @@ def add_power_capacities_installed_before_baseyear(
         "OCGT": "OCGT",
         "CCGT": "CCGT",
         "Bioenergy": "solid biomass",
-        # "Waste": "waste",
-        # "nicht biogener Abfall": "waste",
     }
 
     # If heat is considered, add CHPs in the add_heating_capacities function.
