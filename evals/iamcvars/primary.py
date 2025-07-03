@@ -1,8 +1,12 @@
+import logging
+
 import pandas as pd
 from pypsa.statistics import port_efficiency
 
 from evals.constants import TradeTypes
 from evals.utils import filter_by
+
+logger = logging.getLogger()
 
 
 def _get_traded_energy(n, var, bus_carrier, direction, subcat):
@@ -252,6 +256,10 @@ def primary_biomass(n, var):
 
 def primary_hydro(n, var):
     """
+    Calculate the hydropower generated per region.
+
+    The inflow split is kept, in case PHS receives an update
+    that supplies inflow amounts to it.
 
     Parameters
     ----------
@@ -288,6 +296,7 @@ def primary_hydro(n, var):
 
 def primary_solar(n, var):
     """
+    Calculate solar energy generated per region.
 
     Parameters
     ----------
@@ -306,13 +315,13 @@ def primary_solar(n, var):
         comps="Generator",
         bus_carrier=["AC", "low voltage"],
     )
-    var["Primary Energy|Solar|solar"] = filter_by(solar, carrier="solar").droplevel(
+    var["Primary Energy|Solar|Utility"] = filter_by(solar, carrier="solar").droplevel(
         "carrier"
     )
-    var["Primary Energy|Solar|solar-hsat"] = filter_by(
-        solar, carrier="solar-hsat"
-    ).droplevel("carrier")
-    var["Primary Energy|Solar|solar rooftop"] = filter_by(
+    var["Primary Energy|Solar|HSAT"] = filter_by(solar, carrier="solar-hsat").droplevel(
+        "carrier"
+    )
+    var["Primary Energy|Solar|Rooftop"] = filter_by(
         solar, carrier="solar rooftop"
     ).droplevel("carrier")
     var["Primary Energy|Solar"] = _sum_by_subcategory(var, "Solar")
@@ -322,6 +331,7 @@ def primary_solar(n, var):
 
 def primary_nuclear(n, var):
     """
+    Calculate the uranium demand for nuclear power plants per region.
 
     Parameters
     ----------
@@ -335,12 +345,22 @@ def primary_nuclear(n, var):
     :
         The updated variables' collection.
     """
+    var["Primary Energy|Nuclear|Uranium"] = (
+        n.statistics.withdrawal(
+            groupby=["location", "carrier"],
+            comps="Link",
+            bus_carrier="uranium",
+        )
+        .groupby("location")
+        .sum()
+    )
 
     return var
 
 
 def primary_ammonia(n, var):
     """
+    Calculate the ammonium imported per region.
 
     Parameters
     ----------
@@ -354,11 +374,26 @@ def primary_ammonia(n, var):
     :
         The updated variables' collection.
     """
+    # There is no regional NH3 demand, because ammonium Loads are
+    # aggregated and connected to EU bus.
+    ammonium = n.statistics.withdrawal(
+        groupby=["location", "carrier"],
+        comps="Link",
+        bus_carrier="NH3",
+    )
+    if ammonium.empty:
+        logger.info(
+            "There is no regional NH3 demand, because ammonium Loads are aggregated and connected to EU bus."
+        )
+    else:
+        var["Primary Energy|Ammonium|Import"] = ammonium.groupby("location").sum()
+
     return var
 
 
 def primary_wind(n, var):
     """
+    Calculate wind energy generated per region.
 
     Parameters
     ----------
@@ -372,6 +407,21 @@ def primary_wind(n, var):
     :
         The updated variables' collection.
     """
+    generator_supply = n.statistics.supply(
+        groupby=["location", "carrier"],
+        comps="Generator",
+        bus_carrier="AC",
+    )
+    var["Primary Energy|Wind|Onshore"] = (
+        filter_by(generator_supply, carrier="onwind").groupby("location").sum()
+    )
+    var["Primary Energy|Wind|Offshore"] = (
+        filter_by(generator_supply, carrier=["offwind-ac", "offwind-dc"])
+        .groupby("location")
+        .sum()
+    )
+    var["Primary Energy|Wind"] = _sum_by_subcategory(var, "Wind")
+
     return var
 
 

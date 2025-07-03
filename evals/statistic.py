@@ -480,7 +480,6 @@ class ESMStatistics(StatisticsAccessor):
         stored_energy = phs["p_store"] * n.static("StorageUnit")["efficiency_dispatch"]
         share_inflow = phs["inflow"] / (phs["inflow"] + stored_energy)
 
-        #
         phs["Dispatched Power from Inflow"] = phs["p_dispatch"] * share_inflow
         phs["Dispatched Power from Stored"] = phs["p_dispatch"] * (1 - share_inflow)
         phs["Spill from Inflow"] = phs["spill"] * share_inflow
@@ -505,7 +504,6 @@ class ESMStatistics(StatisticsAccessor):
             [(r[1], f"{r[2]} {r[0]}", r[2]) for r in ser.index],
             names=DataModel.IDX_NAMES,
         )
-
         ser = ser.rename(
             index={"PHS": BusCarrier.AC, "hydro": BusCarrier.AC},
             level=DataModel.BUS_CARRIER,

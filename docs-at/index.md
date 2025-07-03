@@ -19,7 +19,7 @@ This site hosts the documentation for `pypsa-at`
 
 first, build the scenarios using the public DB access
 ``` sh
-snakemake build_scenarios -f
+snakemake build_scenarios -f --cores 'all'
 ```
 This is necessary, because PyPSA-AT uses assumptions from PyPSA-DE scenarios.  
 
