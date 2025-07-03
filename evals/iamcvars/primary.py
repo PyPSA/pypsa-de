@@ -266,11 +266,7 @@ def primary_hydro(n, var):
         The updated variables' collection.
     """
 
-    n.statistics.supply(
-        bus_carrier="AC", groupby=["location", "carrier"], comps="StorageUnit"
-    ).pipe(filter_by, location="AT32")
-
-    hydro = n.statistics.phs_split(drop_hydro_cols=False)
+    hydro = n.statistics.phs_split()
 
     var["Primary Energy|Hydro|PHS"] = filter_by(
         hydro, carrier="PHS Dispatched Power from Inflow"
