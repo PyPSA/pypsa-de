@@ -60,6 +60,12 @@ def view_balance_heat(
     """
     Evaluate the heat balance.
 
+    Parameters
+    ----------
+    result_path
+    networks
+    config
+
     Returns
     -------
     :

@@ -343,7 +343,7 @@ def prepare_industry_demand(
     methane values in the resource file.
 
     The industry demand is read from resource files, and not
-    extracted from the postnetwork, because the postnetwork contains
+    extracted from the network, because the network contains
     demands in an aggregated form and the CSV files are on a per-sector
     granularity.
 

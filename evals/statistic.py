@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pandas as pd
 import pypsa
+from deprecation import deprecated
 from pandas import DataFrame
 from pypsa.statistics import (
     StatisticsAccessor,
@@ -723,6 +724,7 @@ class ESMStatistics(StatisticsAccessor):
 
         return trade_capacity.squeeze()
 
+    @deprecated("Not used anymore.")
     def ambient_heat(self) -> pd.Series | pd.DataFrame:
         """Calculate ambient heat energy amounts used by heat pumps."""
         energy_balance = self._n.statistics.energy_balance(
@@ -756,7 +758,7 @@ class ESMStatistics(StatisticsAccessor):
             hp = ser.unstack(DataModel.BUS_CARRIER)
             assert hp.shape[1] == 2, f"Unexpected number of bus_carrier: {hp.columns}."
             assert "low voltage" in hp.columns, (
-                f"AC missing in bus_carrier: {hp.columns}."
+                f"low voltage missing in bus_carrier: {hp.columns}."
             )
             return hp.T.sum()
 

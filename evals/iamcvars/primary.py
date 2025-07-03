@@ -3,8 +3,14 @@ import logging
 import pandas as pd
 from pypsa.statistics import port_efficiency
 
+from evals.constants import DataModel as DM
 from evals.constants import TradeTypes
-from evals.utils import filter_by
+from evals.utils import (
+    calculate_input_share,
+    filter_by,
+    filter_for_carrier_connected_to,
+    rename_aggregate,
+)
 
 logger = logging.getLogger()
 
@@ -440,7 +446,33 @@ def primary_heat(n, var):
     :
         The updated variables' collection.
     """
+    bus_carrier = [""]
+    # todo: storage links
 
+    link_energy_balance = n.statistics.energy_balance(
+        groupby=["location", "carrier", "bus_carrier"],
+        comps="Link",
+    )
+
+    # for every heat bus, calculate the amounts of supply for heat
+    to_concat = []
+    for bc in bus_carrier:
+        p = (
+            link_energy_balance.pipe(filter_for_carrier_connected_to, bc)
+            # CO2 supply are CO2 emissions that do not help heat production
+            .drop(["co2", "co2 stored"], level=DM.BUS_CARRIER)
+            .pipe(calculate_input_share, bc)
+            # drop technology names in favour of input bus carrier names:
+            .pipe(rename_aggregate, bc)
+            .swaplevel(DM.BUS_CARRIER, DM.CARRIER)
+        )
+        p.index = p.index.set_names(DM.YEAR_IDX_NAMES)
+        p.attrs["unit"] = "MWh_th"
+        to_concat.append(p)
+
+    supply = pd.concat(to_concat)
+
+    var = supply
     # ambient heat from heat pumps
     # latent heat from CHPs
     # Solar heat
