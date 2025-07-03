@@ -640,7 +640,7 @@ electricity:
   estimate_renewable_capacities:
     year: 2019
   H2_plants_DE:
-    enable: true
+    enable: true  # todo: do we want really this for pypsa-at?
     start: 2030 # should be < force
     force: 2035
     cost_factor: 0.15 # repurposing cost of OCGT gas to H2 in % investment cost in EUR/MW source: Christidis et al (2023) - H2-Ready-Gaskraftwerke, Table 3 https://reiner-lemoine-institut.de/wp-content/uploads/2023/11/RLI-Studie-H2-ready_DE.pdf
