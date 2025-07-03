@@ -29,11 +29,40 @@ from evals.iamcvars.primary import (
     primary_waste,
     primary_wind,
 )
+from evals.statistic import collect_myopic_statistics
 from evals.utils import insert_index_level
 from scripts._helpers import configure_logging, mock_snakemake
 
 
-def get_nodal_system_cost(n: pypsa.Network, year: str) -> pd.DataFrame:
+def combine_variables(var: dict, unit: str, year: str) -> pd.Series:
+    """
+    Combine variables into a single dataframe.
+
+    Parameters
+    ----------
+    var
+    unit
+    year
+
+    Returns
+    -------
+    :
+    """
+    # for name, ds in var.items():
+    #     ds = insert_index_level(ds, unit, "Unit")
+    #     ds = insert_index_level(ds, year, "Year")
+    #     var[name] = ds
+    ds = (
+        pd.concat({k: v for k, v in var.items() if not v.empty})
+        .pipe(insert_index_level, unit, "Unit")
+        .pipe(insert_index_level, year, "Year")
+    )
+    ds.index = ds.index.rename({None: "Variable"})
+
+    return ds
+
+
+def collect_system_cost(n: pypsa.Network) -> pd.DataFrame:
     """
     Extract total energy system cost per region.
 
@@ -41,34 +70,43 @@ def get_nodal_system_cost(n: pypsa.Network, year: str) -> pd.DataFrame:
     ----------
     n
         The pypsa network instance.
-    year
-        The planning horizon for the network.
 
     Returns
     -------
     :
         Total CAPEX plus OPEX per model region in billions EUR (2020).
     """
+    # Nodal OPEX and nodal CAPEX in billion EUR2020
+    var = {}
+    var["System Costs|CAPEX"] = n.statistics.capex(
+        groupby="location", aggregate_across_components="sum"
+    ).div(1e9)
+    var["System Costs|OPEX"] = n.statistics.opex(
+        groupby="location", aggregate_across_components="sum"
+    ).div(1e9)
+    var["System Costs"] = var["System Costs|CAPEX"] + var["System Costs|OPEX"]
 
-    # Nodal OPEX plus nodal Capex in billion EUR2020
-    system_cost = (
-        n.statistics.capex(groupby="location", aggregate_across_components="sum")
-        .add(n.statistics.opex(groupby="location", aggregate_across_components="sum"))
-        .div(1e9)  # to Billion (Milliarden)
-        # centralize all below
-        .round(4)
-        .pipe(insert_index_level, "billion EUR2020", "Unit")
-        .pipe(insert_index_level, "Cost|Total Energy System Cost", "Variable")
-        .pipe(insert_index_level, snakemake.wildcards.run, "Scenario")
-        .pipe(insert_index_level, "PyPSA-AT", "Model")
-        .pipe(insert_index_level, year, "Year", pos=-1)
-    )
-    system_cost.index = system_cost.index.rename({"location": "Region"})
+    # todo: enable, or test later
+    # assert vars["System Costs"].mul(1e9).sum() == n.objective, "Total system costs do not match the optimization result."
 
-    return system_cost
+    # system_cost = (
+    #     n.statistics.capex(groupby="location", aggregate_across_components="sum")
+    #     .add(n.statistics.opex(groupby="location", aggregate_across_components="sum"))
+    #     .div(1e9)  # to Billion (Milliarden)
+    #     # # centralize all below
+    #     # .round(4)
+    #     # .pipe(insert_index_level, "billion EUR2020", "Unit")
+    #     # .pipe(insert_index_level, "Cost|Total Energy System Cost", "Variable")
+    #     # .pipe(insert_index_level, snakemake.wildcards.run, "Scenario")
+    #     # .pipe(insert_index_level, "PyPSA-AT", "Model")
+    #     # .pipe(insert_index_level, year, "Year", pos=-1)
+    # )
+    # # system_cost.index = system_cost.index.rename({"location": "Region"})
+
+    return combine_variables(var, "billion EUR2020", n.year)
 
 
-def collect_primary_energy(n: pypsa.Network) -> dict:
+def collect_primary_energy(n: pypsa.Network) -> pd.Series:
     """
     Extract all primary energy variables from the networks.
 
@@ -103,70 +141,14 @@ def collect_primary_energy(n: pypsa.Network) -> dict:
     primary_wind(n, var)
     primary_heat(n, var)
 
-    # "Primary Energy|Gas"
-    # "Primary Energy|Gas|Heat"
-    # "Primary Energy|Gas|Electricity"
-    # "Primary Energy|Gas|Hydrogen"
-    # "Primary Energy|Gas|Gases" (?) Sabatier?
-
-    # similar to oil, but without refining losses
-    # Primary Energy|Coal
-    # Primary Energy|Coal|Hard Coal
-    # Primary Energy|Coal|Lignite
-    # Primary Energy|Coal|Heat
-    # Primary Energy|Coal|Electricity
-
-    # Primary Energy|Fossil (= Coal + Gas + Oil + non-renewable HVC)
-
-    # Primary Energy|Biomass
-    # Primary Energy|Biomass|Gases  (BioMethane, BioSNG)
-    # Primary Energy|Biomass|Liquids
-    # Primary Energy|Biomass|Electricity
-    # Primary Energy|Biomass|Heat
-    # Primary Energy|Biomass|Solids
-    # Primary Energy|Biomass|Hydrogen
-    # Primary Energy|Biomass|Methanol
-
-    # Primary Energy|Ammonia
-
-    # Primary Energy|Nuclear
-
-    # Primary Energy|Hydro
-    # Primary Energy|Hydro|Pumped Storage
-    # Primary Energy|Hydro|Run-of-River
-    # Primary Energy|Solar
-    # Primary Energy|Solar|PV-Rooftop
-    # Primary Energy|Solar|PV-Utility
-    # Primary Energy|Solar|PV-HSAT
-    # Primary Energy|Wind
-    # Primary Energy|Wind|Onshore
-    # Primary Energy|Wind|Offshore
-
-    # Primary Energy|Heat|Solar-Thermal
-    # Primary Energy|Heat|Ambient Heat  (heat pumps)
-    # Primary Energy|Heat|Latent Heat  (CHPs with efficiency > 1)
-    # Primary Energy|Heat|Geothermal  (Geothermic heat)
-
-    # Primary Energy|Renewable (= Biomass + Hydro + Solar + Wind + renewable HVC)
-
-    # EU and IEA statistics tend to report imported electricity and fuels as
-    # contributing to the region’s primary energy supply.
-    # Primary Energy|Import|Electricity
-    # Primary Energy|Import|Oil
-    # Primary Energy|Import|Gas
-    # Primary Energy|Import|Coal  (Hard + Lignite)
-    # Primary Energy|Import|Waste
-    # Primary Energy|Import|Biomass
-    # Primary Energy|Import|Hydrogen
-
-    return var
+    return combine_variables(var, "MWh", n.year)
 
 
-def collect_secondary_energy(n, year) -> pd.DataFrame:
+def collect_secondary_energy(n) -> pd.DataFrame:
     """Extract all secondary energy variables from the networks."""
 
 
-def collect_final_energy(n, year) -> pd.DataFrame:
+def collect_final_energy(n) -> pd.DataFrame:
     """Extract all final energy variables from the networks."""
 
 
@@ -184,12 +166,27 @@ if __name__ == "__main__":
     # during development and debugging sessions
     networks = read_networks(sorted(snakemake.input.networks, reverse=True))
 
+    kwargs = {
+        "groupby": ["location", "carrier", "bus_carrier", "unit"],
+        "aggregate_components": False,
+        "drop_zeros": False,
+        "drop_unit": False,
+    }
+    # myopic_energy_balance = collect_myopic_statistics(networks, "energy_balance", **kwargs)
+    # calculate all statistics and process them to IAMC data model.
+    myopic_supply = collect_myopic_statistics(networks, "supply", **kwargs)
+    myopic_withdrawal = collect_myopic_statistics(networks, "withdrawal", **kwargs)
+    myopic_opex = collect_myopic_statistics(networks, "opex", **kwargs)  # wrong unit
+    myopic_capex = collect_myopic_statistics(networks, "capex", **kwargs)  # wrong unit
+    # Idea: calculate all once and extract from global mutable series
+    # to ensure nothing is forgotten. The global series however is a risk.
+
     iamc_variables = []
     for year, n in networks.items():
-        iamc_variables.append(get_nodal_system_cost(n, year))
+        iamc_variables.append(collect_system_cost(n))
         iamc_variables.append(collect_primary_energy(n))
-        iamc_variables.append(collect_secondary_energy(n, year))
-        iamc_variables.append(collect_final_energy(n, year))
+        iamc_variables.append(collect_secondary_energy(n))
+        iamc_variables.append(collect_final_energy(n))
 
     df = pd.concat(iamc_variables)
 

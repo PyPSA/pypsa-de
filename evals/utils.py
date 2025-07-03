@@ -711,7 +711,7 @@ def calculate_input_share(
         # scaling takes into account that Link inputs and outputs are not equally large
         scaling = abs(supply.sum() / withdrawal.sum())
         # share takes multiple outputs into account
-        with np.errstate(divide="ignore", invalid="ignore"):  # let supply be zero
+        with np.errstate(divide="ignore", invalid="ignore"):  # silently divide by zero
             share = bus_carrier_supply / supply.sum()
         if scaling > 1.0:
             _carrier = _df.index.unique(DataModel.CARRIER).item()
@@ -723,8 +723,8 @@ def calculate_input_share(
         else:
             return withdrawal * scaling * share
 
-    groups = [DataModel.YEAR, DataModel.LOCATION, DataModel.CARRIER]
-    return df.groupby(groups, group_keys=False).apply(_input_share).mul(-1)
+    wo_bus_carrier = [s for s in df.index.names if s != "bus_carrier"]
+    return df.groupby(wo_bus_carrier, group_keys=False).apply(_input_share).mul(-1)
 
 
 def filter_for_carrier_connected_to(df: pd.DataFrame, bus_carrier: str | list):

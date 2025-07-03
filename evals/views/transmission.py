@@ -49,7 +49,7 @@ def view_grid_capacity(
     grid_capactiy = collect_myopic_statistics(
         networks,
         statistic="grid_capacity",
-        drop_zero_rows=False,
+        drop_zeros=False,
         comps=["Link", "Line"],
     )
 

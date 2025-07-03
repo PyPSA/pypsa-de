@@ -9,7 +9,6 @@ from evals.utils import (
     calculate_input_share,
     filter_by,
     filter_for_carrier_connected_to,
-    rename_aggregate,
 )
 
 logger = logging.getLogger()
@@ -113,27 +112,18 @@ def primary_oil(n, var):
     return var
 
 
-def primary_gas(n, var):
-    # for scope in (TradeTypes.DOMESTIC, TradeTypes.FOREIGN):
-    #     gas_trade = n.statistics.trade_energy(
-    #         bus_carrier="gas", direction="import", scope=scope
-    #     )
-    #     gas_trade = gas_trade[gas_trade.gt(0)].groupby("location").sum()
-    #     var[f"Primary Energy|Gas|Import {scope.title()}"] = gas_trade
+def primary_gas(n, var) -> dict:
     _get_traded_energy(n, var, "gas", "import", "Gas")
 
     gas_generation = n.statistics.supply(
         groupby=["location", "carrier"], bus_carrier="gas", comps="Generator"
     )
-    # var["Primary Energy|Gas|Import Foreign"] = gas_trade_foreign
-    # var["Primary Energy|Gas|Import Domestic"] = gas_trade_domestic
     var["Primary Energy|Gas|Production"] = (
         filter_by(gas_generation, carrier="gas").groupby("location").sum()
     )
     var["Primary Energy|Gas|Import Global"] = (
         filter_by(gas_generation, carrier="import gas").groupby("location").sum()
     )
-    # summing up does not work bc of misaligned indices. Need to concat.
     var["Primary Energy|Gas"] = _sum_by_subcategory(var, "Gas")
 
     return var
@@ -187,9 +177,7 @@ def primary_coal(n, var):
     var["Primary Energy|Coal|Lignite"] = n.statistics.withdrawal(
         groupby="location", bus_carrier="lignite"
     ).drop("Store")
-    var["Primary Energy|Coal"] = (
-        var["Primary Energy|Coal|Hard"] + var["Primary Energy|Coal|Lignite"]
-    )
+    var["Primary Energy|Coal"] = _sum_by_subcategory(var, "Coal")
 
     return var
 
@@ -316,19 +304,19 @@ def primary_solar(n, var):
     :
         The updated variables' collection.
     """
-    solar = n.statistics.supply(
+    generator_supply = n.statistics.supply(
         groupby=["location", "carrier"],
         comps="Generator",
         bus_carrier=["AC", "low voltage"],
     )
-    var["Primary Energy|Solar|Utility"] = filter_by(solar, carrier="solar").droplevel(
-        "carrier"
-    )
-    var["Primary Energy|Solar|HSAT"] = filter_by(solar, carrier="solar-hsat").droplevel(
-        "carrier"
-    )
+    var["Primary Energy|Solar|Utility"] = filter_by(
+        generator_supply, carrier="solar"
+    ).droplevel("carrier")
+    var["Primary Energy|Solar|HSAT"] = filter_by(
+        generator_supply, carrier="solar-hsat"
+    ).droplevel("carrier")
     var["Primary Energy|Solar|Rooftop"] = filter_by(
-        solar, carrier="solar rooftop"
+        generator_supply, carrier="solar rooftop"
     ).droplevel("carrier")
     var["Primary Energy|Solar"] = _sum_by_subcategory(var, "Solar")
 
@@ -380,8 +368,6 @@ def primary_ammonia(n, var):
     :
         The updated variables' collection.
     """
-    # There is no regional NH3 demand, because ammonium Loads are
-    # aggregated and connected to EU bus.
     ammonium = n.statistics.withdrawal(
         groupby=["location", "carrier"],
         comps="Link",
@@ -446,9 +432,7 @@ def primary_heat(n, var):
     :
         The updated variables' collection.
     """
-    bus_carrier = [""]
-    # todo: storage links
-
+    heat_bus_carrier = ["rural heat", "urban decentral heat", "urban central heat"]
     link_energy_balance = n.statistics.energy_balance(
         groupby=["location", "carrier", "bus_carrier"],
         comps="Link",
@@ -456,27 +440,37 @@ def primary_heat(n, var):
 
     # for every heat bus, calculate the amounts of supply for heat
     to_concat = []
-    for bc in bus_carrier:
+    for bc in heat_bus_carrier:
         p = (
             link_energy_balance.pipe(filter_for_carrier_connected_to, bc)
             # CO2 supply are CO2 emissions that do not help heat production
             .drop(["co2", "co2 stored"], level=DM.BUS_CARRIER)
             .pipe(calculate_input_share, bc)
-            # drop technology names in favour of input bus carrier names:
-            .pipe(rename_aggregate, bc)
-            .swaplevel(DM.BUS_CARRIER, DM.CARRIER)
+            .pipe(filter_by, bus_carrier=["ambient heat", "latent heat"])
         )
-        p.index = p.index.set_names(DM.YEAR_IDX_NAMES)
         p.attrs["unit"] = "MWh_th"
         to_concat.append(p)
 
-    supply = pd.concat(to_concat)
+    heat_supply = pd.concat(to_concat)
+    var["Primary Energy|Heat|Latent"] = (
+        filter_by(heat_supply, bus_carrier="latent heat").groupby("location").sum()
+    )
+    var["Primary Energy|Heat|Ambient"] = (
+        filter_by(heat_supply, bus_carrier="ambient heat").groupby("location").sum()
+    )
 
-    var = supply
-    # ambient heat from heat pumps
-    # latent heat from CHPs
-    # Solar heat
-    # Geothermal
+    heat_generation = n.statistics.supply(
+        groupby=["location", "carrier"], bus_carrier=heat_bus_carrier, comps="Generator"
+    )
+    var["Primary Energy|Heat|Solar"] = (
+        heat_generation.filter(regex=r"solar thermal'\)$", axis=0)
+        .groupby("location")
+        .sum()
+    )
+    var["Primary Energy|Heat|Geothermal"] = (
+        filter_by(heat_generation, carrier="geothermal heat").groupby("location").sum()
+    )
+    var["Primary Energy|Heat"] = _sum_by_subcategory(var, "Heat")
 
     return var
 

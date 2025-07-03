@@ -134,7 +134,8 @@ def collect_myopic_statistics(
     networks: dict,
     statistic: str,
     aggregate_components: str | None = "sum",
-    drop_zero_rows: bool = True,
+    drop_zeros: bool = True,
+    drop_unit: bool = True,
     **kwargs: object,
 ) -> pd.DataFrame | pd.Series:
     """
@@ -152,9 +153,11 @@ def collect_myopic_statistics(
         The name of the metric to build.
     aggregate_components
         The aggregation function to combine components by.
-    drop_zero_rows
+    drop_zeros
         Whether to drop rows from the returned statistic that have
         only zeros as values.
+    drop_unit
+        Whether to drop the unit index level from the returned statistic.
     **kwargs
         Any key word argument accepted by the statistics function.
 
@@ -203,7 +206,7 @@ def collect_myopic_statistics(
     if kwargs.get("aggregate_time") is False:
         statistic.columns.name = DataModel.SNAPSHOTS
 
-    if drop_zero_rows:
+    if drop_zeros:
         if isinstance(statistic, pd.Series):
             statistic = statistic.loc[statistic != 0]
         elif isinstance(statistic, pd.DataFrame):
@@ -212,7 +215,7 @@ def collect_myopic_statistics(
             raise TypeError(f"Unknown statistic type '{type(statistic)}'")
 
     # assign the correct unit the statistic if possible
-    if "unit" in statistic.index.names:
+    if "unit" in statistic.index.names and drop_unit:
         if not statistic.empty:
             try:
                 statistic.attrs["unit"] = statistic.index.unique("unit").item()

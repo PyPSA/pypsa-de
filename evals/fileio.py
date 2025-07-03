@@ -414,7 +414,7 @@ def prepare_industry_demand(
         comps="Link",
         bus_carrier="gas",
         carrier=["gas for industry", "gas for industry CC"],
-        drop_zero_rows=False,
+        drop_zeros=False,
         at_port=False,  # only port 0
     )
 
