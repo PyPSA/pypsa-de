@@ -357,11 +357,11 @@ def split_location_carrier(index: pd.MultiIndex, names: list) -> pd.MultiIndex:
         level due to the splitting.
     """
     idx_split = []
-    for *prefix, loc_category in index:
+    for *prefixes, loc_category in index:
         matches = re.match(Regex.region, loc_category)
-        location = matches.group() if matches else ""
+        location = matches.group().strip() if matches else ""
         technology = loc_category.removeprefix(location).strip()
-        idx_split.append((*prefix, location, technology))
+        idx_split.append((*prefixes, location, technology))
 
     return pd.MultiIndex.from_tuples(idx_split, names=names)
 

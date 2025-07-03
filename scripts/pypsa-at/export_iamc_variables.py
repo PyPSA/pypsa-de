@@ -35,7 +35,7 @@ from scripts._helpers import configure_logging, mock_snakemake
 
 def get_nodal_system_cost(n: pypsa.Network, year: str) -> pd.DataFrame:
     """
-    Extract total energy system cost for all regions.
+    Extract total energy system cost per region.
 
     Parameters
     ----------
@@ -54,7 +54,7 @@ def get_nodal_system_cost(n: pypsa.Network, year: str) -> pd.DataFrame:
     system_cost = (
         n.statistics.capex(groupby="location", aggregate_across_components="sum")
         .add(n.statistics.opex(groupby="location", aggregate_across_components="sum"))
-        .div(1e9)
+        .div(1e9)  # to Billion (Milliarden)
         # centralize all below
         .round(4)
         .pipe(insert_index_level, "billion EUR2020", "Unit")
@@ -68,7 +68,7 @@ def get_nodal_system_cost(n: pypsa.Network, year: str) -> pd.DataFrame:
     return system_cost
 
 
-def collect_primary_energy(n, year) -> pd.DataFrame:
+def collect_primary_energy(n: pypsa.Network) -> dict:
     """
     Extract all primary energy variables from the networks.
 
@@ -83,8 +83,6 @@ def collect_primary_energy(n, year) -> pd.DataFrame:
     ----------
     n
         The pypsa network instance.
-    year
-        The planning horizon for the network.
 
     Returns
     -------
@@ -189,7 +187,7 @@ if __name__ == "__main__":
     iamc_variables = []
     for year, n in networks.items():
         iamc_variables.append(get_nodal_system_cost(n, year))
-        iamc_variables.append(collect_primary_energy(n, year))
+        iamc_variables.append(collect_primary_energy(n))
         iamc_variables.append(collect_secondary_energy(n, year))
         iamc_variables.append(collect_final_energy(n, year))
 

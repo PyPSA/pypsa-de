@@ -437,6 +437,10 @@ class ESMStatistics(StatisticsAccessor):
         """
         Split energy amounts for StorageUnits.
 
+        This is done to properly separate primary energy and energy
+        storage, i.e. to separate the natural inflow (primary energy)
+        from storage dispatch (secondary energy).
+
         Parameters
         ----------
         aggregate_time
@@ -452,6 +456,14 @@ class ESMStatistics(StatisticsAccessor):
         :
             A DataFrame containing the split energy amounts for
             PHS and hydro.
+
+        Notes
+        -----
+        This was done int the ESM Toolbox. However, it does not
+        seem to make sense with PyPSA-AT models, because inflow
+        to PHS is zero. As a result, there is no splitting and
+        PHS is secondary energy only, while hydro is primary energy
+        only.
         """
         n = self._n
 
@@ -464,15 +476,16 @@ class ESMStatistics(StatisticsAccessor):
                 p, weights, agg=aggregate_time
             )
 
-        efficiency = phs["p_store"] * n.static("StorageUnit")["efficiency_dispatch"]
-        part_inflow = phs["inflow"] / (phs["inflow"] + efficiency)
+        # calculate the potential dispatch energy for storages
+        stored_energy = phs["p_store"] * n.static("StorageUnit")["efficiency_dispatch"]
+        share_inflow = phs["inflow"] / (phs["inflow"] + stored_energy)
 
-        phs["Dispatched Power from Inflow"] = phs["p_dispatch"] * part_inflow
-        phs["Dispatched Power from Stored"] = phs["p_dispatch"] * (1 - part_inflow)
-        phs["Spill from Inflow"] = phs["spill"] * part_inflow
-        phs["Spill from Stored"] = phs["spill"] * (1 - part_inflow)
+        #
+        phs["Dispatched Power from Inflow"] = phs["p_dispatch"] * share_inflow
+        phs["Dispatched Power from Stored"] = phs["p_dispatch"] * (1 - share_inflow)
+        phs["Spill from Inflow"] = phs["spill"] * share_inflow
+        phs["Spill from Stored"] = phs["spill"] * (1 - share_inflow)
 
-        # use evaluation output carrier names
         mapper = {
             "p_dispatch": "Dispatched Power",
             "p_store": "Stored Power",

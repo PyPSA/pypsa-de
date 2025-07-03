@@ -29,7 +29,7 @@ def _get_traded_energy(n, var, bus_carrier, direction, subcat):
         var[f"Primary Energy|{subcat}|{direction.title()} {scope.title()}"] = trade
 
 
-def _get_sum_by_subcategory(var, subcat):
+def _sum_by_subcategory(var, subcat):
     return (
         pd.concat([var[v] for v in var.keys() if f"|{subcat}|" in v])
         .groupby("location")
@@ -124,7 +124,7 @@ def primary_gas(n, var):
         filter_by(gas_generation, carrier="import gas").groupby("location").sum()
     )
     # summing up does not work bc of misaligned indices. Need to concat.
-    var["Primary Energy|Gas"] = _get_sum_by_subcategory(var, "Gas")
+    var["Primary Energy|Gas"] = _sum_by_subcategory(var, "Gas")
 
     return var
 
@@ -146,7 +146,7 @@ def primary_waste(n, var):
     var["Primary Energy|Waste|Solid"] = n.statistics.supply(
         groupby="location", bus_carrier="municipal solid waste", comps="Generator"
     )
-    var["Primary Energy|Waste"] = _get_sum_by_subcategory(var, "Waste")
+    var["Primary Energy|Waste"] = _sum_by_subcategory(var, "Waste")
 
     return var
 
@@ -215,7 +215,7 @@ def primary_hydrogen(n, var):
         .droplevel("carrier")
     )
 
-    var["Primary Energy|Hydrogen"] = _get_sum_by_subcategory(var, "Hydrogen")
+    var["Primary Energy|Hydrogen"] = _sum_by_subcategory(var, "Hydrogen")
 
     return var
 
@@ -245,7 +245,7 @@ def primary_biomass(n, var):
     var["Primary Energy|Biomass|Biogas"] = n.statistics.supply(
         groupby="location", bus_carrier="biogas", comps="Generator"
     )
-    var["Primary Energy|Biomass"] = _get_sum_by_subcategory(var, "Biomass")
+    var["Primary Energy|Biomass"] = _sum_by_subcategory(var, "Biomass")
 
     return var
 
@@ -266,22 +266,26 @@ def primary_hydro(n, var):
         The updated variables' collection.
     """
 
-    hydro = n.statistics.phs_split()
+    n.statistics.supply(
+        bus_carrier="AC", groupby=["location", "carrier"], comps="StorageUnit"
+    ).pipe(filter_by, location="AT32")
+
+    hydro = n.statistics.phs_split(drop_hydro_cols=False)
 
     var["Primary Energy|Hydro|PHS"] = filter_by(
         hydro, carrier="PHS Dispatched Power from Inflow"
-    )
-    var["Primary Energy|Hydro|Hydro"] = filter_by(
+    ).droplevel(["carrier", "bus_carrier"])
+    var["Primary Energy|Hydro|Reservoir"] = filter_by(
         hydro, carrier="hydro Dispatched Power from Inflow"
-    )
-    var["Primary Energy|Hydro|ror"] = (
+    ).droplevel(["carrier", "bus_carrier"])
+    var["Primary Energy|Hydro|Run-of-River"] = (
         n.statistics.supply(
             groupby=["location", "carrier"], comps="Generator", bus_carrier="AC"
         )
         .pipe(filter_by, carrier="ror")
         .droplevel("carrier")
     )
-    var["Primary Energy|Hydro"] = _get_sum_by_subcategory(var, "Hydro")
+    var["Primary Energy|Hydro"] = _sum_by_subcategory(var, "Hydro")
 
     return var
 
@@ -315,7 +319,7 @@ def primary_solar(n, var):
     var["Primary Energy|Solar|solar rooftop"] = filter_by(
         solar, carrier="solar rooftop"
     ).droplevel("carrier")
-    var["Primary Energy|Solar"] = _get_sum_by_subcategory(var, "Solar")
+    var["Primary Energy|Solar"] = _sum_by_subcategory(var, "Solar")
 
     return var
 
@@ -335,6 +339,7 @@ def primary_nuclear(n, var):
     :
         The updated variables' collection.
     """
+
     return var
 
 
