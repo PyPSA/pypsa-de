@@ -1,3 +1,1 @@
-# Plots
-
 ::: evals.plots

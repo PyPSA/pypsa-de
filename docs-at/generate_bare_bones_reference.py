@@ -1,11 +1,10 @@
 import pathlib
-from importlib import resources
 
 
 def py_to_md_file(subdir):
-    """"""
+    """Generate all required markdown files in a subdirectory."""
     directory = SRC_DIR / subdir
-    target = pathlib.Path(r"C:\Storage\esmtools\docs\reference") / subdir
+    target = ROOTDIR / "docs-at" / "reference" / "evals" / subdir
 
     for p in directory.iterdir():
         if p.suffix != ".py":
@@ -15,10 +14,10 @@ def py_to_md_file(subdir):
 
         if p.stem == "__init__":
             new = target / "index.md"
-            module = f"esmtools.{subdir}" if subdir else "esmtools"
+            module = f"evals.{subdir}" if subdir else "evals"
         else:
             new = target / (p.stem + ".md")
-            module = f"esmtools.{subdir}.{p.stem}" if subdir else f"esmtools.{p.stem}"
+            module = f"evals.{subdir}.{p.stem}" if subdir else f"evals.{p.stem}"
         # print(str(new), f"::: {module}")
         target.mkdir(exist_ok=True)
         new.touch(exist_ok=True)
@@ -26,8 +25,9 @@ def py_to_md_file(subdir):
 
 
 if __name__ == "__main__":
-    SRC_DIR = resources.files("pypsa-at") / "evals"
-
+    ROOTDIR = pathlib.Path(".").resolve()  # assuming CDW pypsa-at
+    assert ROOTDIR.stem == "pypsa-at", "Must run from repo root 'pypsa-at'"
+    SRC_DIR = ROOTDIR / "evals"
     py_to_md_file("")
     py_to_md_file("plots")
     py_to_md_file("views")
