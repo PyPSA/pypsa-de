@@ -33,6 +33,11 @@ logger = logging.getLogger()
 YEAR_LOC = [DM.YEAR, DM.LOCATION]
 
 
+def _extract(ds: pd.Series, **filter_kwargs) -> pd.Series:
+    """Extract and group filter results."""
+    return filter_by(ds, drop=True, **filter_kwargs).groupby(YEAR_LOC).sum()
+
+
 def _get_traded_energy(n, var, bus_carrier, direction, subcat):
     """
     Calculate the trade statistics.
@@ -132,40 +137,21 @@ def primary_oil(n, var):
 
 
 def primary_gas(var) -> dict:
-    # , myopic_supply, foreign_import, foreign_export, domestic_import, domestic_export
     bus_carrier = "gas"
-    var["Primary Energy|Gas|Import Foreign"] = (
-        filter_by(myopic_trade_foreign_import, bus_carrier=bus_carrier, drop=True)
-        .groupby(YEAR_LOC)
-        .sum()
+    var["Primary Energy|Gas|Import Foreign"] = _extract(
+        myopic_trade_foreign_import, bus_carrier=bus_carrier
     )
-    var["Primary Energy|Gas|Import Domestic"] = (
-        filter_by(myopic_trade_domestic_import, bus_carrier=bus_carrier, drop=True)
-        .groupby(YEAR_LOC)
-        .sum()
+    var["Primary Energy|Gas|Import Domestic"] = _extract(
+        myopic_trade_domestic_import, bus_carrier=bus_carrier
     )
-
-    var["Primary Energy|Gas|Production"] = (
-        filter_by(
-            myopic_supply,
-            carrier="gas",
-            bus_carrier=bus_carrier,
-            component="Generator",
-            drop=True,
-        )
-        .groupby(YEAR_LOC)
-        .sum()
+    var["Primary Energy|Gas|Production"] = _extract(
+        myopic_supply, carrier="gas", bus_carrier=bus_carrier, component="Generator"
     )
-    var["Primary Energy|Gas|Import Global"] = (
-        filter_by(
-            myopic_supply,
-            carrier="import gas",
-            bus_carrier=bus_carrier,
-            component="Generator",
-            drop=True,
-        )
-        .groupby(YEAR_LOC)
-        .sum()
+    var["Primary Energy|Gas|Import Global"] = _extract(
+        myopic_supply,
+        carrier="import gas",
+        bus_carrier=bus_carrier,
+        component="Generator",
     )
     var["Primary Energy|Gas"] = _sum_by_subcategory(var, "Gas")
 
@@ -187,30 +173,18 @@ def primary_waste(n, var):
     _get_traded_energy(n, var, "municipal solid waste", "import", "Waste")
 
     bus_carrier = "municipal solid waste"
-    var["Primary Energy|Waste|Import Foreign"] = (
-        filter_by(myopic_trade_foreign_import, bus_carrier=bus_carrier, drop=True)
-        .groupby(YEAR_LOC)
-        .sum()
+    var["Primary Energy|Waste|Import Foreign"] = _extract(
+        myopic_trade_foreign_import, bus_carrier=bus_carrier
     )
-    var["Primary Energy|Waste|Import Domestic"] = (
-        filter_by(myopic_trade_domestic_import, bus_carrier=bus_carrier, drop=True)
-        .groupby(YEAR_LOC)
-        .sum()
+    var["Primary Energy|Waste|Import Domestic"] = _extract(
+        myopic_trade_domestic_import, bus_carrier=bus_carrier
     )
-    var["Primary Energy|Waste|Solid"] = (
-        filter_by(
-            myopic_supply, bus_carrier=bus_carrier, component="Generator", drop=True
-        )
-        .groupby(YEAR_LOC)
-        .sum()
+    var["Primary Energy|Waste|Solid"] = _extract(
+        myopic_supply, bus_carrier=bus_carrier, component="Generator"
     )
     var["Primary Energy|Waste"] = _sum_by_subcategory(var, "Waste")
 
     return var
-
-
-def _extract(ds: pd.Series, **filter_kwargs) -> pd.Series:
-    return filter_by(ds, drop=True, **filter_kwargs).groupby(YEAR_LOC).sum()
 
 
 def primary_coal(var):
