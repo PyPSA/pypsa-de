@@ -158,20 +158,17 @@ def primary_gas(var) -> dict:
     return var
 
 
-def primary_waste(n, var):
+def primary_waste(var):
     """
 
     Parameters
     ----------
-    n
     var
 
     Returns
     -------
     :
     """
-    _get_traded_energy(n, var, "municipal solid waste", "import", "Waste")
-
     bus_carrier = "municipal solid waste"
     var["Primary Energy|Waste|Import Foreign"] = _extract(
         IMPORT_FOREIGN, bus_carrier=bus_carrier
@@ -235,15 +232,15 @@ def primary_hydrogen(n, var):
     :
         The updated variables' collection.
     """
-
-    _get_traded_energy(n, var, "H2", "import", "Hydrogen")
-
-    var["Primary Energy|Hydrogen|Import Global"] = (
-        n.statistics.supply(
-            groupby=["location", "carrier"], bus_carrier="H2", comps="Generator"
-        )
-        .pipe(filter_by, carrier="import H2")
-        .droplevel("carrier")
+    bus_carrier = "H2"
+    var["Primary Energy|Hydrogen|Import Foreign"] = _extract(
+        IMPORT_FOREIGN, bus_carrier=bus_carrier
+    )
+    var["Primary Energy|Hydrogen|Import Domestic"] = _extract(
+        IMPORT_DOMESTIC, bus_carrier=bus_carrier
+    )
+    var["Primary Energy|Hydrogen|Import Global"] = _extract(
+        SUPPLY, carrier="import H2", bus_carrier=bus_carrier, component="Generator"
     )
 
     var["Primary Energy|Hydrogen"] = _sum_by_subcategory(var, "Hydrogen")
@@ -267,14 +264,19 @@ def primary_biomass(n, var):
     :
         The updated variables' collection.
     """
-
-    _get_traded_energy(n, var, "solid biomass", "import", "Biomass")
-
-    var["Primary Energy|Biomass|Solid"] = n.statistics.supply(
-        groupby="location", bus_carrier="solid biomass", comps="Generator"
+    bus_carrier = "solid biomass"
+    var["Primary Energy|Biomass|Import Foreign"] = _extract(
+        IMPORT_FOREIGN, bus_carrier=bus_carrier
     )
-    var["Primary Energy|Biomass|Biogas"] = n.statistics.supply(
-        groupby="location", bus_carrier="biogas", comps="Generator"
+    var["Primary Energy|Biomass|Import Domestic"] = _extract(
+        IMPORT_DOMESTIC, bus_carrier=bus_carrier
+    )
+
+    var["Primary Energy|Biomass|Solid"] = _extract(
+        SUPPLY, bus_carrier=bus_carrier, component="Generator"
+    )
+    var["Primary Energy|Biomass|Biogas"] = _extract(
+        SUPPLY, bus_carrier="biogas", component="Generator"
     )
     var["Primary Energy|Biomass"] = _sum_by_subcategory(var, "Biomass")
 
