@@ -139,16 +139,16 @@ def primary_oil(n, var):
 def primary_gas(var) -> dict:
     bus_carrier = "gas"
     var["Primary Energy|Gas|Import Foreign"] = _extract(
-        myopic_trade_foreign_import, bus_carrier=bus_carrier
+        IMPORT_FOREIGN, bus_carrier=bus_carrier
     )
     var["Primary Energy|Gas|Import Domestic"] = _extract(
-        myopic_trade_domestic_import, bus_carrier=bus_carrier
+        IMPORT_DOMESTIC, bus_carrier=bus_carrier
     )
     var["Primary Energy|Gas|Production"] = _extract(
-        myopic_supply, carrier="gas", bus_carrier=bus_carrier, component="Generator"
+        SUPPLY, carrier="gas", bus_carrier=bus_carrier, component="Generator"
     )
     var["Primary Energy|Gas|Import Global"] = _extract(
-        myopic_supply,
+        SUPPLY,
         carrier="import gas",
         bus_carrier=bus_carrier,
         component="Generator",
@@ -174,13 +174,13 @@ def primary_waste(n, var):
 
     bus_carrier = "municipal solid waste"
     var["Primary Energy|Waste|Import Foreign"] = _extract(
-        myopic_trade_foreign_import, bus_carrier=bus_carrier
+        IMPORT_FOREIGN, bus_carrier=bus_carrier
     )
     var["Primary Energy|Waste|Import Domestic"] = _extract(
-        myopic_trade_domestic_import, bus_carrier=bus_carrier
+        IMPORT_DOMESTIC, bus_carrier=bus_carrier
     )
     var["Primary Energy|Waste|Solid"] = _extract(
-        myopic_supply, bus_carrier=bus_carrier, component="Generator"
+        SUPPLY, bus_carrier=bus_carrier, component="Generator"
     )
     var["Primary Energy|Waste"] = _sum_by_subcategory(var, "Waste")
 
@@ -204,15 +204,11 @@ def primary_coal(var):
     :
         The updated variables' collection.
     """
-    var["Primary Energy|Coal|Hard"] = (
-        filter_by(myopic_withdrawal, bus_carrier="coal", component="Link", drop=True)
-        .groupby(YEAR_LOC)
-        .sum()
+    var["Primary Energy|Coal|Hard"] = _extract(
+        DEMAND, bus_carrier="coal", component="Link"
     )
-    var["Primary Energy|Coal|Lignite"] = (
-        filter_by(myopic_withdrawal, bus_carrier="lignite", component="Link", drop=True)
-        .groupby(YEAR_LOC)
-        .sum()
+    var["Primary Energy|Coal|Lignite"] = _extract(
+        DEMAND, bus_carrier="lignite", component="Link"
     )
     var["Primary Energy|Coal"] = _sum_by_subcategory(var, "Coal")
 
@@ -659,19 +655,17 @@ if __name__ == "__main__":
         networks, "energy_balance", **kwargs
     )
     # calculate all statistics and process them to IAMC data model.
-    myopic_supply = collect_myopic_statistics(
-        networks, "supply", groupby=groupby, **kwargs
-    )
-    myopic_withdrawal = collect_myopic_statistics(
+    SUPPLY = collect_myopic_statistics(networks, "supply", groupby=groupby, **kwargs)
+    DEMAND = collect_myopic_statistics(
         networks, "withdrawal", groupby=groupby, **kwargs
     )
-    myopic_trade_foreign_import = collect_myopic_statistics(
+    IMPORT_FOREIGN = collect_myopic_statistics(
         networks, "trade_energy", scope=TradeTypes.FOREIGN, direction="import", **kwargs
     )
     myopic_trade_foreign_export = collect_myopic_statistics(
         networks, "trade_energy", scope=TradeTypes.FOREIGN, direction="export", **kwargs
     )
-    myopic_trade_domestic_import = collect_myopic_statistics(
+    IMPORT_DOMESTIC = collect_myopic_statistics(
         networks,
         "trade_energy",
         scope=TradeTypes.DOMESTIC,
