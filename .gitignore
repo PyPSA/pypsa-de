@@ -24,6 +24,7 @@ gurobi.log
 /data
 /cutouts
 /tmp
+/public  # mkdocs build
 doc/_build
 
 /scripts/old

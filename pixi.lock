@@ -451,7 +451,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/pyogrio-0.10.0-py312h02b19dd_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pyparsing-3.2.3-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/pyproj-3.7.1-py312h03c6e1f_1.conda
-      - conda: https://conda.anaconda.org/conda-forge/noarch/pypsa-0.34.1-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/pypsa-0.35.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pyshp-2.3.1-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/pyside6-6.9.0-py312h91f0f75_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pysocks-1.7.1-pyha55dd90_7.conda
@@ -7038,9 +7038,9 @@ packages:
   - pkg:pypi/pyproj?source=hash-mapping
   size: 555089
   timestamp: 1742323461761
-- conda: https://conda.anaconda.org/conda-forge/noarch/pypsa-0.34.1-pyhd8ed1ab_0.conda
-  sha256: c62bc20e37d84b869d563b2c43d6de969e6ea6a3411c5437e22516dc21a53cc0
-  md5: 47d8440b4688f021dfd1cf4b9c5ac762
+- conda: https://conda.anaconda.org/conda-forge/noarch/pypsa-0.35.0-pyhd8ed1ab_0.conda
+  sha256: 5e6717b064d2dfd87971e81d270e6cd51fb2a6f64848f6caea1a614ae5c168b5
+  md5: 1ff1865ef17c6344a2b3ba911bef730f
   depends:
   - deprecation
   - geopandas >=0.9
@@ -7051,6 +7051,7 @@ packages:
   - networkx >=2
   - numpy
   - pandas >=0.24
+  - plotly
   - pytables
   - python >=3.10
   - scipy
@@ -7062,8 +7063,8 @@ packages:
   license_family: MIT
   purls:
   - pkg:pypi/pypsa?source=hash-mapping
-  size: 156040
-  timestamp: 1744023423246
+  size: 187329
+  timestamp: 1750621609543
 - pypi: https://files.pythonhosted.org/packages/00/b0/2193f1b828e89437299a24a7c46c4744130728397ea09f8fa66683d28bff/pyscipopt-5.4.1-cp312-cp312-manylinux_2_28_x86_64.whl
   name: pyscipopt
   version: 5.4.1
