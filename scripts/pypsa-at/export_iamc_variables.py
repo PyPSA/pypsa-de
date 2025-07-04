@@ -24,6 +24,7 @@ from evals.utils import (
     calculate_input_share,
     filter_by,
     filter_for_carrier_connected_to,
+    insert_index_level,
     rename_aggregate,
 )
 from scripts._helpers import configure_logging, mock_snakemake
@@ -67,9 +68,7 @@ def _get_traded_energy(n, var, bus_carrier, direction, subcat):
 
 def _sum_by_subcategory(var, subcat):
     return (
-        pd.concat([var[v] for v in var.keys() if f"|{subcat}|" in v])
-        .groupby("location")
-        .sum()
+        pd.concat([var[v] for v in var.keys() if f"|{subcat}|" in v]).groupby(IDX).sum()
     )
 
 
@@ -159,7 +158,7 @@ def primary_oil(var: dict) -> dict:
         1 - oil_refining_eff
     )
     var["Primary Energy|Oil|Global Import"] = _extract(SUPPLY, carrier="import oil")
-    var["Primary Energy|Oil|Global Import"] = _extract(SUPPLY, carrier="oil primary")
+    var["Primary Energy|Oil|Primary"] = _extract(SUPPLY, carrier="oil primary")
     var["Primary Energy|Oil"] = regional_oil_imports
 
     # var["Primary Energy|Oil|Fossil"] = oil  # including losses
@@ -252,13 +251,19 @@ def primary_coal(var: dict) -> dict:
     :
         The updated variables' collection.
     """
-    var["Primary Energy|Coal|Hard"] = _extract(
-        DEMAND, bus_carrier="coal", component="Link"
+    var["Primary Energy|Coal|Hard"] = (
+        filter_by(DEMAND, bus_carrier="coal", component="Link").groupby(IDX).sum()
     )
-    var["Primary Energy|Coal|Lignite"] = _extract(
-        DEMAND, bus_carrier="lignite", component="Link"
+    var["Primary Energy|Coal|Lignite"] = (
+        filter_by(DEMAND, bus_carrier="lignite", component="Link").groupby(IDX).sum()
     )
     var["Primary Energy|Coal"] = _sum_by_subcategory(var, "Coal")
+
+    # remove EU coal generators from the to-do list
+    coal_generators = filter_by(
+        SUPPLY, bus_carrier=["coal", "lignite"], component="Generator"
+    )
+    SUPPLY.drop(coal_generators, inplace=True)
 
     return var
 
@@ -384,9 +389,17 @@ def primary_solar(var: dict) -> dict:
         SUPPLY, carrier="solar-hsat", component="Generator"
     )
     var["Primary Energy|Solar|Rooftop"] = _extract(
-        SUPPLY, carrier="solar-rooftop", component="Generator"
+        SUPPLY, carrier="solar rooftop", component="Generator"
     )
     var["Primary Energy|Solar"] = _sum_by_subcategory(var, "Solar")
+
+    return var
+
+
+def primary_liquids(var: dict) -> dict:
+    var["Primary Energy|Liquids|Unsustainable Bioliquids"] = _extract(
+        SUPPLY, carrier="import oil"
+    )
 
     return var
 
@@ -405,10 +418,15 @@ def primary_nuclear(var: dict) -> dict:
     :
         The updated variables' collection.
     """
-    var["Primary Energy|Nuclear|Uranium"] = _extract(
-        DEMAND, carrier="uranium", component="Link"
+    var["Primary Energy|Nuclear|Uranium"] = (
+        filter_by(DEMAND, carrier="uranium", component="Link").groupby(IDX).sum()
     )
     # var["Primary Energy|Nuclear|Electricity"] = _extract(SUPPLY, carrier="nuclear", component="Link")  # is secondary energy
+    # remove EU uranium generators from the to-do list
+    uranium_generators = filter_by(
+        SUPPLY, bus_carrier=["coal", "lignite"], component="Generator"
+    )
+    SUPPLY.drop(uranium_generators, inplace=True)
 
     return var
 
@@ -486,6 +504,7 @@ def primary_heat(var: dict) -> dict:
         .drop(["co2", "co2 stored"], level=DM.BUS_CARRIER)
         .pipe(calculate_input_share, heat_bus_carrier)
         .pipe(filter_by, bus_carrier=["ambient heat", "latent heat"])
+        .pipe(insert_index_level, "MWh_th", "unit")
     )
 
     # # for every heat bus, calculate the amounts of supply for heat
@@ -590,8 +609,8 @@ def collect_system_cost() -> pd.Series:
     # FixMe: Why are there negative values in OPEX?
 
     # rewrite using global myopic metrics
-    var["System Costs|OPEX"] = myopic_opex.groupby(["year", "location"]).sum()
-    var["System Costs|CAPEX"] = myopic_capex.groupby(["year", "location"]).sum()
+    var["System Costs|OPEX"] = myopic_opex.groupby(IDX).sum()
+    var["System Costs|CAPEX"] = myopic_capex.groupby(IDX).sum()
     var["System Costs"] = var["System Costs|CAPEX"] + var["System Costs|OPEX"]
 
     # todo: enable, or test later
@@ -674,7 +693,7 @@ if __name__ == "__main__":
     IMPORT_FOREIGN = collect_myopic_statistics(
         networks, "trade_energy", scope=TradeTypes.FOREIGN, direction="import", **kwargs
     )
-    myopic_trade_foreign_export = collect_myopic_statistics(
+    EXPORT_FOREIGN = collect_myopic_statistics(
         networks, "trade_energy", scope=TradeTypes.FOREIGN, direction="export", **kwargs
     )
     IMPORT_DOMESTIC = collect_myopic_statistics(
@@ -684,7 +703,7 @@ if __name__ == "__main__":
         direction="import",
         **kwargs,
     )
-    myopic_trade_domestic_export = collect_myopic_statistics(
+    EXPORT_DOMESTIC = collect_myopic_statistics(
         networks,
         "trade_energy",
         scope=TradeTypes.DOMESTIC,
@@ -704,9 +723,14 @@ if __name__ == "__main__":
     # iamc_variables.append(collect_final_energy(n))
 
     # df = pd.concat(iamc_variables)
-    df = pd.DataFrame()
+    df = pd.concat([system_cost, primary_energy])
+
+    df = insert_index_level(df, "PyPSA-AT", "model")
+    df = insert_index_level(df, snakemake.wildcards.run, "scenario")
+    df.index = df.index.rename({"location": "region"})
 
     # # drop all values for dummy template
+
     iamc = IamDataFrame(df)
 
     meta = pd.Series(
