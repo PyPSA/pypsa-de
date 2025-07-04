@@ -630,9 +630,7 @@ class ESMStatistics(StatisticsAccessor):
             _bc = [bus_carrier] if isinstance(bus_carrier, str) else bus_carrier
             buses = buses.query("carrier in @_bc")
 
-        carrier = get_transmission_carriers(n, bus_carrier).unique(  # Noqa: F841
-            "carrier"
-        )
+        carrier = get_transmission_carriers(n, bus_carrier).unique("carrier")  # Noqa: F841
         comps = get_transmission_carriers(n, bus_carrier).unique("component")
 
         for port, c in product((0, 1), comps):
@@ -651,8 +649,8 @@ class ESMStatistics(StatisticsAccessor):
                 if "location" in comp
                 else DataModel.LOCATION
             )
-            p = p.set_index([_location, DataModel.CARRIER, "carrier_bus"])
-            p.index.names = DataModel.IDX_NAMES
+            p = p.set_index([_location, DataModel.CARRIER, "carrier_bus", "unit"])
+            p.index.names = DataModel.IDX_NAMES + ["unit"]
             # branch components have reversed sign
             p = p.filter(n.snapshots, axis=1).mul(-1)
             if direction == "export":
@@ -664,7 +662,7 @@ class ESMStatistics(StatisticsAccessor):
 
             results_comp.append(insert_index_level(p, c, "component"))
 
-        result = pd.concat(results_comp)  # .groupby(DataModel.IDX_NAMES).sum()
+        result = pd.concat(results_comp)
 
         if aggregate_time:
             # assuming Link and Line have the same weights
