@@ -30,12 +30,15 @@ from scripts._helpers import configure_logging, mock_snakemake
 
 logger = logging.getLogger()
 
-YEAR_LOC = [DM.YEAR, DM.LOCATION]
+IDX = [DM.YEAR, DM.LOCATION, "unit"]
 
 
 def _extract(ds: pd.Series, **filter_kwargs) -> pd.Series:
     """Extract and group filter results."""
-    return filter_by(ds, drop=True, **filter_kwargs).groupby(YEAR_LOC).sum()
+    results = filter_by(ds, **filter_kwargs)
+    ds.drop(results.index, inplace=True)
+    return results.groupby(IDX).sum()
+    # return filter_by(ds, drop=True, **filter_kwargs).groupby(IDX).sum()
 
 
 def _get_traded_energy(n, var, bus_carrier, direction, subcat):
@@ -70,7 +73,7 @@ def _sum_by_subcategory(var, subcat):
     )
 
 
-def primary_oil(n, var):
+def primary_oil(var: dict) -> dict:
     """
     Calculate the amounts of oil entering a region.
 
@@ -98,8 +101,6 @@ def primary_oil(n, var):
 
     Parameters
     ----------
-    n
-        A solved network.
     var
         The collection to append new variables in.
 
@@ -108,49 +109,99 @@ def primary_oil(n, var):
     :
         The updated variables' collection.
     """
-    netted_liquids = n.statistics.energy_balance(
-        groupby="location", bus_carrier="oil", comps="Link"
-    ).drop("EU", errors="ignore")
-    liquids_consumption = netted_liquids[netted_liquids.le(0)].abs()
+    # # netted_liquids = n.statistics.energy_balance(
+    # #     groupby="location", bus_carrier="oil", comps="Link"
+    # # ).drop("EU", errors="ignore")
+    # netted_liquids = collect_myopic_statistics(networks, "energy_balance", bus_carrier="oil", comps="Link").drop("EU", level="location")
+    # liquids_consumption = netted_liquids[netted_liquids.le(0)].abs()
 
     # increase fossil oil demand by this factor to account for refining losses
-    oil_refining_efficiency = (
-        port_efficiency(n, "Link", "1").filter(like="oil refining").item()
+    _refining_efficiencies = set()
+    for n in networks.values():
+        _refining_efficiencies.add(
+            port_efficiency(n, "Link", "1").filter(like="oil refining").item()
+        )
+    if len(_refining_efficiencies) != 1:
+        raise NotImplementedError("Multiple efficiencies not supported.")
+    else:
+        oil_refining_eff = _refining_efficiencies.pop()
+
+    # assuming that all local oil production. Let's not filter_by components, to capture all but Stores.
+    production = (
+        filter_by(SUPPLY, bus_carrier="oil")
+        .drop("Store", level="component")
+        .groupby(IDX)
+        .sum()
     )
-    # calculate the split of fossil oil generation to liquids production and assume
-    # the same split for all regions
-    total_oil_import = n.statistics.supply(bus_carrier="oil primary").item()
-    total_liquids_production = n.statistics.supply(
-        groupby="bus_carrier", bus_carrier="oil", comps="Link"
-    ).item()
-    fossil_share = total_oil_import / total_liquids_production
-    oil = liquids_consumption * fossil_share / oil_refining_efficiency
+    consumption = (
+        filter_by(DEMAND, bus_carrier="oil")
+        .drop("Store", level="component")
+        .groupby(IDX)
+        .sum()
+    )
+    regional_oil_imports = consumption.sub(production, fill_value=0).clip(lower=0)
 
-    liquids = liquids_consumption * (1 - fossil_share)
+    # assert primary oil and imports are equal per year
+    eu_oil_import = filter_by(SUPPLY, carrier=["oil primary", "import oil"])
+    try:
+        pd.testing.assert_series_equal(
+            regional_oil_imports.groupby("year").sum(),
+            eu_oil_import.groupby("year").sum(),
+            check_names=False,
+        )
+    except AssertionError:
+        logger.warning("Oil amounts mismatch.")
 
-    var["Primary Energy|Oil|Fossil"] = oil  # including losses
-    var["Primary Energy|Oil|Liquids"] = liquids
-    var["Primary Energy|Oil"] = oil + liquids
-    var["Primary Energy|Oil|Refining Losses"] = oil * (1 - oil_refining_efficiency)
+    var["Primary Energy|Oil|Fossil Oil"] = (
+        regional_oil_imports / oil_refining_eff
+    )  # total amounts before refining
+    var["Primary Energy|Oil|Refining Losses"] = regional_oil_imports * (
+        1 - oil_refining_eff
+    )
+    var["Primary Energy|Oil|Global Import"] = _extract(SUPPLY, carrier="import oil")
+    var["Primary Energy|Oil|Global Import"] = _extract(SUPPLY, carrier="oil primary")
+    var["Primary Energy|Oil"] = regional_oil_imports
+
+    # var["Primary Energy|Oil|Fossil"] = oil  # including losses
+    # var["Primary Energy|Oil|Liquids"] = liquids  # this is secondary energy
+    # var["Primary Energy|Oil|Global Import"] = _extract(SUPPLY, carrier="import oil")
+    # var["Primary Energy|Oil"] = oil + liquids
+    # var["Primary Energy|Oil|Refining Losses"] = oil * (1 - oil_refining_eff)
+
+    # # calculate the split of fossil oil generation to liquids production and assume
+    # # the same split for all regions
+    # total_oil_import = n.statistics.supply(bus_carrier="oil primary").item()
+    # total_liquids_production = n.statistics.supply(
+    #     groupby="bus_carrier", bus_carrier="oil", comps="Link"
+    # ).item()
+    # fossil_share = total_oil_import / total_liquids_production
+    # oil = liquids_consumption * fossil_share / oil_refining_eff
+    #
+    # liquids = liquids_consumption * (1 - fossil_share)
+    #
+    # var["Primary Energy|Oil|Fossil"] = oil  # including losses
+    # var["Primary Energy|Oil|Liquids"] = liquids  # this is secondary energy
+    # var["Primary Energy|Oil|Global Import"] = _extract(SUPPLY, carrier="import oil")
+    # var["Primary Energy|Oil"] = oil + liquids
+    # var["Primary Energy|Oil|Refining Losses"] = oil * (1 - oil_refining_eff)
 
     return var
 
 
 def primary_gas(var) -> dict:
-    bus_carrier = "gas"
     var["Primary Energy|Gas|Import Foreign"] = _extract(
-        IMPORT_FOREIGN, bus_carrier=bus_carrier
+        IMPORT_FOREIGN, bus_carrier="gas"
     )
     var["Primary Energy|Gas|Import Domestic"] = _extract(
-        IMPORT_DOMESTIC, bus_carrier=bus_carrier
+        IMPORT_DOMESTIC, bus_carrier="gas"
     )
     var["Primary Energy|Gas|Production"] = _extract(
-        SUPPLY, carrier="gas", bus_carrier=bus_carrier, component="Generator"
+        SUPPLY, carrier="gas", bus_carrier="gas", component="Generator"
     )
     var["Primary Energy|Gas|Import Global"] = _extract(
         SUPPLY,
         carrier="import gas",
-        bus_carrier=bus_carrier,
+        bus_carrier="gas",
         component="Generator",
     )
     var["Primary Energy|Gas"] = _sum_by_subcategory(var, "Gas")
@@ -158,7 +209,7 @@ def primary_gas(var) -> dict:
     return var
 
 
-def primary_waste(var):
+def primary_waste(var: dict) -> dict:
     """
 
     Parameters
@@ -184,7 +235,7 @@ def primary_waste(var):
     return var
 
 
-def primary_coal(var):
+def primary_coal(var: dict) -> dict:
     """
     Calculate the amounts of coal consumed in a region.
 
@@ -212,7 +263,7 @@ def primary_coal(var):
     return var
 
 
-def primary_hydrogen(n, var):
+def primary_hydrogen(var: dict) -> dict:
     """
     Calculate the amounts of hydrogen imported into a region.
 
@@ -222,8 +273,6 @@ def primary_hydrogen(n, var):
 
     Parameters
     ----------
-    n
-        A solved network.
     var
         The collection to append new variables in.
 
@@ -248,14 +297,12 @@ def primary_hydrogen(n, var):
     return var
 
 
-def primary_biomass(n, var):
+def primary_biomass(var: dict) -> dict:
     """
     Calculate the amounts of biomass generated in a region.
 
     Parameters
     ----------
-    n
-        A solved network.
     var
         The collection to append new variables in.
 
@@ -283,7 +330,7 @@ def primary_biomass(n, var):
     return var
 
 
-def primary_hydro(n, var):
+def primary_hydro(var: dict) -> dict:
     """
     Calculate the hydropower generated per region.
 
@@ -292,8 +339,6 @@ def primary_hydro(n, var):
 
     Parameters
     ----------
-    n
-        A solved network.
     var
         The collection to append new variables in.
 
@@ -302,28 +347,21 @@ def primary_hydro(n, var):
     :
         The updated variables' collection.
     """
-
-    hydro = n.statistics.phs_split()
-
-    var["Primary Energy|Hydro|PHS"] = filter_by(
-        hydro, carrier="PHS Dispatched Power from Inflow"
-    ).droplevel(["carrier", "bus_carrier"])
-    var["Primary Energy|Hydro|Reservoir"] = filter_by(
-        hydro, carrier="hydro Dispatched Power from Inflow"
-    ).droplevel(["carrier", "bus_carrier"])
-    var["Primary Energy|Hydro|Run-of-River"] = (
-        n.statistics.supply(
-            groupby=["location", "carrier"], comps="Generator", bus_carrier="AC"
-        )
-        .pipe(filter_by, carrier="ror")
-        .droplevel("carrier")
+    var["Primary Energy|Hydro|PHS"] = _extract(
+        SUPPLY, carrier="PHS", component="StorageUnit"
+    )
+    var["Primary Energy|Hydro|Reservoir"] = _extract(
+        SUPPLY, carrier="hydro", component="StorageUnit"
+    )
+    var["Primary Energy|Hydro|Run-of-River"] = _extract(
+        SUPPLY, carrier="ror", component="Generator"
     )
     var["Primary Energy|Hydro"] = _sum_by_subcategory(var, "Hydro")
 
     return var
 
 
-def primary_solar(n, var):
+def primary_solar(var: dict) -> dict:
     """
     Calculate solar energy generated per region.
 
@@ -339,33 +377,26 @@ def primary_solar(n, var):
     :
         The updated variables' collection.
     """
-    generator_supply = n.statistics.supply(
-        groupby=["location", "carrier"],
-        comps="Generator",
-        bus_carrier=["AC", "low voltage"],
+    var["Primary Energy|Solar|Utility"] = _extract(
+        SUPPLY, carrier="solar", component="Generator"
     )
-    var["Primary Energy|Solar|Utility"] = filter_by(
-        generator_supply, carrier="solar"
-    ).droplevel("carrier")
-    var["Primary Energy|Solar|HSAT"] = filter_by(
-        generator_supply, carrier="solar-hsat"
-    ).droplevel("carrier")
-    var["Primary Energy|Solar|Rooftop"] = filter_by(
-        generator_supply, carrier="solar rooftop"
-    ).droplevel("carrier")
+    var["Primary Energy|Solar|HSAT"] = _extract(
+        SUPPLY, carrier="solar-hsat", component="Generator"
+    )
+    var["Primary Energy|Solar|Rooftop"] = _extract(
+        SUPPLY, carrier="solar-rooftop", component="Generator"
+    )
     var["Primary Energy|Solar"] = _sum_by_subcategory(var, "Solar")
 
     return var
 
 
-def primary_nuclear(n, var):
+def primary_nuclear(var: dict) -> dict:
     """
     Calculate the uranium demand for nuclear power plants per region.
 
     Parameters
     ----------
-    n
-        A solved network.
     var
         The collection to append new variables in.
 
@@ -374,20 +405,15 @@ def primary_nuclear(n, var):
     :
         The updated variables' collection.
     """
-    var["Primary Energy|Nuclear|Uranium"] = (
-        n.statistics.withdrawal(
-            groupby=["location", "carrier"],
-            comps="Link",
-            bus_carrier="uranium",
-        )
-        .groupby("location")
-        .sum()
+    var["Primary Energy|Nuclear|Uranium"] = _extract(
+        DEMAND, carrier="uranium", component="Link"
     )
+    # var["Primary Energy|Nuclear|Electricity"] = _extract(SUPPLY, carrier="nuclear", component="Link")  # is secondary energy
 
     return var
 
 
-def primary_ammonia(n, var):
+def primary_ammonia(var: dict) -> dict:
     """
     Calculate the ammonium imported per region.
 
@@ -403,22 +429,12 @@ def primary_ammonia(n, var):
     :
         The updated variables' collection.
     """
-    ammonium = n.statistics.withdrawal(
-        groupby=["location", "carrier"],
-        comps="Link",
-        bus_carrier="NH3",
-    )
-    if ammonium.empty:
-        logger.info(
-            "There is no regional NH3 demand, because ammonium Loads are aggregated and connected to EU bus."
-        )
-    else:
-        var["Primary Energy|Ammonium|Import"] = ammonium.groupby("location").sum()
+    var["Primary Energy|Ammonium|Import"] = _extract(SUPPLY, carrier="import NH3")
 
     return var
 
 
-def primary_wind(n, var):
+def primary_wind(var: dict) -> dict:
     """
     Calculate wind energy generated per region.
 
@@ -434,32 +450,23 @@ def primary_wind(n, var):
     :
         The updated variables' collection.
     """
-    generator_supply = n.statistics.supply(
-        groupby=["location", "carrier"],
-        comps="Generator",
-        bus_carrier="AC",
+    var["Primary Energy|Wind|Onshore"] = _extract(
+        SUPPLY, carrier="onwind", component="Generator"
     )
-    var["Primary Energy|Wind|Onshore"] = (
-        filter_by(generator_supply, carrier="onwind").groupby("location").sum()
-    )
-    var["Primary Energy|Wind|Offshore"] = (
-        filter_by(generator_supply, carrier=["offwind-ac", "offwind-dc"])
-        .groupby("location")
-        .sum()
+    var["Primary Energy|Wind|Offshore"] = _extract(
+        SUPPLY, carrier=["offwind-ac", "offwind-dc"], component="Generator"
     )
     var["Primary Energy|Wind"] = _sum_by_subcategory(var, "Wind")
 
     return var
 
 
-def primary_heat(n, var):
+def primary_heat(var: dict) -> dict:
     """
-    Calculate heat generation and heat generated by CHPs and heat pumps.
+    Calculate heat generation and enthalpy of evaporation.
 
     Parameters
     ----------
-    n
-        A solved network.
     var
         The collection to append new variables in.
 
@@ -469,49 +476,52 @@ def primary_heat(n, var):
         The updated variables' collection.
     """
     heat_bus_carrier = ["rural heat", "urban decentral heat", "urban central heat"]
-    link_energy_balance = n.statistics.energy_balance(
-        groupby=["location", "carrier", "bus_carrier"],
-        comps="Link",
+    # link_energy_balance = n.statistics.energy_balance(
+    #     groupby=["location", "carrier", "bus_carrier"],
+    #     comps="Link",
+    # )
+    enthalpy_heat = (
+        collect_myopic_statistics(networks, comps="Link", statistic="energy_balance")
+        .pipe(filter_for_carrier_connected_to, heat_bus_carrier)
+        .drop(["co2", "co2 stored"], level=DM.BUS_CARRIER)
+        .pipe(calculate_input_share, heat_bus_carrier)
+        .pipe(filter_by, bus_carrier=["ambient heat", "latent heat"])
     )
 
-    # for every heat bus, calculate the amounts of supply for heat
-    to_concat = []
-    for bc in heat_bus_carrier:
-        p = (
-            link_energy_balance.pipe(filter_for_carrier_connected_to, bc)
-            # CO2 supply are CO2 emissions that do not help heat production
-            .drop(["co2", "co2 stored"], level=DM.BUS_CARRIER)
-            .pipe(calculate_input_share, bc)
-            .pipe(filter_by, bus_carrier=["ambient heat", "latent heat"])
-        )
-        p.attrs["unit"] = "MWh_th"
-        to_concat.append(p)
-
-    heat_supply = pd.concat(to_concat)
+    # # for every heat bus, calculate the amounts of supply for heat
+    # to_concat = []
+    # for bc in heat_bus_carrier:
+    #     p = (
+    #         link_energy_balance.pipe(filter_for_carrier_connected_to, bc)
+    #         # CO2 supply are CO2 emissions that do not help heat production
+    #         .drop(["co2", "co2 stored"], level=DM.BUS_CARRIER)
+    #         .pipe(calculate_input_share, bc)
+    #         .pipe(filter_by, bus_carrier=["ambient heat", "latent heat"])
+    #     )
+    #     p.attrs["unit"] = "MWh_th"
+    #     to_concat.append(p)
+    #
+    # heat_supply = pd.concat(to_concat)
     var["Primary Energy|Heat|Latent"] = (
-        filter_by(heat_supply, bus_carrier="latent heat").groupby("location").sum()
+        filter_by(enthalpy_heat, bus_carrier="latent heat").groupby(IDX).sum()
     )
     var["Primary Energy|Heat|Ambient"] = (
-        filter_by(heat_supply, bus_carrier="ambient heat").groupby("location").sum()
+        filter_by(enthalpy_heat, bus_carrier="ambient heat").groupby(IDX).sum()
     )
 
-    heat_generation = n.statistics.supply(
-        groupby=["location", "carrier"], bus_carrier=heat_bus_carrier, comps="Generator"
+    solar_thermal_carr = [
+        c for c in SUPPLY.index.unique("carrier") if "solar thermal" in c
+    ]
+    var["Primary Energy|Heat|Solar"] = _extract(
+        SUPPLY, carrier=solar_thermal_carr, component="Generator"
     )
-    var["Primary Energy|Heat|Solar"] = (
-        heat_generation.filter(regex=r"solar thermal'\)$", axis=0)
-        .groupby("location")
-        .sum()
-    )
-    var["Primary Energy|Heat|Geothermal"] = (
-        filter_by(heat_generation, carrier="geothermal heat").groupby("location").sum()
-    )
+    var["Primary Energy|Heat|Geothermal"] = _extract(SUPPLY, carrier="geothermal heat")
     var["Primary Energy|Heat"] = _sum_by_subcategory(var, "Heat")
 
     return var
 
 
-def get_renewable_generation(var):
+def get_renewable_generation(var: dict) -> dict:
     """
 
     Parameters
