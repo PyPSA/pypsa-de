@@ -134,19 +134,16 @@ def primary_oil(n, var):
 def primary_gas(var) -> dict:
     # , myopic_supply, foreign_import, foreign_export, domestic_import, domestic_export
     bus_carrier = "gas"
-    gas_import_foreign = filter_by(
-        myopic_trade_foreign_import, bus_carrier=bus_carrier, drop=True
+    var["Primary Energy|Gas|Import Foreign"] = (
+        filter_by(myopic_trade_foreign_import, bus_carrier=bus_carrier, drop=True)
+        .groupby(YEAR_LOC)
+        .sum()
     )
-    var["Primary Energy|Gas|Import Foreign"] = gas_import_foreign.groupby(
-        ["year", "location"]
-    ).sum()
-
-    gas_import_domestic = filter_by(
-        myopic_trade_domestic_import, bus_carrier=bus_carrier, drop=True
+    var["Primary Energy|Gas|Import Domestic"] = (
+        filter_by(myopic_trade_domestic_import, bus_carrier=bus_carrier, drop=True)
+        .groupby(YEAR_LOC)
+        .sum()
     )
-    var["Primary Energy|Gas|Import Domestic"] = gas_import_domestic.groupby(
-        ["year", "location"]
-    ).sum()
 
     var["Primary Energy|Gas|Production"] = (
         filter_by(
@@ -156,7 +153,7 @@ def primary_gas(var) -> dict:
             component="Generator",
             drop=True,
         )
-        .groupby("location")
+        .groupby(YEAR_LOC)
         .sum()
     )
     var["Primary Energy|Gas|Import Global"] = (
@@ -167,7 +164,7 @@ def primary_gas(var) -> dict:
             component="Generator",
             drop=True,
         )
-        .groupby("location")
+        .groupby(YEAR_LOC)
         .sum()
     )
     var["Primary Energy|Gas"] = _sum_by_subcategory(var, "Gas")
@@ -212,12 +209,11 @@ def primary_waste(n, var):
     return var
 
 
-#
-# def _extract(ds: pd.Series, bus_carrier: str) -> pd.Series:
-#     return
+def _extract(ds: pd.Series, **filter_kwargs) -> pd.Series:
+    return filter_by(ds, drop=True, **filter_kwargs).groupby(YEAR_LOC).sum()
 
 
-def primary_coal(n, var):
+def primary_coal(var):
     """
     Calculate the amounts of coal consumed in a region.
 
@@ -226,8 +222,6 @@ def primary_coal(n, var):
 
     Parameters
     ----------
-    n
-        A solved network.
     var
         The collection to append new variables in.
 
