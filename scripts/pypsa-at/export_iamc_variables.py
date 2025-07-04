@@ -263,7 +263,7 @@ def primary_coal(var: dict) -> dict:
     coal_generators = filter_by(
         SUPPLY, bus_carrier=["coal", "lignite"], component="Generator"
     )
-    SUPPLY.drop(coal_generators, inplace=True)
+    SUPPLY.drop(coal_generators.index, inplace=True)
 
     return var
 
@@ -372,9 +372,6 @@ def primary_solar(var: dict) -> dict:
 
     Parameters
     ----------
-    n
-        A solved network.
-    var
         The collection to append new variables in.
 
     Returns
@@ -397,8 +394,20 @@ def primary_solar(var: dict) -> dict:
 
 
 def primary_liquids(var: dict) -> dict:
+    """
+    Calculate the amounts of liquid fuels generated per region.
+
+    Parameters
+    ----------
+        The collection to append new variables in.
+
+    Returns
+    -------
+    :
+        The updated variables' collection.
+    """
     var["Primary Energy|Liquids|Unsustainable Bioliquids"] = _extract(
-        SUPPLY, carrier="import oil"
+        SUPPLY, carrier="unsustainable bioliquids"
     )
 
     return var
@@ -423,10 +432,8 @@ def primary_nuclear(var: dict) -> dict:
     )
     # var["Primary Energy|Nuclear|Electricity"] = _extract(SUPPLY, carrier="nuclear", component="Link")  # is secondary energy
     # remove EU uranium generators from the to-do list
-    uranium_generators = filter_by(
-        SUPPLY, bus_carrier=["coal", "lignite"], component="Generator"
-    )
-    SUPPLY.drop(uranium_generators, inplace=True)
+    uranium_generators = filter_by(SUPPLY, bus_carrier="uranium", component="Generator")
+    SUPPLY.drop(uranium_generators.index, inplace=True)
 
     return var
 
@@ -437,8 +444,6 @@ def primary_ammonia(var: dict) -> dict:
 
     Parameters
     ----------
-    n
-        A solved network.
     var
         The collection to append new variables in.
 
@@ -458,8 +463,6 @@ def primary_wind(var: dict) -> dict:
 
     Parameters
     ----------
-    n
-        A solved network.
     var
         The collection to append new variables in.
 
@@ -580,11 +583,6 @@ def collect_system_cost() -> pd.Series:
     """
     Extract total energy system cost per region.
 
-    Parameters
-    ----------
-    n
-        The pypsa network instance.
-
     Returns
     -------
     :
@@ -615,8 +613,6 @@ def collect_system_cost() -> pd.Series:
 
     # todo: enable, or test later
     # assert vars["System Costs"].mul(1e9).sum() == n.objective, "Total system costs do not match the optimization result."
-    # ds = pd.concat(var)
-    # df.index = ds.index = ds.index.rename({None: "Variable"})
 
     return combine_variables(var)
 
@@ -650,15 +646,18 @@ def collect_primary_energy() -> pd.Series:
     primary_ammonia(var)
     primary_wind(var)
     primary_heat(var)
+    primary_liquids(var)
+
+    assert filter_by(SUPPLY, component="Generator").empty
 
     return combine_variables(var)
 
 
-def collect_secondary_energy(n) -> pd.DataFrame:
+def collect_secondary_energy() -> pd.DataFrame:
     """Extract all secondary energy variables from the networks."""
 
 
-def collect_final_energy(n) -> pd.DataFrame:
+def collect_final_energy() -> pd.DataFrame:
     """Extract all final energy variables from the networks."""
 
 
