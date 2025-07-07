@@ -30,7 +30,7 @@ def get_transport_data(db, year):
         transport_demand["Hydrogen"] = 0.0 + 0.0 + 0.0 + 0.0
         transport_demand["Liquids"] = 41.81 + 1369.34 + 11.18 + 637.23
         transport_demand = transport_demand.div(3.6e-6)  # convert PJ to MWh
-        transport_demand["number_of_cars"] = 0.658407
+        transport_demand["number_of_cars"] = 0.658407 + 0.120261  # BEV + PHEV
 
     else:
         df = db[year].loc[snakemake.params.leitmodelle["transport"]]
@@ -41,9 +41,10 @@ def get_transport_data(db, year):
                 transport_demand.loc[fuel] += df.get((key, "TWh/yr"), 0.0)
 
         transport_demand = transport_demand.mul(1e6)  # convert TWh to MWh
-        transport_demand["number_of_cars"] = df.loc[
-            "Stock|Transportation|LDV|BEV", "million"
-        ]
+        transport_demand["number_of_cars"] = (
+            df.loc["Stock|Transportation|LDV|BEV", "million"]
+            + df.loc["Stock|Transportation|LDV|PHEV", "million"]
+        )
 
     return transport_demand
 
