@@ -835,42 +835,38 @@ def aladin_mobility_demand(n):
     simulation_period_correction_factor = n.snapshot_weightings.objective.sum() / 8760
 
     # oil demand
-    oil_demand = aladin_demand.Liquids * simulation_period_correction_factor
-    oil_index = n.loads[
-        (n.loads.carrier == "land transport oil") & (n.loads.index.str[:2] == "DE")
-    ].index
-    oil_demand.index = [f"{i} land transport oil" for i in oil_demand.index]
+    oil_demand = pd.Series(
+        aladin_demand.Liquids * simulation_period_correction_factor,
+        index=aladin_demand.index + " land transport oil",
+    )
 
-    profile = n.loads_t.p_set.loc[:, oil_index]
+    profile = n.loads_t.p_set.loc[:, oil_demand.index]
     profile /= profile.sum()
-    n.loads_t.p_set.loc[:, oil_index] = (oil_demand * profile).div(
+    n.loads_t.p_set.loc[:, oil_demand.index] = (oil_demand * profile).div(
         n.snapshot_weightings.objective, axis=0
     )
 
     # hydrogen demand
-    h2_demand = aladin_demand.Hydrogen * simulation_period_correction_factor
-    h2_index = n.loads[
-        (n.loads.carrier == "land transport fuel cell")
-        & (n.loads.index.str[:2] == "DE")
-    ].index
-    h2_demand.index = [f"{i} land transport fuel cell" for i in h2_demand.index]
+    h2_demand = pd.Series(
+        aladin_demand.Hydrogen * simulation_period_correction_factor,
+        index=aladin_demand.index + " land transport fuel cell",
+    )
 
-    profile = n.loads_t.p_set.loc[:, h2_index]
+    profile = n.loads_t.p_set.loc[:, h2_demand.index]
     profile /= profile.sum()
-    n.loads_t.p_set.loc[:, h2_index] = (h2_demand * profile).div(
+    n.loads_t.p_set.loc[:, h2_demand.index] = (h2_demand * profile).div(
         n.snapshot_weightings.objective, axis=0
     )
 
     # electricity demand
-    ev_demand = aladin_demand.Electricity * simulation_period_correction_factor
-    ev_index = n.loads[
-        (n.loads.carrier == "land transport EV") & (n.loads.index.str[:2] == "DE")
-    ].index
-    ev_demand.index = [f"{i} land transport EV" for i in ev_demand.index]
+    ev_demand = pd.Series(
+        aladin_demand.Electricity * simulation_period_correction_factor,
+        index=aladin_demand.index + " land transport EV",
+    )
 
-    profile = n.loads_t.p_set.loc[:, ev_index]
+    profile = n.loads_t.p_set.loc[:, ev_demand.index]
     profile /= profile.sum()
-    n.loads_t.p_set.loc[:, ev_index] = (ev_demand * profile).div(
+    n.loads_t.p_set.loc[:, ev_demand.index] = (ev_demand * profile).div(
         n.snapshot_weightings.objective, axis=0
     )
 
