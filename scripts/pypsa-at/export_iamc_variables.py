@@ -16,8 +16,8 @@ import pandas as pd
 from pyam import IamDataFrame
 from pypsa.statistics import port_efficiency
 
+from evals.constants import BusCarrier, TradeTypes
 from evals.constants import DataModel as DM
-from evals.constants import TradeTypes
 from evals.fileio import read_networks
 from evals.statistic import collect_myopic_statistics
 from evals.utils import (
@@ -127,7 +127,8 @@ def primary_oil(var: dict) -> dict:
     else:
         oil_refining_eff = _refining_efficiencies.pop()
 
-    # assuming that all local oil production. Let's not filter_by components, to capture all but Stores.
+    # assuming that all local oil production is consumed locally.
+    # Let's not filter_by components, to capture all but Stores.
     production = (
         filter_by(SUPPLY, bus_carrier="oil")
         .drop("Store", level="component")
@@ -161,6 +162,7 @@ def primary_oil(var: dict) -> dict:
     )
     var["Primary Energy|Oil|Global Import"] = _extract(SUPPLY, carrier="import oil")
     var["Primary Energy|Oil|Primary"] = _extract(SUPPLY, carrier="oil primary")
+    var["Primary Energy|Oil|Refining"] = _extract(SUPPLY, carrier="oil refining")
     var["Primary Energy|Oil"] = regional_oil_deficit
 
     # var["Primary Energy|Oil|Fossil"] = oil  # including losses
@@ -534,8 +536,7 @@ def primary_heat(var: dict) -> dict:
     #     comps="Link",
     # )
     enthalpy_heat = (
-        collect_myopic_statistics(networks, comps="Link", statistic="energy_balance")
-        .pipe(filter_for_carrier_connected_to, heat_bus_carrier)
+        LINK_BALANCE.pipe(filter_for_carrier_connected_to, heat_bus_carrier)
         .drop(["co2", "co2 stored"], level=DM.BUS_CARRIER)
         .pipe(calculate_input_share, heat_bus_carrier)
         .pipe(filter_by, bus_carrier=["ambient heat", "latent heat"])
@@ -687,8 +688,6 @@ def secondary_electricity_supply(var: dict) -> dict:
     prefix = "Secondary Energy|Electricity"
     bc = ["AC", "low voltage"]
 
-    filter_by(SUPPLY, bus_carrier="AC")
-
     var[f"{prefix}|Gas"] = _extract(
         SUPPLY,
         carrier=[
@@ -699,7 +698,7 @@ def secondary_electricity_supply(var: dict) -> dict:
         bus_carrier=bc,
     )
     var[f"{prefix}|Oil"] = _extract(
-        SUPPLY, carrier=["urban central oil CHP"], bus_carrier=bc
+        SUPPLY, carrier="urban central oil CHP", bus_carrier=bc
     )
     var[f"{prefix}|Coal|Hard Coal"] = _extract(
         SUPPLY, carrier=["coal", "urban central coal CHP"], bus_carrier=bc
@@ -850,8 +849,7 @@ def secondary_methanol_supply(var: dict) -> dict:
 
     # need to distinguish between methanol and heat output
     methanolisation_inputs_for_methanol = (
-        collect_myopic_statistics(networks, comps="Link", statistic="energy_balance")
-        .drop(["co2", "co2 stored"], level="bus_carrier")
+        LINK_BALANCE.drop(["co2", "co2 stored"], level="bus_carrier")
         .pipe(filter_for_carrier_connected_to, bc)
         .pipe(calculate_input_share, bc)
         .pipe(filter_by, carrier="methanolisation")
@@ -883,6 +881,49 @@ def secondary_oil(var: dict) -> dict:
     -------
     :
     """
+    prefix = "Secondary Energy|Oil"
+    bc = "oil"
+
+    var[f"{prefix}|Solid Biomass|Biomass2Liquids|w/o CC"] = _extract(
+        SUPPLY, carrier="biomass to liquid", bus_carrier=bc
+    )
+    var[f"{prefix}|Solid Biomass|Biomass2Liquids|w CC"] = _extract(
+        SUPPLY, carrier="biomass to liquid CC", bus_carrier=bc
+    )
+
+    # electrobiofuels has 2 inputs: solid biomass and H2 and one output
+    electrobiofuels_inputs_for_oil = (
+        LINK_BALANCE.drop(["co2", "co2 stored"], level="bus_carrier")
+        .pipe(filter_for_carrier_connected_to, bc)
+        .pipe(calculate_input_share, bc)
+        .pipe(filter_by, carrier="electrobiofuels")
+    )
+    var[f"{prefix}|H2|Electrobiofuels"] = (
+        filter_by(electrobiofuels_inputs_for_oil, bus_carrier="H2")
+        .pipe(insert_index_level, "MWh_LHV", "unit")
+        .groupby(IDX)
+        .sum()
+    )
+    var[f"{prefix}|AC|Electrobiofuels"] = (
+        filter_by(electrobiofuels_inputs_for_oil, bus_carrier="solid biomass")
+        .pipe(insert_index_level, "MWh_LHV", "unit")
+        .groupby(IDX)
+        .sum()
+    )
+    _extract(SUPPLY, carrier="electrobiofuels", bus_carrier=bc)
+
+    var[f"{prefix}|H2|Fischer-Tropsch"] = _extract(
+        SUPPLY, carrier="Fischer-Tropsch", bus_carrier=bc
+    )
+
+    assert filter_by(SUPPLY, bus_carrier=bc, component="Link").empty
+
+    var[prefix] = _sum_variables_by_prefix(var, prefix)
+    var[f"{prefix}|H2"] = _sum_variables_by_prefix(var, f"{prefix}|H2")
+    var[f"{prefix}|AC"] = _sum_variables_by_prefix(var, f"{prefix}|AC")
+    var[f"{prefix}|Solid Biomass"] = _sum_variables_by_prefix(
+        var, f"{prefix}|Solid Biomass"
+    )
 
     return var
 
@@ -913,6 +954,73 @@ def secondary_heat(var: dict) -> dict:
     -------
     :
     """
+    prefix = "Secondary Energy|Heat"
+    bc = BusCarrier.heat_buses()
+
+    var[f"{prefix}|Solid Biomass|Boiler"] = _extract(
+        SUPPLY,
+        carrier=["rural biomass boiler", "urban decentral biomass boiler"],
+        bus_carrier=bc,
+    )
+    var[f"{prefix}|Solid Biomass|CHP"] = _extract(
+        SUPPLY, carrier="urban central solid biomass CHP", bus_carrier=bc
+    )
+
+    var[f"{prefix}|AC|Ground Heat Pump"] = _extract(
+        SUPPLY, carrier="rural ground heat pump", bus_carrier=bc
+    )
+    var[f"{prefix}|AC|Air Heat Pump"] = _extract(
+        SUPPLY,
+        carrier=[
+            "urban decentral air heat pump",
+            "rural air heat pump",
+            "urban central air heat pump",
+        ],
+        bus_carrier=bc,
+    )
+    var[f"{prefix}|Gas|Boiler"] = _extract(
+        SUPPLY,
+        carrier=[
+            "rural gas boiler",
+            "urban central gas boiler",
+            "urban decentral gas boiler",
+        ],
+        bus_carrier=bc,
+    )
+    var[f"{prefix}|Gas|CHP"] = _extract(
+        SUPPLY, carrier="urban central gas CHP", bus_carrier=bc
+    )
+
+    var[f"{prefix}|AC|Resistive Heater"] = _extract(
+        SUPPLY,
+        carrier=[
+            "rural resistive heater",
+            "urban decentral resistive heater",
+            "urban central resistive heater",
+        ],
+        bus_carrier=bc,
+    )
+
+    var[f"{prefix}|Oil|Boiler"] = _extract(
+        SUPPLY,
+        carrier=["rural oil boiler", "urban decentral oil boiler"],
+        bus_carrier=bc,
+    )
+
+    var[f"{prefix}|Waste|CHP w/o CC"] = _extract(
+        SUPPLY, carrier="waste CHP", bus_carrier=bc
+    )
+    var[f"{prefix}|Waste|CHP w CC"] = _extract(
+        SUPPLY, carrier="waste CHP CC", bus_carrier=bc
+    )
+
+    # Heat from H2-to-X technologies
+    var[f"{prefix}|H2|Sabatier"] = _extract(SUPPLY, carrier="Sabatier", bus_carrier=bc)
+    var[f"{prefix}|H2|Fischer-Tropsch"] = _extract(
+        SUPPLY, carrier="Fischer-Tropsch", bus_carrier=bc
+    )
+
+    assert filter_by(SUPPLY, bus_carrier=bc, component="Link").empty
 
     return var
 
@@ -924,13 +1032,12 @@ def collect_secondary_energy() -> pd.Series:
     secondary_gas_supply(var)
     secondary_hydrogen_supply(var)
     secondary_methanol_supply(var)
+    secondary_oil(var)
+    secondary_liquids(var)
+    secondary_heat(var)
+    secondary_ammonia(var)
 
-    # secondary_hydrogen(var)
-    # secondary_liquids(var)
-    # secondary_oil(var)
-    # secondary_methanol(var)
-    # secondary_ammonia(var)
-    # secondary_heat(var)
+    # secondary_losses()
 
     return combine_variables(var)
 
@@ -985,6 +1092,11 @@ if __name__ == "__main__":
         scope=TradeTypes.DOMESTIC,
         direction="export",
         **kwargs,
+    )
+
+    # necessary for Links with multiple inputs
+    LINK_BALANCE = collect_myopic_statistics(
+        networks, comps="Link", statistic="energy_balance"
     )
 
     # all transmission is already in trade_energy.
