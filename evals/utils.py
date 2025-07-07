@@ -1152,6 +1152,17 @@ def get_transmission_techs(networks: dict, bus_carrier: str | list = None) -> li
     return sorted(transmission_techs)
 
 
+def show_link_bus_efficiencies(networks, year, like):
+    return (
+        networks[year]
+        .static("Link")
+        .filter(like=like, axis=0)
+        .filter(regex="bus|eff")
+        .iloc[0, :]
+        .T.sort_index()
+    )
+
+
 # def get_bus_carrier_names(
 #     networks: dict, sector: str
 # ) -> list[str]:

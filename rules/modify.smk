@@ -69,7 +69,7 @@ rule plot_iamc_variables:
 
 rule validate_pypsa_at:  # rule to run integration tests on solved networks
     params:
-        clsutering=config_provider("clustering"),
+        clustering=config_provider("clustering"),
         rdir=RESULTS,
     input:
         expand(
@@ -82,4 +82,5 @@ rule validate_pypsa_at:  # rule to run integration tests on solved networks
         mem_mb=16000,
     shell:
         # setting RESULTS here does not work, but why?!
-        "pytest test/test_base_network.py --html {params.rdir}/validity_report.html"
+        # "pytest test/test_base_network.py --html {params.rdir}/validity_report.html --results_dir {params.rdir}"
+        "pytest --html {params.rdir}/validity_report.html --results_dir {params.rdir}"

@@ -24,12 +24,13 @@ from evals.utils import (
     calculate_input_share,
     filter_by,
     filter_for_carrier_connected_to,
+    get_transmission_techs,
     insert_index_level,
     rename_aggregate,
 )
 from scripts._helpers import configure_logging, mock_snakemake
 
-logger = logging.getLogger()
+logger = logging.getLogger(__file__)
 
 IDX = [DM.YEAR, DM.LOCATION, "unit"]
 
@@ -39,7 +40,6 @@ def _extract(ds: pd.Series, **filter_kwargs) -> pd.Series:
     results = filter_by(ds, **filter_kwargs)
     ds.drop(results.index, inplace=True)
     return results.groupby(IDX).sum()
-    # return filter_by(ds, drop=True, **filter_kwargs).groupby(IDX).sum()
 
 
 def _get_traded_energy(n, var, bus_carrier, direction, subcat):
@@ -66,9 +66,11 @@ def _get_traded_energy(n, var, bus_carrier, direction, subcat):
         var[f"Primary Energy|{subcat}|{direction.title()} {scope.title()}"] = trade
 
 
-def _sum_by_subcategory(var, subcat):
+def _sum_variables_by_prefix(var, prefix):
     return (
-        pd.concat([var[v] for v in var.keys() if f"|{subcat}|" in v]).groupby(IDX).sum()
+        pd.concat([var[v] for v in var.keys() if v.startswith(prefix)])
+        .groupby(IDX)
+        .sum()
     )
 
 
@@ -138,13 +140,13 @@ def primary_oil(var: dict) -> dict:
         .groupby(IDX)
         .sum()
     )
-    regional_oil_imports = consumption.sub(production, fill_value=0).clip(lower=0)
+    regional_oil_deficit = consumption.add(production, fill_value=0).clip(lower=0)
 
-    # assert primary oil and imports are equal per year
+    # assert primary oil and imports are equal to regional demands
     eu_oil_import = filter_by(SUPPLY, carrier=["oil primary", "import oil"])
     try:
         pd.testing.assert_series_equal(
-            regional_oil_imports.groupby("year").sum(),
+            regional_oil_deficit.groupby("year").sum(),
             eu_oil_import.groupby("year").sum(),
             check_names=False,
         )
@@ -152,14 +154,14 @@ def primary_oil(var: dict) -> dict:
         logger.warning("Oil amounts mismatch.")
 
     var["Primary Energy|Oil|Fossil Oil"] = (
-        regional_oil_imports / oil_refining_eff
+        regional_oil_deficit / oil_refining_eff
     )  # total amounts before refining
-    var["Primary Energy|Oil|Refining Losses"] = regional_oil_imports * (
+    var["Primary Energy|Oil|Refining Losses"] = regional_oil_deficit * (
         1 - oil_refining_eff
     )
     var["Primary Energy|Oil|Global Import"] = _extract(SUPPLY, carrier="import oil")
     var["Primary Energy|Oil|Primary"] = _extract(SUPPLY, carrier="oil primary")
-    var["Primary Energy|Oil"] = regional_oil_imports
+    var["Primary Energy|Oil"] = regional_oil_deficit
 
     # var["Primary Energy|Oil|Fossil"] = oil  # including losses
     # var["Primary Energy|Oil|Liquids"] = liquids  # this is secondary energy
@@ -203,7 +205,7 @@ def primary_gas(var) -> dict:
         bus_carrier="gas",
         component="Generator",
     )
-    var["Primary Energy|Gas"] = _sum_by_subcategory(var, "Gas")
+    var["Primary Energy|Gas"] = _sum_variables_by_prefix(var, "Primary Energy|Gas")
 
     return var
 
@@ -229,7 +231,7 @@ def primary_waste(var: dict) -> dict:
     var["Primary Energy|Waste|Solid"] = _extract(
         SUPPLY, bus_carrier=bus_carrier, component="Generator"
     )
-    var["Primary Energy|Waste"] = _sum_by_subcategory(var, "Waste")
+    var["Primary Energy|Waste"] = _sum_variables_by_prefix(var, "Primary Energy|Waste")
 
     return var
 
@@ -253,11 +255,11 @@ def primary_coal(var: dict) -> dict:
     """
     var["Primary Energy|Coal|Hard"] = (
         filter_by(DEMAND, bus_carrier="coal", component="Link").groupby(IDX).sum()
-    )
+    ).mul(-1)
     var["Primary Energy|Coal|Lignite"] = (
         filter_by(DEMAND, bus_carrier="lignite", component="Link").groupby(IDX).sum()
-    )
-    var["Primary Energy|Coal"] = _sum_by_subcategory(var, "Coal")
+    ).mul(-1)
+    var["Primary Energy|Coal"] = _sum_variables_by_prefix(var, "Primary Energy|Coal")
 
     # remove EU coal generators from the to-do list
     coal_generators = filter_by(
@@ -297,7 +299,9 @@ def primary_hydrogen(var: dict) -> dict:
         SUPPLY, carrier="import H2", bus_carrier=bus_carrier, component="Generator"
     )
 
-    var["Primary Energy|Hydrogen"] = _sum_by_subcategory(var, "Hydrogen")
+    var["Primary Energy|Hydrogen"] = _sum_variables_by_prefix(
+        var, "Primary Energy|Hydrogen"
+    )
 
     return var
 
@@ -330,7 +334,9 @@ def primary_biomass(var: dict) -> dict:
     var["Primary Energy|Biomass|Biogas"] = _extract(
         SUPPLY, bus_carrier="biogas", component="Generator"
     )
-    var["Primary Energy|Biomass"] = _sum_by_subcategory(var, "Biomass")
+    var["Primary Energy|Biomass"] = _sum_variables_by_prefix(
+        var, "Primary Energy|Biomass"
+    )
 
     return var
 
@@ -361,7 +367,7 @@ def primary_hydro(var: dict) -> dict:
     var["Primary Energy|Hydro|Run-of-River"] = _extract(
         SUPPLY, carrier="ror", component="Generator"
     )
-    var["Primary Energy|Hydro"] = _sum_by_subcategory(var, "Hydro")
+    var["Primary Energy|Hydro"] = _sum_variables_by_prefix(var, "Primary Energy|Hydro")
 
     return var
 
@@ -388,7 +394,7 @@ def primary_solar(var: dict) -> dict:
     var["Primary Energy|Solar|Rooftop"] = _extract(
         SUPPLY, carrier="solar rooftop", component="Generator"
     )
-    var["Primary Energy|Solar"] = _sum_by_subcategory(var, "Solar")
+    var["Primary Energy|Solar"] = _sum_variables_by_prefix(var, "Primary Energy|Solar")
 
     return var
 
@@ -428,10 +434,11 @@ def primary_nuclear(var: dict) -> dict:
         The updated variables' collection.
     """
     var["Primary Energy|Nuclear|Uranium"] = (
-        filter_by(DEMAND, carrier="uranium", component="Link").groupby(IDX).sum()
+        filter_by(DEMAND, carrier="uranium", component="Link")
+        .groupby(IDX)
+        .sum()
+        .mul(-1)
     )
-    # var["Primary Energy|Nuclear|Electricity"] = _extract(SUPPLY, carrier="nuclear", component="Link")  # is secondary energy
-    # remove EU uranium generators from the to-do list
     uranium_generators = filter_by(SUPPLY, bus_carrier="uranium", component="Generator")
     SUPPLY.drop(uranium_generators.index, inplace=True)
 
@@ -452,7 +459,32 @@ def primary_ammonia(var: dict) -> dict:
     :
         The updated variables' collection.
     """
+    # there is no regional ammonium demand
     var["Primary Energy|Ammonium|Import"] = _extract(SUPPLY, carrier="import NH3")
+
+    return var
+
+
+def primary_methanol(var: dict) -> dict:
+    """
+    Calculate methanol imported per region.
+
+    Parameters
+    ----------
+    var
+        The collection to append new variables in.
+
+    Returns
+    -------
+    :
+        The updated variables' collection.
+    """
+    # todo: same logic as oil for regional demands.
+    # regional_demand = filter_by(DEMAND, bus_carrier="methanol", component="Link").
+    # regional_supply = filter_by(SUPPLY, bus_carrier="methanol", component="Link").sum()
+    # regional_supply + regional_demand
+    # filter_by(SUPPLY, carrier="import methanol", component="Link").sum()
+    var["Primary Energy|Methanol|Import"] = _extract(SUPPLY, carrier="import methanol")
 
     return var
 
@@ -477,7 +509,7 @@ def primary_wind(var: dict) -> dict:
     var["Primary Energy|Wind|Offshore"] = _extract(
         SUPPLY, carrier=["offwind-ac", "offwind-dc"], component="Generator"
     )
-    var["Primary Energy|Wind"] = _sum_by_subcategory(var, "Wind")
+    var["Primary Energy|Wind"] = _sum_variables_by_prefix(var, "Primary Energy|Wind")
 
     return var
 
@@ -510,19 +542,6 @@ def primary_heat(var: dict) -> dict:
         .pipe(insert_index_level, "MWh_th", "unit")
     )
 
-    # # for every heat bus, calculate the amounts of supply for heat
-    # to_concat = []
-    # for bc in heat_bus_carrier:
-    #     p = (
-    #         link_energy_balance.pipe(filter_for_carrier_connected_to, bc)
-    #         # CO2 supply are CO2 emissions that do not help heat production
-    #         .drop(["co2", "co2 stored"], level=DM.BUS_CARRIER)
-    #         .pipe(calculate_input_share, bc)
-    #         .pipe(filter_by, bus_carrier=["ambient heat", "latent heat"])
-    #     )
-    #     p.attrs["unit"] = "MWh_th"
-    #     to_concat.append(p)
-    #
     # heat_supply = pd.concat(to_concat)
     var["Primary Energy|Heat|Latent"] = (
         filter_by(enthalpy_heat, bus_carrier="latent heat").groupby(IDX).sum()
@@ -538,7 +557,7 @@ def primary_heat(var: dict) -> dict:
         SUPPLY, carrier=solar_thermal_carr, component="Generator"
     )
     var["Primary Energy|Heat|Geothermal"] = _extract(SUPPLY, carrier="geothermal heat")
-    var["Primary Energy|Heat"] = _sum_by_subcategory(var, "Heat")
+    var["Primary Energy|Heat"] = _sum_variables_by_prefix(var, "Primary Energy|Heat")
 
     return var
 
@@ -647,14 +666,273 @@ def collect_primary_energy() -> pd.Series:
     primary_wind(var)
     primary_heat(var)
     primary_liquids(var)
+    primary_methanol(var)
 
     assert filter_by(SUPPLY, component="Generator").empty
 
     return combine_variables(var)
 
 
-def collect_secondary_energy() -> pd.DataFrame:
+def secondary_electricity_supply(var: dict) -> dict:
+    """
+
+    Parameters
+    ----------
+    var
+
+    Returns
+    -------
+    :
+    """
+    prefix = "Secondary Energy|Electricity"
+    bc = ["AC", "low voltage"]
+
+    filter_by(SUPPLY, bus_carrier="AC")
+
+    var[f"{prefix}|Gas"] = _extract(
+        SUPPLY,
+        carrier=[
+            "CCGT",
+            "OCGT",
+            "urban central gas CHP",
+        ],
+        bus_carrier=bc,
+    )
+    var[f"{prefix}|Oil"] = _extract(
+        SUPPLY, carrier=["urban central oil CHP"], bus_carrier=bc
+    )
+    var[f"{prefix}|Coal|Hard Coal"] = _extract(
+        SUPPLY, carrier=["coal", "urban central coal CHP"], bus_carrier=bc
+    )
+    var[f"{prefix}|Coal|Lignite"] = _extract(
+        SUPPLY, carrier=["lignite", "urban central lignite CHP"], bus_carrier=bc
+    )
+    var[f"{prefix}|H2"] = _extract(
+        SUPPLY,
+        carrier=["urban central H2 CHP", "urban central H2 retrofit CHP"],
+        bus_carrier=bc,
+    )
+    var[f"{prefix}|Solid Biomass"] = _extract(
+        SUPPLY,
+        carrier=["solid biomass", "urban central solid biomass CHP"],
+        bus_carrier=bc,
+    )
+    var[f"{prefix}|Nuclear"] = _extract(SUPPLY, carrier="nuclear", bus_carrier=bc)
+    var[f"{prefix}|Waste|w/o CC"] = _extract(
+        SUPPLY, carrier="waste CHP", bus_carrier=bc
+    )
+    var[f"{prefix}|Waste|w CC"] = _extract(
+        SUPPLY, carrier="waste CHP CC", bus_carrier=bc
+    )
+
+    var[prefix] = _sum_variables_by_prefix(var, prefix)
+
+    # subcategory aggregation must happen after prefix aggregations, or the
+    # sum will be distorted
+    var[f"{prefix}|Coal"] = _sum_variables_by_prefix(var, f"{prefix}|Coal")
+    var[f"{prefix}|Waste"] = _sum_variables_by_prefix(var, f"{prefix}|Waste")
+
+    # distribution grid losses are no supply, but we deal with it now remove all
+    # electricity from the global supply statistic
+    var[f"{prefix}|Distribution Grid Losses"] = _extract(
+        SUPPLY, carrier="electricity distribution grid"
+    ) + _extract(DEMAND, carrier="electricity distribution grid")  # negative values
+
+    assert filter_by(SUPPLY, bus_carrier=bc, component="Link").empty
+
+    return var
+
+
+def secondary_gas_supply(var: dict) -> dict:
+    """
+
+    Parameters
+    ----------
+    var
+
+    Returns
+    -------
+    :
+    """
+    # Secondary Energy|<output bus_carrier>|from <input bus_carrier>|<subcategory>
+    prefix = "Secondary Energy|Gas"
+    bc = "gas"
+    var[f"{prefix}|Biogas|w/o CC"] = _extract(
+        SUPPLY, carrier="biogas to gas", bus_carrier=bc
+    )
+    var[f"{prefix}|Biogas|w CC"] = _extract(
+        SUPPLY, carrier="biogas to gas CC", bus_carrier=bc
+    )
+    # _extract(DEMAND, carrier=["biogas to gas", "biogas to gas CC"], bus_carrier="biogas")
+
+    var[f"{prefix}|Solid Biomass|w/o CC"] = _extract(
+        SUPPLY, carrier="BioSNG", bus_carrier=bc
+    )
+    var[f"{prefix}|Solid Biomass|w CC"] = _extract(
+        SUPPLY, carrier="BioSNG CC", bus_carrier=bc
+    )
+    # _extract(DEMAND, carrier=["BioSNG", "BioSNG CC"], bus_carrier="solid biomass")
+
+    var[f"{prefix}|Sabatier"] = _extract(SUPPLY, carrier="Sabatier", bus_carrier=bc)
+
+    var[prefix] = _sum_variables_by_prefix(var, prefix)
+
+    assert filter_by(SUPPLY, bus_carrier=bc, component="Link").empty
+
+    # move to Carbon function
+    # var["Secondary Carbon|Biogas|atmosphere"] = _extract(DEMAND, carrier="biogas to gas", bus_carrier="co2")  # CO2 credit
+    # var["Secondary Carbon|Biogas|stored"] = _extract(SUPPLY, carrier="biogas to gas CC", bus_carrier="co2")  # carbon capture
+
+    return var
+
+
+def secondary_hydrogen_supply(var: dict) -> dict:
+    """
+
+    Parameters
+    ----------
+    var
+
+    Returns
+    -------
+    :
+    """
+    prefix = "Secondary Energy|Hydrogen"
+    bc = "H2"
+    var[f"{prefix}|Electricity"] = _extract(
+        SUPPLY, carrier="H2 Electrolysis", bus_carrier=bc
+    )
+    # var[f"{prefix}|Electricity|Losses"] = _extract(SUPPLY, carrier="H2 Electrolysis", bus_carrier=bc)
+    var[f"{prefix}|Gas|SMR w/o CC"] = _extract(SUPPLY, carrier="SMR", bus_carrier=bc)
+    var[f"{prefix}|Gas|SMR w CC"] = _extract(SUPPLY, carrier="SMR CC", bus_carrier=bc)
+    var[f"{prefix}|Methanol|w/o CC"] = _extract(
+        SUPPLY, carrier="Methanol steam reforming", bus_carrier=bc
+    )
+    var[f"{prefix}|Methanol|w CC"] = _extract(
+        SUPPLY, carrier="Methanol steam reforming CC", bus_carrier=bc
+    )
+
+    var[prefix] = _sum_variables_by_prefix(var, prefix)
+
+    assert filter_by(SUPPLY, bus_carrier=bc, component="Link").empty
+
+    return var
+
+
+def secondary_liquids(var: dict) -> dict:
+    """
+
+    Parameters
+    ----------
+    var
+
+    Returns
+    -------
+    :
+    """
+
+    return var
+
+
+def secondary_methanol_supply(var: dict) -> dict:
+    """
+
+    Parameters
+    ----------
+    var
+
+    Returns
+    -------
+    :
+    """
+    prefix = "Secondary Energy|Methanol"
+    bc = "methanol"
+
+    # need to distinguish between methanol and heat output
+    methanolisation_inputs_for_methanol = (
+        collect_myopic_statistics(networks, comps="Link", statistic="energy_balance")
+        .drop(["co2", "co2 stored"], level="bus_carrier")
+        .pipe(filter_for_carrier_connected_to, bc)
+        .pipe(calculate_input_share, bc)
+        .pipe(filter_by, carrier="methanolisation")
+    )
+    var[f"{prefix}|H2"] = filter_by(
+        methanolisation_inputs_for_methanol, bus_carrier="H2"
+    ).pipe(insert_index_level, "MWh_LHV", "unit")
+    var[f"{prefix}|AC"] = filter_by(
+        methanolisation_inputs_for_methanol, bus_carrier="AC"
+    ).pipe(insert_index_level, "MWh_el", "unit")
+    _extract(SUPPLY, carrier="methanolisation", bus_carrier=bc)
+
+    var[prefix] = _sum_variables_by_prefix(var, prefix)
+
+    assert filter_by(SUPPLY, bus_carrier=bc, component="Link").empty
+    # biomass-to-methanol?
+
+    return var
+
+
+def secondary_oil(var: dict) -> dict:
+    """
+
+    Parameters
+    ----------
+    var
+
+    Returns
+    -------
+    :
+    """
+
+    return var
+
+
+def secondary_ammonia(var: dict) -> dict:
+    """
+
+    Parameters
+    ----------
+    var
+
+    Returns
+    -------
+    :
+    """
+
+    return var
+
+
+def secondary_heat(var: dict) -> dict:
+    """
+
+    Parameters
+    ----------
+    var
+
+    Returns
+    -------
+    :
+    """
+
+    return var
+
+
+def collect_secondary_energy() -> pd.Series:
     """Extract all secondary energy variables from the networks."""
+    var = {}
+    secondary_electricity_supply(var)
+    secondary_gas_supply(var)
+    secondary_hydrogen_supply(var)
+    secondary_methanol_supply(var)
+
+    # secondary_hydrogen(var)
+    # secondary_liquids(var)
+    # secondary_oil(var)
+    # secondary_methanol(var)
+    # secondary_ammonia(var)
+    # secondary_heat(var)
+
+    return combine_variables(var)
 
 
 def collect_final_energy() -> pd.DataFrame:
@@ -681,14 +959,13 @@ if __name__ == "__main__":
         "drop_zeros": False,
         "drop_unit": False,
     }
-    myopic_energy_balance = collect_myopic_statistics(
-        networks, "energy_balance", **kwargs
-    )
-    # calculate all statistics and process them to IAMC data model.
+    # calculate all statistics and process them to IAMC data model. The idea is to
+    # calculate everything once and remove rows from the global statistic. This way
+    # we make sure that nothing is counted twice or is forgotten.
     SUPPLY = collect_myopic_statistics(networks, "supply", groupby=groupby, **kwargs)
     DEMAND = collect_myopic_statistics(
         networks, "withdrawal", groupby=groupby, **kwargs
-    )
+    ).mul(-1)
     IMPORT_FOREIGN = collect_myopic_statistics(
         networks, "trade_energy", scope=TradeTypes.FOREIGN, direction="import", **kwargs
     )
@@ -709,29 +986,34 @@ if __name__ == "__main__":
         direction="export",
         **kwargs,
     )
-    # Idea: calculate all once and extract from global mutable series
-    # to ensure nothing is forgotten. The global series however is a risk.
 
-    # iamc_variables = []
-    # for year, n in networks.items():
-    system_cost = collect_system_cost()
+    # all transmission is already in trade_energy.
+    transmission_carrier = [t[1] for t in get_transmission_techs(networks)]
+    SUPPLY.drop(transmission_carrier, level="carrier", errors="ignore", inplace=True)
+    DEMAND.drop(transmission_carrier, level="carrier", errors="ignore", inplace=True)
+
+    # collect transformed energy system variables
     primary_energy = collect_primary_energy()
-    # iamc_variables.append(collect_system_cost())
-    # iamc_variables.append(collect_primary_energy(n))
-    # iamc_variables.append(collect_secondary_energy(n))
-    # iamc_variables.append(collect_final_energy(n))
+    secondary_energy = collect_secondary_energy()
+    system_cost = collect_system_cost()
 
-    # df = pd.concat(iamc_variables)
-    df = pd.concat([system_cost, primary_energy])
+    df = pd.concat([system_cost, primary_energy, secondary_energy])
+
+    for global_statistic in [
+        SUPPLY,
+        DEMAND,
+        IMPORT_FOREIGN,
+        EXPORT_FOREIGN,
+        IMPORT_DOMESTIC,
+        EXPORT_DOMESTIC,
+    ]:
+        assert global_statistic.empty, f"Statistic not transformed: {global_statistic}."
 
     df = insert_index_level(df, "PyPSA-AT", "model")
     df = insert_index_level(df, snakemake.wildcards.run, "scenario")
-    df.index = df.index.rename({"location": "region"})
-
-    # # drop all values for dummy template
+    df.index = df.index.rename({"location": "region"})  # comply with IAMC data model
 
     iamc = IamDataFrame(df)
-
     meta = pd.Series(
         {
             "Model": "PyPSA-AT",

@@ -1,10 +1,11 @@
 import numpy as np
 import pandas as pd
 import pytest
-from esmtools.constants import DataModel
-from esmtools.plots._base import ESMChart
-from esmtools.plots.timeseries import ESMTimeSeriesChart
-from esmtools.utils import (
+
+from evals.constants import DataModel
+from evals.plots._base import ESMChart
+from evals.plots.timeseries import ESMTimeSeriesChart
+from evals.utils import (
     aggregate_locations,
     apply_cutoff,
     calculate_cost_annuity,
