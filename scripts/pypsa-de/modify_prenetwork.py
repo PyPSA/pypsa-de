@@ -835,20 +835,21 @@ def aladin_mobility_demand(n):
     simulation_period_correction_factor = n.snapshot_weightings.objective.sum() / 8760
 
     # oil demand
-    oil_demand = pd.Series(
-        aladin_demand.Liquids * simulation_period_correction_factor,
-        index=aladin_demand.index + " land transport oil",
-    )
+    if "land transport oil" in n.loads.carrier.unique():  # i.e. before 2050
+        oil_demand = pd.Series(
+            aladin_demand.Liquids.values * simulation_period_correction_factor,
+            index=aladin_demand.index + " land transport oil",
+        )
 
-    profile = n.loads_t.p_set.loc[:, oil_demand.index]
-    profile /= profile.sum()
-    n.loads_t.p_set.loc[:, oil_demand.index] = (oil_demand * profile).div(
-        n.snapshot_weightings.objective, axis=0
-    )
+        profile = n.loads_t.p_set.loc[:, oil_demand.index]
+        profile /= profile.sum()
+        n.loads_t.p_set.loc[:, oil_demand.index] = (oil_demand * profile).div(
+            n.snapshot_weightings.objective, axis=0
+        )
 
     # hydrogen demand
     h2_demand = pd.Series(
-        aladin_demand.Hydrogen * simulation_period_correction_factor,
+        aladin_demand.Hydrogen.values * simulation_period_correction_factor,
         index=aladin_demand.index + " land transport fuel cell",
     )
 
@@ -860,7 +861,7 @@ def aladin_mobility_demand(n):
 
     # electricity demand
     ev_demand = pd.Series(
-        aladin_demand.Electricity * simulation_period_correction_factor,
+        aladin_demand.Electricity.values * simulation_period_correction_factor,
         index=aladin_demand.index + " land transport EV",
     )
 
@@ -883,27 +884,28 @@ def aladin_mobility_demand(n):
 
     # Then directly use .values for assignment
     p_nom = (
-        aladin_demand.number_of_cars.values * snakemake.params.bev_charge_rate
+        aladin_demand.number_of_cars.values * 1e6 * snakemake.params.bev_charge_rate
     )  # same logic like in prepare_sector_network
 
-    n.links.loc[BEV_charger_i].p_nom = p_nom
+    n.links.loc[BEV_charger_i, "p_nom"] = p_nom
 
     V2G_i = n.links[
         (n.links.carrier == "V2G") & (n.links.bus0.str.startswith("DE"))
     ].index
     if not V2G_i.empty:
-        n.links.loc[V2G_i].p_nom = p_nom * snakemake.params.bev_dsm_availability
+        n.links.loc[V2G_i, "p_nom"] = p_nom * snakemake.params.bev_dsm_availability
 
     dsm_i = n.stores[
         (n.stores.carrier == "EV battery") & (n.stores.bus.str.startswith("DE"))
     ].index
     e_nom = (
         aladin_demand.number_of_cars.values
+        * 1e6
         * snakemake.params.bev_energy
         * snakemake.params.bev_dsm_availability
     )
     if not dsm_i.empty:
-        n.stores.loc[dsm_i].e_nom = e_nom
+        n.stores.loc[dsm_i, "e_nom"] = e_nom
 
 
 def add_hydrogen_turbines(n):
