@@ -295,6 +295,23 @@ sector:
       2040: 0.6
       2045: 0.8
       2050: 1.0
+    subnodes:
+      enable: false
+      nlargest: 40
+      census_areas:
+        enable: true
+        min_district_heating_share: 0.01
+        processing:
+          min_area: [10000, 100000, 0, 1000000]
+          buffer_factor: [0.01, 0.05, 0.05, 0]
+      limit_ptes_potential:
+        enable: true
+        limit_mother_nodes: true
+        excluder_resolution: 10
+        osm_landcover_codes: [21, 23, 32, 33]
+        max_groundwater_depth: -10
+        min_area: 10000
+        default_capacity: 4500
   heat_vent:
     urban central: true
     urban decentral: true
@@ -303,7 +320,6 @@ sector:
   biomass_spatial: true
   #relax so no infeasibility in 2050 with no land transport demand
   min_part_load_fischer_tropsch: 0.
-  regional_methanol_demand: true  #set to true if regional CO2 constraints needed
   regional_oil_demand: true  #set to true if regional CO2 constraints needed
   regional_coal_demand: true  #set to true if regional CO2 constraints needed
   gas_network: false

@@ -945,13 +945,13 @@ def _get_capacities(n, region, cap_func, cap_string="Capacity|"):
         like="oil boiler"
     ).sum()
 
-    var[cap_string + "Heat|Storage Converter"] = capacities_central_heat.filter(
-        like="water tanks discharger"
-    ).sum()
+    var[cap_string + "Heat|Storage Converter"] = capacities_central_heat[
+        capacities_central_heat.index.str.contains("water (?:tanks|pits) discharger")
+    ].sum()
 
-    var[cap_string + "Heat|Storage Reservoir"] = storage_capacities.filter(
-        like="water tanks"
-    ).sum()
+    var[cap_string + "Heat|Storage Reservoir"] = storage_capacities[
+        storage_capacities.index.str.contains("water (?:tanks|pits)")
+    ].sum()
 
     var[cap_string + "Heat"] = (
         var[cap_string + "Heat|Solar thermal"]
@@ -1026,7 +1026,7 @@ def _get_capacities(n, region, cap_func, cap_string="Capacity|"):
         capacities_h2.get("H2 Electrolysis", 0) + var[cap_string + "Hydrogen|Gas"]
     )
 
-    var[cap_string + "Hydrogen|Reservoir"] = storage_capacities.get("H2", 0)
+    var[cap_string + "Hydrogen|Reservoir"] = storage_capacities.get("H2 Store", 0)
 
     capacities_gas = (
         cap_func(
@@ -2177,7 +2177,9 @@ def get_final_energy(
         .drop(
             [  # chargers affect all sectors equally
                 "urban decentral water tanks charger",
+                "urban decentral water pits charger",
                 "rural water tanks charger",
+                "rural water pits charger",
             ],
             errors="ignore",
         )
@@ -3567,7 +3569,6 @@ def get_prices(n, region):
     # Price|Final Energy|Transportation|Liquids|Petroleum|Transport and Distribution
     # Price|Final Energy|Transportation|Liquids|Petroleum|Carbon Price Component
     # Price|Final Energy|Transportation|Liquids|Petroleum|Other Taxes
-
     # Price|Final Energy|Transportation|Liquids|Diesel
     # Price|Final Energy|Transportation|Liquids|Diesel|Sales Margin
     # Price|Final Energy|Transportation|Liquids|Diesel|Transport and Distribution
