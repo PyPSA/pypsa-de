@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20250617_80dhsystems
+  prefix: 20250630_fix_neighbours
   name:
   - Baseline
   - No_PTES
@@ -22,7 +22,10 @@ run:
     file: config/scenarios.automated.yaml
     fix_foreign_investments:
       enable: false
+      nom_min: true
+      nom_max: false
       reference_scenario: Baseline
+      slack: 0.01
   shared_resources:
     policy: base #stops recalculating
     exclude:

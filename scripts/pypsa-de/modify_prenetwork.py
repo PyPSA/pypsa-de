@@ -1276,11 +1276,7 @@ def scale_capacity(n, scaling):
                 ]
 
 
-def fix_foreign_investments(
-    n,
-    n_ref,
-    slack=0,
-):
+def fix_foreign_investments(n, n_ref, slack=0, nom_min=True, nom_max=False):
     """
     Fix reference investments for non-DE components.
     """
@@ -1329,32 +1325,68 @@ def fix_foreign_investments(
         # bound rounding values to the nearest integer and inserting slack
         # to avoid constraint violations
         if c == "Store":
-            n.stores.loc[indices, "e_nom_min"] = baseline_component.loc[indices].apply(
-                lambda row: max(row["e_nom_opt"] * (1 - slack), row["e_nom_min"]),
-                axis=1,
-            )
-            n.stores.loc[indices, "e_nom_max"] = baseline_component.loc[indices].apply(
-                lambda row: min(row["e_nom_opt"] * (1 + slack), row["e_nom_max"]),
-                axis=1,
-            )
+            if nom_min:
+                n.stores.loc[indices, "e_nom_min"] = baseline_component.loc[
+                    indices
+                ].apply(
+                    lambda row: max(
+                        np.floor(row["e_nom_opt"]) * (1 - slack),
+                        row["e_nom_min"],
+                        # row["e_nom"],
+                    ),
+                    axis=1,
+                )
+            if nom_max:
+                n.stores.loc[indices, "e_nom_max"] = baseline_component.loc[
+                    indices
+                ].apply(
+                    lambda row: min(
+                        np.ceil(row["e_nom_opt"]) * (1 + slack), row["e_nom_max"]
+                    ),
+                    axis=1,
+                )
         elif c == "Line":
-            n.lines.loc[indices, "s_nom_min"] = baseline_component.loc[indices].apply(
-                lambda row: max(row["s_nom_opt"] * (1 - slack), row["s_nom_min"]),
-                axis=1,
-            )
-            n.lines.loc[indices, "s_nom_max"] = baseline_component.loc[indices].apply(
-                lambda row: min(row["s_nom_opt"] * (1 + slack), row["s_nom_max"]),
-                axis=1,
-            )
+            if nom_min:
+                n.lines.loc[indices, "s_nom_min"] = baseline_component.loc[
+                    indices
+                ].apply(
+                    lambda row: max(
+                        np.floor(row["s_nom_opt"]) * (1 - slack),
+                        row["s_nom_min"],
+                    ),
+                    axis=1,
+                )
+            if nom_max:
+                n.lines.loc[indices, "s_nom_max"] = baseline_component.loc[
+                    indices
+                ].apply(
+                    lambda row: min(
+                        np.ceil(row["s_nom_opt"]) * (1 + slack),
+                        row["s_nom_max"],
+                    ),
+                    axis=1,
+                )
         else:
-            n.df(c).loc[indices, "p_nom_min"] = baseline_component.loc[indices].apply(
-                lambda row: max(row["p_nom_opt"] * (1 - slack), row["p_nom_min"]),
-                axis=1,
-            )
-            n.df(c).loc[indices, "p_nom_max"] = baseline_component.loc[indices].apply(
-                lambda row: min(row["p_nom_opt"] * (1 + slack), row["p_nom_max"]),
-                axis=1,
-            )
+            if nom_min:
+                n.df(c).loc[indices, "p_nom_min"] = baseline_component.loc[
+                    indices
+                ].apply(
+                    lambda row: max(
+                        np.floor(row["p_nom_opt"]) * (1 - slack),
+                        row["p_nom_min"],
+                    ),
+                    axis=1,
+                )
+            if nom_max:
+                n.df(c).loc[indices, "p_nom_max"] = baseline_component.loc[
+                    indices
+                ].apply(
+                    lambda row: min(
+                        np.ceil(row["p_nom_opt"]) * (1 + slack),
+                        row["p_nom_max"],
+                    ),
+                    axis=1,
+                )
 
         logger.info(f"Fixed {sum(to_fix)} {c} components outside Germany")
 
@@ -1368,8 +1400,8 @@ if __name__ == "__main__":
             opts="",
             ll="vopt",
             sector_opts="none",
-            planning_horizons="2045",
-            run="No_PTES",
+            planning_horizons="2020",
+            run="Baseline_fix_foreign_investments_90slack",
         )
 
     configure_logging(snakemake)
@@ -1451,6 +1483,12 @@ if __name__ == "__main__":
             "Fixing investments for components outside Germany based on the reference scenario."
         )
         n_ref = pypsa.Network(snakemake.input.reference_network)
-        fix_foreign_investments(n, n_ref, snakemake.params["slack"])
+        fix_foreign_investments(
+            n,
+            n_ref,
+            snakemake.params["slack"],
+            snakemake.params["fix_foreign_investments"]["nom_min"],
+            snakemake.params["fix_foreign_investments"]["nom_max"],
+        )
 
     n.export_to_netcdf(snakemake.output.network)

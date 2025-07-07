@@ -3,12 +3,21 @@
 # SPDX-License-Identifier: CC0-1.0
 
 run:
-  prefix: 20250630_fix_neighbours
+  prefix: 20250704_fix_neighbours
   name:
   - Baseline
-  - Baseline_control
-  - Baseline_fix_foreign_investments
-  - Baseline_fix_foreign_investments_largeslack
+  - LowDH
+  - HighDH
+  - LowPTESCAPEX
+  - HighPTESCAPEX
+  # - Baseline_control
+  # - Baseline_fix_foreign_investments_.01slack
+  # - Baseline_fix_foreign_investments_.1slack
+  # - Baseline_fix_foreign_investments_1slack
+  # - Baseline_fix_foreign_investments_5slack
+  # - Baseline_fix_foreign_investments_10slack
+  # - Baseline_fix_foreign_investments_20slack
+  # - Baseline_fix_foreign_investments_90slack
   # - TES_DE_leq_0TWh
   # - PTES_DE_leq_0TWh
   # - PTES_DE_leq_3TWh
@@ -27,8 +36,10 @@ run:
     file: config/scenarios.automated.yaml
     fix_foreign_investments:
       enable: false
+      nom_min: true
+      nom_max: false
       reference_scenario: Baseline
-      slack: 0.2
+      slack: 0.01
   shared_resources:
     policy: base #stops recalculating
     exclude:
@@ -60,7 +71,7 @@ scenario:
 
 clustering:
   temporal:
-    resolution_sector: 365H
+    resolution_sector: 7H
 
 adjustments:
   electricity: false
@@ -119,6 +130,8 @@ solving:
       Seed: 123
       BarConvTol: 1.e-8
       FeasibilityTol: 1.e-8
+      # Crossover: 1
+      # NumericFocus: 3
 
 
 plotting:

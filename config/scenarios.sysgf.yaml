@@ -4,23 +4,6 @@
 # SPDX-License-Identifier: MIT
 
 Baseline:
-  
-
-Baseline_fix_foreign_investments:
-  run:
-    scenarios:
-      fix_foreign_investments:
-        enable: true
-        reference_scenario: Baseline
-        slack: 0.2
-
-Baseline_fix_foreign_investments_largeslack:
-  run:
-    scenarios:
-      fix_foreign_investments:
-        enable: true
-        reference_scenario: Baseline
-        slack: 0.05
 
 Baseline_control:
 
@@ -28,6 +11,36 @@ LowDH:
   sector:
     district_heating:
       potential: 0.3
+HighDH:
+  sector:
+    district_heating:
+      potential: 0.8
+
+Baseline_fix_foreign_investments_.01slack:
+  run:
+    scenarios:
+      fix_foreign_investments:
+        enable: true
+        reference_scenario: Baseline
+        slack: 0.0001
+
+Baseline_fix_foreign_investments_.1slack:
+  run:
+    scenarios:
+      fix_foreign_investments:
+        enable: true
+        reference_scenario: Baseline
+        slack: 0.001
+
+Baseline_fix_foreign_investments_1slack:
+  run:
+    scenarios:
+      fix_foreign_investments:
+        enable: true
+        reference_scenario: Baseline
+        slack: 0.01
+
+
 
 PTES_DE_leq_0TWh:
   solving:
@@ -117,6 +130,11 @@ TES_DE_leq_0TWh:
               2045: 0
 
 LowPTESCAPEX:
+  run:
+    scenarios:
+      fix_foreign_investments:
+        enable: true
+        slack: 0.0001
   adjustments:
     electricity: false
     sector:
@@ -132,6 +150,11 @@ LowPTESCAPEX:
             standing_loss: 0.00015476
 
 HighPTESCAPEX:
+  run:
+    scenarios:
+      fix_foreign_investments:
+        enable: true
+        slack: 0.0001
   adjustments:
     electricity: false
     sector:
