@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20250514_dhsubnodes
+  prefix: 20250707_improve_transport_demand
   name:
   # - ExPol
   - KN2045_Mix
