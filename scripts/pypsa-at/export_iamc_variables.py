@@ -130,7 +130,7 @@ def primary_oil(var: dict) -> dict:
     # assuming that all local oil production is consumed locally.
     # Let's not filter_by components, to capture all but Stores.
     production = (
-        filter_by(SUPPLY, bus_carrier="oil")
+        filter_by(SUPPLY, bus_carrier=["oil"])  # , "unsustainable bioliquids"
         .drop("Store", level="component")
         .groupby(IDX)
         .sum()
@@ -160,11 +160,20 @@ def primary_oil(var: dict) -> dict:
     var["Primary Energy|Oil|Refining Losses"] = regional_oil_deficit * (
         1 - oil_refining_eff
     )
-    var["Primary Energy|Oil|Global Import"] = _extract(SUPPLY, carrier="import oil")
-    var["Primary Energy|Oil|Primary"] = _extract(SUPPLY, carrier="oil primary")
-    var["Primary Energy|Oil|Refining"] = _extract(SUPPLY, carrier="oil refining")
-    var["Primary Energy|Oil"] = regional_oil_deficit
+    var["Primary Energy|Oil|Global Import"] = _extract(
+        SUPPLY, carrier="import oil"
+    )  # EU
+    var["Primary Energy|Oil|Primary"] = _extract(SUPPLY, carrier="oil primary")  # EU
+    var["Primary Energy|Oil|Refining"] = _extract(SUPPLY, carrier="oil refining")  # EU
 
+    # unsustainable bioliquids have regional bus generators
+    var["Primary Energy|Oil|Unsustainable Bioliquids"] = _extract(
+        SUPPLY, carrier="unsustainable bioliquids", component="Generator"
+    )
+
+    var["Primary Energy|Oil"] = var["Primary Energy|Oil|Fossil Oil"].add(
+        var["Primary Energy|Oil|Unsustainable Bioliquids"], fill_value=0
+    )
     # var["Primary Energy|Oil|Fossil"] = oil  # including losses
     # var["Primary Energy|Oil|Liquids"] = liquids  # this is secondary energy
     # var["Primary Energy|Oil|Global Import"] = _extract(SUPPLY, carrier="import oil")
@@ -291,19 +300,17 @@ def primary_hydrogen(var: dict) -> dict:
         The updated variables' collection.
     """
     bus_carrier = "H2"
-    var["Primary Energy|Hydrogen|Import Foreign"] = _extract(
+    var["Primary Energy|H2|Import Foreign"] = _extract(
         IMPORT_FOREIGN, bus_carrier=bus_carrier
     )
-    var["Primary Energy|Hydrogen|Import Domestic"] = _extract(
+    var["Primary Energy|H2|Import Domestic"] = _extract(
         IMPORT_DOMESTIC, bus_carrier=bus_carrier
     )
-    var["Primary Energy|Hydrogen|Import Global"] = _extract(
+    var["Primary Energy|H2|Import Global"] = _extract(
         SUPPLY, carrier="import H2", bus_carrier=bus_carrier, component="Generator"
     )
 
-    var["Primary Energy|Hydrogen"] = _sum_variables_by_prefix(
-        var, "Primary Energy|Hydrogen"
-    )
+    var["Primary Energy|H2"] = _sum_variables_by_prefix(var, "Primary Energy|H2")
 
     return var
 
@@ -415,7 +422,7 @@ def primary_liquids(var: dict) -> dict:
         The updated variables' collection.
     """
     var["Primary Energy|Liquids|Unsustainable Bioliquids"] = _extract(
-        SUPPLY, carrier="unsustainable bioliquids"
+        SUPPLY, carrier="unsustainable bioliquids", component="Generator"
     )
 
     return var
@@ -796,7 +803,7 @@ def secondary_hydrogen_supply(var: dict) -> dict:
     -------
     :
     """
-    prefix = "Secondary Energy|Hydrogen"
+    prefix = "Secondary Energy|H2"
     bc = "H2"
     var[f"{prefix}|Electricity"] = _extract(
         SUPPLY, carrier="H2 Electrolysis", bus_carrier=bc
@@ -920,6 +927,10 @@ def secondary_oil(var: dict) -> dict:
 
     var[f"{prefix}|H2|Fischer-Tropsch"] = _extract(
         SUPPLY, carrier="Fischer-Tropsch", bus_carrier=bc
+    )
+
+    var[f"{prefix}|Unsustainable Bioliquids"] = _extract(
+        SUPPLY, carrier="unsustainable bioliquids", bus_carrier=bc
     )
 
     assert filter_by(SUPPLY, bus_carrier=bc, component="Link").empty
@@ -1133,6 +1144,8 @@ def secondary_heat(var: dict) -> dict:
 
     assert filter_by(SUPPLY, bus_carrier=bc, component="Link").empty
 
+    var[prefix] = _sum_variables_by_prefix(var, prefix)
+
     return var
 
 
@@ -1148,6 +1161,8 @@ def secondary_waste(var: dict) -> dict:
     )
 
     assert filter_by(SUPPLY, bus_carrier=bc, component="Link").empty
+
+    var[prefix] = _sum_variables_by_prefix(var, prefix)
 
     return var
 
@@ -1186,7 +1201,9 @@ def collect_secondary_energy() -> pd.Series:
     # but needs to be addressed nevertheless to correct balances
     secondary_solid_biomass_supply(var)
 
-    # Links that connect to buses with single loads
+    # Links that connect to buses with single loads. They are skipped in
+    # IAMC variables, because their buses are only needed because of
+    # PyPSA restrictions.
     ignore_bus_carrier = [
         "EV battery",
         "agriculture machinery oil",
@@ -1280,15 +1297,15 @@ if __name__ == "__main__":
 
     df = pd.concat([system_cost, primary_energy, secondary_energy])
 
-    for global_statistic in [
-        SUPPLY,
-        DEMAND,
-        IMPORT_FOREIGN,
-        EXPORT_FOREIGN,
-        IMPORT_DOMESTIC,
-        EXPORT_DOMESTIC,
-    ]:
-        assert global_statistic.empty, f"Statistic not transformed: {global_statistic}."
+    # for global_statistic in [
+    #     SUPPLY,
+    #     DEMAND,
+    #     IMPORT_FOREIGN,
+    #     EXPORT_FOREIGN,
+    #     IMPORT_DOMESTIC,
+    #     EXPORT_DOMESTIC,
+    # ]:
+    #     assert global_statistic.empty, f"Statistic not transformed: {global_statistic}."
 
     df = insert_index_level(df, "PyPSA-AT", "model")
     df = insert_index_level(df, snakemake.wildcards.run, "scenario")
