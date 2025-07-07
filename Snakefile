@@ -488,9 +488,6 @@ rule modify_prenetwork:
         must_run=config_provider("must_run"),
         clustering=config_provider("clustering", "temporal", "resolution_sector"),
         H2_plants=config_provider("electricity", "H2_plants_DE"),
-        land_transport_electric_share=config_provider(
-            "sector", "land_transport_electric_share"
-        ),
         onshore_nep_force=config_provider("onshore_nep_force"),
         offshore_nep_force=config_provider("offshore_nep_force"),
         shipping_methanol_efficiency=config_provider(
@@ -500,6 +497,9 @@ rule modify_prenetwork:
         shipping_methanol_share=config_provider("sector", "shipping_methanol_share"),
         mwh_meoh_per_tco2=config_provider("sector", "MWh_MeOH_per_tCO2"),
         scale_capacity=config_provider("scale_capacity"),
+        bev_charge_rate=config_provider("sector", "bev_charge_rate"),
+        bev_energy=config_provider("sector", "bev_energy"),
+        bev_dsm_availability=config_provider("sector", "bev_dsm_availability"),
     input:
         costs_modifications="ariadne-data/costs_{planning_horizons}-modifications.csv",
         network=resources(
@@ -514,7 +514,6 @@ rule modify_prenetwork:
         aladin_demand=resources(
             "mobility_demand_aladin_{clusters}_{planning_horizons}.csv"
         ),
-        transport_data=resources("transport_data_s_{clusters}.csv"),
         biomass_potentials=resources(
             "biomass_potentials_s_{clusters}_{planning_horizons}.csv"
         ),

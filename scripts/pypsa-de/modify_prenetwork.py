@@ -871,37 +871,39 @@ def aladin_mobility_demand(n):
     )
 
     # adjust BEV charger and V2G capacities
-    number_cars = pd.read_csv(snakemake.input.transport_data, index_col=0)[
-        "number cars"
-    ].filter(like="DE")
-
-    factor = (
-        aladin_demand.number_of_cars
-        * 1e6
-        / (
-            number_cars
-            * snakemake.params.land_transport_electric_share[
-                int(snakemake.wildcards.planning_horizons)
-            ]
-        )
-    )
 
     BEV_charger_i = n.links[
         (n.links.carrier == "BEV charger") & (n.links.bus0.str.startswith("DE"))
     ].index
-    n.links.loc[BEV_charger_i].p_nom *= pd.Series(factor.values, index=BEV_charger_i)
+
+    # Check that buses in network and aladin_data appear in same order
+    assert [
+        idx.startswith(idx2) for (idx, idx2) in zip(BEV_charger_i, aladin_demand.index)
+    ]
+
+    # Then directly use .values for assignment
+    p_nom = (
+        aladin_demand.number_of_cars.values * snakemake.params.bev_charge_rate
+    )  # same logic like in prepare_sector_network
+
+    n.links.loc[BEV_charger_i].p_nom = p_nom
 
     V2G_i = n.links[
         (n.links.carrier == "V2G") & (n.links.bus0.str.startswith("DE"))
     ].index
     if not V2G_i.empty:
-        n.links.loc[V2G_i].p_nom *= pd.Series(factor.values, index=V2G_i)
+        n.links.loc[V2G_i].p_nom = p_nom * snakemake.params.bev_dsm_availability
 
     dsm_i = n.stores[
         (n.stores.carrier == "EV battery") & (n.stores.bus.str.startswith("DE"))
     ].index
+    e_nom = (
+        aladin_demand.number_of_cars.values
+        * snakemake.params.bev_energy
+        * snakemake.params.bev_dsm_availability
+    )
     if not dsm_i.empty:
-        n.stores.loc[dsm_i].e_nom *= pd.Series(factor.values, index=dsm_i)
+        n.stores.loc[dsm_i].e_nom = e_nom
 
 
 def add_hydrogen_turbines(n):
