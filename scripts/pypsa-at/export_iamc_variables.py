@@ -35,11 +35,70 @@ logger = logging.getLogger(__file__)
 IDX = [DM.YEAR, DM.LOCATION, "unit"]
 
 
+def _get_port_efficiency(substring: str, port: str, component: str = "Link"):
+    """
+    Return the efficiency for a component and port.
+
+    Parameters
+    ----------
+    substring
+    port
+    component
+
+    Returns
+    -------
+    :
+
+    Raises
+    ------
+    NotImplementedError
+        If the efficiency changes between years.
+
+    ValueError
+        If the substring filter yields more than one row.
+    """
+    _refining_efficiencies = set()
+    for n in networks.values():
+        _refining_efficiencies.add(
+            port_efficiency(n, component, port).filter(like=substring).unique().item()
+        )
+
+    if len(_refining_efficiencies) != 1:
+        raise NotImplementedError("Myopic efficiencies not supported.")
+
+    return _refining_efficiencies.pop()
+
+
 def _extract(ds: pd.Series, **filter_kwargs) -> pd.Series:
     """Extract and group filter results."""
     results = filter_by(ds, **filter_kwargs)
     ds.drop(results.index, inplace=True)
     return results.groupby(IDX).sum()
+
+
+def _extract_single_power_supply_and_losses(
+    var: dict,
+    label: str,
+    carrier: str | list,
+    supply_bus_carrier: str | list,
+    demand_bus_carrier: str | list,
+    component: str = "Link",
+) -> dict:
+    """Abstraction for Links with single input branches."""
+    var[label] = _extract(
+        SUPPLY,
+        carrier=carrier,
+        bus_carrier=supply_bus_carrier,
+        component=component,
+    )
+    var[f"{label}|Losses"] = _get_transformation_losses(
+        var[label],
+        carrier=carrier,
+        demand_bus_carrier=demand_bus_carrier,
+        component=component,
+    )
+
+    return var
 
 
 def _get_traded_energy(n, var, bus_carrier, direction, subcat):
@@ -67,22 +126,29 @@ def _get_traded_energy(n, var, bus_carrier, direction, subcat):
 
 
 def _get_transformation_losses(supply: pd.Series, **filter_kwargs) -> pd.Series:
+    # single branch Links only
     unit_supply = supply.index.unique("unit").item()
     supply = supply.droplevel("unit")
 
     demand = _extract(DEMAND, **filter_kwargs)
     unit_demand = demand.index.unique("unit").item()
-    demand = demand.droplevel("unit")
+    demand = demand.groupby(IDX).sum().droplevel("unit")
+
+    unit_losses = unit_supply
+    if unit_supply != unit_demand:
+        unit_losses = f"{unit_demand} to {unit_supply}"
 
     losses = (
         demand.add(supply)
-        .pipe(insert_index_level, f"{unit_supply} to {unit_demand}", "unit")
+        .pipe(insert_index_level, unit_losses, "unit")
         .groupby(IDX)
         .sum()
-        .abs()
     )
 
-    assert demand.sum() == (supply.sum() + losses.sum())
+    assert demand.sum() + supply.sum() - losses.sum() <= 1e-5
+    # todo: myopic regional efficiencies
+    # eff = _get_port_efficiency(filter_kwargs["carrier"], port="1")
+    # assert abs(demand.sum() * eff + supply.sum()) <= 1e-4
 
     return losses
 
@@ -137,15 +203,7 @@ def primary_oil(var: dict) -> dict:
     # liquids_consumption = netted_liquids[netted_liquids.le(0)].abs()
 
     # increase fossil oil demand by this factor to account for refining losses
-    _refining_efficiencies = set()
-    for n in networks.values():
-        _refining_efficiencies.add(
-            port_efficiency(n, "Link", "1").filter(like="oil refining").item()
-        )
-    if len(_refining_efficiencies) != 1:
-        raise NotImplementedError("Multiple efficiencies not supported.")
-    else:
-        oil_refining_eff = _refining_efficiencies.pop()
+    oil_refining_eff = _get_port_efficiency("oil refining", port="1")
 
     # assuming that all local oil production is consumed locally.
     # Let's not filter_by components, to capture all but Stores.
@@ -715,25 +773,44 @@ def secondary_electricity_supply(var: dict) -> dict:
     prefix = "Secondary Energy|Electricity"
     bc = ["AC", "low voltage"]
 
-    var[f"{prefix}|Gas"] = _extract(
+    var = _extract_single_power_supply_and_losses(
+        var,
+        f"{prefix}|Gas|Turbine",
+        ["CCGT", "OCGT"],
+        supply_bus_carrier=bc,
+        demand_bus_carrier="gas",
+    )
+
+    var[f"{prefix}|Gas|Turbine"] = _extract(
         SUPPLY,
-        carrier=[
-            "CCGT",
-            "OCGT",
-            "urban central gas CHP",
-        ],
+        carrier=["CCGT", "OCGT"],
         bus_carrier=bc,
     )
-    var[f"{prefix}|Oil"] = _extract(
+    var[f"{prefix}|Gas|Turbine|Losses"] = _get_transformation_losses(
+        var[f"{prefix}|Gas|Turbine"],
+        component="Link",
+        carrier=["CCGT", "OCGT"],
+        bus_carrier="gas",
+    )
+
+    var[f"{prefix}|Gas|CHP"] = _extract(
+        SUPPLY,
+        carrier="urban central gas CHP",
+        bus_carrier=bc,
+    )
+
+    var[f"{prefix}|Oil|CHP"] = _extract(
         SUPPLY, carrier="urban central oil CHP", bus_carrier=bc
     )
-    var[f"{prefix}|Coal|Hard Coal"] = _extract(
-        SUPPLY, carrier=["coal", "urban central coal CHP"], bus_carrier=bc
+    var[f"{prefix}|Coal|CHP Hard Coal"] = _extract(
+        SUPPLY, carrier="urban central coal CHP", bus_carrier=bc
     )
-    var[f"{prefix}|Coal|Lignite"] = _extract(
-        SUPPLY, carrier=["lignite", "urban central lignite CHP"], bus_carrier=bc
+    var[f"{prefix}|Coal|Hard Coal"] = _extract(SUPPLY, carrier="coal", bus_carrier=bc)
+    var[f"{prefix}|Coal|Lignite"] = _extract(SUPPLY, carrier="lignite", bus_carrier=bc)
+    var[f"{prefix}|Coal|CHP Lignite"] = _extract(
+        SUPPLY, carrier="urban central lignite CHP", bus_carrier=bc
     )
-    var[f"{prefix}|H2"] = _extract(
+    var[f"{prefix}|H2|CHP"] = _extract(
         SUPPLY,
         carrier=["urban central H2 CHP", "urban central H2 retrofit CHP"],
         bus_carrier=bc,
@@ -743,6 +820,7 @@ def secondary_electricity_supply(var: dict) -> dict:
         carrier=["solid biomass", "urban central solid biomass CHP"],
         bus_carrier=bc,
     )
+
     var[f"{prefix}|Nuclear"] = _extract(SUPPLY, carrier="nuclear", bus_carrier=bc)
     var[f"{prefix}|Nuclear|Losses"] = _get_transformation_losses(
         var[f"{prefix}|Nuclear"],
@@ -751,16 +829,10 @@ def secondary_electricity_supply(var: dict) -> dict:
         bus_carrier="uranium",
     )
 
-    filter_by(
-        DEMAND, component="Link", carrier="nuclear", bus_carrier="uranium"
-    ).droplevel("unit").add(var[f"{prefix}|Nuclear"].droplevel("unit")).pipe(
-        insert_index_level, "MWh_th to MWh_el", "unit"
-    ).groupby(IDX).sum()
-
-    var[f"{prefix}|Waste|w/o CC"] = _extract(
+    var[f"{prefix}|Waste|CHP w/o CC"] = _extract(
         SUPPLY, carrier="waste CHP", bus_carrier=bc
     )
-    var[f"{prefix}|Waste|w CC"] = _extract(
+    var[f"{prefix}|Waste|CHP w CC"] = _extract(
         SUPPLY, carrier="waste CHP CC", bus_carrier=bc
     )
 
@@ -768,8 +840,8 @@ def secondary_electricity_supply(var: dict) -> dict:
 
     # subcategory aggregation must happen after prefix aggregations, or the
     # sum will be distorted
-    var[f"{prefix}|Coal"] = _sum_variables_by_prefix(var, f"{prefix}|Coal")
-    var[f"{prefix}|Waste"] = _sum_variables_by_prefix(var, f"{prefix}|Waste")
+    for subcat in ("Gas", "Coal", "Waste"):
+        var[f"{prefix}|{subcat}"] = _sum_variables_by_prefix(var, f"{prefix}|{subcat}")
 
     # distribution grid losses are no supply, but we deal with it now remove all
     # electricity from the global supply statistic
@@ -1310,6 +1382,7 @@ if __name__ == "__main__":
     # collect transformed energy system variables
     primary_energy = collect_primary_energy()
     secondary_energy = collect_secondary_energy()
+    # secondary_losses = collect_secondary_losses()
     system_cost = collect_system_cost()
 
     df = pd.concat([system_cost, primary_energy, secondary_energy])
