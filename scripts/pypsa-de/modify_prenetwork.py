@@ -829,6 +829,9 @@ def aladin_mobility_demand(n):
     """
     Change loads in Germany to use Aladin data for road demand.
     """
+    logger.info(
+        "Overwriting land transport demand with Aladin data. In particular the `land_transport_electric_share` config setting will not be used."
+    )
     # get aladin data
     aladin_demand = pd.read_csv(snakemake.input.aladin_demand, index_col=0)
 
