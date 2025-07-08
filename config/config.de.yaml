@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20250514_dhsubnodes
+  prefix: 20253006_fix_chp_lifetime
   name:
   # - ExPol
   - KN2045_Mix
@@ -275,8 +275,6 @@ costs:
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#sector
 sector:
-  chp:
-    enable: false # This should only deactivate the CHPs from prepare_sector_network, not those from add_existing_baseyear
   v2g: false
   solar_thermal: false
   district_heating:

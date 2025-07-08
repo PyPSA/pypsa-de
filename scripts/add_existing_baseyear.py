@@ -510,6 +510,10 @@ def add_chp_plants(n, grouping_years, costs, baseyear):
     chp["lifetime"] = (chp.DateOut - chp["grouping_year"] + 1).fillna(
         snakemake.params.costs["fill_values"]["lifetime"]
     )
+    chp.loc[chp.Fueltype == "gas", "lifetime"] = (
+        chp.DateOut - chp["grouping_year"] + 1
+    ).fillna(40)
+
     chp = chp.loc[
         chp.grouping_year + chp.lifetime > baseyear
     ]  # in add_brownfield this is build_year + lifetime <= baseyear
@@ -572,6 +576,12 @@ def add_chp_plants(n, grouping_years, costs, baseyear):
             aggfunc=lambda x: np.average(x, weights=mastr_chp.loc[x.index, "p_nom"]),
         )
 
+        mastr_chp_lifetime = mastr_chp.pivot_table(
+            index=["grouping_year", "Fueltype"],
+            columns="bus",
+            values="lifetime",
+            aggfunc=lambda x: np.average(x, weights=mastr_chp.loc[x.index, "p_nom"]),
+        )
         mastr_chp_p_nom = mastr_chp.pivot_table(
             index=["grouping_year", "Fueltype"],
             columns="bus",
@@ -595,6 +605,7 @@ def add_chp_plants(n, grouping_years, costs, baseyear):
 
             efficiency_power = mastr_chp_efficiency_power.loc[grouping_year, generator]
             efficiency_heat = mastr_chp_efficiency_heat.loc[grouping_year, generator]
+            lifetime = mastr_chp_lifetime.loc[grouping_year, generator]
 
             for bus in p_nom.index:
                 # check if link already exists and set p_nom_min and efficiency
@@ -640,7 +651,7 @@ def add_chp_plants(n, grouping_years, costs, baseyear):
                         efficiency2=efficiency_heat.dropna().loc[bus],
                         efficiency3=costs.at[generator, "CO2 intensity"],
                         build_year=grouping_year,
-                        lifetime=costs.at[key, "lifetime"],
+                        lifetime=lifetime.dropna().loc[bus],
                     )
                 else:
                     key = "central solid biomass CHP"
@@ -661,7 +672,7 @@ def add_chp_plants(n, grouping_years, costs, baseyear):
                         efficiency=efficiency_power.loc[bus],
                         efficiency2=efficiency_heat.loc[bus],
                         build_year=grouping_year,
-                        lifetime=costs.at[key, "lifetime"],
+                        lifetime=lifetime.dropna().loc[bus],
                     )
 
     # CHPs that are not from MaStR
@@ -671,10 +682,17 @@ def add_chp_plants(n, grouping_years, costs, baseyear):
         values="Capacity",
         aggfunc="sum",
     )
+    chp_nodal_lifetime = chp.pivot_table(
+        index=["grouping_year", "Fueltype"],
+        columns="bus",
+        values="lifetime",
+        aggfunc=lambda x: np.average(x, weights=chp.loc[x.index, "Capacity"]),
+    )
     for grouping_year, generator in chp_nodal_p_nom.index:
         p_nom = chp_nodal_p_nom.loc[grouping_year, generator].dropna()
         threshold = snakemake.params.existing_capacities["threshold_capacity"]
         p_nom = p_nom[p_nom > threshold]
+        lifetime = chp_nodal_lifetime.loc[grouping_year, generator]
 
         for bus in p_nom.index:
             # check if link already exists and set p_nom_min and efficiency
@@ -726,7 +744,7 @@ def add_chp_plants(n, grouping_years, costs, baseyear):
                     efficiency2=costs.at[key, "efficiency"] / costs.at[key, "c_b"],
                     efficiency3=costs.at[generator, "CO2 intensity"],
                     build_year=grouping_year,
-                    lifetime=costs.at[key, "lifetime"],
+                    lifetime=lifetime.dropna().loc[bus],
                 )
             else:
                 key = "central solid biomass CHP"
@@ -747,7 +765,7 @@ def add_chp_plants(n, grouping_years, costs, baseyear):
                     efficiency=costs.at[key, "efficiency"],
                     efficiency2=costs.at[key, "efficiency-heat"],
                     build_year=grouping_year,
-                    lifetime=costs.at[key, "lifetime"],
+                    lifetime=lifetime.dropna().loc[bus],
                 )
 
 
@@ -1085,9 +1103,8 @@ if __name__ == "__main__":
 
         snakemake = mock_snakemake(
             "add_existing_baseyear",
-            configfiles=["config/test/config.dach.yaml"],
-            clusters="5",
-            ll="v1.5",
+            clusters="27",
+            ll="vopt",
             opts="",
             sector_opts="none",
             planning_horizons="2020",

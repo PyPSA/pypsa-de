@@ -140,12 +140,6 @@ if __name__ == "__main__":
         f"Scaling central water tank storage investment costs to KEA Technikkatalog: {costs.loc['central water tank storage', 'investment'].value} {costs.loc['central water tank storage', 'investment'].unit}."
     )
 
-    # increase central gas CHP lifetime to 40 years
-    costs.at[("central gas CHP", "lifetime"), "value"] = 40
-    logger.info(
-        f"Setting lifetime of central gas CHP to {costs.at[('central gas CHP', 'lifetime'), 'value']} {costs.at[('central gas CHP', 'lifetime'), 'unit']}."
-    )
-
     # decrease Fischer-Tropsch efficiency
     costs.at[("Fischer-Tropsch", "efficiency"), "value"] = (
         1 / costs.at[("Fischer-Tropsch", "hydrogen-input"), "value"]
