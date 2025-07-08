@@ -10,15 +10,15 @@ other metrics.
 import numpy as np
 import pandas as pd
 import pypsa
-from make_summary import (
-    assign_carriers,
-    assign_locations,
-)
 from pypsa.descriptors import get_active_assets
 from six import iteritems
 
 from scripts._helpers import set_scenario_config
 from scripts.add_electricity import load_costs
+from scripts.make_summary import (
+    assign_carriers,
+    assign_locations,
+)
 
 idx = pd.IndexSlice
 
