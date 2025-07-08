@@ -66,6 +66,27 @@ def _get_traded_energy(n, var, bus_carrier, direction, subcat):
         var[f"Primary Energy|{subcat}|{direction.title()} {scope.title()}"] = trade
 
 
+def _get_transformation_losses(supply: pd.Series, **filter_kwargs) -> pd.Series:
+    unit_supply = supply.index.unique("unit").item()
+    supply = supply.droplevel("unit")
+
+    demand = _extract(DEMAND, **filter_kwargs)
+    unit_demand = demand.index.unique("unit").item()
+    demand = demand.droplevel("unit")
+
+    losses = (
+        demand.add(supply)
+        .pipe(insert_index_level, f"{unit_supply} to {unit_demand}", "unit")
+        .groupby(IDX)
+        .sum()
+        .abs()
+    )
+
+    assert demand.sum() == (supply.sum() + losses.sum())
+
+    return losses
+
+
 def _sum_variables_by_prefix(var, prefix):
     return (
         pd.concat([var[v] for v in var.keys() if v.startswith(prefix)])
@@ -441,14 +462,14 @@ def primary_nuclear(var: dict) -> dict:
     :
         The updated variables' collection.
     """
+    # use localized uranium demands from nuclear power plants
     var["Primary Energy|Nuclear|Uranium"] = (
         filter_by(DEMAND, carrier="uranium", component="Link")
         .groupby(IDX)
         .sum()
         .mul(-1)
     )
-    uranium_generators = filter_by(SUPPLY, bus_carrier="uranium", component="Generator")
-    SUPPLY.drop(uranium_generators.index, inplace=True)
+    _extract(SUPPLY, bus_carrier="uranium", component="Generator")
 
     return var
 
@@ -723,6 +744,19 @@ def secondary_electricity_supply(var: dict) -> dict:
         bus_carrier=bc,
     )
     var[f"{prefix}|Nuclear"] = _extract(SUPPLY, carrier="nuclear", bus_carrier=bc)
+    var[f"{prefix}|Nuclear|Losses"] = _get_transformation_losses(
+        var[f"{prefix}|Nuclear"],
+        component="Link",
+        carrier="nuclear",
+        bus_carrier="uranium",
+    )
+
+    filter_by(
+        DEMAND, component="Link", carrier="nuclear", bus_carrier="uranium"
+    ).droplevel("unit").add(var[f"{prefix}|Nuclear"].droplevel("unit")).pipe(
+        insert_index_level, "MWh_th to MWh_el", "unit"
+    ).groupby(IDX).sum()
+
     var[f"{prefix}|Waste|w/o CC"] = _extract(
         SUPPLY, carrier="waste CHP", bus_carrier=bc
     )
@@ -741,7 +775,7 @@ def secondary_electricity_supply(var: dict) -> dict:
     # electricity from the global supply statistic
     var[f"{prefix}|Distribution Grid Losses"] = _extract(
         SUPPLY, carrier="electricity distribution grid"
-    ) + _extract(DEMAND, carrier="electricity distribution grid")  # negative values
+    ) + _extract(DEMAND, carrier="electricity distribution grid")
 
     assert filter_by(SUPPLY, bus_carrier=bc, component="Link").empty
 
