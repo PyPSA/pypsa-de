@@ -1,4 +1,5 @@
 # Changelog
+- Improved the transport demand data, added an option to source 2020 and 2025 data from AGEB instead of Aladin
 - Simplified scenarion definition and made `Mix` the default scenario
 - 0.3: workflow is all public now, no longer requires credentials to internal data
 - Allowing myopic optimization until 2050
