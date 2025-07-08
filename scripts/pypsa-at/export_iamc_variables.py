@@ -85,7 +85,6 @@ def primary_oil(var: dict) -> dict:
     Lacking an oil network that connects regions, we assume that all oil is consumed
     locally and only oil production surplus becomes exported as final energy.
 
-
     There are a few caveats here:
     1. the EU oil bus mixes fossil oil and renewable liquids
     2. It is not possible to distinguish oil types anymore
@@ -825,21 +824,6 @@ def secondary_hydrogen_supply(var: dict) -> dict:
     return var
 
 
-def secondary_liquids(var: dict) -> dict:
-    """
-
-    Parameters
-    ----------
-    var
-
-    Returns
-    -------
-    :
-    """
-
-    return var
-
-
 def secondary_methanol_supply(var: dict) -> dict:
     """
 
@@ -1192,7 +1176,6 @@ def collect_secondary_energy() -> pd.Series:
     secondary_hydrogen_supply(var)
     secondary_methanol_supply(var)
     secondary_oil(var)
-    secondary_liquids(var)
     secondary_heat(var)
     secondary_ammonia(var)
     secondary_waste(var)
