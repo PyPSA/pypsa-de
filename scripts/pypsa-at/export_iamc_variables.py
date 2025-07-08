@@ -76,31 +76,6 @@ def _extract(ds: pd.Series, **filter_kwargs) -> pd.Series:
     return results.groupby(IDX).sum()
 
 
-def _extract_single_power_supply_and_losses(
-    var: dict,
-    label: str,
-    carrier: str | list,
-    supply_bus_carrier: str | list,
-    demand_bus_carrier: str | list,
-    component: str = "Link",
-) -> dict:
-    """Abstraction for Links with single input branches."""
-    var[label] = _extract(
-        SUPPLY,
-        carrier=carrier,
-        bus_carrier=supply_bus_carrier,
-        component=component,
-    )
-    var[f"{label}|Losses"] = _get_transformation_losses(
-        var[label],
-        carrier=carrier,
-        demand_bus_carrier=demand_bus_carrier,
-        component=component,
-    )
-
-    return var
-
-
 def _get_traded_energy(n, var, bus_carrier, direction, subcat):
     """
     Calculate the trade statistics.
@@ -127,24 +102,25 @@ def _get_traded_energy(n, var, bus_carrier, direction, subcat):
 
 def _get_transformation_losses(supply: pd.Series, **filter_kwargs) -> pd.Series:
     # single branch Links only
-    unit_supply = supply.index.unique("unit").item()
-    supply = supply.droplevel("unit")
+    # unit_supply = supply.index.unique("unit").item()
+    # supply = supply.droplevel("unit")
 
     demand = _extract(DEMAND, **filter_kwargs)
     unit_demand = demand.index.unique("unit").item()
     demand = demand.groupby(IDX).sum().droplevel("unit")
 
-    unit_losses = unit_supply
-    if unit_supply != unit_demand:
-        unit_losses = f"{unit_demand} to {unit_supply}"
+    # unit_losses = unit_supply
+    # if unit_supply != unit_demand:
+    #     unit_losses = f"{unit_demand} to {unit_supply}"
 
     losses = (
-        demand.add(supply)
-        .pipe(insert_index_level, unit_losses, "unit")
+        demand.add(supply.droplevel("unit"))
+        .pipe(insert_index_level, unit_demand, "unit")
         .groupby(IDX)
         .sum()
     )
 
+    # implicitly True
     assert demand.sum() + supply.sum() - losses.sum() <= 1e-5
     # todo: myopic regional efficiencies
     # eff = _get_port_efficiency(filter_kwargs["carrier"], port="1")
@@ -235,7 +211,7 @@ def primary_oil(var: dict) -> dict:
     var["Primary Energy|Oil|Fossil Oil"] = (
         regional_oil_deficit / oil_refining_eff
     )  # total amounts before refining
-    var["Primary Energy|Oil|Refining Losses"] = regional_oil_deficit * (
+    var["Primary Energy|Oil|Refining Losses"] = regional_oil_deficit * (  # todo: label
         1 - oil_refining_eff
     )
     var["Primary Energy|Oil|Global Import"] = _extract(
@@ -773,24 +749,10 @@ def secondary_electricity_supply(var: dict) -> dict:
     prefix = "Secondary Energy|Electricity"
     bc = ["AC", "low voltage"]
 
-    var = _extract_single_power_supply_and_losses(
-        var,
-        f"{prefix}|Gas|Turbine",
-        ["CCGT", "OCGT"],
-        supply_bus_carrier=bc,
-        demand_bus_carrier="gas",
-    )
-
     var[f"{prefix}|Gas|Turbine"] = _extract(
         SUPPLY,
         carrier=["CCGT", "OCGT"],
         bus_carrier=bc,
-    )
-    var[f"{prefix}|Gas|Turbine|Losses"] = _get_transformation_losses(
-        var[f"{prefix}|Gas|Turbine"],
-        component="Link",
-        carrier=["CCGT", "OCGT"],
-        bus_carrier="gas",
     )
 
     var[f"{prefix}|Gas|CHP"] = _extract(
@@ -822,12 +784,6 @@ def secondary_electricity_supply(var: dict) -> dict:
     )
 
     var[f"{prefix}|Nuclear"] = _extract(SUPPLY, carrier="nuclear", bus_carrier=bc)
-    var[f"{prefix}|Nuclear|Losses"] = _get_transformation_losses(
-        var[f"{prefix}|Nuclear"],
-        component="Link",
-        carrier="nuclear",
-        bus_carrier="uranium",
-    )
 
     var[f"{prefix}|Waste|CHP w/o CC"] = _extract(
         SUPPLY, carrier="waste CHP", bus_carrier=bc
@@ -845,9 +801,12 @@ def secondary_electricity_supply(var: dict) -> dict:
 
     # distribution grid losses are no supply, but we deal with it now remove all
     # electricity from the global supply statistic
-    var[f"{prefix}|Distribution Grid Losses"] = _extract(
-        SUPPLY, carrier="electricity distribution grid"
-    ) + _extract(DEMAND, carrier="electricity distribution grid")
+    var["Secondary Energy|Losses|Electricity|Distribution Grid"] = (
+        _extract(  # todo: label and move to losses
+            SUPPLY, carrier="electricity distribution grid"
+        )
+        + _extract(DEMAND, carrier="electricity distribution grid")
+    )
 
     assert filter_by(SUPPLY, bus_carrier=bc, component="Link").empty
 
@@ -908,18 +867,17 @@ def secondary_hydrogen_supply(var: dict) -> dict:
     -------
     :
     """
-    prefix = "Secondary Energy|H2"
+    prefix = "Secondary Energy|Hydrogen"
     bc = "H2"
-    var[f"{prefix}|Electricity"] = _extract(
+    var[f"{prefix}|Electricity|Electrolysis"] = _extract(
         SUPPLY, carrier="H2 Electrolysis", bus_carrier=bc
     )
-    # var[f"{prefix}|Electricity|Losses"] = _extract(SUPPLY, carrier="H2 Electrolysis", bus_carrier=bc)
     var[f"{prefix}|Gas|SMR w/o CC"] = _extract(SUPPLY, carrier="SMR", bus_carrier=bc)
     var[f"{prefix}|Gas|SMR w CC"] = _extract(SUPPLY, carrier="SMR CC", bus_carrier=bc)
-    var[f"{prefix}|Methanol|w/o CC"] = _extract(
+    var[f"{prefix}|Methanol|Steam Reforming w/o CC"] = _extract(
         SUPPLY, carrier="Methanol steam reforming", bus_carrier=bc
     )
-    var[f"{prefix}|Methanol|w CC"] = _extract(
+    var[f"{prefix}|Methanol|Steam Reforming w CC"] = _extract(
         SUPPLY, carrier="Methanol steam reforming CC", bus_carrier=bc
     )
 
@@ -957,7 +915,7 @@ def secondary_methanol_supply(var: dict) -> dict:
         .groupby(IDX)
         .sum()
     )
-    var[f"{prefix}|AC"] = (
+    var[f"{prefix}|Electricity"] = (
         filter_by(methanolisation_inputs_for_methanol, bus_carrier="AC")
         .pipe(insert_index_level, "MWh_el", "unit")
         .groupby(IDX)
@@ -973,7 +931,7 @@ def secondary_methanol_supply(var: dict) -> dict:
     return var
 
 
-def secondary_oil(var: dict) -> dict:
+def secondary_oil_supply(var: dict) -> dict:
     """
 
     Parameters
@@ -987,10 +945,10 @@ def secondary_oil(var: dict) -> dict:
     prefix = "Secondary Energy|Oil"
     bc = "oil"
 
-    var[f"{prefix}|Solid Biomass|Biomass2Liquids|w/o CC"] = _extract(
+    var[f"{prefix}|Solid Biomass|Biomass2Liquids w/o CC"] = _extract(
         SUPPLY, carrier="biomass to liquid", bus_carrier=bc
     )
-    var[f"{prefix}|Solid Biomass|Biomass2Liquids|w CC"] = _extract(
+    var[f"{prefix}|Solid Biomass|Biomass2Liquids w CC"] = _extract(
         SUPPLY, carrier="biomass to liquid CC", bus_carrier=bc
     )
 
@@ -1007,7 +965,7 @@ def secondary_oil(var: dict) -> dict:
         .groupby(IDX)
         .sum()
     )
-    var[f"{prefix}|AC|Electrobiofuels"] = (
+    var[f"{prefix}|Electricity|Electrobiofuels"] = (
         filter_by(electrobiofuels_inputs_for_oil, bus_carrier="solid biomass")
         .pipe(insert_index_level, "MWh_LHV", "unit")
         .groupby(IDX)
@@ -1026,16 +984,13 @@ def secondary_oil(var: dict) -> dict:
     assert filter_by(SUPPLY, bus_carrier=bc, component="Link").empty
 
     var[prefix] = _sum_variables_by_prefix(var, prefix)
-    var[f"{prefix}|H2"] = _sum_variables_by_prefix(var, f"{prefix}|H2")
-    var[f"{prefix}|AC"] = _sum_variables_by_prefix(var, f"{prefix}|AC")
-    var[f"{prefix}|Solid Biomass"] = _sum_variables_by_prefix(
-        var, f"{prefix}|Solid Biomass"
-    )
+    for group in ("H2", "Electricity", "Solid Biomass"):
+        var[f"{prefix}|{group}"] = _sum_variables_by_prefix(var, f"{prefix}|{group}")
 
     return var
 
 
-def secondary_ammonia(var: dict) -> dict:
+def secondary_ammonia_supply(var: dict) -> dict:
     """
 
     Parameters
@@ -1056,12 +1011,12 @@ def secondary_ammonia(var: dict) -> dict:
         .pipe(filter_by, carrier="Haber-Bosch")
         .pipe(insert_index_level, "n/a", "unit")
     )
-    var[f"{prefix}|AC"] = (
+    var[f"{prefix}|Electricity|Haber-Bosch"] = (
         filter_by(haber_bosch_input_for_nh3, carrier="Haber-Bosch", bus_carrier="AC")
         .groupby(IDX)
         .sum()
     )
-    var[f"{prefix}|H2"] = (
+    var[f"{prefix}|H2|Haber-Bosch"] = (
         filter_by(haber_bosch_input_for_nh3, carrier="Haber-Bosch", bus_carrier="H2")
         .groupby(IDX)
         .sum()
@@ -1071,7 +1026,7 @@ def secondary_ammonia(var: dict) -> dict:
     return var
 
 
-def secondary_heat(var: dict) -> dict:
+def secondary_heat_supply(var: dict) -> dict:
     """
 
     Parameters
@@ -1094,10 +1049,10 @@ def secondary_heat(var: dict) -> dict:
         SUPPLY, carrier="urban central solid biomass CHP", bus_carrier=bc
     )
 
-    var[f"{prefix}|AC|Ground Heat Pump"] = _extract(
+    var[f"{prefix}|Electricity|Ground Heat Pump"] = _extract(
         SUPPLY, carrier="rural ground heat pump", bus_carrier=bc
     )
-    var[f"{prefix}|AC|Air Heat Pump"] = _extract(
+    var[f"{prefix}|Electricity|Air Heat Pump"] = _extract(
         SUPPLY,
         carrier=[
             "urban decentral air heat pump",
@@ -1116,7 +1071,7 @@ def secondary_heat(var: dict) -> dict:
         bus_carrier=bc,
     )
 
-    var[f"{prefix}|AC|Resistive Heater"] = _extract(
+    var[f"{prefix}|Electricity|Resistive Heater"] = _extract(
         SUPPLY,
         carrier=[
             "rural resistive heater",
@@ -1166,7 +1121,7 @@ def secondary_heat(var: dict) -> dict:
     var[f"{prefix}|H2|Fischer-Tropsch"] = _extract(
         SUPPLY, carrier="Fischer-Tropsch", bus_carrier=bc
     )
-    var[f"{prefix}|AC|Electrolysis"] = _extract(
+    var[f"{prefix}|Electricity|Electrolysis"] = _extract(
         SUPPLY, carrier="H2 Electrolysis", bus_carrier=bc
     )
 
@@ -1178,7 +1133,7 @@ def secondary_heat(var: dict) -> dict:
         .pipe(filter_by, carrier=["methanolisation", "Haber-Bosch"])
         .pipe(insert_index_level, "MWh_LHV", "unit")
     )
-    var[f"{prefix}|AC|Methanolisation"] = (
+    var[f"{prefix}|Electricity|Methanolisation"] = (
         filter_by(
             methanolisation_input_for_heat, carrier="methanolisation", bus_carrier="AC"
         )
@@ -1194,7 +1149,7 @@ def secondary_heat(var: dict) -> dict:
     )
     _extract(SUPPLY, carrier="methanolisation", bus_carrier=bc)
 
-    var[f"{prefix}|AC|Haber-Bosch"] = (
+    var[f"{prefix}|Electricity|Haber-Bosch"] = (
         filter_by(
             methanolisation_input_for_heat, carrier="Haber-Bosch", bus_carrier="AC"
         )
@@ -1211,7 +1166,7 @@ def secondary_heat(var: dict) -> dict:
     _extract(SUPPLY, carrier="Haber-Bosch", bus_carrier=bc)
 
     # deal with water pit charger losses now to clear all heat buses
-    var[f"{prefix}|Heat|Storage Losses"] = _extract(
+    var["Storage Losses|Heat|Water Pits"] = _extract(  # todo: label and move to storage
         SUPPLY,
         carrier="urban central water pits discharger",
         bus_carrier="urban central heat",
@@ -1234,12 +1189,10 @@ def secondary_heat(var: dict) -> dict:
 
     assert filter_by(SUPPLY, bus_carrier=bc, component="Link").empty
 
-    var[prefix] = _sum_variables_by_prefix(var, prefix)
-
     return var
 
 
-def secondary_waste(var: dict) -> dict:
+def secondary_waste_supply(var: dict) -> dict:
     prefix = "Secondary Energy|Waste"
     bc = "non-sequestered HVC"
 
@@ -1274,6 +1227,44 @@ def secondary_solid_biomass_supply(var: dict) -> dict:
     return var
 
 
+def secondary_electricity_losses(var: dict) -> dict:
+    prefix = "Transformation Losses|Electricity"
+    bc = ["AC", "low voltage"]
+
+    var["Transformation Losses|Electricity|Electrolysis"] = _get_transformation_losses(
+        var["Secondary Energy|H2|Electricity"]
+        + var["Secondary Energy|Heat|Electricity|Electrolysis"],
+        carrier="H2 Electrolysis",
+        bus_carrier=bc,
+    )
+
+    # heat pumps Ground Heat Pump: no losses but ambient heat
+    var[f"{prefix}|Ground Heat Pump"] = _get_transformation_losses(
+        var["Secondary Energy|Heat|Electricity|Ground Heat Pump"],
+        carrier="rural ground heat pump",
+        bus_carrier=bc,
+    )
+
+    # heat pumps Air Heat Pump
+    var[f"{prefix}|Air Heat Pump"] = _get_transformation_losses(
+        var["Secondary Energy|Heat|Electricity|Air Heat Pump"],
+        carrier=[""],
+        bus_carrier=bc,
+    )
+
+    # resistive heater
+
+    # Secondary Energy|Heat|Solid Biomass|CHP
+    # Secondary Energy|AC|Solid Biomass|CHP
+    # Secondary Energy|*|Solid Biomass|CHP    -> supply regex
+
+    # Transformation Losses|Solid Biomass|CHP  --> losses label
+
+    assert filter_by(DEMAND, bus_carrier=bc, component="Link").empty
+
+    return var
+
+
 def collect_secondary_energy() -> pd.Series:
     """Extract all secondary energy variables from the networks."""
     var = {}
@@ -1281,10 +1272,10 @@ def collect_secondary_energy() -> pd.Series:
     secondary_gas_supply(var)
     secondary_hydrogen_supply(var)
     secondary_methanol_supply(var)
-    secondary_oil(var)
-    secondary_heat(var)
-    secondary_ammonia(var)
-    secondary_waste(var)
+    secondary_oil_supply(var)
+    secondary_heat_supply(var)
+    secondary_ammonia_supply(var)
+    secondary_waste_supply(var)
 
     # solid biomass is produced by some boilers, which is wrong of course
     # but needs to be addressed nevertheless to correct balances
@@ -1292,7 +1283,7 @@ def collect_secondary_energy() -> pd.Series:
 
     # Links that connect to buses with single loads. They are skipped in
     # IAMC variables, because their buses are only needed because of
-    # PyPSA restrictions.
+    # separated loads at bus1.
     ignore_bus_carrier = [
         "EV battery",
         "agriculture machinery oil",
@@ -1312,6 +1303,8 @@ def collect_secondary_energy() -> pd.Series:
         .drop(ignore_bus_carrier, level="bus_carrier", errors="ignore")
         .empty
     )
+
+    secondary_electricity_losses(var)
 
     return combine_variables(var)
 
