@@ -334,30 +334,31 @@ sector:
     2040: 0.29
     2045: 0.36
     2050: 0.43
+  # The transport_shares are just dummy setting that get overwritten in build_mobility_demand
   land_transport_fuel_cell_share:
-    2020: 0.05
-    2025: 0.05
-    2030: 0.05
-    2035: 0.05
-    2040: 0.05
-    2045: 0.05
-    2050: 0.05
+    2020: 0.01
+    2025: 0.01
+    2030: 0.01
+    2035: 0.01
+    2040: 0.01
+    2045: 0.01
+    2050: 0.01
   land_transport_electric_share:
-    2020: 0.05
-    2025: 0.15
-    2030: 0.3
-    2035: 0.45
-    2040: 0.7
-    2045: 0.85
-    2050: 0.95
+    2020: 0.04
+    2025: 0.04
+    2030: 0.04
+    2035: 0.04
+    2040: 0.04
+    2045: 0.04
+    2050: 0.04
   land_transport_ice_share:
-    2020: 0.9
-    2025: 0.8
-    2030: 0.65
-    2035: 0.5
-    2040: 0.25
-    2045: 0.1
-    2050: 0.0
+    2020: 0.95
+    2025: 0.95
+    2030: 0.95
+    2035: 0.95
+    2040: 0.95
+    2045: 0.95
+    2050: 0.95
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#industry
 industry:
