@@ -314,6 +314,7 @@ rule build_mobility_demand:
         reference_scenario=config_provider("iiasa_database", "reference_scenario"),
         planning_horizons=config_provider("scenario", "planning_horizons"),
         leitmodelle=config_provider("iiasa_database", "leitmodelle"),
+        ageb_for_transport=config_provider("iiasa_database", "ageb_for_transport"),
     input:
         ariadne="resources/ariadne_database.csv",
         clustered_pop_layout=resources("pop_layout_base_s_{clusters}.csv"),

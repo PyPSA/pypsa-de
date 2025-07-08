@@ -43,6 +43,7 @@ iiasa_database:
   - KN2045_NFhoch
   reference_scenario: KN2045_Mix
   region: Deutschland
+  ageb_for_transport: true
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#foresight
 foresight: myopic
