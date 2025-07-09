@@ -47,12 +47,16 @@ BC_ALIAS = {
     "gas": "Gas",
     "low voltage": "AC",
     "oil": "Oil",
+    "coal": "Coal",
+    "lignite": "Coal",
     "municipal solid waste": "Waste",
     "solid biomass": "Biomass",
+    "methanol": "Methanol",
+    "non-sequestered HVC": "Waste",
 }
 
 
-def transform_link(var, carrier: str | list, technology: str):
+def transform_link(var, carrier: str | list, technology: str, debug: bool = False):
     """
     Transform a Link component into supply and transformation losses.
 
@@ -61,6 +65,7 @@ def transform_link(var, carrier: str | list, technology: str):
     var
     carrier
     technology
+    debug
 
     Returns
     -------
@@ -98,6 +103,10 @@ def transform_link(var, carrier: str | list, technology: str):
     )
     # total demand + supply + losses <= 1e-5
     assert (total_vars + demand.groupby(YEAR_LOC).sum() <= 1e-5).all()
+
+    # optionally skipping global statistics update is useful during development
+    if debug:
+        return var
 
     # remove from global statistic to prevent double counting
     SUPPLY.drop(supply.index, inplace=True)
@@ -796,54 +805,57 @@ def secondary_electricity_supply(var: dict) -> dict:
     prefix = "Secondary Energy|Electricity"
     bc = ["AC", "low voltage"]
 
-    print(len(var))
-    transform_link(var, carrier=["CCGT", "OCGT"], technology="Turbine")
-    print(len(var))
-    transform_link(var, carrier="urban central gas CHP", technology="CHP")
-    print(len(var))
-
-    var[f"{prefix}|Gas|Turbine"] = _extract(
-        SUPPLY,
-        carrier=["CCGT", "OCGT"],
-        bus_carrier=bc,
-    )
-
-    var[f"{prefix}|Gas|CHP"] = _extract(
-        SUPPLY,
-        carrier="urban central gas CHP",
-        bus_carrier=bc,
-    )
-
-    var[f"{prefix}|Oil|CHP"] = _extract(
-        SUPPLY, carrier="urban central oil CHP", bus_carrier=bc
-    )
-    var[f"{prefix}|Coal|CHP Hard Coal"] = _extract(
-        SUPPLY, carrier="urban central coal CHP", bus_carrier=bc
-    )
-    var[f"{prefix}|Coal|Hard Coal"] = _extract(SUPPLY, carrier="coal", bus_carrier=bc)
-    var[f"{prefix}|Coal|Lignite"] = _extract(SUPPLY, carrier="lignite", bus_carrier=bc)
-    var[f"{prefix}|Coal|CHP Lignite"] = _extract(
-        SUPPLY, carrier="urban central lignite CHP", bus_carrier=bc
-    )
-    var[f"{prefix}|H2|CHP"] = _extract(
-        SUPPLY,
+    transform_link(var, technology="CHP", carrier="urban central gas CHP")
+    transform_link(var, technology="CHP", carrier="urban central oil CHP")
+    transform_link(var, technology="CHP", carrier="urban central coal CHP")
+    transform_link(var, technology="CHP", carrier="urban central lignite CHP")
+    transform_link(
+        var,
+        technology="CHP",
         carrier=["urban central H2 CHP", "urban central H2 retrofit CHP"],
-        bus_carrier=bc,
     )
-    var[f"{prefix}|Solid Biomass"] = _extract(
-        SUPPLY,
-        carrier=["solid biomass", "urban central solid biomass CHP"],
-        bus_carrier=bc,
-    )
+    transform_link(var, technology="CHP", carrier="urban central solid biomass CHP")
+    transform_link(var, technology="CHP w/o CC", carrier="waste CHP")
+    transform_link(var, technology="CHP w CC", carrier="waste CHP CC")
 
-    var[f"{prefix}|Nuclear"] = _extract(SUPPLY, carrier="nuclear", bus_carrier=bc)
+    transform_link(var, technology="Powerplant", carrier=["CCGT", "OCGT"])
+    transform_link(var, technology="Powerplant", carrier="coal")
+    transform_link(var, technology="Powerplant", carrier="lignite")
+    transform_link(var, technology="Powerplant", carrier="solid biomass")
+    transform_link(var, technology="Powerplant", carrier="nuclear")
 
-    var[f"{prefix}|Waste|CHP w/o CC"] = _extract(
-        SUPPLY, carrier="waste CHP", bus_carrier=bc
-    )
-    var[f"{prefix}|Waste|CHP w CC"] = _extract(
-        SUPPLY, carrier="waste CHP CC", bus_carrier=bc
-    )
+    transform_link(var, technology="", carrier="SMR")
+
+    # var[f"{prefix}|Oil|CHP"] = _extract(
+    #     SUPPLY, carrier="urban central oil CHP", bus_carrier=bc
+    # )
+    # var[f"{prefix}|Coal|CHP Hard Coal"] = _extract(
+    #     SUPPLY, carrier="urban central coal CHP", bus_carrier=bc
+    # )
+    # var[f"{prefix}|Coal|Hard Coal"] = _extract(SUPPLY, carrier="coal", bus_carrier=bc)
+    # var[f"{prefix}|Coal|Lignite"] = _extract(SUPPLY, carrier="lignite", bus_carrier=bc)
+    # var[f"{prefix}|Coal|CHP Lignite"] = _extract(
+    #     SUPPLY, carrier="urban central lignite CHP", bus_carrier=bc
+    # )
+    # var[f"{prefix}|H2|CHP"] = _extract(
+    #     SUPPLY,
+    #     carrier=["urban central H2 CHP", "urban central H2 retrofit CHP"],
+    #     bus_carrier=bc,
+    # )
+    # var[f"{prefix}|Solid Biomass"] = _extract(
+    #     SUPPLY,
+    #     carrier=["solid biomass", "urban central solid biomass CHP"],
+    #     bus_carrier=bc,
+    # )
+
+    # var[f"{prefix}|Nuclear"] = _extract(SUPPLY, carrier="nuclear", bus_carrier=bc)
+
+    # var[f"{prefix}|Waste|CHP w/o CC"] = _extract(
+    #     SUPPLY, carrier="waste CHP", bus_carrier=bc
+    # )
+    # var[f"{prefix}|Waste|CHP w CC"] = _extract(
+    #     SUPPLY, carrier="waste CHP CC", bus_carrier=bc
+    # )
 
     var[prefix] = _sum_variables_by_prefix(var, prefix)
 
