@@ -11,6 +11,7 @@ https://pyam-iamc.readthedocs.io/en/stable/
 """
 
 import logging
+import re
 
 import pandas as pd
 from pyam import IamDataFrame
@@ -32,7 +33,77 @@ from scripts._helpers import configure_logging, mock_snakemake
 
 logger = logging.getLogger(__file__)
 
-IDX = [DM.YEAR, DM.LOCATION, "unit"]
+YEAR_LOC = [DM.YEAR, DM.LOCATION]
+IDX = YEAR_LOC + ["unit"]
+PRIMARY = "Primary Energy"
+SECONDARY = "Secondary Energy"
+FINAL = "Final Energy"
+
+
+BC_ALIAS = {
+    "urban central heat": "Heat",
+    "urban decentral heat": "Heat",
+    "rural heat": "Heat",
+    "gas": "Gas",
+    "low voltage": "AC",
+    "oil": "Oil",
+}
+
+
+def transform_link(var, carrier: str | list, technology: str):
+    """
+    Transform a Link component into supply and transformation losses.
+
+    Parameters
+    ----------
+    var
+    carrier
+    technology
+
+    Returns
+    -------
+    :
+    """
+    supply = filter_by(SUPPLY, carrier=carrier, component="Link")
+    demand = filter_by(DEMAND, carrier=carrier, component="Link")
+    losses = supply.groupby(YEAR_LOC).sum() + demand.groupby(YEAR_LOC).sum()
+
+    bc_in = demand.index.unique("bus_carrier").item()
+    bc_in = BC_ALIAS.get(bc_in, bc_in)
+    bc_out = supply.index.unique("bus_carrier")
+
+    # single input
+    for bc in bc_out:
+        label = f"{SECONDARY}|{BC_ALIAS.get(bc, bc)}|{bc_in}|{technology}"
+        branch_output = filter_by(supply, bus_carrier=bc)
+        var[label] = branch_output.groupby(IDX).sum()
+        losses_unit = var[label].index.unique("unit").item()
+
+        branch_output_share = (
+            branch_output.groupby(YEAR_LOC).sum() / supply.groupby(YEAR_LOC).sum()
+        )
+        var[f"{label}|Losses"] = (
+            losses.mul(branch_output_share)
+            .pipe(insert_index_level, losses_unit, "unit", pos=2)
+            .mul(-1)
+        )
+
+    pattern = rf"{SECONDARY}\|[a-z, A-Z]*\|{bc_in}\|{technology}"
+    total_vars = (
+        pd.concat({k: v for k, v in var.items() if re.match(pattern, k)})
+        .groupby(YEAR_LOC)
+        .sum()
+    )
+    # total demand + supply + losses <= 1e-5
+    assert (total_vars + demand.groupby(YEAR_LOC).sum() <= 1e-5).all()
+
+    # remove from global statistic to prevent double counting
+    SUPPLY.drop(supply.index, inplace=True)
+    # adding demand to IAMC is redundant, because supply + losses == demand,
+    # and we the demand bus_carrier is known from the variable name.
+    DEMAND.drop(demand.index, inplace=True)
+
+    return var
 
 
 def _get_port_efficiency(substring: str, port: str, component: str = "Link"):
@@ -749,6 +820,12 @@ def secondary_electricity_supply(var: dict) -> dict:
     prefix = "Secondary Energy|Electricity"
     bc = ["AC", "low voltage"]
 
+    print(len(var))
+    transform_link(var, carrier=["CCGT", "OCGT"], technology="Turbine")
+    print(len(var))
+    transform_link(var, carrier="urban central gas CHP", technology="CHP")
+    print(len(var))
+
     var[f"{prefix}|Gas|Turbine"] = _extract(
         SUPPLY,
         carrier=["CCGT", "OCGT"],
@@ -1228,11 +1305,39 @@ def secondary_solid_biomass_supply(var: dict) -> dict:
 
 
 def secondary_electricity_losses(var: dict) -> dict:
-    prefix = "Transformation Losses|Electricity"
+    # needs secondary energy var
+    # needs a robust way to identify labels and carrier
+    # needs a way to test, because subtraction of supply and demand is error-prone  --> get_efficiency grouper for Links
+    # simply use LINK_BALANCE ? with carrier filter
+
+    # regex to find secondary energy supply by output group
+    # re.match("Secondary Energy\|[a-z, A-Z]*\|Electricity\|Electrolysis")
+
+    prefix = "Secondary Energy|Losses|Electricity"  # stay under Secondary Energy!
     bc = ["AC", "low voltage"]
 
+    losses = (
+        filter_by(LINK_BALANCE, carrier="H2 Electrolysis")
+        .drop(["co2", "co2 stored"], level="bus_carrier", errors="ignore")
+        .groupby(["year", "location"])
+        .sum()
+    )
+    demand = (
+        filter_by(DEMAND, carrier="H2 Electrolysis").groupby(["year", "location"]).sum()
+    )
+    supply = (
+        var["Secondary Energy|Hydrogen|Electricity|Electrolysis"]
+        .droplevel("unit")
+        .add(
+            var["Secondary Energy|Heat|Electricity|Electrolysis"].droplevel("unit"),
+            fill_value=0,
+        )
+    )
+
+    assert (losses.sub(demand + supply) < 0.000001).all()
+
     var["Transformation Losses|Electricity|Electrolysis"] = _get_transformation_losses(
-        var["Secondary Energy|H2|Electricity"]
+        var["Secondary Energy|Hydrogen|Electricity|Electrolysis"]
         + var["Secondary Energy|Heat|Electricity|Electrolysis"],
         carrier="H2 Electrolysis",
         bus_carrier=bc,
@@ -1337,30 +1442,34 @@ if __name__ == "__main__":
     # calculate all statistics and process them to IAMC data model. The idea is to
     # calculate everything once and remove rows from the global statistic. This way
     # we make sure that nothing is counted twice or is forgotten.
-    SUPPLY = collect_myopic_statistics(networks, "supply", groupby=groupby, **kwargs)
-    DEMAND = collect_myopic_statistics(
-        networks, "withdrawal", groupby=groupby, **kwargs
-    ).mul(-1)
+    SUPPLY = collect_myopic_statistics(
+        networks, "supply", groupby=groupby, **kwargs
+    ).drop("t_co2", level="unit", errors="ignore")
+    DEMAND = (
+        collect_myopic_statistics(networks, "withdrawal", groupby=groupby, **kwargs)
+        .drop("t_co2", level="unit", errors="ignore")
+        .mul(-1)
+    )
     IMPORT_FOREIGN = collect_myopic_statistics(
         networks, "trade_energy", scope=TradeTypes.FOREIGN, direction="import", **kwargs
-    )
+    ).drop("t_co2", level="unit", errors="ignore")
     EXPORT_FOREIGN = collect_myopic_statistics(
         networks, "trade_energy", scope=TradeTypes.FOREIGN, direction="export", **kwargs
-    )
+    ).drop("t_co2", level="unit", errors="ignore")
     IMPORT_DOMESTIC = collect_myopic_statistics(
         networks,
         "trade_energy",
         scope=TradeTypes.DOMESTIC,
         direction="import",
         **kwargs,
-    )
+    ).drop("t_co2", level="unit", errors="ignore")
     EXPORT_DOMESTIC = collect_myopic_statistics(
         networks,
         "trade_energy",
         scope=TradeTypes.DOMESTIC,
         direction="export",
         **kwargs,
-    )
+    ).drop("t_co2", level="unit", errors="ignore")
 
     # necessary for Links with multiple inputs
     LINK_BALANCE = collect_myopic_statistics(
