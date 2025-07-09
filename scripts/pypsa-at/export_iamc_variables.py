@@ -154,11 +154,10 @@ def transform_link(var, carrier: str | list, technology: str, debug: bool = Fals
                 bc_out,
                 bus_carrier_demand,
                 technology,
-                debug=debug,
             )
     else:
         var = _process_single_input_link(
-            var, supply, demand, bc_out, bc_in.item(), technology, debug=debug
+            var, supply, demand, bc_out, bc_in.item(), technology
         )
 
     # optionally skipping global statistics update is useful during development
@@ -373,34 +372,34 @@ def process_biomass_boilers(var) -> dict:
 #         trade = trade[trade.gt(0)].groupby("location").sum()
 #         var[f"Primary Energy|{subcat}|{direction.title()} {scope.title()}"] = trade
 
-
-def _get_transformation_losses(supply: pd.Series, **filter_kwargs) -> pd.Series:
-    # single branch Links only
-    # unit_supply = supply.index.unique("unit").item()
-    # supply = supply.droplevel("unit")
-
-    demand = _extract(DEMAND, **filter_kwargs)
-    unit_demand = demand.index.unique("unit").item()
-    demand = demand.groupby(IDX).sum().droplevel("unit")
-
-    # unit_losses = unit_supply
-    # if unit_supply != unit_demand:
-    #     unit_losses = f"{unit_demand} to {unit_supply}"
-
-    losses = (
-        demand.add(supply.droplevel("unit"))
-        .pipe(insert_index_level, unit_demand, "unit")
-        .groupby(IDX)
-        .sum()
-    )
-
-    # implicitly True
-    assert demand.sum() + supply.sum() - losses.sum() <= 1e-5
-    # todo: myopic regional efficiencies
-    # eff = _get_port_efficiency(filter_kwargs["carrier"], port="1")
-    # assert abs(demand.sum() * eff + supply.sum()) <= 1e-4
-
-    return losses
+#
+# def _get_transformation_losses(supply: pd.Series, **filter_kwargs) -> pd.Series:
+#     # single branch Links only
+#     # unit_supply = supply.index.unique("unit").item()
+#     # supply = supply.droplevel("unit")
+#
+#     demand = _extract(DEMAND, **filter_kwargs)
+#     unit_demand = demand.index.unique("unit").item()
+#     demand = demand.groupby(IDX).sum().droplevel("unit")
+#
+#     # unit_losses = unit_supply
+#     # if unit_supply != unit_demand:
+#     #     unit_losses = f"{unit_demand} to {unit_supply}"
+#
+#     losses = (
+#         demand.add(supply.droplevel("unit"))
+#         .pipe(insert_index_level, unit_demand, "unit")
+#         .groupby(IDX)
+#         .sum()
+#     )
+#
+#     # implicitly True
+#     assert demand.sum() + supply.sum() - losses.sum() <= 1e-5
+#     # todo: myopic regional efficiencies
+#     # eff = _get_port_efficiency(filter_kwargs["carrier"], port="1")
+#     # assert abs(demand.sum() * eff + supply.sum()) <= 1e-4
+#
+#     return losses
 
 
 def _sum_variables_by_prefix(var, prefix):
@@ -1729,12 +1728,10 @@ def collect_secondary_energy() -> pd.Series:
         SUPPLY, carrier="electricity distribution grid"
     ) + _extract(DEMAND, carrier="electricity distribution grid")
 
-    # todo: multi input links
+    # todo: properly test multi input links
     transform_link(var, technology="Methanolisation", carrier="methanolisation")
     transform_link(var, technology="Electrobiofuels", carrier="electrobiofuels")
     transform_link(var, technology="Haber-Bosch", carrier="Haber-Bosch")
-    # secondary_methanol_supply(var)
-    # secondary_ammonia_supply(var)
 
     # Links that connect to buses with single loads. They are skipped in
     # IAMC variables, because their buses are only needed because of
@@ -1756,14 +1753,27 @@ def collect_secondary_energy() -> pd.Series:
         "urban central water pits charger",
         "urban central water pits discharger",
     ]
-    assert (
+    supply = (
         filter_by(SUPPLY, component="Link")
         .drop(ignore_bus_carrier, level="bus_carrier", errors="ignore")
         .drop(ignore_carrier, level="carrier", errors="ignore")
-        .empty
+    )
+    assert supply.empty, f"{supply.index.unique('carrier')}"
+
+    # DAC is not exactly losses, but close enough to avoid a new category
+    var[f"{SECONDARY}|Losses|AC|DAC"] = _extract(
+        DEMAND, carrier="DAC", bus_carrier="AC"
+    )
+    var[f"{SECONDARY}|Losses|Heat|DAC"] = _extract(
+        DEMAND,
+        carrier="DAC",
+        bus_carrier=["rural heat", "urban decentral heat", "urban central heat"],
     )
 
-    # secondary_electricity_losses(var)
+    demand = filter_by(DEMAND, component="Link").drop(
+        ignore_bus_carrier + ignore_carrier, level="carrier", errors="ignore"
+    )
+    assert demand.empty, f"{demand.index.unique('carrier')}"
 
     return combine_variables(var)
 
