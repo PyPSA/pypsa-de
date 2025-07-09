@@ -47,6 +47,8 @@ BC_ALIAS = {
     "gas": "Gas",
     "low voltage": "AC",
     "oil": "Oil",
+    "municipal solid waste": "Waste",
+    "solid biomass": "Biomass",
 }
 
 
@@ -326,22 +328,20 @@ def primary_oil(var: dict) -> dict:
 
 
 def primary_gas(var) -> dict:
-    var["Primary Energy|Gas|Import Foreign"] = _extract(
-        IMPORT_FOREIGN, bus_carrier="gas"
+    bc = "gas"
+    prefix = f"{PRIMARY}|{BC_ALIAS.get(bc, bc)}"
+    var[f"{prefix}|Import Foreign"] = _extract(IMPORT_FOREIGN, bus_carrier=bc)
+    var[f"{prefix}|Import Domestic"] = _extract(IMPORT_DOMESTIC, bus_carrier=bc)
+    var[f"{prefix}|Production"] = _extract(
+        SUPPLY, carrier="gas", bus_carrier=bc, component="Generator"
     )
-    var["Primary Energy|Gas|Import Domestic"] = _extract(
-        IMPORT_DOMESTIC, bus_carrier="gas"
-    )
-    var["Primary Energy|Gas|Production"] = _extract(
-        SUPPLY, carrier="gas", bus_carrier="gas", component="Generator"
-    )
-    var["Primary Energy|Gas|Import Global"] = _extract(
+    var[f"{prefix}|Import Global"] = _extract(
         SUPPLY,
         carrier="import gas",
-        bus_carrier="gas",
+        bus_carrier=bc,
         component="Generator",
     )
-    var["Primary Energy|Gas"] = _sum_variables_by_prefix(var, "Primary Energy|Gas")
+    var[prefix] = _sum_variables_by_prefix(var, prefix)
 
     return var
 
@@ -357,17 +357,12 @@ def primary_waste(var: dict) -> dict:
     -------
     :
     """
-    bus_carrier = "municipal solid waste"
-    var["Primary Energy|Waste|Import Foreign"] = _extract(
-        IMPORT_FOREIGN, bus_carrier=bus_carrier
-    )
-    var["Primary Energy|Waste|Import Domestic"] = _extract(
-        IMPORT_DOMESTIC, bus_carrier=bus_carrier
-    )
-    var["Primary Energy|Waste|Solid"] = _extract(
-        SUPPLY, bus_carrier=bus_carrier, component="Generator"
-    )
-    var["Primary Energy|Waste"] = _sum_variables_by_prefix(var, "Primary Energy|Waste")
+    bc = "municipal solid waste"
+    prefix = f"{PRIMARY}|{BC_ALIAS.get(bc, bc)}"
+    var[f"{prefix}|Import Foreign"] = _extract(IMPORT_FOREIGN, bus_carrier=bc)
+    var[f"{prefix}|Import Domestic"] = _extract(IMPORT_DOMESTIC, bus_carrier=bc)
+    var[f"{prefix}|Solid"] = _extract(SUPPLY, bus_carrier=bc, component="Generator")
+    var[prefix] = _sum_variables_by_prefix(var, prefix)
 
     return var
 
@@ -389,13 +384,14 @@ def primary_coal(var: dict) -> dict:
     :
         The updated variables' collection.
     """
-    var["Primary Energy|Coal|Hard"] = (
+    prefix = f"{PRIMARY}|Coal"
+    var[f"{prefix}|Hard"] = (
         filter_by(DEMAND, bus_carrier="coal", component="Link").groupby(IDX).sum()
     ).mul(-1)
-    var["Primary Energy|Coal|Lignite"] = (
+    var[f"{prefix}|Lignite"] = (
         filter_by(DEMAND, bus_carrier="lignite", component="Link").groupby(IDX).sum()
     ).mul(-1)
-    var["Primary Energy|Coal"] = _sum_variables_by_prefix(var, "Primary Energy|Coal")
+    var[prefix] = _sum_variables_by_prefix(var, prefix)
 
     # remove EU coal generators from the to-do list
     coal_generators = filter_by(
@@ -424,18 +420,15 @@ def primary_hydrogen(var: dict) -> dict:
     :
         The updated variables' collection.
     """
-    bus_carrier = "H2"
-    var["Primary Energy|H2|Import Foreign"] = _extract(
-        IMPORT_FOREIGN, bus_carrier=bus_carrier
-    )
-    var["Primary Energy|H2|Import Domestic"] = _extract(
-        IMPORT_DOMESTIC, bus_carrier=bus_carrier
-    )
-    var["Primary Energy|H2|Import Global"] = _extract(
-        SUPPLY, carrier="import H2", bus_carrier=bus_carrier, component="Generator"
+    bc = "H2"
+    prefix = f"{PRIMARY}|{BC_ALIAS.get(bc, bc)}"
+    var[f"{prefix}|Import Foreign"] = _extract(IMPORT_FOREIGN, bus_carrier=bc)
+    var[f"{prefix}|Import Domestic"] = _extract(IMPORT_DOMESTIC, bus_carrier=bc)
+    var[f"{prefix}|Import Global"] = _extract(
+        SUPPLY, carrier="import H2", bus_carrier=bc, component="Generator"
     )
 
-    var["Primary Energy|H2"] = _sum_variables_by_prefix(var, "Primary Energy|H2")
+    var[prefix] = _sum_variables_by_prefix(var, prefix)
 
     return var
 
@@ -454,23 +447,16 @@ def primary_biomass(var: dict) -> dict:
     :
         The updated variables' collection.
     """
-    bus_carrier = "solid biomass"
-    var["Primary Energy|Biomass|Import Foreign"] = _extract(
-        IMPORT_FOREIGN, bus_carrier=bus_carrier
-    )
-    var["Primary Energy|Biomass|Import Domestic"] = _extract(
-        IMPORT_DOMESTIC, bus_carrier=bus_carrier
-    )
+    bc = "solid biomass"
+    prefix = f"{PRIMARY}|{BC_ALIAS.get(bc, bc)}"
+    var[f"{prefix}|Import Foreign"] = _extract(IMPORT_FOREIGN, bus_carrier=bc)
+    var[f"{prefix}|Import Domestic"] = _extract(IMPORT_DOMESTIC, bus_carrier=bc)
 
-    var["Primary Energy|Biomass|Solid"] = _extract(
-        SUPPLY, bus_carrier=bus_carrier, component="Generator"
-    )
-    var["Primary Energy|Biomass|Biogas"] = _extract(
+    var[f"{prefix}|Solid"] = _extract(SUPPLY, bus_carrier=bc, component="Generator")
+    var[f"{prefix}|Biogas"] = _extract(
         SUPPLY, bus_carrier="biogas", component="Generator"
     )
-    var["Primary Energy|Biomass"] = _sum_variables_by_prefix(
-        var, "Primary Energy|Biomass"
-    )
+    var[prefix] = _sum_variables_by_prefix(var, prefix)
 
     return var
 
@@ -492,16 +478,17 @@ def primary_hydro(var: dict) -> dict:
     :
         The updated variables' collection.
     """
-    var["Primary Energy|Hydro|PHS"] = _extract(
-        SUPPLY, carrier="PHS", component="StorageUnit"
-    )
-    var["Primary Energy|Hydro|Reservoir"] = _extract(
+    prefix = f"{PRIMARY}|Hydro"
+    # var["Primary Energy|Hydro|PHS"] = _extract(
+    #     SUPPLY, carrier="PHS", component="StorageUnit"
+    # )
+    var[f"{prefix}|Reservoir"] = _extract(
         SUPPLY, carrier="hydro", component="StorageUnit"
     )
-    var["Primary Energy|Hydro|Run-of-River"] = _extract(
+    var[f"{prefix}|Run-of-River"] = _extract(
         SUPPLY, carrier="ror", component="Generator"
     )
-    var["Primary Energy|Hydro"] = _sum_variables_by_prefix(var, "Primary Energy|Hydro")
+    var[prefix] = _sum_variables_by_prefix(var, prefix)
 
     return var
 
@@ -519,16 +506,15 @@ def primary_solar(var: dict) -> dict:
     :
         The updated variables' collection.
     """
-    var["Primary Energy|Solar|Utility"] = _extract(
-        SUPPLY, carrier="solar", component="Generator"
-    )
-    var["Primary Energy|Solar|HSAT"] = _extract(
+    prefix = f"{PRIMARY}|Solar"
+    var[f"{prefix}|Utility"] = _extract(SUPPLY, carrier="solar", component="Generator")
+    var[f"{prefix}|HSAT"] = _extract(
         SUPPLY, carrier="solar-hsat", component="Generator"
     )
-    var["Primary Energy|Solar|Rooftop"] = _extract(
+    var[f"{prefix}|Rooftop"] = _extract(
         SUPPLY, carrier="solar rooftop", component="Generator"
     )
-    var["Primary Energy|Solar"] = _sum_variables_by_prefix(var, "Primary Energy|Solar")
+    var[prefix] = _sum_variables_by_prefix(var, prefix)
 
     return var
 
@@ -546,7 +532,7 @@ def primary_liquids(var: dict) -> dict:
     :
         The updated variables' collection.
     """
-    var["Primary Energy|Liquids|Unsustainable Bioliquids"] = _extract(
+    var[f"{PRIMARY}|Liquids|Unsustainable Bioliquids"] = _extract(
         SUPPLY, carrier="unsustainable bioliquids", component="Generator"
     )
 
@@ -568,7 +554,7 @@ def primary_nuclear(var: dict) -> dict:
         The updated variables' collection.
     """
     # use localized uranium demands from nuclear power plants
-    var["Primary Energy|Nuclear|Uranium"] = (
+    var[f"{PRIMARY}|Nuclear|Uranium"] = (
         filter_by(DEMAND, carrier="uranium", component="Link")
         .groupby(IDX)
         .sum()
@@ -594,7 +580,7 @@ def primary_ammonia(var: dict) -> dict:
         The updated variables' collection.
     """
     # there is no regional ammonium demand
-    var["Primary Energy|Ammonium|Import"] = _extract(SUPPLY, carrier="import NH3")
+    var[f"{PRIMARY}|Ammonium|Import"] = _extract(SUPPLY, carrier="import NH3")
 
     return var
 
@@ -613,12 +599,7 @@ def primary_methanol(var: dict) -> dict:
     :
         The updated variables' collection.
     """
-    # todo: same logic as oil for regional demands.
-    # regional_demand = filter_by(DEMAND, bus_carrier="methanol", component="Link").
-    # regional_supply = filter_by(SUPPLY, bus_carrier="methanol", component="Link").sum()
-    # regional_supply + regional_demand
-    # filter_by(SUPPLY, carrier="import methanol", component="Link").sum()
-    var["Primary Energy|Methanol|Import"] = _extract(SUPPLY, carrier="import methanol")
+    var[f"{PRIMARY}|Methanol|Import"] = _extract(SUPPLY, carrier="import methanol")
 
     return var
 
@@ -637,13 +618,12 @@ def primary_wind(var: dict) -> dict:
     :
         The updated variables' collection.
     """
-    var["Primary Energy|Wind|Onshore"] = _extract(
-        SUPPLY, carrier="onwind", component="Generator"
-    )
-    var["Primary Energy|Wind|Offshore"] = _extract(
+    prefix = f"{PRIMARY}|Wind"
+    var[f"{prefix}|Onshore"] = _extract(SUPPLY, carrier="onwind", component="Generator")
+    var[f"{prefix}|Offshore"] = _extract(
         SUPPLY, carrier=["offwind-ac", "offwind-dc"], component="Generator"
     )
-    var["Primary Energy|Wind"] = _sum_variables_by_prefix(var, "Primary Energy|Wind")
+    var[prefix] = _sum_variables_by_prefix(var, prefix)
 
     return var
 
@@ -663,34 +643,30 @@ def primary_heat(var: dict) -> dict:
         The updated variables' collection.
     """
     heat_bus_carrier = ["rural heat", "urban decentral heat", "urban central heat"]
-    # link_energy_balance = n.statistics.energy_balance(
-    #     groupby=["location", "carrier", "bus_carrier"],
-    #     comps="Link",
-    # )
+    prefix = f"{PRIMARY}|{BC_ALIAS.get('rural heat', 'rural heat')}"
+
     enthalpy_heat = (
         LINK_BALANCE.pipe(filter_for_carrier_connected_to, heat_bus_carrier)
-        .drop(["co2", "co2 stored"], level=DM.BUS_CARRIER)
         .pipe(calculate_input_share, heat_bus_carrier)
         .pipe(filter_by, bus_carrier=["ambient heat", "latent heat"])
         .pipe(insert_index_level, "MWh_th", "unit")
     )
 
-    # heat_supply = pd.concat(to_concat)
-    var["Primary Energy|Heat|Latent"] = (
+    var[f"{prefix}|Latent"] = (
         filter_by(enthalpy_heat, bus_carrier="latent heat").groupby(IDX).sum()
     )
-    var["Primary Energy|Heat|Ambient"] = (
+    var[f"{prefix}|Ambient"] = (
         filter_by(enthalpy_heat, bus_carrier="ambient heat").groupby(IDX).sum()
     )
 
     solar_thermal_carr = [
         c for c in SUPPLY.index.unique("carrier") if "solar thermal" in c
     ]
-    var["Primary Energy|Heat|Solar"] = _extract(
+    var[f"{prefix}|Solar"] = _extract(
         SUPPLY, carrier=solar_thermal_carr, component="Generator"
     )
-    var["Primary Energy|Heat|Geothermal"] = _extract(SUPPLY, carrier="geothermal heat")
-    var["Primary Energy|Heat"] = _sum_variables_by_prefix(var, "Primary Energy|Heat")
+    var[f"{prefix}|Geothermal"] = _extract(SUPPLY, carrier="geothermal heat")
+    var[prefix] = _sum_variables_by_prefix(var, prefix)
 
     return var
 
@@ -1474,7 +1450,7 @@ if __name__ == "__main__":
     # necessary for Links with multiple inputs
     LINK_BALANCE = collect_myopic_statistics(
         networks, comps="Link", statistic="energy_balance"
-    )
+    ).drop(["co2", "co2 stored"], level=DM.BUS_CARRIER)
 
     # all transmission is already in trade_energy.
     transmission_carrier = [t[1] for t in get_transmission_techs(networks)]
