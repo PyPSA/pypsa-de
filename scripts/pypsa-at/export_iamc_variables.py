@@ -61,6 +61,10 @@ def transform_link(var, carrier: str | list, technology: str, debug: bool = Fals
     """
     Transform a Link component into supply and transformation losses.
 
+    The Link demand is equal to supply + losses and not included in
+    the output to avoid redundant data. Losses have positive signs
+    and the demand bus unit.
+
     Parameters
     ----------
     var
@@ -73,12 +77,13 @@ def transform_link(var, carrier: str | list, technology: str, debug: bool = Fals
     :
     """
     supply = filter_by(SUPPLY, carrier=carrier, component="Link")
-    if supply.empty:
-        logger.warning(f"No SUPPLY data found for {carrier}.")
-
     demand = filter_by(DEMAND, carrier=carrier, component="Link")
-    if supply.empty:
-        logger.warning(f"No DEMAND data found for {carrier}.")
+
+    if supply.empty and demand.empty:
+        logger.warning(
+            f"No supply or demand found for {carrier}. Skipping transformation."
+        )
+        return var
 
     losses = supply.groupby(YEAR_LOC).sum() + demand.groupby(YEAR_LOC).sum()
 
@@ -103,9 +108,22 @@ def transform_link(var, carrier: str | list, technology: str, debug: bool = Fals
         # )
 
     losses_unit = demand.index.unique("unit").item()
-    var[f"{SECONDARY}|Losses|{bc_in}|{technology}"] = insert_index_level(
-        losses, losses_unit, "unit", pos=2
-    ).mul(-1)
+    losses = insert_index_level(losses, losses_unit, "unit", pos=2).mul(-1)
+
+    if losses.lt(0).all():
+        # negative losses are expected for X-to-heat technologies that
+        # utilize enthalpy heat
+        assert technology in ("CHP", "Boiler", "Ground Heat Pump", "Air Heat Pump"), (
+            f"Unknown technology with efficiencies > 1: {technology}."
+        )
+        losses = rename_aggregate(losses, "MWh_LHV", level="unit").mul(
+            -1
+        )  # positive heat supply
+        var[f"{SECONDARY}|Ambient Heat|{bc_in}|{technology}"] = losses
+    elif losses.ge(0).all():
+        var[f"{SECONDARY}|Losses|{bc_in}|{technology}"] = losses
+    else:
+        raise ValueError(f"Mixed signs in losses detected: {losses}.")
 
     pattern = rf"{SECONDARY}\|[a-z, A-Z]*\|{bc_in}\|{technology}"
     total_vars = (
@@ -113,7 +131,7 @@ def transform_link(var, carrier: str | list, technology: str, debug: bool = Fals
         .groupby(YEAR_LOC)
         .sum()
     )
-    # total demand + supply + losses <= 1e-5
+    # total demand + supply + losses = 0
     assert (total_vars + demand.groupby(YEAR_LOC).sum() <= 1e-5).all()
 
     # optionally skipping global statistics update is useful during development
@@ -693,7 +711,7 @@ def primary_heat(var: dict) -> dict:
         The updated variables' collection.
     """
     heat_bus_carrier = ["rural heat", "urban decentral heat", "urban central heat"]
-    prefix = f"{PRIMARY}|{BC_ALIAS.get('rural heat', 'rural heat')}"
+    prefix = f"{PRIMARY}|{BC_ALIAS.get('rural heat', 'Heat')}"
 
     enthalpy_heat = (
         LINK_BALANCE.pipe(filter_for_carrier_connected_to, heat_bus_carrier)
@@ -1432,7 +1450,7 @@ def collect_secondary_energy() -> pd.Series:
         var, technology="Steam Reforming w/o CC", carrier="Methanol steam reforming"
     )
     transform_link(
-        var, technology="Steam Reforming w CC", carrier="Methanol steam reforming CC"
+        var, technology="Steam Reforming w CC", carrier="methanol steam reforming CC"
     )
     transform_link(var, technology="SMR w CC", carrier="SMR CC")
 
@@ -1447,11 +1465,6 @@ def collect_secondary_energy() -> pd.Series:
         var, technology="Unsustainable Bioliquids", carrier="unsustainable Bioliquids"
     )
 
-    transform_link(
-        var,
-        technology="Boiler",
-        carrier=["rural biomass boiler", "urban decentral biomass boiler"],
-    )
     transform_link(
         var,
         technology="Boiler",
@@ -1498,33 +1511,26 @@ def collect_secondary_energy() -> pd.Series:
 
     # solid biomass is produced by some boilers, which is wrong of course
     # but needs to be addressed nevertheless to correct balances
+    biomass_boiler = ["rural biomass boiler", "urban decentral biomass boiler"]
     try:
-        biomass_boiler = ["rural biomass boiler", "urban decentral biomass boiler"]
-        transform_link(
-            var,
-            technology="Boiler",
-            carrier=biomass_boiler,
-        )
+        transform_link(var, technology="Boiler", carrier=biomass_boiler)
     except ValueError:  # multiple inputs
         logger.warning(
             "Solid biomass boilers have negative values at heat buses. The applied workaround "
             "calculates balances to circumnavigate the bug. Please raise an issue at PyPSA-EUR "
             "and note down the issue number here."
         )
-        balances = filter_by(
-            LINK_BALANCE,
-            carrier=biomass_boiler,
-        )
+        balances = filter_by(LINK_BALANCE, carrier=biomass_boiler)
         var[f"{SECONDARY}|Heat|Biomass|Boiler"] = (
             balances.clip(lower=0)
             .pipe(insert_index_level, "MWH_th", "unit")
             .groupby(IDX)
             .sum()
         )
-        var[f"{SECONDARY}|Heat|Biomass|Boiler|Losses"] = (
+        var[f"{SECONDARY}|Losses|Biomass|Boiler"] = (
             insert_index_level(balances, "MWh_LHV", "unit").groupby(IDX).sum().mul(-1)
         )
-        assert var[f"{SECONDARY}|Heat|Biomass|Boiler|Losses"].gt(0).all()
+        assert var[f"{SECONDARY}|Losses|Biomass|Losses"].gt(0).all()
         _extract(SUPPLY, carrier=biomass_boiler, component="Link")
         _extract(DEMAND, carrier=biomass_boiler, component="Link")
     # secondary_solid_biomass_supply(var)
