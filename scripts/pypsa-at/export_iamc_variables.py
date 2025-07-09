@@ -121,9 +121,7 @@ def transform_link(var, carrier: str | list, technology: str, debug: bool = Fals
         ).mul(-1)
 
     # do not count ambient heat for demand + supply + losses = 0 to stay true
-    bc_out_alias = [BC_ALIAS.get(bc, bc) for bc in bc_out] + [
-        "Losses"
-    ]  # , "Ambient Heat"]
+    bc_out_alias = [BC_ALIAS.get(bc, bc) for bc in bc_out] + ["Losses"]
     pattern = rf"{SECONDARY}\|({'|'.join(bc_out_alias)})\|{bc_in}\|{technology}"
     total_vars = (
         pd.concat({k: v for k, v in var.items() if re.match(pattern, k)})
@@ -131,13 +129,18 @@ def transform_link(var, carrier: str | list, technology: str, debug: bool = Fals
         .sum()
     )
     # total demand + supply + losses - ambient heat = 0
-    assert (
-        total_vars.add(demand.groupby(YEAR_LOC).sum()).sub(
-            var.get(f"{SECONDARY}|Ambient Heat|{bc_in}|{technology}", pd.Series()),
-            fill_value=0,
-        )
-        <= 1e-5
-    ).all()
+    ambient_heat = var.get(
+        f"{SECONDARY}|Ambient Heat|{bc_in}|{technology}", pd.Series()
+    )
+    if not ambient_heat.empty:
+        assert (
+            total_vars.add(demand.groupby(YEAR_LOC).sum()).sub(
+                ambient_heat, fill_value=0
+            )
+            <= 1e-5
+        ).all()
+    else:
+        assert (total_vars.add(demand.groupby(YEAR_LOC).sum()) <= 1e-5).all()
 
     # optionally skipping global statistics update is useful during development
     if debug:
@@ -1338,21 +1341,21 @@ def collect_primary_energy() -> pd.Series:
 #     return var
 #
 #
-# def secondary_solid_biomass_supply(var: dict) -> dict:
-#     var["Secondary Energy|Solid Biomass|Boiler Error"] = _extract(
-#         SUPPLY,
-#         carrier=["rural biomass boiler", "urban decentral biomass boiler"],
-#         bus_carrier="solid biomass",
-#     )
-#
-#     if not var["Secondary Energy|Solid Biomass|Boiler Error"].empty:
-#         logger.warning(
-#             f"Solid biomass boilers supply to solid biomass bus. Total amount of energy supplied = {var['Secondary Energy|Solid Biomass|Boiler Error'].sum():.2f} MWh_LHV"
-#         )
-#
-#     assert filter_by(SUPPLY, bus_carrier="solid biomass", component="Link").empty
-#
-#     return var
+def secondary_solid_biomass_supply(var: dict) -> dict:
+    var["Secondary Energy|Solid Biomass|Boiler Error"] = _extract(
+        SUPPLY,
+        carrier=["rural biomass boiler", "urban decentral biomass boiler"],
+        bus_carrier="solid biomass",
+    )
+
+    if not var["Secondary Energy|Solid Biomass|Boiler Error"].empty:
+        logger.warning(
+            f"Solid biomass boilers supply to solid biomass bus. Total amount of energy supplied = {var['Secondary Energy|Solid Biomass|Boiler Error'].sum():.2f} MWh_LHV"
+        )
+
+    assert filter_by(SUPPLY, bus_carrier="solid biomass", component="Link").empty
+
+    return var
 
 
 # def secondary_electricity_losses(var: dict) -> dict:
@@ -1527,19 +1530,40 @@ def collect_secondary_energy() -> pd.Series:
             "and note down the issue number here."
         )
         balances = filter_by(LINK_BALANCE, carrier=biomass_boiler)
+        # SUPPLY.drop(biomass_boiler, inplace=True, errors="ignore")
+        # DEMAND.drop(biomass_boiler, inplace=True, errors="ignore")
+        #
+        # _supply = insert_index_level(balances[balances >= 0], "MWh_th", "unit", pos=5).pipe(insert_index_level, "Link", "component", pos=1)
+        #
+        #
+        # SUPPLY.append(insert_index_level(balances[balances >= 0], "MWh_th", "unit", pos=5).pipe(insert_index_level, "Link", "component", pos=1))
+        #
+        # SUPPLY = pd.concat([SUPPLY, insert_index_level(balances[balances >= 0], "MWh_th", "unit", pos=5).pipe(insert_index_level, "Link", "component", pos=1)])
+        # DEMAND = pd.concat([DEMAND, insert_index_level(balances[balances >= 0], "MWh_LHV", "unit", pos=5).pipe(insert_index_level, "Link", "component", pos=1)])
+        # transform_link(var, technology="Boiler", carrier=biomass_boiler)
+
         var[f"{SECONDARY}|Heat|Biomass|Boiler"] = (
             balances.clip(lower=0)
             .pipe(insert_index_level, "MWH_th", "unit")
             .groupby(IDX)
             .sum()
         )
-        var[f"{SECONDARY}|Losses|Biomass|Boiler"] = (
+        _bal = (
             insert_index_level(balances, "MWh_LHV", "unit").groupby(IDX).sum().mul(-1)
         )
-        assert var[f"{SECONDARY}|Losses|Biomass|Boiler"].gt(0).all()
+        losses = _bal[_bal.gt(0)]
+        ambient_heat = _bal[_bal.le(0)].mul(-1)
+        assert losses.gt(0).all()
+        var[f"{SECONDARY}|Losses|Biomass|Boiler"] = losses
+        if not ambient_heat.empty:
+            assert (
+                _bal.sub(losses, fill_value=0).sub(ambient_heat, fill_value=0) <= 1e-5
+            ).all()
+            var[f"{SECONDARY}|Ambient Heat|Biomass|Boiler"] = ambient_heat
+        else:
+            assert (_bal.sub(losses, fill_value=0) <= 1e-5).all()
         _extract(SUPPLY, carrier=biomass_boiler, component="Link")
         _extract(DEMAND, carrier=biomass_boiler, component="Link")
-    # secondary_solid_biomass_supply(var)
 
     # todo: multi input links
     # transform_link(var, technology="Methanolisation", carrier="methanolisation", debug=True)
