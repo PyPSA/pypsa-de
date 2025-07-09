@@ -1499,10 +1499,11 @@ def collect_secondary_energy() -> pd.Series:
     # solid biomass is produced by some boilers, which is wrong of course
     # but needs to be addressed nevertheless to correct balances
     try:
+        biomass_boiler = ["rural biomass boiler", "urban decentral biomass boiler"]
         transform_link(
             var,
             technology="Boiler",
-            carrier=["rural biomass boiler", "urban decentral biomass boiler"],
+            carrier=biomass_boiler,
         )
     except ValueError:  # multiple inputs
         logger.warning(
@@ -1512,17 +1513,20 @@ def collect_secondary_energy() -> pd.Series:
         )
         balances = filter_by(
             LINK_BALANCE,
-            carrier=["rural biomass boiler", "urban decentral biomass boiler"],
+            carrier=biomass_boiler,
         )
-        var[f"{SECONDARY}|Heat|Biomass"] = (
+        var[f"{SECONDARY}|Heat|Biomass|Boiler"] = (
             balances.clip(lower=0)
             .pipe(insert_index_level, "MWH_th", "unit")
             .groupby(IDX)
             .sum()
         )
-        var[f"{SECONDARY}|Heat|Biomass|Losses"] = (
-            insert_index_level(balances, "MWh_LHV", "unit").groupby(IDX).sum()
+        var[f"{SECONDARY}|Heat|Biomass|Boiler|Losses"] = (
+            insert_index_level(balances, "MWh_LHV", "unit").groupby(IDX).sum().mul(-1)
         )
+        assert var[f"{SECONDARY}|Heat|Biomass|Boiler|Losses"].gt(0).all()
+        _extract(SUPPLY, carrier=biomass_boiler, component="Link")
+        _extract(DEMAND, carrier=biomass_boiler, component="Link")
     # secondary_solid_biomass_supply(var)
 
     # todo: multi input links
