@@ -264,8 +264,7 @@ def transform_load(var, carrier: str) -> dict:
         sector = "Agriculture"
     elif carrier == "electricity":
         sector = "Base Load"  # todo: sector load split
-        # Base Load contains
-        # Tr
+        # Base Load contains Transport, Industry, Households and service
     elif "industry" in carrier:
         sector = "Industry"
     else:
@@ -278,25 +277,39 @@ def transform_load(var, carrier: str) -> dict:
         )
     }
     assert len(bc) == 1, (
-        f"Mixed target bus carrier are not supported. Found bus_carrier {bc} for carrier {carrier}."
+        f"Mixed target bus carrier are not supported. "
+        f"Found bus_carrier {bc} for carrier {carrier}."
     )
     bc = bc.pop()
 
-    load = _extract(DEMAND, carrier=carrier, component="Load")
+    load_demand = _extract(DEMAND, carrier=carrier, component="Load")
     load_supply = _extract(SUPPLY, carrier=carrier, component="Load")
+    # positive load values are possible if industry produces a surplus, for example
+    load = load_demand.add(load_supply, fill_value=0)
+
+    # # add carbon capture variants to correctly extract Links
+    # carbon_capture_links = ("solid biomass for industry", "gas for industry")
+    # if is_cc_variant := carrier in carbon_capture_links:
+    #     carrier = [carrier, carrier + " CC"]
+
     supply = _extract(SUPPLY, carrier=carrier, component="Link")
     demand = _extract(DEMAND, carrier=carrier, component="Link")
 
-    if not load_supply.empty:
-        logger.warning(
-            f"Positive values in Load component detected for carrier: {carrier}.\n{load_supply.head()}\n"
-            f"Please raise an issue in PyPSA and note down the issue number here."
-            f"Positive Load values are added with positive signs to conserve balances."
-        )
-        load = load.add(load_supply, fill_value=0)
+    # if not load_supply.empty:
+    #     logger.warning(
+    #         f"Positive values in Load component detected for carrier: {carrier}.\n{load_supply.head()}\n"
+    #         f"Please raise an issue in PyPSA and note down the issue number here."
+    #         f"Positive Load values are added with positive signs to conserve balances."
+    #     )
+    #     load = load.add(load_supply, fill_value=0)
 
     # pd.testing.assert_series_equal(demand, load.groupby(YEAR_LOC).sum(), check_names=False)
     losses = supply.groupby(YEAR_LOC).sum().add(demand.groupby(YEAR_LOC).sum())
+    # losses_exist = losses.abs().lt(1e-5).all()
+    # if losses_exist and is_cc_variant:
+    #     # CC Links have bus0 efficiencies < 1, i.e. they have losses
+    #     pass
+    # else:
     assert losses.abs().lt(1e-5).all(), (
         f"Supply and demand are not equal. Please check for losses and efficiencies != 1 for carrier: {carrier}.\n{losses}"
     )
@@ -1644,6 +1657,15 @@ def collect_primary_energy() -> pd.Series:
 
 def collect_secondary_energy() -> pd.Series:
     """Extract all secondary energy variables from the networks."""
+    # check and drop Stores todo: move to preprocessing checks
+    for carrier in filter_by(SUPPLY, component="Store").index.unique("carrier"):
+        bal = _extract(DEMAND, component="Store", carrier="gas") + _extract(
+            SUPPLY, component="Store", carrier="gas"
+        )
+        assert bal.sum() == 0, (
+            f"Imbalanced Store detected for carrier {carrier} with total imbalance of {bal.sum()}"
+        )
+
     var = {}
 
     # secondary_electricity_supply(var)
@@ -1749,32 +1771,19 @@ def collect_secondary_energy() -> pd.Series:
     transform_link(var, technology="Electrobiofuels", carrier="electrobiofuels")
     transform_link(var, technology="Haber-Bosch", carrier="Haber-Bosch")
 
-    # Links that connect to buses with single loads. They are skipped in
-    # IAMC variables, because their buses are only needed because of
-    # separated loads at bus1.
-    ignore_carrier = [
-        "BEV charger",
-        "agriculture machinery oil",
-        "coal for industry",
-        "gas for industry",
-        "gas for industry CC",
-        "industry methanol",
-        "kerosene for aviation",
-        "land transport oil",
-        "naphtha for industry",
-        "shipping methanol",
-        "shipping oil",
-        "solid biomass for industry",
-        "solid biomass for industry CC",
-        "urban central water pits charger",
-        "urban central water pits discharger",
-    ]
-    remaining_supply = filter_by(SUPPLY, component="Link").drop(
-        ignore_carrier, level="carrier", errors="ignore"
+    # DSM Links with losses that connect to buses with stores
+    var[f"{SECONDARY}|Losses|AC|BEV charger"] = (
+        _extract(SUPPLY, carrier="BEV charger", component="Link")
+        .add(_extract(DEMAND, carrier="BEV charger", component="Link"))
+        .mul(-1)
     )
-    assert remaining_supply.empty, f"{remaining_supply.index.unique('carrier')}"
+    var[f"{SECONDARY}|Losses|Heat|Water Pits"] = _extract(
+        SUPPLY, carrier="urban central water pits discharger", component="Link"
+    ).add(
+        _extract(DEMAND, carrier="urban central water pits charger", component="Link")
+    )
 
-    # DAC is not exactly losses, but close enough to avoid a new category
+    # DAC has no outputs but CO2, which is ignored in energy flows
     var[f"{SECONDARY}|Losses|AC|DAC"] = _extract(
         DEMAND, carrier="DAC", bus_carrier="AC"
     ).mul(-1)
@@ -1790,8 +1799,33 @@ def collect_secondary_energy() -> pd.Series:
         bus_carrier="non-sequestered HVC",
     ).mul(-1)
 
+    # Links that connect to buses with single loads. They are skipped in
+    # IAMC variables, because their buses are only needed because of
+    # separated loads at bus1.
+    demand_carrier = [
+        # "BEV charger",
+        "agriculture machinery oil",
+        "coal for industry",
+        "gas for industry",
+        "gas for industry CC",
+        "industry methanol",
+        "kerosene for aviation",
+        "land transport oil",
+        "naphtha for industry",
+        "shipping methanol",
+        "shipping oil",
+        "solid biomass for industry",
+        "solid biomass for industry CC",
+        # "urban central water pits charger",
+        # "urban central water pits discharger",
+    ]
+    remaining_supply = filter_by(SUPPLY, component="Link").drop(
+        demand_carrier, level="carrier", errors="ignore"
+    )
+    assert remaining_supply.empty, f"{remaining_supply.index.unique('carrier')}"
+
     remaining_demand = filter_by(DEMAND, component="Link").drop(
-        ignore_carrier, level="carrier", errors="ignore"
+        demand_carrier, level="carrier", errors="ignore"
     )
     assert remaining_demand.empty, f"{remaining_demand.index.unique('carrier')}"
 
@@ -1801,13 +1835,6 @@ def collect_secondary_energy() -> pd.Series:
 def collect_final_energy() -> pd.Series:
     """Extract all final energy variables from the networks."""
     var = {}
-    # Industry
-    # Transport
-    # Services (Gewerbe)
-    # Households
-    # Agriculture
-    # non-energy usage
-    #
 
     load_carrier = filter_by(DEMAND, component="Load").index.unique("carrier")
     for carrier in load_carrier:
@@ -1816,7 +1843,17 @@ def collect_final_energy() -> pd.Series:
     assert filter_by(DEMAND, component="Load").empty
     assert filter_by(SUPPLY, component="Load").empty
 
-    filter_by(SUPPLY, component="Link")
+    # CC Links have bus0 efficiencies < 1, i.e. they have losses
+    for carrier in ("gas for industry CC", "solid biomass for industry CC"):
+        bc = carrier.split(" for industry")[0]
+        var[f"{SECONDARY}|Losses|{BC_ALIAS[bc]}|CC"] = (
+            _extract(SUPPLY, component="Link", carrier=carrier)
+            .add(_extract(DEMAND, component="Link", carrier=carrier))
+            .mul(-1)
+        )
+
+    assert SUPPLY.empty
+    assert DEMAND.empty
 
     return combine_variables(var)
 
