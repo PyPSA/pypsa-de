@@ -1659,8 +1659,8 @@ def collect_secondary_energy() -> pd.Series:
     """Extract all secondary energy variables from the networks."""
     # check and drop Stores todo: move to preprocessing checks
     for carrier in filter_by(SUPPLY, component="Store").index.unique("carrier"):
-        bal = _extract(DEMAND, component="Store", carrier="gas") + _extract(
-            SUPPLY, component="Store", carrier="gas"
+        bal = _extract(DEMAND, component="Store", carrier=carrier) + _extract(
+            SUPPLY, component="Store", carrier=carrier
         )
         assert bal.sum() == 0, (
             f"Imbalanced Store detected for carrier {carrier} with total imbalance of {bal.sum()}"
@@ -1778,9 +1778,23 @@ def collect_secondary_energy() -> pd.Series:
         .mul(-1)
     )
     var[f"{SECONDARY}|Losses|Heat|Water Pits"] = _extract(
-        SUPPLY, carrier="urban central water pits discharger", component="Link"
+        # todo: why has "urban central water pits charger" supply?
+        SUPPLY,
+        carrier=[
+            "urban central water pits discharger",
+            "urban central water pits charger",
+        ],
+        component="Link",
     ).add(
-        _extract(DEMAND, carrier="urban central water pits charger", component="Link")
+        # todo: why has "urban central water pits discharger" demand?
+        _extract(
+            DEMAND,
+            carrier=[
+                "urban central water pits discharger",
+                "urban central water pits charger",
+            ],
+            component="Link",
+        )
     )
 
     # DAC has no outputs but CO2, which is ignored in energy flows
@@ -1803,7 +1817,6 @@ def collect_secondary_energy() -> pd.Series:
     # IAMC variables, because their buses are only needed because of
     # separated loads at bus1.
     demand_carrier = [
-        # "BEV charger",
         "agriculture machinery oil",
         "coal for industry",
         "gas for industry",
@@ -1852,8 +1865,8 @@ def collect_final_energy() -> pd.Series:
             .mul(-1)
         )
 
-    assert SUPPLY.empty
-    assert DEMAND.empty
+    assert SUPPLY.empty, f"Supply is not empty: {SUPPLY}"
+    assert DEMAND.empty, f"Demand is not empty: {SUPPLY}"
 
     return combine_variables(var)
 
