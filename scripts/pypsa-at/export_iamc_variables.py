@@ -452,78 +452,57 @@ def primary_oil(var: dict) -> dict:
     # liquids_consumption = netted_liquids[netted_liquids.le(0)].abs()
 
     # increase fossil oil demand by this factor to account for refining losses
-    oil_refining_eff = _get_port_efficiency("oil refining", port="1")
+    prefix = f"{PRIMARY}|Oil"
+    bc = "oil"
 
-    # assuming that all local oil production is consumed locally.
+    # assuming that all oil production is consumed locally.
     # Let's not filter_by components, to capture all but Stores.
     production = (
-        filter_by(SUPPLY, bus_carrier=["oil"])  # , "unsustainable bioliquids"
-        .drop("Store", level="component")
+        filter_by(SUPPLY, bus_carrier=bc)
+        .drop("EU", level="location")
         .groupby(IDX)
         .sum()
     )
     consumption = (
-        filter_by(DEMAND, bus_carrier="oil")
-        .drop("Store", level="component")
+        filter_by(DEMAND, bus_carrier=bc)
+        .drop("EU", level="location")
         .groupby(IDX)
         .sum()
     )
-    regional_oil_deficit = consumption.add(production, fill_value=0).clip(lower=0)
-
+    assert "EU" not in consumption.index.unique("location")
+    regional_oil_deficit = (
+        consumption.add(production, fill_value=0).clip(upper=0).mul(-1)
+    )
+    regional_oil_surplus = consumption.add(production, fill_value=0).clip(lower=0)
     # assert primary oil and imports are equal to regional demands
-    eu_oil_import = filter_by(SUPPLY, carrier=["oil primary", "import oil"])
-    try:
-        pd.testing.assert_series_equal(
-            regional_oil_deficit.groupby("year").sum(),
-            eu_oil_import.groupby("year").sum(),
-            check_names=False,
-        )
-    except AssertionError:
-        logger.warning("Oil amounts mismatch.")
-
-    var["Primary Energy|Oil|Fossil Oil"] = (
-        regional_oil_deficit / oil_refining_eff
-    )  # total amounts before refining
-    var["Primary Energy|Oil|Refining Losses"] = regional_oil_deficit * (  # todo: label
-        1 - oil_refining_eff
+    oil_refining_eff = _get_port_efficiency("oil refining", port="1")
+    eu_oil = filter_by(SUPPLY, carrier=["oil refining", "import oil"], bus_carrier=bc)
+    missing = (
+        regional_oil_deficit.groupby("year").sum()
+        - eu_oil.groupby("year").sum()
+        - regional_oil_surplus.groupby("year").sum()
     )
-    var["Primary Energy|Oil|Global Import"] = _extract(
-        SUPPLY, carrier="import oil"
-    )  # EU
-    var["Primary Energy|Oil|Primary"] = _extract(SUPPLY, carrier="oil primary")  # EU
-    var["Primary Energy|Oil|Refining"] = _extract(SUPPLY, carrier="oil refining")  # EU
+    if not (missing <= 1e-5).abs().all():
+        logger.warning(f"Missing oil amounts detected: {missing}")
 
-    # unsustainable bioliquids have regional bus generators
-    var["Primary Energy|Oil|Unsustainable Bioliquids"] = _extract(
-        SUPPLY, carrier="unsustainable bioliquids", component="Generator"
-    )
+    var[f"{prefix}|Fossil"] = regional_oil_deficit
+    var[f"{prefix}|Refining Losses"] = regional_oil_deficit * (1 - oil_refining_eff)
 
-    var["Primary Energy|Oil"] = var["Primary Energy|Oil|Fossil Oil"].add(
-        var["Primary Energy|Oil|Unsustainable Bioliquids"], fill_value=0
-    )
+    # remove EU imports and oil refining
+    _extract(SUPPLY, carrier="import oil")
+    _extract(SUPPLY, carrier="oil primary")
+    _extract(SUPPLY, carrier="oil refining")
+    _extract(DEMAND, carrier="oil refining")
 
-    # var["Primary Energy|Oil|Fossil"] = oil  # including losses
-    # var["Primary Energy|Oil|Liquids"] = liquids  # this is secondary energy
-    # var["Primary Energy|Oil|Global Import"] = _extract(SUPPLY, carrier="import oil")
-    # var["Primary Energy|Oil"] = oil + liquids
-    # var["Primary Energy|Oil|Refining Losses"] = oil * (1 - oil_refining_eff)
+    # unsustainable bioliquids have regional bus generators, but are already
+    # accounted for in regional_oil_deficit. The "unsustainable bioliquids"
+    # Link supplies to the oil bus.
+    _extract(SUPPLY, carrier="unsustainable bioliquids", component="Generator")
 
-    # # calculate the split of fossil oil generation to liquids production and assume
-    # # the same split for all regions
-    # total_oil_import = n.statistics.supply(bus_carrier="oil primary").item()
-    # total_liquids_production = n.statistics.supply(
-    #     groupby="bus_carrier", bus_carrier="oil", comps="Link"
-    # ).item()
-    # fossil_share = total_oil_import / total_liquids_production
-    # oil = liquids_consumption * fossil_share / oil_refining_eff
-    #
-    # liquids = liquids_consumption * (1 - fossil_share)
-    #
-    # var["Primary Energy|Oil|Fossil"] = oil  # including losses
-    # var["Primary Energy|Oil|Liquids"] = liquids  # this is secondary energy
-    # var["Primary Energy|Oil|Global Import"] = _extract(SUPPLY, carrier="import oil")
-    # var["Primary Energy|Oil"] = oil + liquids
-    # var["Primary Energy|Oil|Refining Losses"] = oil * (1 - oil_refining_eff)
+    # var["Primary Energy|Oil"] = var["Primary Energy|Oil|Fossil Oil"].add(
+    #     var["Primary Energy|Oil|Unsustainable Bioliquids"], fill_value=0
+    # )
+    var[prefix] = _sum_variables_by_prefix(var, prefix)
 
     return var
 
@@ -1728,7 +1707,7 @@ def collect_secondary_energy() -> pd.Series:
         SUPPLY, carrier="electricity distribution grid"
     ) + _extract(DEMAND, carrier="electricity distribution grid")
 
-    # todo: properly test multi input links
+    # multi input links
     transform_link(var, technology="Methanolisation", carrier="methanolisation")
     transform_link(var, technology="Electrobiofuels", carrier="electrobiofuels")
     transform_link(var, technology="Haber-Bosch", carrier="Haber-Bosch")
@@ -1736,11 +1715,12 @@ def collect_secondary_energy() -> pd.Series:
     # Links that connect to buses with single loads. They are skipped in
     # IAMC variables, because their buses are only needed because of
     # separated loads at bus1.
-    ignore_bus_carrier = [
-        "EV battery",
+    ignore_carrier = [
+        "BEV charger",
         "agriculture machinery oil",
         "coal for industry",
         "gas for industry",
+        "gas for industry CC",
         "industry methanol",
         "kerosene for aviation",
         "land transport oil",
@@ -1748,39 +1728,53 @@ def collect_secondary_energy() -> pd.Series:
         "shipping methanol",
         "shipping oil",
         "solid biomass for industry",
-    ]
-    ignore_carrier = [
+        "solid biomass for industry CC",
         "urban central water pits charger",
         "urban central water pits discharger",
     ]
-    supply = (
-        filter_by(SUPPLY, component="Link")
-        .drop(ignore_bus_carrier, level="bus_carrier", errors="ignore")
-        .drop(ignore_carrier, level="carrier", errors="ignore")
+    remaining_supply = filter_by(SUPPLY, component="Link").drop(
+        ignore_carrier, level="carrier", errors="ignore"
     )
-    assert supply.empty, f"{supply.index.unique('carrier')}"
+    assert remaining_supply.empty, f"{remaining_supply.index.unique('carrier')}"
 
     # DAC is not exactly losses, but close enough to avoid a new category
     var[f"{SECONDARY}|Losses|AC|DAC"] = _extract(
         DEMAND, carrier="DAC", bus_carrier="AC"
-    )
+    ).mul(-1)
     var[f"{SECONDARY}|Losses|Heat|DAC"] = _extract(
         DEMAND,
         carrier="DAC",
         bus_carrier=["rural heat", "urban decentral heat", "urban central heat"],
-    )
+    ).mul(-1)
+    var[f"{SECONDARY}|Losses|Waste|HVC to air"] = _extract(
+        DEMAND,
+        carrier="HVC to air",
+        component="Link",
+        bus_carrier="non-sequestered HVC",
+    ).mul(-1)
 
-    demand = filter_by(DEMAND, component="Link").drop(
-        ignore_bus_carrier + ignore_carrier, level="carrier", errors="ignore"
+    remaining_demand = filter_by(DEMAND, component="Link").drop(
+        ignore_carrier, level="carrier", errors="ignore"
     )
-    assert demand.empty, f"{demand.index.unique('carrier')}"
+    assert remaining_demand.empty, f"{remaining_demand.index.unique('carrier')}"
 
     return combine_variables(var)
 
 
-def collect_final_energy() -> pd.DataFrame:
+def collect_final_energy() -> pd.Series:
     """Extract all final energy variables from the networks."""
-    # by sector
+    var = {}
+    # Final Energy|Industry|Heat|DAC
+    # Final Energy|Transport|Oil|ICE
+    # Industry
+    # Transport
+    # Services (Gewerbe)
+    # Households
+    # Agriculture
+    # non-energy usage
+    #
+
+    return combine_variables(var)
 
 
 if __name__ == "__main__":
@@ -1848,10 +1842,10 @@ if __name__ == "__main__":
     # collect transformed energy system variables
     primary_energy = collect_primary_energy()
     secondary_energy = collect_secondary_energy()
-    # secondary_losses = collect_secondary_losses()
+    final_energy = collect_final_energy()
     system_cost = collect_system_cost()
 
-    df = pd.concat([system_cost, primary_energy, secondary_energy])
+    df = pd.concat([primary_energy, secondary_energy, final_energy, system_cost])
 
     # for global_statistic in [
     #     SUPPLY,
