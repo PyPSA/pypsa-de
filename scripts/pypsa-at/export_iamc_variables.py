@@ -1952,6 +1952,8 @@ def collect_final_energy() -> pd.Series:
     assert SUPPLY.empty, f"Supply is not empty: {SUPPLY}"
     assert DEMAND.empty, f"Demand is not empty: {DEMAND}"
 
+    # todo: Primary Energy|Waste unit is missing
+    # todo: Primary Energy bus_carrier is missing for all
     # todo: localize NH3 demand using Haber-Bosch production
     # todo: collect export
     # todo: check balances per bus_carrier
