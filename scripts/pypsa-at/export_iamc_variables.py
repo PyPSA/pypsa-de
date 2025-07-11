@@ -433,7 +433,12 @@ def process_biomass_boilers(var) -> dict:
         "calculates balances to circumnavigate the bug. Please raise an issue at PyPSA-EUR "
         "and note down the issue number here."
     )
-    balances = filter_by(LINK_BALANCE, carrier=carrier)
+    balances = (
+        collect_myopic_statistics(networks, comps="Link", statistic="energy_balance")
+        .pipe(filter_by, carrier=carrier)
+        .drop(["co2", "co2 stored", "process emissions"], level=DM.BUS_CARRIER)
+    )
+    # balances = filter_by(LINK_BALANCE, carrier=carrier)
     # SUPPLY.drop(carrier, inplace=True, errors="ignore")
     # DEMAND.drop(carrier, inplace=True, errors="ignore")
     #
@@ -454,16 +459,15 @@ def process_biomass_boilers(var) -> dict:
     )
     _bal = insert_index_level(balances, "MWh_LHV", "unit").groupby(IDX).sum().mul(-1)
     losses = _bal[_bal.gt(0)]
-    ambient_heat = _bal[_bal.le(0)].mul(-1)
-    assert losses.gt(0).all()
+    surplus = _bal[_bal.le(0)].mul(-1)
     var[f"{SECONDARY}|Losses|Biomass|Boiler"] = losses
-    if not ambient_heat.empty:
-        assert (
-            _bal.sub(losses, fill_value=0).sub(ambient_heat, fill_value=0) <= 1e-5
-        ).all()
-        var[f"{SECONDARY}|Ambient Heat|Biomass|Boiler"] = ambient_heat
-    else:
-        assert (_bal.sub(losses, fill_value=0) <= 1e-5).all()
+    if not surplus.empty:
+        # assert (
+        #     _bal.sub(losses, fill_value=0).sub(surplus, fill_value=0) <= 1e-5
+        # ).all()  # implicitly True
+        var[f"{SECONDARY}|Ambient Heat|Biomass|Boiler"] = surplus
+    # else:
+    #     assert (_bal.sub(losses, fill_value=0) <= 1e-5).all()  # implicitly True
     _extract(SUPPLY, carrier=carrier, component="Link")
     _extract(DEMAND, carrier=carrier, component="Link")
 
@@ -1950,6 +1954,7 @@ def collect_final_energy() -> pd.Series:
 
     # todo: localize NH3 demand using Haber-Bosch production
     # todo: collect export
+    # todo: check balances per bus_carrier
 
     return combine_variables(var)
 
@@ -2007,9 +2012,9 @@ if __name__ == "__main__":
     ).drop("t_co2", level="unit", errors="ignore")
 
     # necessary for Links with multiple inputs
-    LINK_BALANCE = collect_myopic_statistics(
-        networks, comps="Link", statistic="energy_balance"
-    ).drop(["co2", "co2 stored", "process emissions"], level=DM.BUS_CARRIER)
+    # LINK_BALANCE = collect_myopic_statistics(
+    #     networks, comps="Link", statistic="energy_balance"
+    # ).drop(["co2", "co2 stored", "process emissions"], level=DM.BUS_CARRIER)
 
     # all transmission is already in trade_energy.
     transmission_carrier = [t[1] for t in get_transmission_techs(networks)]
