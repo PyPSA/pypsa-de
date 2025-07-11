@@ -30,6 +30,7 @@ from evals.utils import (
 from scripts._helpers import configure_logging, mock_snakemake
 
 logger = logging.getLogger(__file__)
+logger.setLevel(logging.DEBUG)
 
 YEAR_LOC = [DM.YEAR, DM.LOCATION]
 IDX = YEAR_LOC + ["unit"]
@@ -38,6 +39,9 @@ SECONDARY = "Secondary Energy"
 FINAL = "Final Energy"
 
 BC_ALIAS = {
+    "AC": "AC",
+    "H2": "H2",
+    "NH3": "NH3",
     "urban central heat": "Heat",
     "urban decentral heat": "Heat",
     "rural heat": "Heat",
@@ -69,12 +73,18 @@ BC_ALIAS = {
 }
 
 
-class WriteOnceDict(dict):
+class SeriesCollector(dict):
     """Prevent overwriting existing keys."""
 
     def __setitem__(self, key: str, value: pd.Series):
         if key in self:
-            raise KeyError(f"Key {key!r} already exists.")
+            idx = self[key].index.names
+            assert value.index.names == idx, (
+                f"Denying to join existing index levels: {idx} with {value.index.names}"
+            )
+            ds = self.pop(key)
+            self[key] = pd.concat([ds, value]).groupby(idx).sum()
+            logger.debug(f"Merged key {key} with existing Series.")
         super().__setitem__(key, value)
 
 
@@ -99,6 +109,7 @@ def _process_single_input_link(
 
     var[f"{SECONDARY}|Losses|{bc_in}|{technology}"] = losses[losses > 0]
     losses_neg = losses[losses < 0]
+    # label_ambient_heat = f"{SECONDARY}|Ambient Heat|{bc_in}|{technology}"
     if not losses_neg.empty:
         # negative losses are expected for X-to-heat technologies that
         # utilize enthalpy heat and for heat pumps
@@ -110,7 +121,7 @@ def _process_single_input_link(
         ).mul(-1)
 
     # do not count ambient heat for demand + supply + losses = 0 to stay true
-    bc_out_alias = [BC_ALIAS.get(bc, bc) for bc in bc_out] + ["Losses"]
+    bc_out_alias = [BC_ALIAS[bc] for bc in bc_out] + ["Losses"]
     pattern = rf"{SECONDARY}\|({'|'.join(bc_out_alias)})\|{bc_in}\|{technology}"
     total_vars = (
         pd.concat({k: v for k, v in var.items() if re.match(pattern, k)})
@@ -118,16 +129,16 @@ def _process_single_input_link(
         .sum()
     )
     # total demand + supply + losses - ambient heat = 0
-    ambient_heat = var.get(
-        f"{SECONDARY}|Ambient Heat|{bc_in}|{technology}", pd.Series()
-    )
-    if not ambient_heat.empty:
+    # ambient_heat = var.get(label_ambient_heat, pd.Series())
+    if not losses_neg.empty:
         assert (
-            total_vars.add(demand.groupby(YEAR_LOC).sum()).sub(
-                ambient_heat, fill_value=0
+            total_vars.add(demand.groupby(YEAR_LOC).sum()).add(
+                losses_neg.droplevel("unit"), fill_value=0
             )
             <= 1e-5
-        ).all()
+        ).all(), (
+            f"Imbalances detected for Link with bus carrier supply: {bc_in} and bus carrier out: {list(bc_out)} for technology {technology}."
+        )
     else:
         assert (total_vars.add(demand.groupby(YEAR_LOC).sum()) <= 1e-5).all()
 
@@ -155,6 +166,11 @@ def transform_link(
     -------
     :
     """
+
+    assert "|" not in technology, (
+        f"Pipe operator '|' not allows in technology '{technology}' because it breaks the regex match further below."
+    )
+
     supply = filter_by(SUPPLY, carrier=carrier, component="Link")
     demand = filter_by(DEMAND, carrier=carrier, component="Link")
 
@@ -1037,7 +1053,7 @@ def collect_system_cost() -> pd.Series:
         Total CAPEX plus OPEX per model region in billions EUR (2020).
     """
     # Nodal OPEX and nodal CAPEX in billion EUR2020
-    var = WriteOnceDict()
+    var = SeriesCollector()
     # CAPEX and OPEX units are incorrect and need to be updated
     unit = "billion EUR2020"
     # CAPEX and OPEX are not used anywhere else, hence they are local
@@ -1669,11 +1685,19 @@ def collect_primary_energy() -> pd.Series:
 
 def collect_storage_imbalances() -> pd.Series:
     """Extract all storage imbalances due to losses."""
-    var = WriteOnceDict()
+    var = SeriesCollector()
+    comps = ["Store", "StorageUnit"]
 
-    for carrier in filter_by(SUPPLY, component="Store").index.unique("carrier"):
-        supply = filter_by(SUPPLY, component="Store", carrier=carrier)
-        demand = filter_by(DEMAND, component="Store", carrier=carrier)
+    imbalanced_techs = {
+        "urban central water pits": "Water Pits",  # Storage losses
+        "urban central water tanks": "Water Tank",  # Storage losses
+        "coal": "Coal",  # FixMe: small unexplained imbalance accepted for now
+        "PHS": "PHS",  # Pump efficiency
+    }
+
+    for carrier in filter_by(SUPPLY, component=comps).index.unique("carrier"):
+        supply = filter_by(SUPPLY, component=comps, carrier=carrier)
+        demand = filter_by(DEMAND, component=comps, carrier=carrier)
         balance = supply.add(demand, fill_value=0)
 
         if balance.sum() != 0:
@@ -1681,14 +1705,9 @@ def collect_storage_imbalances() -> pd.Series:
                 f"Store imbalances detected for carrier {carrier} with total imbalance of {balance.groupby('year').sum()}."
             )
             bc = balance.index.unique("bus_carrier").item()
-            if carrier == "urban central water pits":
-                tech = "Water Pits"
-            elif carrier == "urban central water tanks":
-                tech = "Water Tank"
-            elif carrier == "coal":
-                tech = "Coal"
-            else:
-                raise ValueError(f"Unknown carrier: {carrier}")
+            tech = imbalanced_techs[
+                carrier
+            ]  # should raise KeyError if bc is not registered
             var[f"{SECONDARY}|Losses|{BC_ALIAS[bc]}|{tech}"] = balance.groupby(
                 IDX
             ).sum()
@@ -1698,24 +1717,9 @@ def collect_storage_imbalances() -> pd.Series:
         SUPPLY.drop(supply.index, inplace=True)
         DEMAND.drop(demand.index, inplace=True)
 
-    return combine_variables(var)
-
-
-def collect_losses_energy() -> pd.Series:
-    # DSM Links with losses that connect to buses with stores
-    var = WriteOnceDict()
-    prefix = f"{SECONDARY}|Losses"
-
-    var[f"{prefix}|AC|Distribution Grid"] = _extract(
-        SUPPLY, carrier="electricity distribution grid"
-    ) + _extract(DEMAND, carrier="electricity distribution grid")
-
-    var[f"{prefix}|AC|BEV charger"] = (
-        _extract(SUPPLY, carrier="BEV charger", component="Link")
-        .add(_extract(DEMAND, carrier="BEV charger", component="Link"))
-        .mul(-1)
-    )
-    var[f"{prefix}|Heat|Water Pits"] = _extract(
+    # collect water pit losses here, to combine them with storage
+    # labels and prevent duplicates in the IAMC data frame.
+    var[f"{SECONDARY}|Losses|Heat|Water Pits"] = _extract(
         SUPPLY,
         carrier="urban central water pits discharger",
         bus_carrier="urban central heat",
@@ -1727,6 +1731,24 @@ def collect_losses_energy() -> pd.Series:
             bus_carrier="urban central heat",
             component="Link",
         )
+    )
+
+    return combine_variables(var)
+
+
+def collect_losses_energy() -> pd.Series:
+    # DSM Links with losses that connect to buses with stores
+    var = SeriesCollector()
+    prefix = f"{SECONDARY}|Losses"
+
+    var[f"{prefix}|AC|Distribution Grid"] = _extract(
+        SUPPLY, carrier="electricity distribution grid"
+    ) + _extract(DEMAND, carrier="electricity distribution grid")
+
+    var[f"{prefix}|AC|BEV charger"] = (
+        _extract(SUPPLY, carrier="BEV charger", component="Link")
+        .add(_extract(DEMAND, carrier="BEV charger", component="Link"))
+        .mul(-1)
     )
     # drop the supply/demand at the other bus side of (dis)charger links
     _extract(
@@ -1759,16 +1781,14 @@ def collect_losses_energy() -> pd.Series:
 
 def collect_secondary_energy() -> pd.Series:
     """Extract all secondary energy variables from the networks."""
-    var = WriteOnceDict()
+    var = SeriesCollector()
 
     # secondary_electricity_supply(var)
     transform_link(var, technology="CHP", carrier="urban central gas CHP")
     transform_link(var, technology="CHP", carrier="urban central oil CHP")
-    transform_link(
-        var,
-        technology="CHP",
-        carrier=["urban central coal CHP", "urban central lignite CHP"],
-    )
+    # prevent writing ...|Coal|CHP twice
+    transform_link(var, technology="CHP", carrier="urban central coal CHP")
+    transform_link(var, technology="CHP", carrier="urban central lignite CHP")
     transform_link(
         var,
         technology="CHP",
@@ -1897,7 +1917,7 @@ def collect_secondary_energy() -> pd.Series:
 
 def collect_final_energy() -> pd.Series:
     """Extract all final energy variables from the networks."""
-    var = WriteOnceDict()
+    var = SeriesCollector()
 
     load_carrier = filter_by(DEMAND, component="Load").index.unique("carrier")
     for carrier in load_carrier:
@@ -1915,8 +1935,21 @@ def collect_final_energy() -> pd.Series:
             .mul(-1)
         )
 
+    var[f"{SECONDARY}|Losses|Heat|Vent"] = _extract(
+        DEMAND,
+        component="Generator",
+        carrier=[
+            "urban central heat vent",
+            "rural heat vent",
+            "urban decentral heat vent",
+        ],
+    ).mul(-1)
+
     assert SUPPLY.empty, f"Supply is not empty: {SUPPLY}"
-    assert DEMAND.empty, f"Demand is not empty: {SUPPLY}"
+    assert DEMAND.empty, f"Demand is not empty: {DEMAND}"
+
+    # todo: localize NH3 demand using Haber-Bosch production
+    # todo: collect export
 
     return combine_variables(var)
 
@@ -2016,6 +2049,9 @@ if __name__ == "__main__":
     df = insert_index_level(df, "PyPSA-AT", "model")
     df = insert_index_level(df, snakemake.wildcards.run, "scenario")
     df.index = df.index.rename({"location": "region"})  # comply with IAMC data model
+
+    if df.index.has_duplicates:
+        print(df[df.index.duplicated()])
 
     iamc = IamDataFrame(df)
     meta = pd.Series(
