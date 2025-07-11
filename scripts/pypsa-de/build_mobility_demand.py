@@ -7,7 +7,12 @@ from scripts._helpers import configure_logging, mock_snakemake
 logger = logging.getLogger(__name__)
 
 
-def get_transport_data(db, year, ageb_for_transport=False):
+def get_transport_data(
+    db,
+    year,
+    non_land_liquids,
+    uba_for_mobility=False,
+):
     """
     Retrieve the German mobility demand from the transport_data model.
 
@@ -24,40 +29,77 @@ def get_transport_data(db, year, ageb_for_transport=False):
             "For 2020, using hard-coded transport data from the Ariadne2-internal database."
         )
 
-        transport_demand = pd.Series()
-        # if 2020
-        transport_demand["Electricity"] = 0.0 + 17.0 + 35.82 + 0.0
-        transport_demand["Hydrogen"] = 0.0 + 0.0 + 0.0 + 0.0
-        transport_demand["Liquids"] = 41.81 + 1369.34 + 11.18 + 637.23
+        transport_demand = pd.Series(
+            {
+                "Electricity": 0.0 + 17.0 + 35.82 + 0.0,
+                "Hydrogen": 0.0 + 0.0 + 0.0 + 0.0,
+                "Liquids": 41.81 + 1369.34 + 11.18 + 637.23,
+            }
+        )
+
         transport_demand = transport_demand.div(3.6e-6)  # convert PJ to MWh
         transport_demand["number_of_cars"] = 0.658407 + 0.120261  # BEV + PHEV
 
-        if ageb_for_transport:
+        if uba_for_mobility:
+            logger.warning(
+                "For 2020, using historical AGEB and KBA data instead of UBA projections."
+            )
             # AGEB 2020, https://ag-energiebilanzen.de/daten-und-fakten/bilanzen-1990-bis-2030/?_jahresbereich-bilanz=2011-2020
-            transport_demand["Electricity"] = 39129 + 2394  # Schiene + Straße
-            transport_demand["Hydrogen"] = 0
-            transport_demand["Liquids"] = (
-                140718 + 1261942 + 10782 + 638820
-            )  # Bio Strasse + Diesel Strasse + Diesel Schiene + Otto Strasse
-            transport_demand = transport_demand.div(3.6e-3)  # convert TJ to MWH
+            transport_demand = pd.Series(
+                {
+                    "Electricity": 39129 + 2394,  # Schiene + Straße
+                    "Hydrogen": 0,
+                    "Liquids": 140718
+                    + 1261942
+                    + 10782
+                    + 638820,  # Bio Strasse + Diesel Strasse + Diesel Schiene + Otto Strasse
+                }
+            )
+            transport_demand = transport_demand.div(3.6e-3)  # convert PJ to MWH
             # https://www.kba.de/DE/Statistik/Produktkatalog/produkte/Fahrzeuge/fz27_b_uebersicht.html
             # FZ27_202101, table FZ 27.2, 1. January 2021:
             transport_demand["number_of_cars"] = 0.358498 + 0.280149
 
-    elif year == "2025" and ageb_for_transport:
-        # AGEB2024 for train demand 25, linear extrapolation with AGEB2024 + AGEB2023 for EVs
-        transport_demand["Electricity"] = 39761 + 2 * 21270 - 16180
-        transport_demand["Hydrogen"] = 0
-        # AGEB2024 for Liquids demand 25
-        transport_demand["Liquids"] = 116323 + 9650 + 1158250 + 702618
-        transport_demand = transport_demand.div(3.6e-3)
-        # FZ27_202504, 202404, table FZ 27.8,
-        # linear extrapolation to 1. January 2026: "1. January 2025" + ("1. January 2025" - "1. January 2024")
-        # 2 * (1,810,815 + 968,734) - (1,555,265 + 922,876) = 3080957
-        # rounded upwards
-        transport_demand["number_of_cars"] = 3.1  # million, BEV + PHEV
+    elif year == "2025" and uba_for_mobility:
+        # https://www.umweltbundesamt.de/sites/default/files/medien/11850/publikationen/projektionsbericht_2025.pdf, Abbildung 64 & 59,
+        transport_demand = pd.Series(
+            {
+                "Electricity": 21,
+                "Hydrogen": 0.0,
+                "Liquids": 524 + 51,
+                "number_of_cars": 2.7 + 1.2,  # BEV + PHEV
+            }
+        )
+        transport_demand["Liquids"] -= non_land_liquids[
+            int(year)
+        ]  # remove domestic navigation and aviation
+    elif year == "2030" and uba_for_mobility:
+        transport_demand = pd.Series(
+            {
+                "Electricity": 57,
+                "Hydrogen": 14,
+                "Liquids": 418 + 34 + 1,
+                "number_of_cars": 8.7 + 1.8,  # BEV + PHEV
+            }
+        )
+        transport_demand["Liquids"] -= non_land_liquids[int(year)]
+    elif year == "2035" and uba_for_mobility:
+        transport_demand = pd.Series(
+            {
+                "Electricity": 117,
+                "Hydrogen": 36,
+                "Liquids": 237 + 26 + 1,
+                "number_of_cars": 18.9 + 1.8,  # BEV + PHEV
+            }
+        )
+        transport_demand["Liquids"] -= non_land_liquids[int(year)]
 
     else:
+        if uba_for_mobility:
+            logger.error(
+                f"Year {year} is not supported for UBA mobility projections. Please use only 2020, 2025, 2030, 2035."
+            )
+
         df = db[year].loc[snakemake.params.leitmodelle["transport"]]
 
         for fuel in fuels:
@@ -79,11 +121,11 @@ if __name__ == "__main__":
         snakemake = mock_snakemake(
             "build_mobility_demand",
             simpl="",
-            clusters=22,
+            clusters=27,
             opts="",
             ll="vopt",
             sector_opts="none",
-            planning_horizons="2020",
+            planning_horizons="2030",
             run="KN2045_Mix",
         )
     configure_logging(snakemake)
@@ -99,12 +141,37 @@ if __name__ == "__main__":
         :,
     ]
 
+    energy_totals = (
+        pd.read_csv(
+            snakemake.input.energy_totals,
+            index_col=[0, 1],
+        )
+        .xs(
+            snakemake.params.energy_totals_year,
+            level="year",
+        )
+        .loc["DE"]
+    )
+
+    domestic_aviation = energy_totals.loc["total domestic aviation"] * pd.Series(
+        snakemake.params.aviation_demand_factor
+    )
+
+    domestic_navigation = energy_totals.loc["total domestic navigation"] * pd.Series(
+        snakemake.params.shipping_oil_share
+    )
+
+    non_land_liquids = domestic_aviation + domestic_navigation
+
     logger.info(
         f"Retrieving German mobility demand from {snakemake.params.leitmodelle['transport']} transport model."
     )
     # get transport_data data
     transport_data = get_transport_data(
-        db, snakemake.wildcards.planning_horizons, snakemake.params.ageb_for_transport
+        db,
+        snakemake.wildcards.planning_horizons,
+        non_land_liquids,
+        uba_for_mobility=snakemake.params.uba_for_mobility,
     )
 
     # get German mobility weighting

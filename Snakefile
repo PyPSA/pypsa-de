@@ -367,10 +367,14 @@ rule build_mobility_demand:
         reference_scenario=config_provider("iiasa_database", "reference_scenario"),
         planning_horizons=config_provider("scenario", "planning_horizons"),
         leitmodelle=config_provider("iiasa_database", "leitmodelle"),
-        ageb_for_transport=config_provider("iiasa_database", "ageb_for_transport"),
+        uba_for_mobility=config_provider("iiasa_database", "uba_for_mobility"),
+        shipping_oil_share=config_provider("sector", "shipping_oil_share"),
+        aviation_demand_factor=config_provider("sector", "aviation_demand_factor"),
+        energy_totals_year=config_provider("energy", "energy_totals_year"),
     input:
         ariadne="resources/ariadne_database.csv",
         clustered_pop_layout=resources("pop_layout_base_s_{clusters}.csv"),
+        energy_totals=resources("energy_totals.csv"),
     output:
         mobility_demand=resources(
             "mobility_demand_aladin_{clusters}_{planning_horizons}.csv"
