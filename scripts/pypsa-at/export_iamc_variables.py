@@ -1764,8 +1764,11 @@ def collect_secondary_energy() -> pd.Series:
     # secondary_electricity_supply(var)
     transform_link(var, technology="CHP", carrier="urban central gas CHP")
     transform_link(var, technology="CHP", carrier="urban central oil CHP")
-    transform_link(var, technology="CHP", carrier="urban central coal CHP")
-    transform_link(var, technology="CHP", carrier="urban central lignite CHP")
+    transform_link(
+        var,
+        technology="CHP",
+        carrier=["urban central coal CHP", "urban central lignite CHP"],
+    )
     transform_link(
         var,
         technology="CHP",
