@@ -63,7 +63,19 @@ BC_ALIAS = {
     "shipping oil": "Oil",
     "solid biomass for industry": "Biomass",
     "EV battery": "AC",
+    # Store
+    "urban central water pits": "Heat",
+    "urban central water tanks": "Heat",
 }
+
+
+class WriteOnceDict(dict):
+    """Prevent overwriting existing keys."""
+
+    def __setitem__(self, key: str, value: pd.Series):
+        if key in self:
+            raise KeyError(f"Key {key!r} already exists.")
+        super().__setitem__(key, value)
 
 
 def _process_single_input_link(
@@ -1025,7 +1037,7 @@ def collect_system_cost() -> pd.Series:
         Total CAPEX plus OPEX per model region in billions EUR (2020).
     """
     # Nodal OPEX and nodal CAPEX in billion EUR2020
-    var = {}
+    var = WriteOnceDict()
     # CAPEX and OPEX units are incorrect and need to be updated
     unit = "billion EUR2020"
     # CAPEX and OPEX are not used anywhere else, hence they are local
@@ -1655,18 +1667,99 @@ def collect_primary_energy() -> pd.Series:
 #     return var
 
 
+def collect_storage_imbalances() -> pd.Series:
+    """Extract all storage imbalances due to losses."""
+    var = WriteOnceDict()
+
+    for carrier in filter_by(SUPPLY, component="Store").index.unique("carrier"):
+        supply = filter_by(SUPPLY, component="Store", carrier=carrier)
+        demand = filter_by(DEMAND, component="Store", carrier=carrier)
+        balance = supply.add(demand, fill_value=0)
+
+        if balance.sum() != 0:
+            logger.warning(
+                f"Store imbalances detected for carrier {carrier} with total imbalance of {balance.groupby('year').sum()}."
+            )
+            bc = balance.index.unique("bus_carrier").item()
+            if carrier == "urban central water pits":
+                tech = "Water Pits"
+            elif carrier == "urban central water tanks":
+                tech = "Water Tank"
+            elif carrier == "coal":
+                tech = "Coal"
+            else:
+                raise ValueError(f"Unknown carrier: {carrier}")
+            var[f"{SECONDARY}|Losses|{BC_ALIAS[bc]}|{tech}"] = balance.groupby(
+                IDX
+            ).sum()
+        else:
+            logger.debug(f"No Store imbalances detected for carrier: {carrier}.")
+
+        SUPPLY.drop(supply.index, inplace=True)
+        DEMAND.drop(demand.index, inplace=True)
+
+    return combine_variables(var)
+
+
+def collect_losses_energy() -> pd.Series:
+    # DSM Links with losses that connect to buses with stores
+    var = WriteOnceDict()
+    prefix = f"{SECONDARY}|Losses"
+
+    var[f"{prefix}|AC|Distribution Grid"] = _extract(
+        SUPPLY, carrier="electricity distribution grid"
+    ) + _extract(DEMAND, carrier="electricity distribution grid")
+
+    var[f"{prefix}|AC|BEV charger"] = (
+        _extract(SUPPLY, carrier="BEV charger", component="Link")
+        .add(_extract(DEMAND, carrier="BEV charger", component="Link"))
+        .mul(-1)
+    )
+    var[f"{prefix}|Heat|Water Pits"] = _extract(
+        SUPPLY,
+        carrier="urban central water pits discharger",
+        bus_carrier="urban central heat",
+        component="Link",
+    ).add(
+        _extract(
+            DEMAND,
+            carrier="urban central water pits charger",
+            bus_carrier="urban central heat",
+            component="Link",
+        )
+    )
+    # drop the supply/demand at the other bus side of (dis)charger links
+    _extract(
+        SUPPLY,
+        carrier="urban central water pits charger",
+        bus_carrier="urban central water pits",
+    )
+    _extract(
+        DEMAND,
+        carrier="urban central water pits discharger",
+        bus_carrier="urban central water pits",
+    )
+
+    # DAC has no outputs but CO2, which is ignored in energy flows
+    var[f"{prefix}|AC|DAC"] = _extract(DEMAND, carrier="DAC", bus_carrier="AC").mul(-1)
+    var[f"{prefix}|Heat|DAC"] = _extract(
+        DEMAND,
+        carrier="DAC",
+        bus_carrier=["rural heat", "urban decentral heat", "urban central heat"],
+    ).mul(-1)
+    var[f"{prefix}|Waste|HVC to air"] = _extract(
+        DEMAND,
+        carrier="HVC to air",
+        component="Link",
+        bus_carrier="non-sequestered HVC",
+    ).mul(-1)
+
+    return combine_variables(var)
+
+
 def collect_secondary_energy() -> pd.Series:
     """Extract all secondary energy variables from the networks."""
-    # check and drop Stores todo: move to preprocessing checks
-    for carrier in filter_by(SUPPLY, component="Store").index.unique("carrier"):
-        bal = _extract(DEMAND, component="Store", carrier=carrier) + _extract(
-            SUPPLY, component="Store", carrier=carrier
-        )
-        assert bal.sum() == 0, (
-            f"Imbalanced Store detected for carrier {carrier} with total imbalance of {bal.sum()}"
-        )
-
-    var = {}
+    var = WriteOnceDict()
 
     # secondary_electricity_supply(var)
     transform_link(var, technology="CHP", carrier="urban central gas CHP")
@@ -1762,56 +1855,10 @@ def collect_secondary_energy() -> pd.Series:
     # but needs to be addressed nevertheless to correct balances
     process_biomass_boilers(var)
 
-    var[f"{SECONDARY}|Losses|AC|Distribution Grid"] = _extract(
-        SUPPLY, carrier="electricity distribution grid"
-    ) + _extract(DEMAND, carrier="electricity distribution grid")
-
     # multi input links
     transform_link(var, technology="Methanolisation", carrier="methanolisation")
     transform_link(var, technology="Electrobiofuels", carrier="electrobiofuels")
     transform_link(var, technology="Haber-Bosch", carrier="Haber-Bosch")
-
-    # DSM Links with losses that connect to buses with stores
-    var[f"{SECONDARY}|Losses|AC|BEV charger"] = (
-        _extract(SUPPLY, carrier="BEV charger", component="Link")
-        .add(_extract(DEMAND, carrier="BEV charger", component="Link"))
-        .mul(-1)
-    )
-    var[f"{SECONDARY}|Losses|Heat|Water Pits"] = _extract(
-        # todo: why has "urban central water pits charger" supply?
-        SUPPLY,
-        carrier=[
-            "urban central water pits discharger",
-            "urban central water pits charger",
-        ],
-        component="Link",
-    ).add(
-        # todo: why has "urban central water pits discharger" demand?
-        _extract(
-            DEMAND,
-            carrier=[
-                "urban central water pits discharger",
-                "urban central water pits charger",
-            ],
-            component="Link",
-        )
-    )
-
-    # DAC has no outputs but CO2, which is ignored in energy flows
-    var[f"{SECONDARY}|Losses|AC|DAC"] = _extract(
-        DEMAND, carrier="DAC", bus_carrier="AC"
-    ).mul(-1)
-    var[f"{SECONDARY}|Losses|Heat|DAC"] = _extract(
-        DEMAND,
-        carrier="DAC",
-        bus_carrier=["rural heat", "urban decentral heat", "urban central heat"],
-    ).mul(-1)
-    var[f"{SECONDARY}|Losses|Waste|HVC to air"] = _extract(
-        DEMAND,
-        carrier="HVC to air",
-        component="Link",
-        bus_carrier="non-sequestered HVC",
-    ).mul(-1)
 
     # Links that connect to buses with single loads. They are skipped in
     # IAMC variables, because their buses are only needed because of
@@ -1847,7 +1894,7 @@ def collect_secondary_energy() -> pd.Series:
 
 def collect_final_energy() -> pd.Series:
     """Extract all final energy variables from the networks."""
-    var = {}
+    var = WriteOnceDict()
 
     load_carrier = filter_by(DEMAND, component="Load").index.unique("carrier")
     for carrier in load_carrier:
@@ -1935,12 +1982,23 @@ if __name__ == "__main__":
 
     # collect transformed energy system variables. Note, that the order of collection is relevant.
     #
-    primary_energy = collect_primary_energy()
-    secondary_energy = collect_secondary_energy()
-    final_energy = collect_final_energy()
-    system_cost = collect_system_cost()
+    to_concat = [
+        collect_primary_energy(),
+        collect_storage_imbalances(),
+        collect_losses_energy(),
+        collect_secondary_energy(),
+        collect_final_energy(),
+        collect_system_cost(),
+    ]
+    df = pd.concat(to_concat)
+    # energy_primary = collect_primary_energy()
+    # energy_storage = collect_storage_imbalances()
+    # energy_losses = collect_losses_energy()
+    # energy_secondary = collect_secondary_energy()
+    # energy_final = collect_final_energy()
+    # system_cost = collect_system_cost()
 
-    df = pd.concat([primary_energy, secondary_energy, final_energy, system_cost])
+    # df = pd.concat([energy_primary, energy_storage, energy_losses, energy_secondary, energy_final, system_cost])
 
     # for global_statistic in [
     #     SUPPLY,
