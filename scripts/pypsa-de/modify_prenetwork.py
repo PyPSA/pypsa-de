@@ -8,7 +8,6 @@ from shapely.geometry import Point
 import os
 import sys
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 from scripts._helpers import (
     configure_logging,
     mock_snakemake,
@@ -1064,9 +1063,9 @@ def force_connection_nep_offshore(n, current_year, costs):
 
     if int(snakemake.params.offshore_nep_force["delay_years"]) != 0:
         # Modify 'Inbetriebnahmejahr' by adding the delay years for rows where 'Inbetriebnahmejahr' > 2025
-        offshore.loc[offshore["Inbetriebnahmejahr"] > 2025, "Inbetriebnahmejahr"] += (
-            int(snakemake.params.offshore_nep_force["delay_years"])
-        )
+        offshore.loc[
+            offshore["Inbetriebnahmejahr"] > 2025, "Inbetriebnahmejahr"
+        ] += int(snakemake.params.offshore_nep_force["delay_years"])
         logger.info(
             f"Delaying NEP offshore connection points by {snakemake.params.offshore_nep_force['delay_years']} years."
         )
