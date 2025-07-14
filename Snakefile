@@ -476,6 +476,7 @@ def get_reference_network(w):
     else:
         return []
 
+
 rule modify_prenetwork:
     params:
         efuel_export_ban=config_provider("solving", "constraints", "efuel_export_ban"),
