@@ -512,7 +512,7 @@ def add_chp_plants(n, grouping_years, costs, baseyear):
     )
     chp.loc[chp.Fueltype == "gas", "lifetime"] = (
         chp.DateOut - chp["grouping_year"] + 1
-    ).fillna(40)
+    ).fillna(snakemake.params.existing_capacities["fill_value_gas_chp_lifetime"])
 
     chp = chp.loc[
         chp.grouping_year + chp.lifetime > baseyear
