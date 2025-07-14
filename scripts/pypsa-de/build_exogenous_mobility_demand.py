@@ -69,32 +69,37 @@ def get_transport_data(
                 "Electricity": 21,
                 "Hydrogen": 0.0,
                 "Liquids": 524 + 51,
-                "number_of_cars": 2.7 + 1.2,  # BEV + PHEV
             }
         )
         transport_demand["Liquids"] -= non_land_liquids[
             int(year)
-        ]  # remove domestic navigation and aviation
+        ]  # remove domestic navigation and aviation from UBA data to avoid double counting
+        transport_demand = transport_demand.mul(1e6)  # convert TWh to MWh
+        transport_demand["number_of_cars"] = 2.7 + 1.2  # BEV + PHEV
+
     elif year == "2030" and uba_for_mobility:
         transport_demand = pd.Series(
             {
                 "Electricity": 57,
                 "Hydrogen": 14,
                 "Liquids": 418 + 34 + 1,
-                "number_of_cars": 8.7 + 1.8,  # BEV + PHEV
             }
         )
         transport_demand["Liquids"] -= non_land_liquids[int(year)]
+        transport_demand = transport_demand.mul(1e6)
+        transport_demand["number_of_cars"] = 8.7 + 1.8
+
     elif year == "2035" and uba_for_mobility:
         transport_demand = pd.Series(
             {
                 "Electricity": 117,
                 "Hydrogen": 36,
                 "Liquids": 237 + 26 + 1,
-                "number_of_cars": 18.9 + 1.8,  # BEV + PHEV
             }
         )
         transport_demand["Liquids"] -= non_land_liquids[int(year)]
+        transport_demand = transport_demand.mul(1e6)
+        transport_demand["number_of_cars"] = 18.9 + 1.8
 
     else:
         if uba_for_mobility:
