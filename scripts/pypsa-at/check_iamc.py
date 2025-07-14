@@ -1,4 +1,5 @@
 import pandas as pd
+from export_iamc_variables import BC_ALIAS
 
 
 def check_balances(df: pd.DataFrame):
@@ -12,7 +13,8 @@ def check_balances(df: pd.DataFrame):
     -------
     :
     """
-    for bc in ("AC",):  # sorted(set(BC_ALIAS.values())):
+    # for bc in ("AC",):  # sorted(set(BC_ALIAS.values())):
+    for bc in sorted(set(BC_ALIAS.values())):
         for (year, region), ds in df.groupby(["Year", "Region"]):
             ds = ds.drop("billion EUR2020", level="Unit").droplevel(
                 ["Year", "Region", "Scenario", "Model"]
