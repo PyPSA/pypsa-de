@@ -182,7 +182,12 @@ def add_land_use_constraint(n: pypsa.Network, planning_horizons: str) -> None:
     n.generators["p_nom_max"] = n.generators["p_nom_max"].clip(lower=0)
 
 
-def add_solar_potential_constraints(n: pypsa.Network, config: dict) -> None:
+def add_solar_potential_constraints(
+    n: pypsa.Network,
+    config: dict,
+    fix_foreign_investments: dict,
+    run: str,
+) -> None:
     """
     Add constraint to make sure the sum capacity of all solar technologies (fixed, tracking, ets. ) is below the region potential.
 
@@ -200,14 +205,29 @@ def add_solar_potential_constraints(n: pypsa.Network, config: dict) -> None:
     rename = {"Generator-ext": "Generator"}
 
     solar_carriers = ["solar", "solar-hsat"]
+    if fix_foreign_investments.get("enable") and run != fix_foreign_investments.get(
+        "reference_scenario"
+    ):
+        buses_to_constrain = n.buses.query("country == 'DE'").index
+    else:
+        buses_to_constrain = n.buses.index
+
     solar = n.generators[
-        n.generators.carrier.isin(solar_carriers) & n.generators.p_nom_extendable
+        n.generators.carrier.isin(solar_carriers)
+        & n.generators.p_nom_extendable
+        & n.generators.bus.isin(buses_to_constrain)
     ].index
 
     solar_today = n.generators[
-        (n.generators.carrier == "solar") & (n.generators.p_nom_extendable)
+        (n.generators.carrier == "solar")
+        & (n.generators.p_nom_extendable)
+        & n.generators.bus.isin(buses_to_constrain)
     ].index
-    solar_hsat = n.generators[(n.generators.carrier == "solar-hsat")].index
+
+    solar_hsat = n.generators[
+        (n.generators.carrier == "solar-hsat")
+        & n.generators.bus.isin(buses_to_constrain)
+    ].index
 
     if solar.empty:
         return
@@ -547,9 +567,9 @@ def add_CCL_constraints(
         agg_p_nom_limits: data/agg_p_nom_minmax.csv
     """
 
-    assert planning_horizons is not None, (
-        "add_CCL_constraints are not implemented for perfect foresight, yet"
-    )
+    assert (
+        planning_horizons is not None
+    ), "add_CCL_constraints are not implemented for perfect foresight, yet"
 
     agg_p_nom_minmax = pd.read_csv(
         config["solving"]["agg_p_nom_limits"]["file"], index_col=[0, 1], header=[0, 1]
@@ -1175,7 +1195,12 @@ def extra_functionality(
     ) and {"solar-hsat", "solar"}.issubset(
         config["electricity"]["extendable_carriers"]["Generator"]
     ):
-        add_solar_potential_constraints(n, config)
+        add_solar_potential_constraints(
+            n,
+            config,
+            snakemake.params["fix_foreign_investments"],
+            snakemake.wildcards.run,
+        )
 
     if n.config.get("sector", {}).get("tes", False):
         if n.buses.index.str.contains(

@@ -143,6 +143,9 @@ rule solve_sector_network_myopic:
         ),
         custom_extra_functionality=input_custom_extra_functionality,
         energy_year=config_provider("energy", "energy_totals_year"),
+fix_foreign_investments=config_provider(
+            "fix_foreign_investments"
+        )
     input:
         network=resources(
             "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_final.nc"
