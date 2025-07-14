@@ -410,7 +410,7 @@ rule prepare_district_heating_subnodes:
         cities="data/fernwaermeatlas/cities_geolocations.geojson",
         lau_regions="data/lau_regions.zip",
         census=storage(
-            "https://www.zensus2022.de/static/Zensus_Veroeffentlichung/Zensus2022_Heizungsart.zip",
+            "https://www.destatis.de/static/DE/zensus/gitterdaten/Zensus2022_Heizungsart.zip",
             keep_local=True,
         ),
         osm_land_cover=storage(
