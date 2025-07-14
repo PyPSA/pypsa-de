@@ -312,37 +312,18 @@ def transform_load(var, carrier: str) -> dict:
 
     load_demand = _extract(DEMAND, carrier=carrier, component="Load")
     load_supply = _extract(SUPPLY, carrier=carrier, component="Load")
-    # positive load values are possible if industry produces a surplus, for example
+    # positive load values are possible if industry produces a surplus
     load = load_demand.add(load_supply, fill_value=0)
-
-    # # add carbon capture variants to correctly extract Links
-    # carbon_capture_links = ("solid biomass for industry", "gas for industry")
-    # if is_cc_variant := carrier in carbon_capture_links:
-    #     carrier = [carrier, carrier + " CC"]
 
     supply = _extract(SUPPLY, carrier=carrier, component="Link")
     demand = _extract(DEMAND, carrier=carrier, component="Link")
 
-    # if not load_supply.empty:
-    #     logger.warning(
-    #         f"Positive values in Load component detected for carrier: {carrier}.\n{load_supply.head()}\n"
-    #         f"Please raise an issue in PyPSA and note down the issue number here."
-    #         f"Positive Load values are added with positive signs to conserve balances."
-    #     )
-    #     load = load.add(load_supply, fill_value=0)
-
-    # pd.testing.assert_series_equal(demand, load.groupby(YEAR_LOC).sum(), check_names=False)
     losses = supply.groupby(YEAR_LOC).sum().add(demand.groupby(YEAR_LOC).sum())
-    # losses_exist = losses.abs().lt(1e-5).all()
-    # if losses_exist and is_cc_variant:
-    #     # CC Links have bus0 efficiencies < 1, i.e. they have losses
-    #     pass
-    # else:
     assert losses.abs().lt(1e-5).all(), (
         f"Supply and demand are not equal. Please check for losses and efficiencies != 1 for carrier: {carrier}.\n{losses}"
     )
 
-    var[f"{FINAL}|{sector}|{bc}"] = load
+    var[f"{FINAL}|{sector}|{bc}"] = load.mul(-1)
 
     return var
 
@@ -676,9 +657,16 @@ def primary_waste(var: dict) -> dict:
     """
     bc = "municipal solid waste"
     prefix = f"{PRIMARY}|{BC_ALIAS.get(bc, bc)}"
-    var[f"{prefix}|Import Foreign"] = _extract(IMPORT_FOREIGN, bus_carrier=bc)
-    var[f"{prefix}|Import Domestic"] = _extract(IMPORT_DOMESTIC, bus_carrier=bc)
-    var[f"{prefix}|Solid"] = _extract(SUPPLY, bus_carrier=bc, component="Generator")
+    mapper = {"": "MWh_LHV"}  # Municipal solid waste is missing the unit
+    var[f"{prefix}|Import Foreign"] = _extract(IMPORT_FOREIGN, bus_carrier=bc).rename(
+        mapper, axis="index", level="unit"
+    )
+    var[f"{prefix}|Import Domestic"] = _extract(IMPORT_DOMESTIC, bus_carrier=bc).rename(
+        mapper, axis="index", level="unit"
+    )
+    var[f"{prefix}|Solid"] = _extract(
+        SUPPLY, bus_carrier=bc, component="Generator"
+    ).rename(mapper, axis="index", level="unit")
 
     # municipal solid waste is only used to transform "municipal solid waste" to
     # "non-sequestered HVC" and to track CO2. Same as Biogas, include in primary
@@ -692,7 +680,7 @@ def primary_waste(var: dict) -> dict:
 
     # HVC is a side product of naphtha for industry. The oil demand of
     # the link equals the naphtha output. There are no losses.
-    var[f"{prefix}|HVC from naphtha processing"] = _extract(
+    var[f"{prefix}|HVC from naphtha"] = _extract(
         SUPPLY,
         carrier="naphtha for industry",
         bus_carrier="non-sequestered HVC",
@@ -798,12 +786,9 @@ def primary_biomass(var: dict) -> dict:
     return var
 
 
-def primary_hydro(var: dict) -> dict:
+def primary_electricity(var: dict) -> dict:
     """
-    Calculate the hydropower generated per region.
-
-    The inflow split is kept, in case PHS receives an update
-    that supplies inflow amounts to it.
+    Calculate the electricity generated per region.
 
     Parameters
     ----------
@@ -815,7 +800,7 @@ def primary_hydro(var: dict) -> dict:
     :
         The updated variables' collection.
     """
-    prefix = f"{PRIMARY}|Hydro"
+    prefix = f"{PRIMARY}|AC"
     # var["Primary Energy|Hydro|PHS"] = _extract(
     #     SUPPLY, carrier="PHS", component="StorageUnit"
     # )
@@ -825,60 +810,31 @@ def primary_hydro(var: dict) -> dict:
     var[f"{prefix}|Run-of-River"] = _extract(
         SUPPLY, carrier="ror", component="Generator"
     )
-    var[prefix] = _sum_variables_by_prefix(var, prefix)
-
-    return var
-
-
-def primary_solar(var: dict) -> dict:
-    """
-    Calculate solar energy generated per region.
-
-    Parameters
-    ----------
-        The collection to append new variables in.
-
-    Returns
-    -------
-    :
-        The updated variables' collection.
-    """
-    prefix = f"{PRIMARY}|Solar"
-    var[f"{prefix}|Utility"] = _extract(SUPPLY, carrier="solar", component="Generator")
-    var[f"{prefix}|HSAT"] = _extract(
+    var[f"{prefix}|Wind Onshore"] = _extract(
+        SUPPLY, carrier="onwind", component="Generator"
+    )
+    var[f"{prefix}|Wind Offshore"] = _extract(
+        SUPPLY, carrier=["offwind-ac", "offwind-dc"], component="Generator"
+    )
+    var[f"{prefix}|Solar Utility"] = _extract(
+        SUPPLY, carrier="solar", component="Generator"
+    )
+    var[f"{prefix}|Solar HSAT"] = _extract(
         SUPPLY, carrier="solar-hsat", component="Generator"
     )
-    var[f"{prefix}|Rooftop"] = _extract(
+    var[f"{prefix}|Solar Rooftop"] = _extract(
         SUPPLY, carrier="solar rooftop", component="Generator"
     )
+
+    var[f"{prefix}|Import Domestic"] = _extract(IMPORT_DOMESTIC, bus_carrier="AC")
+    var[f"{prefix}|Import Foreign"] = _extract(IMPORT_FOREIGN, bus_carrier="AC")
+
     var[prefix] = _sum_variables_by_prefix(var, prefix)
 
     return var
 
 
-def primary_liquids(var: dict) -> dict:
-    """
-    Calculate the amounts of liquid fuels generated per region.
-
-    Parameters
-    ----------
-        The collection to append new variables in.
-
-    Returns
-    -------
-    :
-        The updated variables' collection.
-    """
-    # var[f"{PRIMARY}|Oil|Unsustainable Bioliquids"] = _extract(
-    #     SUPPLY, carrier="unsustainable bioliquids", component="Link"
-    # )
-    # # remove liquids demand
-    # _extract(DEMAND, carrier="unsustainable bioliquids", component="Link")
-
-    return var
-
-
-def primary_nuclear(var: dict) -> dict:
+def primary_uranium(var: dict) -> dict:
     """
     Calculate the uranium demand for nuclear power plants per region.
 
@@ -893,7 +849,7 @@ def primary_nuclear(var: dict) -> dict:
         The updated variables' collection.
     """
     # use localized uranium demands from nuclear power plants
-    var[f"{PRIMARY}|Nuclear|Uranium"] = (
+    var[f"{PRIMARY}|Uranium"] = (
         filter_by(DEMAND, carrier="uranium", component="Link")
         .groupby(IDX)
         .sum()
@@ -919,7 +875,7 @@ def primary_ammonia(var: dict) -> dict:
         The updated variables' collection.
     """
     # there is no regional ammonium demand
-    var[f"{PRIMARY}|Ammonium|Import"] = _extract(SUPPLY, carrier="import NH3")
+    var[f"{PRIMARY}|NH3|Import"] = _extract(SUPPLY, carrier="import NH3")
 
     return var
 
@@ -943,30 +899,6 @@ def primary_methanol(var: dict) -> dict:
     return var
 
 
-def primary_wind(var: dict) -> dict:
-    """
-    Calculate wind energy generated per region.
-
-    Parameters
-    ----------
-    var
-        The collection to append new variables in.
-
-    Returns
-    -------
-    :
-        The updated variables' collection.
-    """
-    prefix = f"{PRIMARY}|Wind"
-    var[f"{prefix}|Onshore"] = _extract(SUPPLY, carrier="onwind", component="Generator")
-    var[f"{prefix}|Offshore"] = _extract(
-        SUPPLY, carrier=["offwind-ac", "offwind-dc"], component="Generator"
-    )
-    var[prefix] = _sum_variables_by_prefix(var, prefix)
-
-    return var
-
-
 def primary_heat(var: dict) -> dict:
     """
     Calculate heat generation and enthalpy of evaporation.
@@ -981,29 +913,11 @@ def primary_heat(var: dict) -> dict:
     :
         The updated variables' collection.
     """
-    # heat_bus_carrier = ["rural heat", "urban decentral heat", "urban central heat"]
     prefix = f"{PRIMARY}|{BC_ALIAS.get('rural heat', 'Heat')}"
 
-    # done in secondary when processing Links
-    # enthalpy_heat = (
-    #     LINK_BALANCE.pipe(filter_for_carrier_connected_to, heat_bus_carrier)
-    #     .pipe(calculate_input_share, heat_bus_carrier)
-    #     .pipe(filter_by, bus_carrier=["ambient heat", "latent heat"])
-    #     .pipe(insert_index_level, "MWh_th", "unit")
-    # )
-    #
-    # var[f"{prefix}|Latent"] = (
-    #     filter_by(enthalpy_heat, bus_carrier="latent heat").groupby(IDX).sum()
-    # )
-    # var[f"{prefix}|Ambient"] = (
-    #     filter_by(enthalpy_heat, bus_carrier="ambient heat").groupby(IDX).sum()
-    # )
-
-    solar_thermal_carr = [
-        c for c in SUPPLY.index.unique("carrier") if "solar thermal" in c
-    ]
-    var[f"{prefix}|Solar"] = _extract(
-        SUPPLY, carrier=solar_thermal_carr, component="Generator"
+    carrier = [c for c in SUPPLY.index.unique("carrier") if "solar thermal" in c]
+    var[f"{prefix}|Solar thermal"] = _extract(
+        SUPPLY, carrier=carrier, component="Generator"
     )
     var[f"{prefix}|Geothermal"] = _extract(SUPPLY, carrier="geothermal heat")
     var[prefix] = _sum_variables_by_prefix(var, prefix)
@@ -1108,583 +1022,17 @@ def collect_primary_energy() -> pd.Series:
     primary_waste(var)
     primary_coal(var)
     primary_biomass(var)
-    primary_hydro(var)
-    primary_solar(var)
-    primary_nuclear(var)
+    primary_electricity(var)
+    primary_uranium(var)
     primary_ammonia(var)
-    primary_wind(var)
     primary_heat(var)
-    primary_liquids(var)
     primary_methanol(var)
 
     assert filter_by(SUPPLY, component="Generator").empty
+    assert IMPORT_DOMESTIC.empty, f"Import domestic is not empty: {IMPORT_DOMESTIC}"
+    assert IMPORT_FOREIGN.empty, f"Import foreign is not empty: {IMPORT_FOREIGN}"
 
     return combine_variables(var)
-
-
-#
-# def secondary_electricity_supply(var: dict) -> dict:
-#     """
-#
-#     Parameters
-#     ----------
-#     var
-#
-#     Returns
-#     -------
-#     :
-#     """
-#     prefix = "Secondary Energy|Electricity"
-#     bc = ["AC", "low voltage"]
-#
-#     transform_link(var, technology="CHP", carrier="urban central gas CHP")
-#     transform_link(var, technology="CHP", carrier="urban central oil CHP")
-#     transform_link(var, technology="CHP", carrier="urban central coal CHP")
-#     transform_link(var, technology="CHP", carrier="urban central lignite CHP")
-#     transform_link(
-#         var,
-#         technology="CHP",
-#         carrier=["urban central H2 CHP", "urban central H2 retrofit CHP"],
-#     )
-#     transform_link(var, technology="CHP", carrier="urban central solid biomass CHP")
-#     transform_link(var, technology="CHP w/o CC", carrier="waste CHP")
-#     transform_link(var, technology="CHP w CC", carrier="waste CHP CC")
-#
-#     transform_link(var, technology="Powerplant", carrier=["CCGT", "OCGT"])
-#     transform_link(var, technology="Powerplant", carrier="coal")
-#     transform_link(var, technology="Powerplant", carrier="lignite")
-#     transform_link(var, technology="Powerplant", carrier="solid biomass")
-#     transform_link(var, technology="Powerplant", carrier="nuclear")
-#
-#     transform_link(var, technology="", carrier="SMR")
-#
-#     # var[f"{prefix}|Oil|CHP"] = _extract(
-#     #     SUPPLY, carrier="urban central oil CHP", bus_carrier=bc
-#     # )
-#     # var[f"{prefix}|Coal|CHP Hard Coal"] = _extract(
-#     #     SUPPLY, carrier="urban central coal CHP", bus_carrier=bc
-#     # )
-#     # var[f"{prefix}|Coal|Hard Coal"] = _extract(SUPPLY, carrier="coal", bus_carrier=bc)
-#     # var[f"{prefix}|Coal|Lignite"] = _extract(SUPPLY, carrier="lignite", bus_carrier=bc)
-#     # var[f"{prefix}|Coal|CHP Lignite"] = _extract(
-#     #     SUPPLY, carrier="urban central lignite CHP", bus_carrier=bc
-#     # )
-#     # var[f"{prefix}|H2|CHP"] = _extract(
-#     #     SUPPLY,
-#     #     carrier=["urban central H2 CHP", "urban central H2 retrofit CHP"],
-#     #     bus_carrier=bc,
-#     # )
-#     # var[f"{prefix}|Solid Biomass"] = _extract(
-#     #     SUPPLY,
-#     #     carrier=["solid biomass", "urban central solid biomass CHP"],
-#     #     bus_carrier=bc,
-#     # )
-#
-#     # var[f"{prefix}|Nuclear"] = _extract(SUPPLY, carrier="nuclear", bus_carrier=bc)
-#
-#     # var[f"{prefix}|Waste|CHP w/o CC"] = _extract(
-#     #     SUPPLY, carrier="waste CHP", bus_carrier=bc
-#     # )
-#     # var[f"{prefix}|Waste|CHP w CC"] = _extract(
-#     #     SUPPLY, carrier="waste CHP CC", bus_carrier=bc
-#     # )
-#
-#     var[prefix] = _sum_variables_by_prefix(var, prefix)
-#
-#     # subcategory aggregation must happen after prefix aggregations, or the
-#     # sum will be distorted
-#     for subcat in ("Gas", "Coal", "Waste"):
-#         var[f"{prefix}|{subcat}"] = _sum_variables_by_prefix(var, f"{prefix}|{subcat}")
-#
-#     # distribution grid losses are no supply, but we deal with it now remove all
-#     # electricity from the global supply statistic
-#     var["Secondary Energy|Losses|Electricity|Distribution Grid"] = (
-#         _extract(  # todo: label and move to losses
-#             SUPPLY, carrier="electricity distribution grid"
-#         )
-#         + _extract(DEMAND, carrier="electricity distribution grid")
-#     )
-#
-#     assert filter_by(SUPPLY, bus_carrier=bc, component="Link").empty
-#
-#     return var
-
-
-# def secondary_gas_supply(var: dict) -> dict:
-#     """
-#
-#     Parameters
-#     ----------
-#     var
-#
-#     Returns
-#     -------
-#     :
-#     """
-#     # Secondary Energy|<output bus_carrier>|from <input bus_carrier>|<subcategory>
-#     prefix = "Secondary Energy|Gas"
-#     bc = "gas"
-#     var[f"{prefix}|Biogas|w/o CC"] = _extract(
-#         SUPPLY, carrier="biogas to gas", bus_carrier=bc
-#     )
-#     var[f"{prefix}|Biogas|w CC"] = _extract(
-#         SUPPLY, carrier="biogas to gas CC", bus_carrier=bc
-#     )
-#     # _extract(DEMAND, carrier=["biogas to gas", "biogas to gas CC"], bus_carrier="biogas")
-#
-#     var[f"{prefix}|Solid Biomass|w/o CC"] = _extract(
-#         SUPPLY, carrier="BioSNG", bus_carrier=bc
-#     )
-#     var[f"{prefix}|Solid Biomass|w CC"] = _extract(
-#         SUPPLY, carrier="BioSNG CC", bus_carrier=bc
-#     )
-#     # _extract(DEMAND, carrier=["BioSNG", "BioSNG CC"], bus_carrier="solid biomass")
-#
-#     var[f"{prefix}|Sabatier"] = _extract(SUPPLY, carrier="Sabatier", bus_carrier=bc)
-#
-#     var[prefix] = _sum_variables_by_prefix(var, prefix)
-#
-#     assert filter_by(SUPPLY, bus_carrier=bc, component="Link").empty
-#
-#     # move to Carbon function
-#     # var["Secondary Carbon|Biogas|atmosphere"] = _extract(DEMAND, carrier="biogas to gas", bus_carrier="co2")  # CO2 credit
-#     # var["Secondary Carbon|Biogas|stored"] = _extract(SUPPLY, carrier="biogas to gas CC", bus_carrier="co2")  # carbon capture
-#
-#     return var
-#
-#
-# def secondary_hydrogen_supply(var: dict) -> dict:
-#     """
-#
-#     Parameters
-#     ----------
-#     var
-#
-#     Returns
-#     -------
-#     :
-#     """
-#     prefix = "Secondary Energy|Hydrogen"
-#     bc = "H2"
-#     var[f"{prefix}|Electricity|Electrolysis"] = _extract(
-#         SUPPLY, carrier="H2 Electrolysis", bus_carrier=bc
-#     )
-#     var[f"{prefix}|Gas|SMR w/o CC"] = _extract(SUPPLY, carrier="SMR", bus_carrier=bc)
-#     var[f"{prefix}|Gas|SMR w CC"] = _extract(SUPPLY, carrier="SMR CC", bus_carrier=bc)
-#     var[f"{prefix}|Methanol|Steam Reforming w/o CC"] = _extract(
-#         SUPPLY, carrier="Methanol steam reforming", bus_carrier=bc
-#     )
-#     var[f"{prefix}|Methanol|Steam Reforming w CC"] = _extract(
-#         SUPPLY, carrier="Methanol steam reforming CC", bus_carrier=bc
-#     )
-#
-#     var[prefix] = _sum_variables_by_prefix(var, prefix)
-#
-#     assert filter_by(SUPPLY, bus_carrier=bc, component="Link").empty
-#
-#     return var
-#
-#
-# def secondary_methanol_supply(var: dict) -> dict:
-#     """
-#
-#     Parameters
-#     ----------
-#     var
-#
-#     Returns
-#     -------
-#     :
-#     """
-#     prefix = "Secondary Energy|Methanol"
-#     bc = "methanol"
-#
-#     # need to distinguish between methanol and heat output
-#     methanolisation_inputs_for_methanol = (
-#         LINK_BALANCE.pipe(filter_for_carrier_connected_to, bc)
-#         .pipe(calculate_input_share, bc)
-#         .pipe(filter_by, carrier="methanolisation")
-#     )
-#     var[f"{prefix}|H2"] = (
-#         filter_by(methanolisation_inputs_for_methanol, bus_carrier="H2")
-#         .pipe(insert_index_level, "MWh_LHV", "unit")
-#         .groupby(IDX)
-#         .sum()
-#     )
-#     var[f"{prefix}|Electricity"] = (
-#         filter_by(methanolisation_inputs_for_methanol, bus_carrier="AC")
-#         .pipe(insert_index_level, "MWh_el", "unit")
-#         .groupby(IDX)
-#         .sum()
-#     )
-#     _extract(SUPPLY, carrier="methanolisation", bus_carrier=bc)
-#
-#     var[prefix] = _sum_variables_by_prefix(var, prefix)
-#
-#     assert filter_by(SUPPLY, bus_carrier=bc, component="Link").empty
-#     # biomass-to-methanol?
-#
-#     return var
-#
-#
-# def secondary_oil_supply(var: dict) -> dict:
-#     """
-#
-#     Parameters
-#     ----------
-#     var
-#
-#     Returns
-#     -------
-#     :
-#     """
-#     prefix = "Secondary Energy|Oil"
-#     bc = "oil"
-#
-#     var[f"{prefix}|Solid Biomass|Biomass2Liquids w/o CC"] = _extract(
-#         SUPPLY, carrier="biomass to liquid", bus_carrier=bc
-#     )
-#     var[f"{prefix}|Solid Biomass|Biomass2Liquids w CC"] = _extract(
-#         SUPPLY, carrier="biomass to liquid CC", bus_carrier=bc
-#     )
-#
-#     # electrobiofuels has 2 inputs: solid biomass and H2 and one output
-#     electrobiofuels_inputs_for_oil = (
-#         LINK_BALANCE.pipe(filter_for_carrier_connected_to, bc)
-#         .pipe(calculate_input_share, bc)
-#         .pipe(filter_by, carrier="electrobiofuels")
-#     )
-#     var[f"{prefix}|H2|Electrobiofuels"] = (
-#         filter_by(electrobiofuels_inputs_for_oil, bus_carrier="H2")
-#         .pipe(insert_index_level, "MWh_LHV", "unit")
-#         .groupby(IDX)
-#         .sum()
-#     )
-#     var[f"{prefix}|Electricity|Electrobiofuels"] = (
-#         filter_by(electrobiofuels_inputs_for_oil, bus_carrier="solid biomass")
-#         .pipe(insert_index_level, "MWh_LHV", "unit")
-#         .groupby(IDX)
-#         .sum()
-#     )
-#     _extract(SUPPLY, carrier="electrobiofuels", bus_carrier=bc)
-#
-#     var[f"{prefix}|H2|Fischer-Tropsch"] = _extract(
-#         SUPPLY, carrier="Fischer-Tropsch", bus_carrier=bc
-#     )
-#
-#     var[f"{prefix}|Unsustainable Bioliquids"] = _extract(
-#         SUPPLY, carrier="unsustainable bioliquids", bus_carrier=bc
-#     )
-#
-#     assert filter_by(SUPPLY, bus_carrier=bc, component="Link").empty
-#
-#     var[prefix] = _sum_variables_by_prefix(var, prefix)
-#     for group in ("H2", "Electricity", "Solid Biomass"):
-#         var[f"{prefix}|{group}"] = _sum_variables_by_prefix(var, f"{prefix}|{group}")
-#
-#     return var
-#
-#
-# def secondary_ammonia_supply(var: dict) -> dict:
-#     """
-#
-#     Parameters
-#     ----------
-#     var
-#
-#     Returns
-#     -------
-#     :
-#     """
-#     prefix = "Secondary Energy|NH3"
-#     bc = "NH3"
-#
-#     haber_bosch_input_for_nh3 = (
-#         LINK_BALANCE.pipe(filter_for_carrier_connected_to, bc)
-#         .pipe(calculate_input_share, bc)
-#         .pipe(filter_by, carrier="Haber-Bosch")
-#         .pipe(insert_index_level, "n/a", "unit")
-#     )
-#     var[f"{prefix}|Electricity|Haber-Bosch"] = (
-#         filter_by(haber_bosch_input_for_nh3, carrier="Haber-Bosch", bus_carrier="AC")
-#         .groupby(IDX)
-#         .sum()
-#     )
-#     var[f"{prefix}|H2|Haber-Bosch"] = (
-#         filter_by(haber_bosch_input_for_nh3, carrier="Haber-Bosch", bus_carrier="H2")
-#         .groupby(IDX)
-#         .sum()
-#     )
-#     _extract(SUPPLY, carrier="Haber-Bosch", bus_carrier=bc)
-#
-#     return var
-#
-#
-# def secondary_heat_supply(var: dict) -> dict:
-#     """
-#
-#     Parameters
-#     ----------
-#     var
-#
-#     Returns
-#     -------
-#     :
-#     """
-#     prefix = "Secondary Energy|Heat"
-#     bc = BusCarrier.heat_buses()
-#
-#     var[f"{prefix}|Solid Biomass|Boiler"] = _extract(
-#         SUPPLY,
-#         carrier=["rural biomass boiler", "urban decentral biomass boiler"],
-#         bus_carrier=bc,
-#     )
-#     var[f"{prefix}|Solid Biomass|CHP"] = _extract(
-#         SUPPLY, carrier="urban central solid biomass CHP", bus_carrier=bc
-#     )
-#
-#     var[f"{prefix}|Electricity|Ground Heat Pump"] = _extract(
-#         SUPPLY, carrier="rural ground heat pump", bus_carrier=bc
-#     )
-#     var[f"{prefix}|Electricity|Air Heat Pump"] = _extract(
-#         SUPPLY,
-#         carrier=[
-#             "urban decentral air heat pump",
-#             "rural air heat pump",
-#             "urban central air heat pump",
-#         ],
-#         bus_carrier=bc,
-#     )
-#     var[f"{prefix}|Gas|Boiler"] = _extract(
-#         SUPPLY,
-#         carrier=[
-#             "rural gas boiler",
-#             "urban central gas boiler",
-#             "urban decentral gas boiler",
-#         ],
-#         bus_carrier=bc,
-#     )
-#
-#     var[f"{prefix}|Electricity|Resistive Heater"] = _extract(
-#         SUPPLY,
-#         carrier=[
-#             "rural resistive heater",
-#             "urban decentral resistive heater",
-#             "urban central resistive heater",
-#         ],
-#         bus_carrier=bc,
-#     )
-#
-#     var[f"{prefix}|Oil|Boiler"] = _extract(
-#         SUPPLY,
-#         carrier=["rural oil boiler", "urban decentral oil boiler"],
-#         bus_carrier=bc,
-#     )
-#
-#     var[f"{prefix}|H2|CHP"] = _extract(
-#         SUPPLY,
-#         carrier=["urban central H2 CHP", "urban central H2 retrofit CHP"],
-#         bus_carrier=bc,
-#     )
-#
-#     var[f"{prefix}|Gas|CHP"] = _extract(
-#         SUPPLY, carrier="urban central gas CHP", bus_carrier=bc
-#     )
-#
-#     var[f"{prefix}|Oil|CHP"] = _extract(
-#         SUPPLY,
-#         carrier="urban central oil CHP",
-#         bus_carrier=bc,
-#     )
-#
-#     var[f"{prefix}|Coal|CHP"] = _extract(
-#         SUPPLY,
-#         carrier=["urban central coal CHP", "urban central lignite CHP"],
-#         bus_carrier=bc,
-#     )
-#
-#     var[f"{prefix}|Waste|CHP w/o CC"] = _extract(
-#         SUPPLY, carrier="waste CHP", bus_carrier=bc
-#     )
-#     var[f"{prefix}|Waste|CHP w CC"] = _extract(
-#         SUPPLY, carrier="waste CHP CC", bus_carrier=bc
-#     )
-#
-#     # Excess heat from technologies
-#     var[f"{prefix}|H2|Sabatier"] = _extract(SUPPLY, carrier="Sabatier", bus_carrier=bc)
-#     var[f"{prefix}|H2|Fischer-Tropsch"] = _extract(
-#         SUPPLY, carrier="Fischer-Tropsch", bus_carrier=bc
-#     )
-#     var[f"{prefix}|Electricity|Electrolysis"] = _extract(
-#         SUPPLY, carrier="H2 Electrolysis", bus_carrier=bc
-#     )
-#
-#     # methanolisation and Haber-Bosch have multiple inputs
-#     methanolisation_input_for_heat = (
-#         LINK_BALANCE.drop(["co2", "co2 stored"], level="bus_carrier")
-#         .pipe(filter_for_carrier_connected_to, bc)
-#         .pipe(calculate_input_share, bc)
-#         .pipe(filter_by, carrier=["methanolisation", "Haber-Bosch"])
-#         .pipe(insert_index_level, "MWh_LHV", "unit")
-#     )
-#     var[f"{prefix}|Electricity|Methanolisation"] = (
-#         filter_by(
-#             methanolisation_input_for_heat, carrier="methanolisation", bus_carrier="AC"
-#         )
-#         .groupby(IDX)
-#         .sum()
-#     )
-#     var[f"{prefix}|H2|Methanolisation"] = (
-#         filter_by(
-#             methanolisation_input_for_heat, carrier="methanolisation", bus_carrier="H2"
-#         )
-#         .groupby(IDX)
-#         .sum()
-#     )
-#     _extract(SUPPLY, carrier="methanolisation", bus_carrier=bc)
-#
-#     var[f"{prefix}|Electricity|Haber-Bosch"] = (
-#         filter_by(
-#             methanolisation_input_for_heat, carrier="Haber-Bosch", bus_carrier="AC"
-#         )
-#         .groupby(IDX)
-#         .sum()
-#     )
-#     var[f"{prefix}|H2|Haber-Bosch"] = (
-#         filter_by(
-#             methanolisation_input_for_heat, carrier="Haber-Bosch", bus_carrier="H2"
-#         )
-#         .groupby(IDX)
-#         .sum()
-#     )
-#     _extract(SUPPLY, carrier="Haber-Bosch", bus_carrier=bc)
-#
-#     # deal with water pit charger losses now to clear all heat buses
-#     var["Storage Losses|Heat|Water Pits"] = _extract(  # todo: label and move to storage
-#         SUPPLY,
-#         carrier="urban central water pits discharger",
-#         bus_carrier="urban central heat",
-#     ) + _extract(
-#         DEMAND,
-#         carrier="urban central water pits charger",
-#         bus_carrier="urban central heat",
-#     )
-#     # drop the supply/demand at the other bus side of (dis)charger links
-#     _extract(
-#         SUPPLY,
-#         carrier="urban central water pits charger",
-#         bus_carrier="urban central water pits",
-#     )
-#     _extract(
-#         DEMAND,
-#         carrier="urban central water pits discharger",
-#         bus_carrier="urban central water pits",
-#     )
-#
-#     assert filter_by(SUPPLY, bus_carrier=bc, component="Link").empty
-#
-#     return var
-#
-#
-# def secondary_waste_supply(var: dict) -> dict:
-#     prefix = "Secondary Energy|Waste"
-#     bc = "non-sequestered HVC"
-#
-#     var[f"{prefix}|Waste|Naptha"] = _extract(
-#         SUPPLY, carrier="naphtha for industry", bus_carrier=bc
-#     )
-#     var[f"{prefix}|Waste|Municipal solid waste"] = _extract(
-#         SUPPLY, carrier="municipal solid waste", bus_carrier=bc
-#     )
-#
-#     assert filter_by(SUPPLY, bus_carrier=bc, component="Link").empty
-#
-#     var[prefix] = _sum_variables_by_prefix(var, prefix)
-#
-#     return var
-#
-#
-# def secondary_solid_biomass_supply(var: dict) -> dict:
-#     var["Secondary Energy|Solid Biomass|Boiler Error"] = _extract(
-#         SUPPLY,
-#         carrier=["rural biomass boiler", "urban decentral biomass boiler"],
-#         bus_carrier="solid biomass",
-#     )
-#
-#     if not var["Secondary Energy|Solid Biomass|Boiler Error"].empty:
-#         logger.warning(
-#             f"Solid biomass boilers supply to solid biomass bus. Total amount of energy supplied = {var['Secondary Energy|Solid Biomass|Boiler Error'].sum():.2f} MWh_LHV"
-#         )
-#
-#     assert filter_by(SUPPLY, bus_carrier="solid biomass", component="Link").empty
-#
-#     return var
-
-
-# def secondary_electricity_losses(var: dict) -> dict:
-#     # needs secondary energy var
-#     # needs a robust way to identify labels and carrier
-#     # needs a way to test, because subtraction of supply and demand is error-prone  --> get_efficiency grouper for Links
-#     # simply use LINK_BALANCE ? with carrier filter
-#
-#     # regex to find secondary energy supply by output group
-#     # re.match("Secondary Energy\|[a-z, A-Z]*\|Electricity\|Electrolysis")
-#
-#     prefix = "Secondary Energy|Losses|Electricity"  # stay under Secondary Energy!
-#     bc = ["AC", "low voltage"]
-#
-#     losses = (
-#         filter_by(LINK_BALANCE, carrier="H2 Electrolysis")
-#         .drop(["co2", "co2 stored"], level="bus_carrier", errors="ignore")
-#         .groupby(["year", "location"])
-#         .sum()
-#     )
-#     demand = (
-#         filter_by(DEMAND, carrier="H2 Electrolysis").groupby(["year", "location"]).sum()
-#     )
-#     supply = (
-#         var["Secondary Energy|Hydrogen|Electricity|Electrolysis"]
-#         .droplevel("unit")
-#         .add(
-#             var["Secondary Energy|Heat|Electricity|Electrolysis"].droplevel("unit"),
-#             fill_value=0,
-#         )
-#     )
-#
-#     assert (losses.sub(demand + supply) < 0.000001).all()
-#
-#     var["Transformation Losses|Electricity|Electrolysis"] = _get_transformation_losses(
-#         var["Secondary Energy|Hydrogen|Electricity|Electrolysis"]
-#         + var["Secondary Energy|Heat|Electricity|Electrolysis"],
-#         carrier="H2 Electrolysis",
-#         bus_carrier=bc,
-#     )
-#
-#     # heat pumps Ground Heat Pump: no losses but ambient heat
-#     var[f"{prefix}|Ground Heat Pump"] = _get_transformation_losses(
-#         var["Secondary Energy|Heat|Electricity|Ground Heat Pump"],
-#         carrier="rural ground heat pump",
-#         bus_carrier=bc,
-#     )
-#
-#     # heat pumps Air Heat Pump
-#     var[f"{prefix}|Air Heat Pump"] = _get_transformation_losses(
-#         var["Secondary Energy|Heat|Electricity|Air Heat Pump"],
-#         carrier=[""],
-#         bus_carrier=bc,
-#     )
-#
-#     # resistive heater
-#
-#     # Secondary Energy|Heat|Solid Biomass|CHP
-#     # Secondary Energy|AC|Solid Biomass|CHP
-#     # Secondary Energy|*|Solid Biomass|CHP    -> supply regex
-#
-#     # Transformation Losses|Solid Biomass|CHP  --> losses label
-#
-#     assert filter_by(DEMAND, bus_carrier=bc, component="Link").empty
-#
-#     return var
 
 
 def collect_storage_imbalances() -> pd.Series:
@@ -1706,12 +1054,12 @@ def collect_storage_imbalances() -> pd.Series:
 
         if balance.sum() != 0:
             logger.warning(
-                f"Store imbalances detected for carrier {carrier} with total imbalance of {balance.groupby('year').sum()}."
+                f"Store imbalances detected for carrier {carrier} with "
+                f"total imbalance of {balance.groupby('year').sum()}."
             )
+            # should raise KeyError if bc is not registered
             bc = balance.index.unique("bus_carrier").item()
-            tech = imbalanced_techs[
-                carrier
-            ]  # should raise KeyError if bc is not registered
+            tech = imbalanced_techs[carrier]
             var[f"{SECONDARY}|Losses|{BC_ALIAS[bc]}|{tech}"] = balance.groupby(
                 IDX
             ).sum()
@@ -1723,18 +1071,22 @@ def collect_storage_imbalances() -> pd.Series:
 
     # collect water pit losses here, to combine them with storage
     # labels and prevent duplicates in the IAMC data frame.
-    var[f"{SECONDARY}|Losses|Heat|Water Pits"] = _extract(
-        SUPPLY,
-        carrier="urban central water pits discharger",
-        bus_carrier="urban central heat",
-        component="Link",
-    ).add(
+    var[f"{SECONDARY}|Losses|Heat|Water Pits"] = (
         _extract(
-            DEMAND,
-            carrier="urban central water pits charger",
+            SUPPLY,
+            carrier="urban central water pits discharger",
             bus_carrier="urban central heat",
             component="Link",
         )
+        .add(
+            _extract(
+                DEMAND,
+                carrier="urban central water pits charger",
+                bus_carrier="urban central heat",
+                component="Link",
+            )
+        )
+        .mul(-1)
     )
 
     return combine_variables(var)
@@ -1745,9 +1097,10 @@ def collect_losses_energy() -> pd.Series:
     var = SeriesCollector()
     prefix = f"{SECONDARY}|Losses"
 
-    var[f"{prefix}|AC|Distribution Grid"] = _extract(
-        SUPPLY, carrier="electricity distribution grid"
-    ) + _extract(DEMAND, carrier="electricity distribution grid")
+    var[f"{prefix}|AC|Distribution Grid"] = (
+        _extract(SUPPLY, carrier="electricity distribution grid")
+        + _extract(DEMAND, carrier="electricity distribution grid")
+    ).mul(-1)
 
     var[f"{prefix}|AC|BEV charger"] = (
         _extract(SUPPLY, carrier="BEV charger", component="Link")
@@ -1787,10 +1140,8 @@ def collect_secondary_energy() -> pd.Series:
     """Extract all secondary energy variables from the networks."""
     var = SeriesCollector()
 
-    # secondary_electricity_supply(var)
     transform_link(var, technology="CHP", carrier="urban central gas CHP")
     transform_link(var, technology="CHP", carrier="urban central oil CHP")
-    # prevent writing ...|Coal|CHP twice
     transform_link(var, technology="CHP", carrier="urban central coal CHP")
     transform_link(var, technology="CHP", carrier="urban central lignite CHP")
     transform_link(
@@ -1868,17 +1219,7 @@ def collect_secondary_energy() -> pd.Series:
         ],
     )
 
-    # # MHC is a side product of naphtha for industry. The oil demand of
-    # # the link equals the naphtha output. There are no losses.
-    # # todo: move to primary
-    # var[f"{SECONDARY}|Waste|Oil|Naphtha Refining"] = _extract(
-    #     SUPPLY,
-    #     carrier="naphtha for industry",
-    #     bus_carrier="non-sequestered HVC",
-    #     component="Link",
-    # )
-
-    # solid biomass is produced by some boilers, which is wrong of course
+    # solid biomass is produced by some boilers, which is wrong
     # but needs to be addressed nevertheless to correct balances
     process_biomass_boilers(var)
 
@@ -1952,13 +1293,44 @@ def collect_final_energy() -> pd.Series:
     assert SUPPLY.empty, f"Supply is not empty: {SUPPLY}"
     assert DEMAND.empty, f"Demand is not empty: {DEMAND}"
 
-    # todo: Primary Energy|Waste unit is missing
-    # todo: Primary Energy bus_carrier is missing for all
-    # todo: localize NH3 demand using Haber-Bosch production
-    # todo: collect export
-    # todo: check balances per bus_carrier
+    for bus_carrier in EXPORT_DOMESTIC.index.unique("bus_carrier"):
+        prefix = f"{FINAL}|{BC_ALIAS[bus_carrier]}"
+        var[f"{prefix}|Export Domestic"] = _extract(
+            EXPORT_DOMESTIC, bus_carrier=bus_carrier
+        )
+        var[f"{prefix}|Export Foreign"] = _extract(
+            EXPORT_FOREIGN, bus_carrier=bus_carrier
+        )
+
+    assert EXPORT_DOMESTIC.empty, f"Export domestic is not empty: {EXPORT_DOMESTIC}"
+    assert EXPORT_FOREIGN.empty, f"Export foreign is not empty: {EXPORT_FOREIGN}"
 
     return combine_variables(var)
+
+
+def check_balances(df: IamDataFrame):
+    """
+
+    Parameters
+    ----------
+    df
+
+    Returns
+    -------
+    :
+    """
+    # per carrier:
+    #   primary energy
+    #   + import
+    #   + secondary production
+    #   - secondary demand
+    #   - secondary losses
+    #   - final energy
+    #   - export
+    #   == 0 ?
+
+    # all units in {units} ?
+    # all bus_carrier in BCS ?
 
 
 if __name__ == "__main__":
@@ -1969,11 +1341,7 @@ if __name__ == "__main__":
         )
     configure_logging(snakemake)
 
-    # template = pd.read_excel(snakemake.input.template, sheet_name="data")
-
-    # want to use 2050 first, to catch all technologies
-    # during development and debugging sessions
-    networks = read_networks(sorted(snakemake.input.networks, reverse=True))
+    networks = read_networks(snakemake.input.networks)
 
     groupby = ["location", "carrier", "bus_carrier", "unit"]
     kwargs = {
@@ -1998,33 +1366,36 @@ if __name__ == "__main__":
     EXPORT_FOREIGN = collect_myopic_statistics(
         networks, "trade_energy", scope=TradeTypes.FOREIGN, direction="export", **kwargs
     ).drop("t_co2", level="unit", errors="ignore")
-    IMPORT_DOMESTIC = collect_myopic_statistics(
-        networks,
-        "trade_energy",
-        scope=TradeTypes.DOMESTIC,
-        direction="import",
-        **kwargs,
-    ).drop("t_co2", level="unit", errors="ignore")
-    EXPORT_DOMESTIC = collect_myopic_statistics(
-        networks,
-        "trade_energy",
-        scope=TradeTypes.DOMESTIC,
-        direction="export",
-        **kwargs,
-    ).drop("t_co2", level="unit", errors="ignore")
-
-    # necessary for Links with multiple inputs
-    # LINK_BALANCE = collect_myopic_statistics(
-    #     networks, comps="Link", statistic="energy_balance"
-    # ).drop(["co2", "co2 stored", "process emissions"], level=DM.BUS_CARRIER)
+    IMPORT_DOMESTIC = (
+        collect_myopic_statistics(
+            networks,
+            "trade_energy",
+            scope=TradeTypes.DOMESTIC,
+            direction="import",
+            **kwargs,
+        )
+        .drop("t_co2", level="unit", errors="ignore")
+        .mul(-1)
+    )
+    EXPORT_DOMESTIC = (
+        collect_myopic_statistics(
+            networks,
+            "trade_energy",
+            scope=TradeTypes.DOMESTIC,
+            direction="export",
+            **kwargs,
+        )
+        .drop("t_co2", level="unit", errors="ignore")
+        .mul(-1)
+    )
 
     # all transmission is already in trade_energy.
     transmission_carrier = [t[1] for t in get_transmission_techs(networks)]
     SUPPLY.drop(transmission_carrier, level="carrier", errors="ignore", inplace=True)
     DEMAND.drop(transmission_carrier, level="carrier", errors="ignore", inplace=True)
 
-    # collect transformed energy system variables. Note, that the order of collection is relevant.
-    #
+    # collect transformed energy system variables. Note, that the order of
+    # collection is relevant for assertions statements.
     to_concat = [
         collect_primary_energy(),
         collect_storage_imbalances(),
@@ -2034,24 +1405,6 @@ if __name__ == "__main__":
         collect_system_cost(),
     ]
     df = pd.concat(to_concat)
-    # energy_primary = collect_primary_energy()
-    # energy_storage = collect_storage_imbalances()
-    # energy_losses = collect_losses_energy()
-    # energy_secondary = collect_secondary_energy()
-    # energy_final = collect_final_energy()
-    # system_cost = collect_system_cost()
-
-    # df = pd.concat([energy_primary, energy_storage, energy_losses, energy_secondary, energy_final, system_cost])
-
-    # for global_statistic in [
-    #     SUPPLY,
-    #     DEMAND,
-    #     IMPORT_FOREIGN,
-    #     EXPORT_FOREIGN,
-    #     IMPORT_DOMESTIC,
-    #     EXPORT_DOMESTIC,
-    # ]:
-    #     assert global_statistic.empty, f"Statistic not transformed: {global_statistic}."
 
     df = insert_index_level(df, "PyPSA-AT", "model")
     df = insert_index_level(df, snakemake.wildcards.run, "scenario")
@@ -2075,3 +1428,5 @@ if __name__ == "__main__":
     with pd.ExcelWriter(snakemake.output.exported_variables) as writer:
         iamc.to_excel(writer, sheet_name="data", index=False)
         meta.to_excel(writer, sheet_name="meta", index=False)
+
+    check_balances(iamc)
