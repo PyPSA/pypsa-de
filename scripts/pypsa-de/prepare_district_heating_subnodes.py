@@ -1,7 +1,4 @@
 import logging
-
-logger = logging.getLogger(__name__)
-
 import os
 import sys
 import tempfile
@@ -24,6 +21,8 @@ from scripts._helpers import (
     set_scenario_config,
     update_config_from_wildcards,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def load_census_data(census_path: str) -> gpd.GeoDataFrame:
@@ -126,7 +125,7 @@ def get_chunked_raster(
     def cleanup(temp_path: str) -> None:
         try:
             os.unlink(temp_path)
-        except:
+        except OSError:
             pass
 
     weakref.finalize(dataset, cleanup, temp_path)

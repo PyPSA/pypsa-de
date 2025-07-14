@@ -1,5 +1,7 @@
 # Changelog
 - Provide option to fix foreign investments outside Germany to optimized capacities of reference scenario
+- Longer lifetime (40 years) is only applied to existing gas CHPs, not new ones. Added a new config entry `existing_capacities:fill_value_gas_chp_lifetime`
+- Bugfix: gas CHPs are extendable again
 - Simplified scenarion definition and made `Mix` the default scenario
 - 0.3: workflow is all public now, no longer requires credentials to internal data
 - Allowing myopic optimization until 2050
