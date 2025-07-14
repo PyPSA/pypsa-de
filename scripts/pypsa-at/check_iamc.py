@@ -43,8 +43,6 @@ def check_balances(df: pd.DataFrame):
                 - final_demand.sum()
             )
 
-            # meth = ds.filter(like="Methanolisation")
-
             if abs(balance) > 0.1:
                 print(bc, year, region, ":\t", f"{balance:.4f}")
 
