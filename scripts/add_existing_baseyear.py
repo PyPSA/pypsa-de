@@ -599,7 +599,7 @@ def add_chp_plants(n, grouping_years, costs, baseyear):
         # add everything as Link
         for grouping_year, generator in mastr_chp_p_nom.index:
             # capacity is the capacity in MW at each node for this
-            p_nom = mastr_chp_p_nom.loc[grouping_year, generator].dropna()
+            p_nom = mastr_chp_p_nom.loc[grouping_year, generator]
             threshold = snakemake.params.existing_capacities["threshold_capacity"]
             p_nom = p_nom[p_nom > threshold]
 
@@ -647,11 +647,11 @@ def add_chp_plants(n, grouping_years, costs, baseyear):
                         overnight_cost=costs.at[key, "investment"]
                         * costs.at[key, "efficiency"],
                         marginal_cost=costs.at[key, "VOM"],
-                        efficiency=efficiency_power.dropna().loc[bus],
-                        efficiency2=efficiency_heat.dropna().loc[bus],
+                        efficiency=efficiency_power.loc[bus],
+                        efficiency2=efficiency_heat.loc[bus],
                         efficiency3=costs.at[generator, "CO2 intensity"],
                         build_year=grouping_year,
-                        lifetime=lifetime.dropna().loc[bus],
+                        lifetime=lifetime.loc[bus],
                     )
                 else:
                     key = "central solid biomass CHP"
@@ -672,7 +672,7 @@ def add_chp_plants(n, grouping_years, costs, baseyear):
                         efficiency=efficiency_power.loc[bus],
                         efficiency2=efficiency_heat.loc[bus],
                         build_year=grouping_year,
-                        lifetime=lifetime.dropna().loc[bus],
+                        lifetime=lifetime.loc[bus],
                     )
 
     # CHPs that are not from MaStR
@@ -689,7 +689,7 @@ def add_chp_plants(n, grouping_years, costs, baseyear):
         aggfunc=lambda x: np.average(x, weights=chp.loc[x.index, "Capacity"]),
     )
     for grouping_year, generator in chp_nodal_p_nom.index:
-        p_nom = chp_nodal_p_nom.loc[grouping_year, generator].dropna()
+        p_nom = chp_nodal_p_nom.loc[grouping_year, generator]
         threshold = snakemake.params.existing_capacities["threshold_capacity"]
         p_nom = p_nom[p_nom > threshold]
         lifetime = chp_nodal_lifetime.loc[grouping_year, generator]
@@ -744,7 +744,7 @@ def add_chp_plants(n, grouping_years, costs, baseyear):
                     efficiency2=costs.at[key, "efficiency"] / costs.at[key, "c_b"],
                     efficiency3=costs.at[generator, "CO2 intensity"],
                     build_year=grouping_year,
-                    lifetime=lifetime.dropna().loc[bus],
+                    lifetime=lifetime.loc[bus],
                 )
             else:
                 key = "central solid biomass CHP"
@@ -765,7 +765,7 @@ def add_chp_plants(n, grouping_years, costs, baseyear):
                     efficiency=costs.at[key, "efficiency"],
                     efficiency2=costs.at[key, "efficiency-heat"],
                     build_year=grouping_year,
-                    lifetime=lifetime.dropna().loc[bus],
+                    lifetime=lifetime.loc[bus],
                 )
 
 
