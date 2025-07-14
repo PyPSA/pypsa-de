@@ -720,12 +720,13 @@ def primary_uranium(var: dict) -> dict:
     """
     # use localized uranium demands from nuclear power plants
     var[f"{PRIMARY}|Uranium"] = (
-        filter_by(DEMAND, carrier="uranium", component="Link")
+        filter_by(DEMAND, carrier="nuclear", bus_carrier="uranium", component="Link")
         .groupby(IDX)
         .sum()
         .mul(-1)
     )
-    _extract(SUPPLY, bus_carrier="uranium", component="Generator")
+
+    _extract(SUPPLY, bus_carrier="uranium", component="Generator", location="EU")
 
     return var
 
@@ -764,7 +765,17 @@ def primary_methanol(var: dict) -> dict:
     :
         The updated variables' collection.
     """
-    var[f"{PRIMARY}|Methanol|Import"] = _extract(SUPPLY, carrier="import methanol")
+    regional_demand = (
+        filter_by(DEMAND, bus_carrier="methanol", component="Link").groupby(IDX).sum()
+    )
+    regional_production = (
+        filter_by(SUPPLY, bus_carrier="methanol", component="Link").groupby(IDX).sum()
+    )
+
+    deficit = regional_demand.add(regional_production, fill_value=0)
+    var[f"{PRIMARY}|Methanol"] = deficit.mul(-1)
+
+    _extract(SUPPLY, carrier="import methanol", location="EU")
 
     return var
 
@@ -901,7 +912,7 @@ def collect_storage_imbalances() -> pd.Series:
     for carrier in filter_by(SUPPLY, component=comps).index.unique("carrier"):
         supply = filter_by(SUPPLY, component=comps, carrier=carrier)
         demand = filter_by(DEMAND, component=comps, carrier=carrier)
-        balance = supply.add(demand, fill_value=0)
+        balance = supply.add(demand, fill_value=0).mul(-1)
 
         if balance.sum() != 0:
             logger.warning(
@@ -1119,13 +1130,17 @@ def collect_secondary_energy() -> pd.Series:
         "gas for industry",
         "gas for industry CC",
         "industry methanol",
-        "kerosene for aviation",
         "land transport oil",
         "naphtha for industry",
-        "shipping methanol",
-        "shipping oil",
         "solid biomass for industry",
         "solid biomass for industry CC",
+        # todo: exclude Links that connect to EU buses and are only
+        #  used to track CO2 emissions from regional data until CO2
+        #  is not dropped from this analysis.
+        #  better: make primary methanol track those imports!
+        "shipping methanol",
+        "shipping oil",
+        "kerosene for aviation",
         # "urban central water pits charger",
         # "urban central water pits discharger",
     ]
