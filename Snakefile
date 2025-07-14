@@ -367,6 +367,7 @@ rule build_mobility_demand:
         reference_scenario=config_provider("iiasa_database", "reference_scenario"),
         planning_horizons=config_provider("scenario", "planning_horizons"),
         leitmodelle=config_provider("iiasa_database", "leitmodelle"),
+        ageb_for_mobility=config_provider("iiasa_database", "ageb_for_mobility"),
         uba_for_mobility=config_provider("iiasa_database", "uba_for_mobility"),
         shipping_oil_share=config_provider("sector", "shipping_oil_share"),
         aviation_demand_factor=config_provider("sector", "aviation_demand_factor"),

@@ -43,7 +43,8 @@ iiasa_database:
   - KN2045_NFhoch
   reference_scenario: KN2045_Mix
   region: Deutschland
-  uba_for_mobility: true # MWMS scenario from Projektionsbericht 2025
+  ageb_for_mobility: true # In 2020 use AGEB data for final energy demand and KBA for vehicles
+  uba_for_mobility: true # For 2025–2035 use MWMS scenario from UBA Projektionsbericht 2025
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#foresight
 foresight: myopic

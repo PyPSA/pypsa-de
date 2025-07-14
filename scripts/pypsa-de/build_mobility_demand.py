@@ -11,6 +11,7 @@ def get_transport_data(
     db,
     year,
     non_land_liquids,
+    ageb_for_mobility=True,
     uba_for_mobility=False,
 ):
     """
@@ -40,10 +41,11 @@ def get_transport_data(
         transport_demand = transport_demand.div(3.6e-6)  # convert PJ to MWh
         transport_demand["number_of_cars"] = 0.658407 + 0.120261  # BEV + PHEV
 
-        if uba_for_mobility:
-            logger.warning(
-                "For 2020, using historical AGEB and KBA data instead of UBA projections."
-            )
+        if ageb_for_mobility or uba_for_mobility:
+            if uba_for_mobility:
+                logger.warning(
+                    "For 2020, using historical AGEB and KBA data instead of UBA projections."
+                )
             # AGEB 2020, https://ag-energiebilanzen.de/daten-und-fakten/bilanzen-1990-bis-2030/?_jahresbereich-bilanz=2011-2020
             transport_demand = pd.Series(
                 {
@@ -171,6 +173,7 @@ if __name__ == "__main__":
         db,
         snakemake.wildcards.planning_horizons,
         non_land_liquids,
+        ageb_for_mobility=snakemake.params.ageb_for_mobility,
         uba_for_mobility=snakemake.params.uba_for_mobility,
     )
 
