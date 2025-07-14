@@ -17,7 +17,8 @@ assuming as an approximation energy content of wood pellets
 import logging
 
 import pandas as pd
-from _helpers import configure_logging
+
+from scripts._helpers import configure_logging
 
 logger = logging.getLogger(__name__)
 

@@ -1,10 +1,6 @@
 import logging
-
-logger = logging.getLogger(__name__)
-
 import os
 import sys
-from typing import Dict, List
 
 import geopandas as gpd
 import pandas as pd
@@ -19,6 +15,8 @@ from scripts._helpers import (
     update_config_from_wildcards,
 )
 from scripts.prepare_network import maybe_adjust_costs_and_potentials
+
+logger = logging.getLogger(__name__)
 
 
 def add_buses(n: pypsa.Network, subnode: pd.Series, name: str) -> None:
@@ -336,11 +334,11 @@ def add_links(
     name: str,
     cop: xr.DataArray,
     direct_heat_source_utilisation_profile: xr.DataArray,
-    heat_pump_sources: List[str],
-    direct_utilisation_heat_sources: List[str],
+    heat_pump_sources: list[str],
+    direct_utilisation_heat_sources: list[str],
     time_dep_hp_cop: bool,
-    limited_heat_sources: List[str],
-    heat_source_potentials: Dict[str, str],
+    limited_heat_sources: list[str],
+    heat_source_potentials: dict[str, str],
 ) -> None:
     """
     Add links for a district heating subnode.
@@ -479,11 +477,11 @@ def add_subnodes(
     head: int = 40,
     dynamic_ptes_capacity: bool = False,
     limit_ptes_potential_mother_nodes: bool = True,
-    heat_pump_sources: List[str] = None,
-    direct_utilisation_heat_sources: List[str] = None,
+    heat_pump_sources: list[str] = None,
+    direct_utilisation_heat_sources: list[str] = None,
     time_dep_hp_cop: bool = False,
-    limited_heat_sources: List[str] = None,
-    heat_source_potentials: Dict[str, str] = None,
+    limited_heat_sources: list[str] = None,
+    heat_source_potentials: dict[str, str] = None,
     output_path: str = None,
 ) -> None:
     """

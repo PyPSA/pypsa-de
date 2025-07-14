@@ -11,9 +11,9 @@ import logging
 
 import geopandas as gpd
 import pandas as pd
-from cluster_gas_network import load_bus_regions
 
 from scripts._helpers import configure_logging, set_scenario_config
+from scripts.cluster_gas_network import load_bus_regions
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +72,7 @@ def build_gem_prod_data(fn):
 
     p = pd.read_excel(fn, sheet_name="Gas extraction - production", engine="openpyxl")
     p = p.set_index("GEM Unit ID")
-    p = p[p["Fuel description"].str.contains("gas")]
+    p = p[p["Fuel description"].str.contains("gas", case=False)]
 
     capacities = pd.DataFrame(index=df.index)
     for key in ["production", "production design capacity", "reserves"]:

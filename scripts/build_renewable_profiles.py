@@ -97,7 +97,6 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 from atlite.gis import ExclusionContainer
-from build_shapes import _simplify_polys
 from dask.distributed import Client
 
 from scripts._helpers import (
@@ -106,6 +105,7 @@ from scripts._helpers import (
     load_cutout,
     set_scenario_config,
 )
+from scripts.build_shapes import _simplify_polys
 
 logger = logging.getLogger(__name__)
 
