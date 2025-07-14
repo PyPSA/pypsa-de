@@ -599,7 +599,7 @@ rule modify_prenetwork:
         "scripts/pypsa-de/modify_prenetwork.py"
 
 
-ruleorder: modify_industry_demand > build_industrial_production_per_country_tomorrow
+ruleorder: modify_industry_production > build_industrial_production_per_country_tomorrow
 
 
 rule modify_existing_heating:
@@ -660,7 +660,7 @@ rule build_existing_chp_de:
         "scripts/pypsa-de/build_existing_chp_de.py"
 
 
-rule modify_industry_demand:
+rule modify_industry_production:
     params:
         reference_scenario=config_provider("iiasa_database", "reference_scenario"),
     input:
@@ -675,9 +675,9 @@ rule modify_industry_demand:
     resources:
         mem_mb=1000,
     log:
-        logs("modify_industry_demand_{planning_horizons}.log"),
+        logs("modify_industry_production_{planning_horizons}.log"),
     script:
-        "scripts/pypsa-de/modify_industry_demand.py"
+        "scripts/pypsa-de/modify_industry_production.py"
 
 
 rule build_wasserstoff_kernnetz:
