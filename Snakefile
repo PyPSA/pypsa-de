@@ -362,7 +362,7 @@ if config["enable"]["retrieve"] and config["enable"].get("retrieve_cost_data", T
     ruleorder: modify_cost_data > retrieve_cost_data
 
 
-rule build_mobility_demand:
+rule build_exogenous_mobility_demand:
     params:
         reference_scenario=config_provider("iiasa_database", "reference_scenario"),
         planning_horizons=config_provider("scenario", "planning_horizons"),
@@ -378,14 +378,14 @@ rule build_mobility_demand:
         energy_totals=resources("energy_totals.csv"),
     output:
         mobility_demand=resources(
-            "mobility_demand_aladin_{clusters}_{planning_horizons}.csv"
+            "modified_mobility_demand_{clusters}_{planning_horizons}.csv"
         ),
     resources:
         mem_mb=1000,
     log:
-        logs("build_mobility_demand_{clusters}_{planning_horizons}.log"),
+        logs("build_exogenous_mobility_demand_{clusters}_{planning_horizons}.log"),
     script:
-        "scripts/pypsa-de/build_mobility_demand.py"
+        "scripts/pypsa-de/build_exogenous_mobility_demand.py"
 
 
 rule build_egon_data:
@@ -570,8 +570,8 @@ rule modify_prenetwork:
             else []
         ),
         costs=resources("costs_{planning_horizons}.csv"),
-        aladin_demand=resources(
-            "mobility_demand_aladin_{clusters}_{planning_horizons}.csv"
+        modified_mobility_demand=resources(
+            "modified_mobility_demand_{clusters}_{planning_horizons}.csv"
         ),
         biomass_potentials=resources(
             "biomass_potentials_s_{clusters}_{planning_horizons}.csv"

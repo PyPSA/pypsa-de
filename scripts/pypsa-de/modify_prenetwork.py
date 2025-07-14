@@ -825,23 +825,22 @@ def must_run(n, params):
             n.links.loc[links_i, "p_min_pu"] = p_min_pu
 
 
-def aladin_mobility_demand(n):
+def modify_mobility_demand(n):
     """
-    Change loads in Germany to use Aladin data for road demand.
+    Change loads in Germany to use exogenous data for road demand.
     """
     logger.info(
-        "Overwriting land transport demand with Aladin data. In particular the `land_transport_electric_share` config setting will not be used."
+        "Overwriting land transport demand. In particular the `land_transport_electric_share` config setting will not be used."
     )
-    # get aladin data
-    aladin_demand = pd.read_csv(snakemake.input.aladin_demand, index_col=0)
+    new_demand = pd.read_csv(snakemake.input.modified_mobility_demand, index_col=0)
 
     simulation_period_correction_factor = n.snapshot_weightings.objective.sum() / 8760
 
     # oil demand
     if "land transport oil" in n.loads.carrier.unique():  # i.e. before 2050
         oil_demand = pd.Series(
-            aladin_demand.Liquids.values * simulation_period_correction_factor,
-            index=aladin_demand.index + " land transport oil",
+            new_demand.Liquids.values * simulation_period_correction_factor,
+            index=new_demand.index + " land transport oil",
         )
 
         profile = n.loads_t.p_set.loc[:, oil_demand.index]
@@ -852,8 +851,8 @@ def aladin_mobility_demand(n):
 
     # hydrogen demand
     h2_demand = pd.Series(
-        aladin_demand.Hydrogen.values * simulation_period_correction_factor,
-        index=aladin_demand.index + " land transport fuel cell",
+        new_demand.Hydrogen.values * simulation_period_correction_factor,
+        index=new_demand.index + " land transport fuel cell",
     )
 
     profile = n.loads_t.p_set.loc[:, h2_demand.index]
@@ -864,8 +863,8 @@ def aladin_mobility_demand(n):
 
     # electricity demand
     ev_demand = pd.Series(
-        aladin_demand.Electricity.values * simulation_period_correction_factor,
-        index=aladin_demand.index + " land transport EV",
+        new_demand.Electricity.values * simulation_period_correction_factor,
+        index=new_demand.index + " land transport EV",
     )
 
     profile = n.loads_t.p_set.loc[:, ev_demand.index]
@@ -880,14 +879,14 @@ def aladin_mobility_demand(n):
         (n.links.carrier == "BEV charger") & (n.links.bus0.str.startswith("DE"))
     ].index
 
-    # Check that buses in network and aladin_data appear in same order
+    # Check that buses in network and new_demand data appear in same order
     assert [
-        idx.startswith(idx2) for (idx, idx2) in zip(BEV_charger_i, aladin_demand.index)
+        idx.startswith(idx2) for (idx, idx2) in zip(BEV_charger_i, new_demand.index)
     ]
 
     # Then directly use .values for assignment
     p_nom = (
-        aladin_demand.number_of_cars.values * 1e6 * snakemake.params.bev_charge_rate
+        new_demand.number_of_cars.values * 1e6 * snakemake.params.bev_charge_rate
     )  # same logic like in prepare_sector_network
 
     n.links.loc[BEV_charger_i, "p_nom"] = p_nom
@@ -902,7 +901,7 @@ def aladin_mobility_demand(n):
         (n.stores.carrier == "EV battery") & (n.stores.bus.str.startswith("DE"))
     ].index
     e_nom = (
-        aladin_demand.number_of_cars.values
+        new_demand.number_of_cars.values
         * 1e6
         * snakemake.params.bev_energy
         * snakemake.params.bev_dsm_availability
@@ -1282,7 +1281,7 @@ if __name__ == "__main__":
         )
 
     configure_logging(snakemake)
-    logger.info("Adding Ariadne-specific functionality")
+    logger.info("Adding PyPSA-DE specific functionality")
 
     n = pypsa.Network(snakemake.input.network)
     nhours = n.snapshot_weightings.generators.sum()
@@ -1295,7 +1294,7 @@ if __name__ == "__main__":
         nyears,
     )
 
-    aladin_mobility_demand(n)
+    modify_mobility_demand(n)
 
     new_boiler_ban(n)
 

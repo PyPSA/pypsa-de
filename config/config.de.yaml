@@ -335,7 +335,7 @@ sector:
     2040: 0.29
     2045: 0.36
     2050: 0.43
-  # The transport_shares are just dummy setting that get overwritten in build_mobility_demand
+  # The transport_shares are just dummy setting that get overwritten in build_exogenous_mobility_demand
   land_transport_fuel_cell_share:
     2020: 0.01
     2025: 0.01

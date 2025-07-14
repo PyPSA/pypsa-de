@@ -121,7 +121,7 @@ def get_transport_data(
 if __name__ == "__main__":
     if "snakemake" not in globals():
         snakemake = mock_snakemake(
-            "build_mobility_demand",
+            "build_exogenous_mobility_demand",
             simpl="",
             clusters=27,
             opts="",
