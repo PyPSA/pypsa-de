@@ -1,12 +1,12 @@
 import logging
+import os
+import sys
 
 import geopandas as gpd
 import numpy as np
 import pandas as pd
 import pypsa
 from shapely.geometry import Point
-import os
-import sys
 
 from scripts._helpers import (
     configure_logging,

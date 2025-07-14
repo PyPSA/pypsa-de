@@ -564,11 +564,9 @@ rule modify_prenetwork:
         shipping_methanol_share=config_provider("sector", "shipping_methanol_share"),
         mwh_meoh_per_tco2=config_provider("sector", "MWh_MeOH_per_tCO2"),
         scale_capacity=config_provider("scale_capacity"),
-        fix_foreign_investments=lambda w: config_provider(
-            "fix_foreign_investments"
-)(w),
+        fix_foreign_investments=lambda w: config_provider("fix_foreign_investments")(w),
         enable_fix_foreign_investments=lambda w: config_provider(
-"fix_foreign_investments", "enable"
+            "fix_foreign_investments", "enable"
         )(w),
     input:
         costs_modifications="ariadne-data/costs_{planning_horizons}-modifications.csv",
@@ -976,4 +974,3 @@ rule ariadne_report_only:
             RESULTS + "ariadne/report/elec_price_duration_curve.pdf",
             run=config_provider("run", "name"),
         ),
-        
