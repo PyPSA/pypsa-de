@@ -579,6 +579,12 @@ rule modify_prenetwork:
         industrial_demand=resources(
             "industrial_energy_demand_base_s_{clusters}_{planning_horizons}.csv"
         ),
+        industrial_production_per_country_tomorrow=resources(
+            "industrial_production_per_country_tomorrow_{planning_horizons}-modified.csv"
+        ),
+        industry_sector_ratios=resources(
+            "industry_sector_ratios_{planning_horizons}.csv"
+        ),
         pop_weighted_energy_totals=resources(
             "pop_weighted_energy_totals_s_{clusters}.csv"
         ),
