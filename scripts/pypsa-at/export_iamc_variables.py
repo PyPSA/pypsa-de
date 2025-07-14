@@ -11,7 +11,6 @@ https://pyam-iamc.readthedocs.io/en/stable/
 """
 
 import logging
-import re
 
 import pandas as pd
 from pyam import IamDataFrame
@@ -82,10 +81,11 @@ class SeriesCollector(dict):
             assert value.index.names == idx, (
                 f"Denying to join existing index levels: {idx} with {value.index.names}"
             )
-            ds = self.pop(key)
-            self[key] = pd.concat([ds, value]).groupby(idx).sum()
+            old = self.pop(key)
+            super().__setitem__(key, old.add(value, fill_value=0))
             logger.debug(f"Merged key {key} with existing Series.")
-        super().__setitem__(key, value)
+        else:
+            super().__setitem__(key, value)
 
 
 def _process_single_input_link(
@@ -96,51 +96,72 @@ def _process_single_input_link(
     bc_in: str,
     technology: str,
 ) -> dict:
-    bc_in = BC_ALIAS.get(bc_in, bc_in)
-
-    for bc in bc_out:
-        label = f"{SECONDARY}|{BC_ALIAS.get(bc, bc)}|{bc_in}|{technology}"
-        branch_output = filter_by(supply, bus_carrier=bc)
-        var[label] = branch_output.groupby(IDX).sum()
-
     demand_unit = demand.index.unique("unit").item()
     losses = supply.groupby(YEAR_LOC).sum() + demand.groupby(YEAR_LOC).sum()
     losses = insert_index_level(losses, demand_unit, "unit", pos=2).mul(-1)
 
-    var[f"{SECONDARY}|Losses|{bc_in}|{technology}"] = losses[losses > 0]
-    losses_neg = losses[losses < 0]
-    # label_ambient_heat = f"{SECONDARY}|Ambient Heat|{bc_in}|{technology}"
-    if not losses_neg.empty:
-        # negative losses are expected for X-to-heat technologies that
-        # utilize enthalpy heat and for heat pumps
+    var[f"{SECONDARY}|Losses|{BC_ALIAS[bc_in]}|{technology}"] = losses[losses > 0]
+    surplus = losses[losses < 0]
+
+    for bc in bc_out:
+        label = f"{SECONDARY}|{BC_ALIAS[bc]}|{BC_ALIAS[bc_in]}|{technology}"
+        # supply_bc = filter_by(supply, bus_carrier=bc).groupby(IDX).sum()
+        # if surplus.empty:
+        var[label] = filter_by(supply, bus_carrier=bc).groupby(IDX).sum()
+        # else:  # split ambient heat. 100% of demand is Heat|AC, surplus is Ambient Heat|AC
+        #     assert technology in ("CHP", "Boiler", "Ground Heat Pump", "Air Heat Pump"), (
+        #         f"Unknown technology with efficiencies > 1: {technology}."
+        #     )
+        #     supply_unit = supply_bc.index.unique("unit").item()
+        #     ambient_heat = rename_aggregate(surplus, supply_unit, level="unit").mul(-1)
+        #     var[label] = supply_bc.sub(ambient_heat, fill_value=0)
+        #     var[f"{SECONDARY}|Ambient Heat|{BC_ALIAS[bc_in]}|{technology}"] = ambient_heat
+
+    if not surplus.empty:
         assert technology in ("CHP", "Boiler", "Ground Heat Pump", "Air Heat Pump"), (
             f"Unknown technology with efficiencies > 1: {technology}."
         )
-        var[f"{SECONDARY}|Ambient Heat|{bc_in}|{technology}"] = rename_aggregate(
-            losses_neg, "MWh_LHV", level="unit"
-        ).mul(-1)
+        heat_ambient = rename_aggregate(surplus, "MWh_th", level="unit").mul(-1)
+        label_heat = f"{SECONDARY}|Heat|{BC_ALIAS[bc_in]}|{technology}"
+        heat_total = var.pop(label_heat)
+        var[label_heat] = heat_total.sub(heat_ambient, fill_value=0)
+        var[f"{SECONDARY}|Ambient Heat|{BC_ALIAS[bc_in]}|{technology}"] = heat_ambient
+    # if not losses_neg.empty:
+    #     # negative losses are expected for X-to-heat technologies that
+    #     # utilize enthalpy heat and for heat pumps
+    #     assert technology in ("CHP", "Boiler", "Ground Heat Pump", "Air Heat Pump"), (
+    #         f"Unknown technology with efficiencies > 1: {technology}."
+    #     )
+    #     var[f"{SECONDARY}|Ambient Heat|{bc_in}|{technology}"] = rename_aggregate(
+    #         losses_neg, "MWh_LHV", level="unit"
+    #     ).mul(-1)
+    #
+    #     # need to subtract ambient heat amounts from primary heat output
+    #     lbl = f"{SECONDARY}|Heat|{bc_in}|{technology}"
+    #     full_output = var.pop(lbl)
+    #     var[lbl] = full_output - var[f"{SECONDARY}|Ambient Heat|{bc_in}|{technology}"]
 
     # do not count ambient heat for demand + supply + losses = 0 to stay true
-    bc_out_alias = [BC_ALIAS[bc] for bc in bc_out] + ["Losses"]
-    pattern = rf"{SECONDARY}\|({'|'.join(bc_out_alias)})\|{bc_in}\|{technology}"
-    total_vars = (
-        pd.concat({k: v for k, v in var.items() if re.match(pattern, k)})
-        .groupby(YEAR_LOC)
-        .sum()
-    )
+    # bc_out_alias = [BC_ALIAS[bc] for bc in bc_out] + ["Losses"]
+    # pattern = rf"{SECONDARY}\|({'|'.join(bc_out_alias)})\|{bc_in}\|{technology}"
+    # total_vars = (
+    #     pd.concat({k: v for k, v in var.items() if re.match(pattern, k)})
+    #     .groupby(YEAR_LOC)
+    #     .sum()
+    # )
     # total demand + supply + losses - ambient heat = 0
     # ambient_heat = var.get(label_ambient_heat, pd.Series())
-    if not losses_neg.empty:
-        assert (
-            total_vars.add(demand.groupby(YEAR_LOC).sum()).add(
-                losses_neg.droplevel("unit"), fill_value=0
-            )
-            <= 1e-5
-        ).all(), (
-            f"Imbalances detected for Link with bus carrier supply: {bc_in} and bus carrier out: {list(bc_out)} for technology {technology}."
-        )
-    else:
-        assert (total_vars.add(demand.groupby(YEAR_LOC).sum()) <= 1e-5).all()
+    # if not losses_neg.empty:
+    #     assert (
+    #             total_vars.add(demand.groupby(YEAR_LOC).sum()).add(
+    #                 losses_neg.droplevel("unit"), fill_value=0
+    #             )
+    #             <= 1e-5
+    #     ).all(), (
+    #         f"Imbalances detected for Link with bus carrier supply: {bc_in} and bus carrier out: {list(bc_out)} for technology {technology}."
+    #     )
+    # else:
+    #     assert (total_vars.add(demand.groupby(YEAR_LOC).sum()) <= 1e-5).all()
 
     return var
 
@@ -187,7 +208,9 @@ def transform_link(
         for bus_carrier_demand in bc_in:
             demand_bc = filter_by(demand, bus_carrier=bus_carrier_demand)
             demand_share = demand_bc.sum() / demand.sum()
-            supply_bc = supply * demand_share
+            # scaling takes into account that Link inputs and outputs are not equally large
+            # scaling = abs(supply.sum() / demand.sum())
+            supply_bc = supply * demand_share  # * scaling
             var = _process_single_input_link(
                 var,
                 supply_bc,
@@ -212,59 +235,6 @@ def transform_link(
     DEMAND.drop(demand.index, inplace=True)
 
     return var
-    # for bc in bc_out:
-    #     label = f"{SECONDARY}|{BC_ALIAS.get(bc, bc)}|{bc_in}|{technology}"
-    #     branch_output = filter_by(supply, bus_carrier=bc)
-    #     var[label] = branch_output.groupby(IDX).sum()
-    #
-    # losses_unit = demand.index.unique("unit").item()
-    # losses = insert_index_level(losses, losses_unit, "unit", pos=2).mul(-1)
-    #
-    # var[f"{SECONDARY}|Losses|{bc_in}|{technology}"] = losses[losses > 0]
-    # losses_neg = losses[losses < 0]
-    # if not losses_neg.empty:
-    #     # negative losses are expected for X-to-heat technologies that
-    #     # utilize enthalpy heat and for heat pumps
-    #     assert technology in ("CHP", "Boiler", "Ground Heat Pump", "Air Heat Pump"), (
-    #         f"Unknown technology with efficiencies > 1: {technology}."
-    #     )
-    #     var[f"{SECONDARY}|Ambient Heat|{bc_in}|{technology}"] = rename_aggregate(
-    #         losses_neg, "MWh_LHV", level="unit"
-    #     ).mul(-1)
-    #
-    # # do not count ambient heat for demand + supply + losses = 0 to stay true
-    # bc_out_alias = [BC_ALIAS.get(bc, bc) for bc in bc_out] + ["Losses"]
-    # pattern = rf"{SECONDARY}\|({'|'.join(bc_out_alias)})\|{bc_in}\|{technology}"
-    # total_vars = (
-    #     pd.concat({k: v for k, v in var.items() if re.match(pattern, k)})
-    #     .groupby(YEAR_LOC)
-    #     .sum()
-    # )
-    # # total demand + supply + losses - ambient heat = 0
-    # ambient_heat = var.get(
-    #     f"{SECONDARY}|Ambient Heat|{bc_in}|{technology}", pd.Series()
-    # )
-    # if not ambient_heat.empty:
-    #     assert (
-    #         total_vars.add(demand.groupby(YEAR_LOC).sum()).sub(
-    #             ambient_heat, fill_value=0
-    #         )
-    #         <= 1e-5
-    #     ).all()
-    # else:
-    #     assert (total_vars.add(demand.groupby(YEAR_LOC).sum()) <= 1e-5).all()
-    #
-    # # optionally skipping global statistics update is useful during development
-    # if debug:
-    #     return var
-    #
-    # # remove from global statistic to prevent double counting
-    # SUPPLY.drop(supply.index, inplace=True)
-    # # adding demand to IAMC is redundant, because supply + losses == demand,
-    # # and we the demand bus_carrier is known from the variable name.
-    # DEMAND.drop(demand.index, inplace=True)
-
-    # return var
 
 
 def transform_load(var, carrier: str) -> dict:
@@ -323,33 +293,9 @@ def transform_load(var, carrier: str) -> dict:
         f"Supply and demand are not equal. Please check for losses and efficiencies != 1 for carrier: {carrier}.\n{losses}"
     )
 
-    var[f"{FINAL}|{sector}|{bc}"] = load.mul(-1)
+    var[f"{FINAL}|{bc}|{sector}"] = load.mul(-1)
 
     return var
-
-
-#
-# def _process_multi_input_link(var: dict, supply: pd.Series, demand: pd.Series, bc_out: pd.Index, bc_in: pd.Index, technology: str, debug: bool = False) -> dict:
-#     """"""
-#     # supply = filter_by(SUPPLY, carrier=carrier, component="Link")
-#     # demand = filter_by(DEMAND, carrier=carrier, component="Link")
-#     #
-#     # if supply.empty and demand.empty:
-#     #     logger.warning(
-#     #         f"No supply or demand found for {carrier}. Skipping transformation."
-#     #     )
-#     #     return var
-#     #
-#     # bc_in = demand.index.unique("bus_carrier")
-#     # bc_out = supply.index.unique("bus_carrier")
-#
-#     for bus_carrier_demand in bc_in:
-#         demand_bc = filter_by(demand, bus_carrier=bus_carrier_demand)
-#         demand_share = demand_bc.sum() / demand.sum()
-#         supply_bc = supply * demand_share
-#         var = _process_single_input_link(var, supply_bc, demand_bc, bc_out, bus_carrier_demand, technology, debug=debug)
-#
-#     return var
 
 
 def _get_port_efficiency(substring: str, port: str, component: str = "Link"):
@@ -455,67 +401,6 @@ def process_biomass_boilers(var) -> dict:
     return var
 
 
-# def _get_traded_energy(n, var, bus_carrier, direction, subcat):
-#     """
-#     Calculate the trade statistics.
-#
-#     Parameters
-#     ----------
-#     n
-#     var
-#     bus_carrier
-#     direction
-#     subcat
-#
-#     Returns
-#     -------
-#     :
-#     """
-#     for scope in (TradeTypes.DOMESTIC, TradeTypes.FOREIGN):
-#         trade = n.statistics.trade_energy(
-#             bus_carrier=bus_carrier, direction=direction, scope=scope
-#         )
-#         trade = trade[trade.gt(0)].groupby("location").sum()
-#         var[f"Primary Energy|{subcat}|{direction.title()} {scope.title()}"] = trade
-
-#
-# def _get_transformation_losses(supply: pd.Series, **filter_kwargs) -> pd.Series:
-#     # single branch Links only
-#     # unit_supply = supply.index.unique("unit").item()
-#     # supply = supply.droplevel("unit")
-#
-#     demand = _extract(DEMAND, **filter_kwargs)
-#     unit_demand = demand.index.unique("unit").item()
-#     demand = demand.groupby(IDX).sum().droplevel("unit")
-#
-#     # unit_losses = unit_supply
-#     # if unit_supply != unit_demand:
-#     #     unit_losses = f"{unit_demand} to {unit_supply}"
-#
-#     losses = (
-#         demand.add(supply.droplevel("unit"))
-#         .pipe(insert_index_level, unit_demand, "unit")
-#         .groupby(IDX)
-#         .sum()
-#     )
-#
-#     # implicitly True
-#     assert demand.sum() + supply.sum() - losses.sum() <= 1e-5
-#     # todo: myopic regional efficiencies
-#     # eff = _get_port_efficiency(filter_kwargs["carrier"], port="1")
-#     # assert abs(demand.sum() * eff + supply.sum()) <= 1e-4
-#
-#     return losses
-
-
-def _sum_variables_by_prefix(var, prefix):
-    return (
-        pd.concat([var[v] for v in var.keys() if v.startswith(prefix)])
-        .groupby(IDX)
-        .sum()
-    )
-
-
 def primary_oil(var: dict) -> dict:
     """
     Calculate the amounts of oil entering a region.
@@ -605,11 +490,6 @@ def primary_oil(var: dict) -> dict:
     # Link supplies to the oil bus.
     _extract(SUPPLY, carrier="unsustainable bioliquids", component="Generator")
 
-    # var["Primary Energy|Oil"] = var["Primary Energy|Oil|Fossil Oil"].add(
-    #     var["Primary Energy|Oil|Unsustainable Bioliquids"], fill_value=0
-    # )
-    var[prefix] = _sum_variables_by_prefix(var, prefix)
-
     return var
 
 
@@ -638,8 +518,6 @@ def primary_gas(var) -> dict:
     _extract(
         DEMAND, carrier=["biogas to gas", "biogas to gas CC"], bus_carrier="biogas"
     )
-
-    var[prefix] = _sum_variables_by_prefix(var, prefix)
 
     return var
 
@@ -687,8 +565,6 @@ def primary_waste(var: dict) -> dict:
         component="Link",
     )
 
-    var[prefix] = _sum_variables_by_prefix(var, prefix)
-
     return var
 
 
@@ -716,7 +592,6 @@ def primary_coal(var: dict) -> dict:
     var[f"{prefix}|Lignite"] = (
         filter_by(DEMAND, bus_carrier="lignite", component="Link").groupby(IDX).sum()
     ).mul(-1)
-    var[prefix] = _sum_variables_by_prefix(var, prefix)
 
     # remove EU coal generators from the to-do list
     coal_generators = filter_by(
@@ -753,8 +628,6 @@ def primary_hydrogen(var: dict) -> dict:
         SUPPLY, carrier="import H2", bus_carrier=bc, component="Generator"
     )
 
-    var[prefix] = _sum_variables_by_prefix(var, prefix)
-
     return var
 
 
@@ -781,7 +654,6 @@ def primary_biomass(var: dict) -> dict:
     var[f"{prefix}|Biogas"] = _extract(
         SUPPLY, bus_carrier="biogas", component="Generator"
     )
-    var[prefix] = _sum_variables_by_prefix(var, prefix)
 
     return var
 
@@ -828,8 +700,6 @@ def primary_electricity(var: dict) -> dict:
 
     var[f"{prefix}|Import Domestic"] = _extract(IMPORT_DOMESTIC, bus_carrier="AC")
     var[f"{prefix}|Import Foreign"] = _extract(IMPORT_FOREIGN, bus_carrier="AC")
-
-    var[prefix] = _sum_variables_by_prefix(var, prefix)
 
     return var
 
@@ -920,27 +790,8 @@ def primary_heat(var: dict) -> dict:
         SUPPLY, carrier=carrier, component="Generator"
     )
     var[f"{prefix}|Geothermal"] = _extract(SUPPLY, carrier="geothermal heat")
-    var[prefix] = _sum_variables_by_prefix(var, prefix)
 
     return var
-
-
-def get_renewable_generation(var: dict) -> dict:
-    """
-
-    Parameters
-    ----------
-    var
-
-    Returns
-    -------
-    :
-    """
-    # solar
-    # wind
-    # biomass
-    # heat?
-    #
 
 
 def combine_variables(var: dict) -> pd.Series:
@@ -1133,6 +984,20 @@ def collect_losses_energy() -> pd.Series:
         bus_carrier="non-sequestered HVC",
     ).mul(-1)
 
+    # gas and hydrogen compressing cost energy
+    var[f"{prefix}|AC|H2 Compressing"] = _extract(
+        DEMAND,
+        carrier=["H2 pipeline", "H2 pipeline (Kernnetz)", "H2 pipeline retrofitted"],
+        component="Link",
+        bus_carrier="AC",
+    ).mul(-1)
+    var[f"{prefix}|AC|Gas Compressing"] = _extract(
+        DEMAND,
+        carrier=["gas pipeline", "gas pipeline new"],
+        component="Link",
+        bus_carrier="AC",
+    ).mul(-1)
+
     return combine_variables(var)
 
 
@@ -1227,6 +1092,23 @@ def collect_secondary_energy() -> pd.Series:
     transform_link(var, technology="Methanolisation", carrier="methanolisation")
     transform_link(var, technology="Electrobiofuels", carrier="electrobiofuels")
     transform_link(var, technology="Haber-Bosch", carrier="Haber-Bosch")
+    # link_balance = collect_myopic_statistics(
+    #     networks,
+    #     "energy_balance",
+    #     comps="Link",
+    # )
+    # from evals.utils import filter_for_carrier_connected_to, calculate_input_share
+    # inputs_for_nh3 = (
+    #     link_balance.filter(like="Haber-Bosch")
+    #     .drop(["co2", "co2 stored"], level="bus_carrier")
+    #     .pipe(filter_for_carrier_connected_to, "H2")
+    #     .pipe(calculate_input_share, "NH3")
+    # )
+    # var[f"{SECONDARY}|NH3|H2|Haber-Bosch"] = inputs_for_nh3.xs("H2", level="bus_carrier").groupby(YEAR_LOC).sum()
+    # var[f"{SECONDARY}|NH3|AC|Haber-Bosch"] = inputs_for_nh3.xs("AC", level="bus_carrier").groupby(YEAR_LOC).sum()
+    #
+    # var[f"{SECONDARY}|Losses|H2|Haber-Bosch"] = inputs_for_nh3.xs("AC", level="bus_carrier").groupby(YEAR_LOC).sum()
+    # var[f"{SECONDARY}|Losses|AC|Haber-Bosch"] = inputs_for_nh3.xs("AC", level="bus_carrier").groupby(YEAR_LOC).sum()
 
     # Links that connect to buses with single loads. They are skipped in
     # IAMC variables, because their buses are only needed because of
@@ -1308,31 +1190,6 @@ def collect_final_energy() -> pd.Series:
     return combine_variables(var)
 
 
-def check_balances(df: IamDataFrame):
-    """
-
-    Parameters
-    ----------
-    df
-
-    Returns
-    -------
-    :
-    """
-    # per carrier:
-    #   primary energy
-    #   + import
-    #   + secondary production
-    #   - secondary demand
-    #   - secondary losses
-    #   - final energy
-    #   - export
-    #   == 0 ?
-
-    # all units in {units} ?
-    # all bus_carrier in BCS ?
-
-
 if __name__ == "__main__":
     if "snakemake" not in globals():
         snakemake = mock_snakemake(
@@ -1363,20 +1220,24 @@ if __name__ == "__main__":
     IMPORT_FOREIGN = collect_myopic_statistics(
         networks, "trade_energy", scope=TradeTypes.FOREIGN, direction="import", **kwargs
     ).drop("t_co2", level="unit", errors="ignore")
-    EXPORT_FOREIGN = collect_myopic_statistics(
-        networks, "trade_energy", scope=TradeTypes.FOREIGN, direction="export", **kwargs
-    ).drop("t_co2", level="unit", errors="ignore")
-    IMPORT_DOMESTIC = (
+    EXPORT_FOREIGN = (
         collect_myopic_statistics(
             networks,
             "trade_energy",
-            scope=TradeTypes.DOMESTIC,
-            direction="import",
+            scope=TradeTypes.FOREIGN,
+            direction="export",
             **kwargs,
         )
         .drop("t_co2", level="unit", errors="ignore")
         .mul(-1)
     )
+    IMPORT_DOMESTIC = collect_myopic_statistics(
+        networks,
+        "trade_energy",
+        scope=TradeTypes.DOMESTIC,
+        direction="import",
+        **kwargs,
+    ).drop("t_co2", level="unit", errors="ignore")
     EXPORT_DOMESTIC = (
         collect_myopic_statistics(
             networks,
@@ -1389,10 +1250,37 @@ if __name__ == "__main__":
         .mul(-1)
     )
 
-    # all transmission is already in trade_energy.
-    transmission_carrier = [t[1] for t in get_transmission_techs(networks)]
-    SUPPLY.drop(transmission_carrier, level="carrier", errors="ignore", inplace=True)
-    DEMAND.drop(transmission_carrier, level="carrier", errors="ignore", inplace=True)
+    # all transmission is already in trade_energy. The bus_carrier must be
+    # considered in the filter to prevent dropping compression costs f
+    transmission_bus_carrier = {
+        "AC": "AC",
+        "CO2 pipeline": "co2",
+        "DC": "AC",
+        "H2 pipeline": "H2",
+        "H2 pipeline (Kernnetz)": "H2",
+        "H2 pipeline retrofitted": "H2",
+        "gas pipeline": "gas",
+        "gas pipeline new": "gas",
+        "municipal solid waste transport": "municipal solid waste",
+        "solid biomass transport": "solid biomass",
+    }
+    # transmission_carrier = [t[1] for t in get_transmission_techs(networks)]
+    for component, carrier in get_transmission_techs(networks):
+        bus_carrier = transmission_bus_carrier[carrier]
+        SUPPLY.drop(
+            filter_by(
+                SUPPLY, component=component, carrier=carrier, bus_carrier=bus_carrier
+            ).index,
+            inplace=True,
+        )
+        DEMAND.drop(
+            filter_by(
+                DEMAND, component=component, carrier=carrier, bus_carrier=bus_carrier
+            ).index,
+            inplace=True,
+        )
+    # SUPPLY.drop(transmission_carrier, level="carrier", errors="ignore", inplace=True)
+    # DEMAND.drop(transmission_carrier, level="carrier", errors="ignore", inplace=True)
 
     # collect transformed energy system variables. Note, that the order of
     # collection is relevant for assertions statements.
@@ -1428,5 +1316,3 @@ if __name__ == "__main__":
     with pd.ExcelWriter(snakemake.output.exported_variables) as writer:
         iamc.to_excel(writer, sheet_name="data", index=False)
         meta.to_excel(writer, sheet_name="meta", index=False)
-
-    check_balances(iamc)
