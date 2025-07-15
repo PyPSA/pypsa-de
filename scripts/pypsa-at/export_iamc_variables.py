@@ -62,6 +62,7 @@ BC_ALIAS = {
     "gas for industry": "Gas",
     "kerosene for aviation": "Oil",
     "land transport oil": "Oil",
+    "industry methanol": "Methanol",
     "shipping methanol": "Methanol",
     "shipping oil": "Oil",
     "solid biomass for industry": "Biomass",
@@ -269,7 +270,7 @@ def transform_load(var, carrier: str) -> dict:
         raise ValueError(f"Unknown sector for Load carrier: {carrier}.")
 
     bc = {
-        BC_ALIAS.get(bc, bc)
+        BC_ALIAS[bc]
         for bc in filter_by(DEMAND, carrier=carrier, component="Load").index.unique(
             "bus_carrier"
         )
@@ -495,7 +496,7 @@ def primary_oil(var: dict) -> dict:
 
 def primary_gas(var) -> dict:
     bc = "gas"
-    prefix = f"{PRIMARY}|{BC_ALIAS.get(bc, bc)}"
+    prefix = f"{PRIMARY}|{BC_ALIAS[bc]}"
     var[f"{prefix}|Import Foreign"] = _extract(IMPORT_FOREIGN, bus_carrier=bc)
     var[f"{prefix}|Import Domestic"] = _extract(IMPORT_DOMESTIC, bus_carrier=bc)
     var[f"{prefix}|Production"] = _extract(
@@ -534,7 +535,7 @@ def primary_waste(var: dict) -> dict:
     :
     """
     bc = "municipal solid waste"
-    prefix = f"{PRIMARY}|{BC_ALIAS.get(bc, bc)}"
+    prefix = f"{PRIMARY}|{BC_ALIAS[bc]}"
     mapper = {"": "MWh_LHV"}  # Municipal solid waste is missing the unit
     var[f"{prefix}|Import Foreign"] = _extract(IMPORT_FOREIGN, bus_carrier=bc).rename(
         mapper, axis="index", level="unit"
@@ -621,7 +622,7 @@ def primary_hydrogen(var: dict) -> dict:
         The updated variables' collection.
     """
     bc = "H2"
-    prefix = f"{PRIMARY}|{BC_ALIAS.get(bc, bc)}"
+    prefix = f"{PRIMARY}|{BC_ALIAS[bc]}"
     var[f"{prefix}|Import Foreign"] = _extract(IMPORT_FOREIGN, bus_carrier=bc)
     var[f"{prefix}|Import Domestic"] = _extract(IMPORT_DOMESTIC, bus_carrier=bc)
     var[f"{prefix}|Import Global"] = _extract(
@@ -646,12 +647,14 @@ def primary_biomass(var: dict) -> dict:
         The updated variables' collection.
     """
     bc = "solid biomass"
-    prefix = f"{PRIMARY}|{BC_ALIAS.get(bc, bc)}"
+    prefix = f"{PRIMARY}|{BC_ALIAS[bc]}"
     var[f"{prefix}|Import Foreign"] = _extract(IMPORT_FOREIGN, bus_carrier=bc)
     var[f"{prefix}|Import Domestic"] = _extract(IMPORT_DOMESTIC, bus_carrier=bc)
 
     var[f"{prefix}|Solid"] = _extract(SUPPLY, bus_carrier=bc, component="Generator")
-    var[f"{prefix}|Biogas"] = _extract(
+
+    # biogas is another group
+    var[f"{PRIMARY}|Biogas"] = _extract(
         SUPPLY, bus_carrier="biogas", component="Generator"
     )
 
@@ -769,7 +772,10 @@ def primary_methanol(var: dict) -> dict:
         filter_by(DEMAND, bus_carrier="methanol", component="Link").groupby(IDX).sum()
     )
     regional_production = (
-        filter_by(SUPPLY, bus_carrier="methanol", component="Link").groupby(IDX).sum()
+        filter_by(SUPPLY, bus_carrier="methanol", component="Link")
+        .drop("import methanol", level="carrier", errors="ignore")
+        .groupby(IDX)
+        .sum()
     )
 
     deficit = regional_demand.add(regional_production, fill_value=0)
