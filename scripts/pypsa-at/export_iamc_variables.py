@@ -167,7 +167,7 @@ def _process_single_input_link(
     return var
 
 
-def transform_link(carrier: str | list, technology: str, debug: bool = False) -> None:
+def transform_link(carrier: str | list, technology: str) -> None:
     """
     Transform a Link component into supply and transformation losses.
 
@@ -179,7 +179,6 @@ def transform_link(carrier: str | list, technology: str, debug: bool = False) ->
     ----------
     carrier
     technology
-    debug
 
     Returns
     -------
@@ -218,10 +217,6 @@ def transform_link(carrier: str | list, technology: str, debug: bool = False) ->
             )
     else:
         _process_single_input_link(supply, demand, bc_out, bc_in.item(), technology)
-
-    # optionally skipping global statistics update is useful during development
-    if debug:
-        return
 
     # remove from global statistic to prevent double counting
     SUPPLY.drop(supply.index, inplace=True)
@@ -327,6 +322,82 @@ def _extract(ds: pd.Series, **filter_kwargs) -> pd.Series:
     results = filter_by(ds, **filter_kwargs)
     ds.drop(results.index, inplace=True)
     return results.groupby(IDX).sum()
+
+
+def drop_transmission_technologies():
+    # all transmission is already in trade_energy. The bus_carrier must be
+    # considered in the filter to prevent dropping compression costs
+    transmission_bus_carrier = {
+        "AC": "AC",
+        "CO2 pipeline": "co2",
+        "DC": "AC",
+        "H2 pipeline": "H2",
+        "H2 pipeline (Kernnetz)": "H2",
+        "H2 pipeline retrofitted": "H2",
+        "gas pipeline": "gas",
+        "gas pipeline new": "gas",
+        "municipal solid waste transport": "municipal solid waste",
+        "solid biomass transport": "solid biomass",
+    }
+    for component, carrier in get_transmission_techs(networks):
+        bus_carrier = transmission_bus_carrier[carrier]
+        SUPPLY.drop(
+            filter_by(
+                SUPPLY, component=component, carrier=carrier, bus_carrier=bus_carrier
+            ).index,
+            inplace=True,
+        )
+        DEMAND.drop(
+            filter_by(
+                DEMAND, component=component, carrier=carrier, bus_carrier=bus_carrier
+            ).index,
+            inplace=True,
+        )
+
+
+def collect_regional_nh3_loads():
+    # use regional surplus as regional Load
+    bc = "NH3"
+
+    nh3_regional_supply = combine_variables(
+        {
+            k: v
+            for k, v in var.items()
+            if re.match(rf"^Secondary Energy\|{BC_ALIAS[bc]}", k)
+        }
+    )
+    nh3_eu_demand = DEMAND.filter(like=BC_ALIAS[bc])
+    nh3_eu_import = combine_variables(
+        {
+            k: v
+            for k, v in var.items()
+            if re.match(rf"^Primary Energy\|{BC_ALIAS[bc]}", k)
+        }
+    )
+    imbalances_iamc = (
+        nh3_regional_supply.groupby("year")
+        .sum()
+        .add(nh3_eu_import.groupby("year").sum(), fill_value=0)
+        .add(nh3_eu_demand.groupby("year").sum(), fill_value=0)
+    )
+    imbalances_bus = (
+        collect_myopic_statistics(
+            networks,
+            "energy_balance",
+            groupby=["location", "carrier"],
+            bus_carrier=bc,
+            aggregate_components=None,
+        )
+        .groupby("year")
+        .sum()
+    )
+
+    # check that imbalances are equal to imbalances in the network
+    pd.testing.assert_series_equal(imbalances_iamc, imbalances_bus, check_names=False)
+    if not imbalances_bus.empty:
+        logger.warning(f"Imbalances detected for bus carrier {bc}:\n{imbalances_bus}.")
+    var[f"{FINAL}|{BC_ALIAS[bc]}"] = nh3_regional_supply.groupby(IDX).sum()
+    _extract(DEMAND, component="Load", carrier=bc, bus_carrier=bc)
 
 
 def process_biomass_boilers() -> dict:
@@ -474,9 +545,9 @@ def primary_oil() -> dict:
     _extract(SUPPLY, carrier="oil refining")
     _extract(DEMAND, carrier="oil refining")
 
-    # unsustainable bioliquids have regional bus generators, but are already
-    # accounted for in regional_oil_deficit. The "unsustainable bioliquids"
-    # Link supplies to the oil bus.
+    # unsustainable bioliquids have regional bus generators.
+    # The "unsustainable bioliquids" Link forwards all generated energy
+    # to the oil bus.
     _extract(SUPPLY, carrier="unsustainable bioliquids", component="Generator")
 
 
@@ -797,7 +868,7 @@ def primary_heat() -> dict:
     return var
 
 
-def combine_variables(collection: SeriesCollector) -> pd.Series:
+def combine_variables(collection: SeriesCollector | dict) -> pd.Series:
     """
     Combine variables into a single data series.
 
@@ -1101,8 +1172,6 @@ def collect_secondary_energy() -> pd.Series:
         "shipping methanol",
         "shipping oil",
         "kerosene for aviation",
-        # "urban central water pits charger",
-        # "urban central water pits discharger",
     ]
     remaining_supply = filter_by(SUPPLY, component="Link").drop(
         demand_carrier, level="carrier", errors="ignore"
@@ -1121,47 +1190,12 @@ def collect_final_energy() -> pd.Series:
     load_carrier = filter_by(DEMAND, component="Load").index.unique("carrier")
 
     # NH3 has Loads on EU bus and we need regional demands
-    if has_nh3 := "NH3" in load_carrier:
+    if "NH3" in load_carrier:
+        collect_regional_nh3_loads()
         load_carrier = load_carrier.drop("NH3")
 
     for carrier in load_carrier:
         transform_load(carrier)
-
-    if has_nh3:  # todo: move to function
-        # use regional surplus as regional Load
-        nh3_regional_supply = combine_variables(
-            {k: v for k, v in var.items() if re.match(r"^Secondary Energy\|NH3", k)}
-        )
-        nh3_eu_demand = DEMAND.filter(like="NH3")
-        nh3_eu_import = combine_variables(
-            {k: v for k, v in var.items() if re.match(r"^Primary Energy\|NH3", k)}
-        )
-        imbalances_iamc = (
-            nh3_regional_supply.groupby("year")
-            .sum()
-            .add(nh3_eu_import.groupby("year").sum(), fill_value=0)
-            .add(nh3_eu_demand.groupby("year").sum(), fill_value=0)
-        )
-        imbalances_bus = (
-            collect_myopic_statistics(
-                networks,
-                "energy_balance",
-                groupby=["location", "carrier"],
-                bus_carrier="NH3",
-                aggregate_components=None,
-            )
-            .groupby("year")
-            .sum()
-        )
-        pd.testing.assert_series_equal(
-            imbalances_iamc, imbalances_bus, check_names=False
-        )
-        if not imbalances_bus.empty:
-            logger.warning(
-                f"Imbalances detected for bus carrier NH3: {imbalances_bus}."
-            )
-        var[f"{FINAL}|NH3"] = nh3_regional_supply.groupby(IDX).sum()
-        _extract(DEMAND, component="Load", carrier="NH3", bus_carrier="NH3")
 
     assert filter_by(DEMAND, component="Load").empty, (
         f"Missing demand from Loads detected: {filter_by(DEMAND, component='Load')}"
@@ -1223,7 +1257,7 @@ if __name__ == "__main__":
     }
     # calculate all statistics and process them to IAMC data model. The idea is to
     # calculate everything once and remove rows from the global statistic. This way
-    # we make sure that nothing is counted twice or is forgotten.
+    # we make sure that nothing is counted twice or forgotten.
     SUPPLY = collect_myopic_statistics(
         networks, "supply", groupby=groupby, **kwargs
     ).drop("t_co2", level="unit", errors="ignore")
@@ -1265,48 +1299,13 @@ if __name__ == "__main__":
         .mul(-1)
     )
 
-    # all transmission is already in trade_energy. The bus_carrier must be
-    # considered in the filter to prevent dropping compression costs
-    # todo: move to function to prevent shadowing variable names
-    transmission_bus_carrier = {
-        "AC": "AC",
-        "CO2 pipeline": "co2",
-        "DC": "AC",
-        "H2 pipeline": "H2",
-        "H2 pipeline (Kernnetz)": "H2",
-        "H2 pipeline retrofitted": "H2",
-        "gas pipeline": "gas",
-        "gas pipeline new": "gas",
-        "municipal solid waste transport": "municipal solid waste",
-        "solid biomass transport": "solid biomass",
-    }
-    for component, carrier in get_transmission_techs(networks):
-        bus_carrier = transmission_bus_carrier[carrier]
-        SUPPLY.drop(
-            filter_by(
-                SUPPLY, component=component, carrier=carrier, bus_carrier=bus_carrier
-            ).index,
-            inplace=True,
-        )
-        DEMAND.drop(
-            filter_by(
-                DEMAND, component=component, carrier=carrier, bus_carrier=bus_carrier
-            ).index,
-            inplace=True,
-        )
+    # global metrics
+    drop_transmission_technologies()
 
     # collect transformed energy system variables. Note, that the order of
     # collection is relevant for assertions statements.
     var = SeriesCollector()
-    # to_concat = [
-    #     collect_primary_energy(),
-    #     collect_storage_imbalances(),
-    #     collect_losses_energy(),
-    #     collect_secondary_energy(),
-    #     collect_final_energy(),
-    #     collect_system_cost(),
-    # ]
-    # df = pd.concat(to_concat)
+
     collect_primary_energy()
     collect_storage_imbalances()
     collect_losses_energy()
@@ -1319,9 +1318,6 @@ if __name__ == "__main__":
     df = insert_index_level(df, "PyPSA-AT", "model")
     df = insert_index_level(df, snakemake.wildcards.run, "scenario")
     df.index = df.index.rename({"location": "region"})  # comply with IAMC data model
-
-    if df.index.has_duplicates:
-        print(df[df.index.duplicated()])
 
     iamc = IamDataFrame(df)
     meta = pd.Series(
