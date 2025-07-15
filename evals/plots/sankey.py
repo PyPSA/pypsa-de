@@ -2,10 +2,15 @@
 
 import numpy as np
 import pandas as pd
+import plotly
+import pyam
 from plotly.graph_objs import Figure, Sankey
 
 from evals.constants import DataModel
-from evals.utils import insert_index_level
+from evals.utils import insert_index_level, rename_aggregate
+
+pd.set_option("display.width", 250)
+pd.set_option("display.max_columns", 20)
 
 
 class ProtoSankey:
@@ -34,7 +39,7 @@ class ProtoSankey:
         self.links = {"source": [], "target": [], "value": []}
 
     def plot(self):
-        """"""
+        raise NotImplementedError
         # nodes and links are to be maintained separately
 
         # a node levels are a data frame with the following columns:
@@ -70,7 +75,7 @@ class ProtoSankey:
         return _df.drop("value", axis=1)
 
     def make_links(self):
-        """"""
+        raise NotImplementedError
 
 
 class OverviewSankey:
@@ -91,10 +96,6 @@ class OverviewSankey:
     year
     location
     """
-
-    print("remove me")
-    pd.set_option("display.width", 250)
-    pd.set_option("display.max_columns", 20)
 
     def __init__(self, df: pd.DataFrame, year: str, location: str) -> None:
         self._df = df  # keep a reference to the original data set
@@ -361,3 +362,79 @@ class OverviewSankey:
         """
         value = self.view[link_or_node][field]
         self.view[link_or_node][field] = np.concatenate([value, items])
+
+
+def read_iamc_data_frame():
+    xls = pd.read_excel(
+        "/IdeaProjects/pypsa-at/results/v2025.02/KN2045_Mix/evaluation/exported_iamc_variables.xlsx",
+        index_col=[0, 1, 2, 3, 4],
+    )
+    xls.columns.name = "Year"
+    return xls.stack()
+
+
+def main():
+    df = read_iamc_data_frame()
+    df = rename_aggregate(df, "TWh", level="Unit").div(1e6)
+    df = pyam.IamDataFrame(df)
+    df = df.filter(year=2050, region="GB0")
+
+    # ['AC',
+    #  'Biomass',
+    #  'Coal',
+    #  'Gas',
+    #  'H2',
+    #  'Heat',
+    #  'Methanol',
+    #  'NH3',
+    #  'Oil',
+    #  'Uranium',
+    #  'Waste']
+
+    sankey_mapping = {
+        # AC
+        "Primary Energy|AC|Import Domestic": ("Domestic Import AC", "AC Primary"),
+        "Primary Energy|AC|Import Foreign": ("Domestic Foreign AC", "AC Primary"),
+        "Primary Energy|AC|Run-of-River": ("Run-of-River", "AC Primary"),
+        "Primary Energy|AC|Solar Rooftop": ("Solar (Rooftop)", "AC Primary"),
+        "Primary Energy|AC|Solar Utility": ("Solar (Utility)", "AC Primary"),
+        "Primary Energy|AC|Wind Offshore": ("Wind (Offshore)", "AC Primary"),
+        "Primary Energy|AC|Wind Onshore": ("Wind (Onshore)", "AC Primary"),
+        "Primary Energy|AC": ("AC Primary", "Transformation Input"),
+        # todo: not everything goes to transformation, some parts go to export and final demand
+        #  need to connect secondary AC demand to Transformation Input! Not sum(primary).
+        #  the rest is final AC demand (the bypass amount)
+        # Primary Energy|Biomass|Solid
+        # Primary Energy|Biogas
+        # Primary Energy|Coal|Hard
+        # Primary Energy|Coal|Lignite
+        # Primary Energy|Gas|Biogas|w CC
+        # Primary Energy|Gas|Biogas|w/o CC
+        # Primary Energy|Gas|Import Domestic
+        # Primary Energy|Gas|Import Foreign
+        # Primary Energy|Gas|Production
+        "Primary Energy|H2|Import Global": ("Global Import H2", "H2 Primary"),
+        "Primary Energy|H2|Import Domestic": ("Domestic Import H2", "H2 Primary"),
+        "Primary Energy|H2|Import Foreign": ("Foreign Import H2", "H2 Primary"),
+        "Primary Energy|H2": ("H2 Primary", "Transformation Input"),
+        # Secondary Energy|Ambient Heat|AC|Air Heat Pump
+        # Secondary Energy|Ambient Heat|AC|Ground Heat Pump
+        # Secondary Energy|Ambient Heat|Biomass|CHP
+        # Secondary Energy|Ambient Heat|Coal|CHP
+        # Secondary Energy|Ambient Heat|Gas|Boiler
+        # Primary Energy|Methanol
+        # Primary Energy|NH3  # skip?
+        # Primary Energy|Oil|Import
+        # Primary Energy|Uranium
+        # Primary Energy|Waste|HVC from naphtha
+        # Primary Energy|Waste|Import Foreign
+        # Primary Energy|Waste|Solid
+    }
+
+    fig = df.plot.sankey(mapping=sankey_mapping)
+    plotly.io.show(fig)
+
+
+if __name__ == "__main__":
+    FILEPATH = "/IdeaProjects/pypsa-at/results/v2025.02/KN2045_Mix/evaluation/exported_iamc_variables.xlsx"
+    main()

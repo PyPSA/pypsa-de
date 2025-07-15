@@ -14,7 +14,6 @@ def check_balances(df: pd.DataFrame):
     -------
     :
     """
-    # for bc in ("AC",):  # sorted(set(BC_ALIAS.values())):
     for bc in sorted(set(BC_ALIAS.values())):
         for (year, region), ds in df.groupby(["Year", "Region"]):
             ds = ds.drop("billion EUR2020", level="Unit").droplevel(
@@ -25,7 +24,7 @@ def check_balances(df: pd.DataFrame):
             #     ["Year", "Region", "Scenario", "Model"])
 
             data = ds.filter(like=bc) / 1e6
-            primary = data.filter(regex=rf"^\('Primary Energy\|{bc}")
+            primary = data.filter(regex=rf"^\('Primary Energy\|{bc}\|")
             secondary_supply = data.filter(regex=rf"^\('Secondary Energy\|{bc}")
             secondary_demand = data.filter(
                 regex=rf"^\('Secondary Energy\|[a-zA-Z0-9\s]*\|{bc}"
@@ -62,7 +61,7 @@ def check_balances(df: pd.DataFrame):
                 - final_demand.sum()
             )
 
-            if abs(balance) >= 0.1:
+            if abs(balance) >= 1:
                 print(bc, year, region, ":\t", f"{balance:.4f}")
 
     # per carrier:

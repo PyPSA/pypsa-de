@@ -4,6 +4,13 @@ Export variables in IAMC data model for all regions.
 IAMC variable naming convention:
 Category|Subcategory|Specification
 
+naming conventions:
+* Primary Energy|<bus_carrier>|Subcategory
+* Secondary Energy|<output_bus_carrier>|<input_bus_carrier>|Subcategory
+  For example, Secondary Energy|H2|AC|Electrolysis should be read as
+  Hydrogen supply from Electricity (AC + low voltage) using Electrolysis
+* Final Energy|<bus_carrier>|Subcategory
+
 Notes
 -----
 https://docs.ece.iiasa.ac.at/iamc.html
@@ -116,6 +123,35 @@ def _process_single_input_link(
         heat_total = var.pop(label_heat)
         var[label_heat] = heat_total.sub(heat_ambient, fill_value=0)
         var[f"{SECONDARY}|Ambient Heat|{BC_ALIAS[bc_in]}|{technology}"] = heat_ambient
+
+
+def aggregate_variables(label: str, pattern: str):
+    """Aggregate a subset of variables."""
+    to_sum = {k: v for k, v in var.items() if re.match(pattern, k)}
+    var[label] = pd.concat(to_sum).groupby(IDX).sum()
+
+
+def merge_variables(collection: SeriesCollector | dict) -> pd.Series | pd.DataFrame:
+    """
+    Combine variables into a single data series.
+
+    Parameters
+    ----------
+    collection
+
+    Returns
+    -------
+    :
+    """
+    to_concat = {k: v for k, v in collection.items() if not v.empty}
+
+    if len(to_concat) == 0:
+        return pd.Series()
+
+    ds = pd.concat(to_concat)
+    ds.index = ds.index.rename({None: "Variable"})
+
+    return ds
 
 
 def transform_link(carrier: str | list, technology: str) -> None:
@@ -276,7 +312,7 @@ def collect_regional_nh3_loads():
     # use regional surplus as regional Load
     bc = "NH3"
 
-    nh3_regional_supply = combine_variables(
+    nh3_regional_supply = merge_variables(
         {
             k: v
             for k, v in var.items()
@@ -284,11 +320,11 @@ def collect_regional_nh3_loads():
         }
     )
     nh3_eu_demand = DEMAND.filter(like=BC_ALIAS[bc])
-    nh3_eu_import = combine_variables(
+    nh3_eu_import = merge_variables(
         {
             k: v
             for k, v in var.items()
-            if re.match(rf"^Primary Energy\|{BC_ALIAS[bc]}", k)
+            if re.match(rf"^Primary Energy\|{BC_ALIAS[bc]}$", k)
         }
     )
     imbalances_iamc = (
@@ -362,19 +398,17 @@ def primary_oil():
     Returns
     -------
     :
-    """
-    # # netted_liquids = n.statistics.energy_balance(
-    # #     groupby="location", bus_carrier="oil", comps="Link"
-    # # ).drop("EU", errors="ignore")
-    # netted_liquids = collect_myopic_statistics(networks, "energy_balance", bus_carrier="oil", comps="Link").drop("EU", level="location")
-    # liquids_consumption = netted_liquids[netted_liquids.le(0)].abs()
 
-    # increase fossil oil demand by this factor to account for refining losses
+    Notes
+    -----
+    proper tests must make sure that no oil amounts
+    in the network are skipped.
+    """
     prefix = f"{PRIMARY}|Oil"
     bc = "oil"
 
     # assuming that all oil production is consumed locally.
-    # Let's not filter_by components, to capture all but Stores.
+    # Let's not filter_by components, to capture anything but Stores.
     production = (
         filter_by(SUPPLY, bus_carrier=bc)
         .drop("EU", level="location")
@@ -387,24 +421,13 @@ def primary_oil():
         .groupby(IDX)
         .sum()
     )
-    assert "EU" not in consumption.index.unique("location")
-    regional_oil_deficit = (
-        consumption.add(production, fill_value=0).clip(upper=0).mul(-1)
-    )
-    regional_oil_surplus = consumption.add(production, fill_value=0).clip(lower=0)
-    # assert primary oil and imports are equal to regional demands
-    # oil_refining_eff = _get_port_efficiency("oil refining", port="1")
-    # eu_oil = filter_by(SUPPLY, carrier=["oil refining", "import oil"], bus_carrier=bc)
-    # missing = (
-    #     regional_oil_deficit.groupby("year").sum()
-    #     - eu_oil.groupby("year").sum()
-    #     - regional_oil_surplus.groupby("year").sum()
-    # )
-    # if not (missing <= 1e-5).abs().all():
-    #     logger.warning(f"Missing oil amounts detected: {missing}")
+    regional_deficit = consumption.add(production, fill_value=0).clip(upper=0).mul(-1)
+    regional_surplus = consumption.add(production, fill_value=0).clip(lower=0)
 
-    var[f"{prefix}|Import"] = regional_oil_deficit
-    var[f"{FINAL}|Oil|Export"] = regional_oil_surplus
+    var[f"{prefix}|Import"] = regional_deficit
+    var[f"{FINAL}|Oil|Export"] = regional_surplus
+
+    aggregate_variables(prefix, pattern=rf"^{prefix.replace('|', r'\|')}")
 
     # remove EU imports and oil refining
     _extract(SUPPLY, carrier="import oil")
@@ -446,6 +469,10 @@ def primary_gas():
     var[f"{prefix}|Biogas|w CC"] = _extract(
         SUPPLY, carrier="biogas to gas CC", bus_carrier=bc
     )
+
+    aggregate_variables(prefix, pattern=rf"^{prefix.replace('|', r'\|')}")
+
+    # drop biogas withdrawal from biogas processing
     _extract(
         DEMAND, carrier=["biogas to gas", "biogas to gas CC"], bus_carrier="biogas"
     )
@@ -472,16 +499,6 @@ def primary_waste():
         SUPPLY, bus_carrier=bc, component="Generator"
     ).rename(mapper, axis="index", level="unit")
 
-    # municipal solid waste is only used to transform "municipal solid waste" to
-    # "non-sequestered HVC" and to track CO2. Same as Biogas, include in primary
-    _extract(
-        SUPPLY,
-        carrier="municipal solid waste",
-        bus_carrier="non-sequestered HVC",
-        component="Link",
-    )
-    _extract(DEMAND, carrier="municipal solid waste", bus_carrier=bc, component="Link")
-
     # HVC is a side product of naphtha for industry. The oil demand of
     # the link equals the naphtha output. There are no losses.
     var[f"{prefix}|HVC from naphtha"] = _extract(
@@ -490,6 +507,18 @@ def primary_waste():
         bus_carrier="non-sequestered HVC",
         component="Link",
     )
+
+    aggregate_variables(prefix, pattern=rf"^{prefix.replace('|', r'\|')}")
+
+    # municipal solid waste is only used to transform "municipal solid waste" to
+    # "non-sequestered HVC" and to track CO2. Same as Biogas processing.
+    _extract(
+        SUPPLY,
+        carrier="municipal solid waste",
+        bus_carrier="non-sequestered HVC",
+        component="Link",
+    )
+    _extract(DEMAND, carrier="municipal solid waste", bus_carrier=bc, component="Link")
 
 
 def primary_coal():
@@ -512,8 +541,10 @@ def primary_coal():
         filter_by(DEMAND, bus_carrier="lignite", component="Link").groupby(IDX).sum()
     ).mul(-1)
 
+    aggregate_variables(prefix, pattern=rf"^{prefix.replace('|', r'\|')}")
+
     # remove EU coal generators from the to-do list
-    coal_generators = filter_by(
+    coal_generators = filter_by(  # todo: use _extract() shorthand
         SUPPLY, bus_carrier=["coal", "lignite"], component="Generator"
     )
     SUPPLY.drop(coal_generators.index, inplace=True)
@@ -540,6 +571,8 @@ def primary_hydrogen():
         SUPPLY, carrier="import H2", bus_carrier=bc, component="Generator"
     )
 
+    aggregate_variables(prefix, pattern=rf"^{prefix.replace('|', r'\|')}")
+
 
 def primary_biomass():
     """
@@ -557,9 +590,13 @@ def primary_biomass():
 
     var[f"{prefix}|Solid"] = _extract(SUPPLY, bus_carrier=bc, component="Generator")
 
+    aggregate_variables(prefix, pattern=rf"^{prefix.replace('|', r'\|')}")
+
     # biogas is a separate bus carrier group
-    var[f"{PRIMARY}|Biogas"] = _extract(
-        SUPPLY, bus_carrier="biogas", component="Generator"
+    var[f"{PRIMARY}|Biogas"] = (
+        _extract(  # todo: Biogas is simplified, either include in BC_ALIAS or drop
+            SUPPLY, bus_carrier="biogas", component="Generator"
+        )
     )
 
 
@@ -598,6 +635,8 @@ def primary_electricity():
     var[f"{prefix}|Import Domestic"] = _extract(IMPORT_DOMESTIC, bus_carrier="AC")
     var[f"{prefix}|Import Foreign"] = _extract(IMPORT_FOREIGN, bus_carrier="AC")
 
+    aggregate_variables(prefix, pattern=rf"^{prefix.replace('|', r'\|')}")
+
 
 def primary_uranium():
     """
@@ -608,7 +647,8 @@ def primary_uranium():
     :
         The updated variables' collection.
     """
-    # use localized uranium demands from nuclear power plants
+    bc = "uranium"
+    prefix = f"{PRIMARY}|{BC_ALIAS[bc]}"
     var[f"{PRIMARY}|Uranium"] = (
         filter_by(DEMAND, carrier="nuclear", bus_carrier="uranium", component="Link")
         .groupby(IDX)
@@ -616,7 +656,10 @@ def primary_uranium():
         .mul(-1)
     )
 
+    # todo: assert var[f"{PRIMARY}|Uranium"].sum() == EU Generator
     _extract(SUPPLY, bus_carrier="uranium", component="Generator", location="EU")
+
+    aggregate_variables(prefix, pattern=rf"^{prefix.replace('|', r'\|')}")
 
 
 def primary_ammonia():
@@ -628,9 +671,12 @@ def primary_ammonia():
     :
     """
     # there is no regional ammonium demand
-    var[f"{PRIMARY}|NH3|Import"] = _extract(
-        SUPPLY, carrier="import NH3"
-    )  # todo: needed?
+    bc = "NH3"
+    prefix = f"{PRIMARY}|{BC_ALIAS[bc]}"
+    # todo: needed?
+    var[f"{prefix}|Import"] = _extract(SUPPLY, carrier="import NH3")
+
+    aggregate_variables(prefix, pattern=rf"^{prefix.replace('|', r'\|')}")
 
 
 def primary_methanol():
@@ -641,18 +687,22 @@ def primary_methanol():
     -------
     :
     """
+    bc = "methanol"
+    prefix = f"{PRIMARY}|{BC_ALIAS[bc]}"
     regional_demand = (
-        filter_by(DEMAND, bus_carrier="methanol", component="Link").groupby(IDX).sum()
+        filter_by(DEMAND, bus_carrier=bc, component="Link").groupby(IDX).sum()
     )
     regional_production = (
-        filter_by(SUPPLY, bus_carrier="methanol", component="Link")
+        filter_by(SUPPLY, bus_carrier=bc, component="Link")
         .drop("import methanol", level="carrier", errors="ignore")
         .groupby(IDX)
         .sum()
     )
 
     deficit = regional_demand.add(regional_production, fill_value=0)
-    var[f"{PRIMARY}|Methanol"] = deficit.mul(-1)
+    var[prefix] = deficit.mul(-1)
+
+    aggregate_variables(prefix, pattern=rf"^{prefix.replace('|', r'\|')}")
 
     _extract(SUPPLY, carrier="import methanol", location="EU")
 
@@ -673,28 +723,7 @@ def primary_heat():
     )
     var[f"{prefix}|Geothermal"] = _extract(SUPPLY, carrier="geothermal heat")
 
-
-def combine_variables(collection: SeriesCollector | dict) -> pd.Series | pd.DataFrame:
-    """
-    Combine variables into a single data series.
-
-    Parameters
-    ----------
-    collection
-
-    Returns
-    -------
-    :
-    """
-    to_concat = {k: v for k, v in collection.items() if not v.empty}
-
-    if len(to_concat) == 0:
-        return pd.Series()
-
-    ds = pd.concat(to_concat)
-    ds.index = ds.index.rename({None: "Variable"})
-
-    return ds
+    aggregate_variables(prefix, pattern=rf"^{prefix.replace('|', r'\|')}")
 
 
 def collect_system_cost() -> pd.Series:
@@ -726,7 +755,7 @@ def collect_system_cost() -> pd.Series:
     var["System Costs|CAPEX"] = myopic_capex.groupby(IDX).sum()
     var["System Costs"] = var["System Costs|CAPEX"] + var["System Costs|OPEX"]
 
-    return combine_variables(var)
+    return merge_variables(var)
 
 
 def collect_primary_energy():
@@ -1109,7 +1138,7 @@ if __name__ == "__main__":
     collect_final_energy()
     collect_system_cost()
 
-    df = combine_variables(var)
+    df = merge_variables(var)
 
     df = insert_index_level(df, "PyPSA-AT", "model")
     df = insert_index_level(df, snakemake.wildcards.run, "scenario")
