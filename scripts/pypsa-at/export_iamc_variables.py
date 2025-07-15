@@ -127,6 +127,9 @@ def _process_single_input_link(
 
 def aggregate_variables(label: str, pattern: str):
     """Aggregate a subset of variables."""
+    assert label not in var, (
+        f"Adding to existing keys causes data duplication. key={label}"
+    )
     to_sum = {k: v for k, v in var.items() if re.match(pattern, k)}
     var[label] = pd.concat(to_sum).groupby(IDX).sum()
 
@@ -649,7 +652,7 @@ def primary_uranium():
     """
     bc = "uranium"
     prefix = f"{PRIMARY}|{BC_ALIAS[bc]}"
-    var[f"{PRIMARY}|Uranium"] = (
+    var[f"{PRIMARY}|Uranium|Import"] = (
         filter_by(DEMAND, carrier="nuclear", bus_carrier="uranium", component="Link")
         .groupby(IDX)
         .sum()
@@ -700,7 +703,7 @@ def primary_methanol():
     )
 
     deficit = regional_demand.add(regional_production, fill_value=0)
-    var[prefix] = deficit.mul(-1)
+    var[f"{prefix}|Import"] = deficit.mul(-1)
 
     aggregate_variables(prefix, pattern=rf"^{prefix.replace('|', r'\|')}")
 
