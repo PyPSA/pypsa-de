@@ -437,12 +437,13 @@ def main():
         # Primary Energy|Waste|Import Foreign
         # Primary Energy|Waste|Solid
     }
-
+    variables = df.index.unique("Variable")
     for k in sankey_mapping:
-        if k not in df.index.unique("Variable"):
-            print(
-                f"Removing {k} from mapping because the variable does not exist in year {year} and region {region}."
-            )
+        if k in variables:
+            continue
+        print(f"Skipping '{k}' because it does not exist in {year} and {region}.")
+        sankey_mapping.pop(k)
+
     sankey_mapping = {
         k: v for k, v in sankey_mapping.items() if k in df.index.unique("Variable")
     }

@@ -1,6 +1,5 @@
 import pandas as pd
 from export_iamc_variables import BC_ALIAS
-from pyam import IamDataFrame
 
 
 def check_balances(df: pd.DataFrame):
@@ -68,58 +67,8 @@ def check_balances(df: pd.DataFrame):
                 - final_demand.sum()
             )
 
-            if abs(balance) >= 1:
+            if abs(balance) >= 0.5:
                 print(bc, year, region, ":\t", f"{balance:.4f}")
-
-    # per carrier:
-    #   primary energy
-    #   + import
-    #   + secondary production
-    #   - secondary demand
-    #   - secondary losses
-    #   - final energy
-    #   - export
-    #   == 0 ?
-
-    # all units in {units} ?
-    # assert "" not in df.index.unique("unit"), (
-    #     f"Need to assign all energy units with 'MWh_suff'.\n{df[df.index.get_level_values('unit') == '']}"
-    # )
-    # all bus_carrier in BCS ?
-
-
-def connect_sankey(df):
-    df = IamDataFrame(df)
-
-    sankey_mapping = {
-        "Primary Energy|Coal": ("Coal Mining", "Coal Trade & Power Generation"),
-        "Primary Energy|Gas": (
-            "Natural Gas Extraction",
-            "Gas Network & Power Generation",
-        ),
-        "Secondary Energy|Electricity|Non-Biomass Renewables": (
-            "Non-Biomass Renewables",
-            "Electricity Grid",
-        ),
-        "Secondary Energy|Electricity|Nuclear": ("Nuclear", "Electricity Grid"),
-        "Secondary Energy|Electricity|Coal": (
-            "Coal Trade & Power Generation",
-            "Electricity Grid",
-        ),
-        "Secondary Energy|Electricity|Gas": (
-            "Gas Network & Power Generation",
-            "Electricity Grid",
-        ),
-        "Final Energy|Electricity": ("Electricity Grid", "Electricity Demand"),
-        "Final Energy|Solids|Coal": (
-            "Coal Trade & Power Generation",
-            "Non-Electricity Coal Demand",
-        ),
-        "Final Energy|Gases": ("Gas Network & Power Generation", "Gas Demand"),
-    }
-
-    fig = df.filter(year=2050).plot.sankey(mapping=sankey_mapping)
-    fig.show()
 
 
 if __name__ == "__main__":
