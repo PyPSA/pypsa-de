@@ -7,7 +7,7 @@ import pyam
 from plotly.graph_objs import Figure, Sankey
 
 from evals.constants import DataModel
-from evals.utils import insert_index_level, rename_aggregate
+from evals.utils import filter_by, insert_index_level, rename_aggregate
 
 pd.set_option("display.width", 250)
 pd.set_option("display.max_columns", 20)
@@ -374,10 +374,12 @@ def read_iamc_data_frame():
 
 
 def main():
+    year = "2050"
+    region = "GB0"
+
     df = read_iamc_data_frame()
     df = rename_aggregate(df, "TWh", level="Unit").div(1e6)
-    df = pyam.IamDataFrame(df)
-    df = df.filter(year=2050, region="GB0")
+    df = filter_by(df, Year=year, Region=region)
 
     # ['AC',
     #  'Biomass',
@@ -394,13 +396,17 @@ def main():
     sankey_mapping = {
         # AC
         "Primary Energy|AC|Import Domestic": ("Domestic Import AC", "AC Primary"),
-        "Primary Energy|AC|Import Foreign": ("Domestic Foreign AC", "AC Primary"),
+        "Primary Energy|AC|Import Foreign": ("Foreign Import AC", "AC Primary"),
         "Primary Energy|AC|Run-of-River": ("Run-of-River", "AC Primary"),
         "Primary Energy|AC|Solar Rooftop": ("Solar (Rooftop)", "AC Primary"),
         "Primary Energy|AC|Solar Utility": ("Solar (Utility)", "AC Primary"),
         "Primary Energy|AC|Wind Offshore": ("Wind (Offshore)", "AC Primary"),
         "Primary Energy|AC|Wind Onshore": ("Wind (Onshore)", "AC Primary"),
-        "Primary Energy|AC": ("AC Primary", "Transformation Input"),
+        "Secondary Energy|Demand AC": ("AC Primary", "Transformation Input"),
+        "Secondary Energy|Bypass AC": (
+            "AC Primary",
+            "AC Bypass",
+        ),  # bypass = final - lossy secondary supply
         # todo: not everything goes to transformation, some parts go to export and final demand
         #  need to connect secondary AC demand to Transformation Input! Not sum(primary).
         #  the rest is final AC demand (the bypass amount)
@@ -416,7 +422,8 @@ def main():
         "Primary Energy|H2|Import Global": ("Global Import H2", "H2 Primary"),
         "Primary Energy|H2|Import Domestic": ("Domestic Import H2", "H2 Primary"),
         "Primary Energy|H2|Import Foreign": ("Foreign Import H2", "H2 Primary"),
-        "Primary Energy|H2": ("H2 Primary", "Transformation Input"),
+        # "Secondary Energy|Demand H2": ("H2 Primary", "Transformation Input"),
+        # "Secondary Energy|Bypass H2": ("H2 Primary", "H2 Bypass"),
         # Secondary Energy|Ambient Heat|AC|Air Heat Pump
         # Secondary Energy|Ambient Heat|AC|Ground Heat Pump
         # Secondary Energy|Ambient Heat|Biomass|CHP
@@ -431,6 +438,16 @@ def main():
         # Primary Energy|Waste|Solid
     }
 
+    for k in sankey_mapping:
+        if k not in df.index.unique("Variable"):
+            print(
+                f"Removing {k} from mapping because the variable does not exist in year {year} and region {region}."
+            )
+    sankey_mapping = {
+        k: v for k, v in sankey_mapping.items() if k in df.index.unique("Variable")
+    }
+
+    df = pyam.IamDataFrame(df)
     fig = df.plot.sankey(mapping=sankey_mapping)
     plotly.io.show(fig)
 
