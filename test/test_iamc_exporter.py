@@ -55,20 +55,20 @@ def test_biogas_balances(
     -------
     :
     """
-    bc = "Biomass"
     ds = (
         exported_variables.query("Year == @year and Region == @region")
         .drop("billion EUR2020", level="Unit")
         .droplevel(["Year", "Region", "Scenario", "Model"])
-        .div(1e6)
-    )  # to TWh for readability
+        .div(1e6)  # to TWh for readability
+    )
 
+    bc = "Biomass"
     primary = ds.filter(regex=rf"^\('Primary Energy\|{bc}")
     secondary_supply = ds.filter(regex=rf"^\('Secondary Energy\|{bc}")
     secondary_demand = ds.filter(regex=rf"^\('Secondary Energy\|[a-zA-Z0-9\s]*\|{bc}")
     final_demand = ds.filter(regex=rf"^\('Final Energy\|{bc}")
 
-    # ambient heat must be excluded because it is not a demand
+    # ambient heat must be excluded or balances cannot amount to zero
     secondary_demand = secondary_demand.drop(
         secondary_demand.filter(like="Ambient Heat").index
     )

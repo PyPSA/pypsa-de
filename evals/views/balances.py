@@ -5,7 +5,6 @@ import pandas as pd
 from evals import plots as plots
 from evals.constants import DataModel as DM
 from evals.fileio import Exporter
-from evals.plots import ESMGroupedBarChart
 from evals.statistic import collect_myopic_statistics
 from evals.utils import (
     calculate_input_share,
@@ -111,7 +110,8 @@ def view_balance_heat(
     exporter = Exporter(statistics=[supply, demand], view_config=config["view"])
 
     # static view settings:
-    exporter.defaults.plotly.chart = ESMGroupedBarChart
+    chart_class = getattr(plots, config["view"]["chart"])
+    exporter.defaults.plotly.chart = chart_class
     exporter.defaults.plotly.xaxis_title = ""
     exporter.defaults.plotly.pattern = {"Demand": "/"}
 
@@ -161,6 +161,21 @@ def view_balance_methane(
 ) -> None:
     """
     Evaluate the methane balance.
+
+    Returns
+    -------
+    :
+    """
+    simple_bus_balance(networks, config, result_path)
+
+
+def view_balance_biomass(
+    result_path: str | Path,
+    networks: dict,
+    config: dict,
+) -> None:
+    """
+    Evaluate the solid biomass balance.
 
     Returns
     -------

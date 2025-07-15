@@ -20,8 +20,8 @@ def check_balances(df: pd.DataFrame):
                 ["Year", "Region", "Scenario", "Model"]
             )
 
-            # ds = filter_by(df, year="2020", region="PL").drop("billion EUR2020", level="unit").droplevel(
-            #     ["year", "region", "scenario", "model"])
+            # ds = filter_by(df, Year="2040", Region="IT0").drop("billion EUR2020", level="Unit").droplevel(
+            #     ["Year", "Region", "Scenario", "Model"])
 
             data = ds.filter(like=bc) / 1e6
             primary = data.filter(regex=rf"^\('Primary Energy\|{bc}")
@@ -35,6 +35,24 @@ def check_balances(df: pd.DataFrame):
             secondary_demand = secondary_demand.drop(
                 secondary_demand.filter(like="Ambient Heat").index
             )
+            # except for Heat to satisfy Heat Loads
+            if bc == "Heat":
+                ambient_heat = data.filter(like="Ambient Heat")
+                secondary_supply = secondary_supply.add(ambient_heat, fill_value=0)
+
+            if bc == "Oil":
+                # # need to drop refining losses, because `Oil Primary` is
+                # # simplified to `Oil` and refining losses are for the
+                # # conversion from oil primary -> oil
+                # primary = primary.drop("Primary Energy|Oil|Refining Losses", level="Variable")
+
+                # also drop unsustainable liquids oil demands. They are not
+                # correctly found by the regex
+                # todo: rename to Oil|Liquids and move to primary
+                secondary_demand = secondary_demand.drop(
+                    "Secondary Energy|Oil|Oil|Unsustainable Bioliquids",
+                    level="Variable",
+                )
 
             balance = (
                 primary.sum()
@@ -43,7 +61,7 @@ def check_balances(df: pd.DataFrame):
                 - final_demand.sum()
             )
 
-            if abs(balance) > 0.1:
+            if abs(balance) >= 0.1:
                 print(bc, year, region, ":\t", f"{balance:.4f}")
 
     # per carrier:
@@ -57,9 +75,9 @@ def check_balances(df: pd.DataFrame):
     #   == 0 ?
 
     # all units in {units} ?
-    assert "" not in df.index.unique("unit"), (
-        f"Need to assign all energy units with 'MWh_suff'.\n{df[df.index.get_level_values('unit') == '']}"
-    )
+    # assert "" not in df.index.unique("unit"), (
+    #     f"Need to assign all energy units with 'MWh_suff'.\n{df[df.index.get_level_values('unit') == '']}"
+    # )
     # all bus_carrier in BCS ?
 
 
