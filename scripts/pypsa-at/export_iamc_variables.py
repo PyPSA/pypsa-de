@@ -15,7 +15,6 @@ import re
 
 import pandas as pd
 from pyam import IamDataFrame
-from pypsa.statistics import port_efficiency
 
 from evals.constants import DataModel as DM
 from evals.constants import TradeTypes
@@ -106,65 +105,17 @@ def _process_single_input_link(
 
     for bc in bc_out:
         label = f"{SECONDARY}|{BC_ALIAS[bc]}|{BC_ALIAS[bc_in]}|{technology}"
-        # supply_bc = filter_by(supply, bus_carrier=bc).groupby(IDX).sum()
-        # if surplus.empty:
         var[label] = filter_by(supply, bus_carrier=bc).groupby(IDX).sum()
-        # else:  # split ambient heat. 100% of demand is Heat|AC, surplus is Ambient Heat|AC
-        #     assert technology in ("CHP", "Boiler", "Ground Heat Pump", "Air Heat Pump"), (
-        #         f"Unknown technology with efficiencies > 1: {technology}."
-        #     )
-        #     supply_unit = supply_bc.index.unique("unit").item()
-        #     ambient_heat = rename_aggregate(surplus, supply_unit, level="unit").mul(-1)
-        #     var[label] = supply_bc.sub(ambient_heat, fill_value=0)
-        #     var[f"{SECONDARY}|Ambient Heat|{BC_ALIAS[bc_in]}|{technology}"] = ambient_heat
 
     if not surplus.empty:
         assert technology in ("CHP", "Boiler", "Ground Heat Pump", "Air Heat Pump"), (
-            f"Unknown technology with efficiencies > 1: {technology}."
+            f"Unexpected technology with efficiencies > 1: {technology}."
         )
         heat_ambient = rename_aggregate(surplus, "MWh_th", level="unit").mul(-1)
         label_heat = f"{SECONDARY}|Heat|{BC_ALIAS[bc_in]}|{technology}"
         heat_total = var.pop(label_heat)
         var[label_heat] = heat_total.sub(heat_ambient, fill_value=0)
         var[f"{SECONDARY}|Ambient Heat|{BC_ALIAS[bc_in]}|{technology}"] = heat_ambient
-    # if not losses_neg.empty:
-    #     # negative losses are expected for X-to-heat technologies that
-    #     # utilize enthalpy heat and for heat pumps
-    #     assert technology in ("CHP", "Boiler", "Ground Heat Pump", "Air Heat Pump"), (
-    #         f"Unknown technology with efficiencies > 1: {technology}."
-    #     )
-    #     var[f"{SECONDARY}|Ambient Heat|{bc_in}|{technology}"] = rename_aggregate(
-    #         losses_neg, "MWh_LHV", level="unit"
-    #     ).mul(-1)
-    #
-    #     # need to subtract ambient heat amounts from primary heat output
-    #     lbl = f"{SECONDARY}|Heat|{bc_in}|{technology}"
-    #     full_output = var.pop(lbl)
-    #     var[lbl] = full_output - var[f"{SECONDARY}|Ambient Heat|{bc_in}|{technology}"]
-
-    # do not count ambient heat for demand + supply + losses = 0 to stay true
-    # bc_out_alias = [BC_ALIAS[bc] for bc in bc_out] + ["Losses"]
-    # pattern = rf"{SECONDARY}\|({'|'.join(bc_out_alias)})\|{bc_in}\|{technology}"
-    # total_vars = (
-    #     pd.concat({k: v for k, v in var.items() if re.match(pattern, k)})
-    #     .groupby(YEAR_LOC)
-    #     .sum()
-    # )
-    # total demand + supply + losses - ambient heat = 0
-    # ambient_heat = var.get(label_ambient_heat, pd.Series())
-    # if not losses_neg.empty:
-    #     assert (
-    #             total_vars.add(demand.groupby(YEAR_LOC).sum()).add(
-    #                 losses_neg.droplevel("unit"), fill_value=0
-    #             )
-    #             <= 1e-5
-    #     ).all(), (
-    #         f"Imbalances detected for Link with bus carrier supply: {bc_in} and bus carrier out: {list(bc_out)} for technology {technology}."
-    #     )
-    # else:
-    #     assert (total_vars.add(demand.groupby(YEAR_LOC).sum()) <= 1e-5).all()
-
-    return var
 
 
 def transform_link(carrier: str | list, technology: str) -> None:
@@ -225,7 +176,7 @@ def transform_link(carrier: str | list, technology: str) -> None:
     DEMAND.drop(demand.index, inplace=True)
 
 
-def transform_load(carrier: str) -> dict:
+def transform_load(carrier: str):
     """
 
     Parameters
@@ -281,40 +232,6 @@ def transform_load(carrier: str) -> dict:
     )
 
     var[f"{FINAL}|{bc}|{sector}"] = load.mul(-1)
-
-
-def _get_port_efficiency(substring: str, port: str, component: str = "Link"):
-    """
-    Return the efficiency for a component and port.
-
-    Parameters
-    ----------
-    substring
-    port
-    component
-
-    Returns
-    -------
-    :
-
-    Raises
-    ------
-    NotImplementedError
-        If the efficiency changes between years.
-
-    ValueError
-        If the substring filter yields more than one row.
-    """
-    _refining_efficiencies = set()
-    for n in networks.values():
-        _refining_efficiencies.add(
-            port_efficiency(n, component, port).filter(like=substring).unique().item()
-        )
-
-    if len(_refining_efficiencies) != 1:
-        raise NotImplementedError("Myopic efficiencies not supported.")
-
-    return _refining_efficiencies.pop()
 
 
 def _extract(ds: pd.Series, **filter_kwargs) -> pd.Series:
@@ -400,16 +317,9 @@ def collect_regional_nh3_loads():
     _extract(DEMAND, component="Load", carrier=bc, bus_carrier=bc)
 
 
-def process_biomass_boilers() -> dict:
+def process_biomass_boilers() -> None:
     """
-
-    Parameters
-    ----------
-    var
-
-    Returns
-    -------
-    :
+    Special processing biomass boilers that have solid biomass supply.
     """
     carrier = ["rural biomass boiler", "urban decentral biomass boiler"]
     if len(filter_by(DEMAND, carrier=carrier).index.unique("bus_carrier")) <= 1:
@@ -426,18 +336,6 @@ def process_biomass_boilers() -> dict:
         .pipe(filter_by, carrier=carrier)
         .drop(["co2", "co2 stored", "process emissions"], level=DM.BUS_CARRIER)
     )
-    # balances = filter_by(LINK_BALANCE, carrier=carrier)
-    # SUPPLY.drop(carrier, inplace=True, errors="ignore")
-    # DEMAND.drop(carrier, inplace=True, errors="ignore")
-    #
-    # _supply = insert_index_level(balances[balances >= 0], "MWh_th", "unit", pos=5).pipe(insert_index_level, "Link", "component", pos=1)
-    #
-    #
-    # SUPPLY.append(insert_index_level(balances[balances >= 0], "MWh_th", "unit", pos=5).pipe(insert_index_level, "Link", "component", pos=1))
-    #
-    # SUPPLY = pd.concat([SUPPLY, insert_index_level(balances[balances >= 0], "MWh_th", "unit", pos=5).pipe(insert_index_level, "Link", "component", pos=1)])
-    # DEMAND = pd.concat([DEMAND, insert_index_level(balances[balances >= 0], "MWh_LHV", "unit", pos=5).pipe(insert_index_level, "Link", "component", pos=1)])
-    # transform_link(technology="Boiler", carrier=carrier)
 
     var[f"{SECONDARY}|Heat|Biomass|Boiler"] = (
         balances.clip(lower=0)
@@ -449,51 +347,21 @@ def process_biomass_boilers() -> dict:
     losses = _bal[_bal.gt(0)]
     surplus = _bal[_bal.le(0)].mul(-1)
     var[f"{SECONDARY}|Losses|Biomass|Boiler"] = losses
+
     if not surplus.empty:
-        # assert (
-        #     _bal.sub(losses, fill_value=0).sub(surplus, fill_value=0) <= 1e-5
-        # ).all()  # implicitly True
         var[f"{SECONDARY}|Ambient Heat|Biomass|Boiler"] = surplus
-    # else:
-    #     assert (_bal.sub(losses, fill_value=0) <= 1e-5).all()  # implicitly True
+
     _extract(SUPPLY, carrier=carrier, component="Link")
     _extract(DEMAND, carrier=carrier, component="Link")
 
 
-def primary_oil() -> dict:
+def primary_oil():
     """
     Calculate the amounts of oil entering a region.
-
-    Assuming that regional oil production is consumed in the same region, the netted
-    energy balance becomes the primary energy (import) and final energy (export) of
-    the region. It is important to note that this is not the same as fossil oil imports,
-    but all oil imports including renewable oil production from other regions.
-    Lacking an oil network that connects regions, we assume that all oil is consumed
-    locally and only oil production surplus becomes exported as final energy.
-
-    There are a few caveats here:
-    1. the EU oil bus mixes fossil oil and renewable liquids
-    2. It is not possible to distinguish oil types anymore
-       once they enter the EU bus
-    3. Regional transformation Links are connected to the EU bus
-    4. Anything other than "oil import" is considered "liquids"
-    5. liquids may, or may not be renewable, depending on the input
-       of the transformation technology
-    6. We assume, that all liquids produced in a region are consumed in that region
-       (This is why the energy_balance is calculated instead of the supply)
-    6. the same consumption split (oil vs liquids) is used for all regions,
-       because the regional split cannot be calculated.
-    7. All oil imported to EU is fossil oil
-
-    Parameters
-    ----------
-    var
-        The collection to append new variables in.
 
     Returns
     -------
     :
-        The updated variables' collection.
     """
     # # netted_liquids = n.statistics.energy_balance(
     # #     groupby="location", bus_carrier="oil", comps="Link"
@@ -536,7 +404,6 @@ def primary_oil() -> dict:
     #     logger.warning(f"Missing oil amounts detected: {missing}")
 
     var[f"{prefix}|Import"] = regional_oil_deficit
-    # var[f"{prefix}|Refining Losses"] = regional_oil_deficit * (1 - oil_refining_eff)
     var[f"{FINAL}|Oil|Export"] = regional_oil_surplus
 
     # remove EU imports and oil refining
@@ -551,7 +418,14 @@ def primary_oil() -> dict:
     _extract(SUPPLY, carrier="unsustainable bioliquids", component="Generator")
 
 
-def primary_gas() -> dict:
+def primary_gas():
+    """
+    Calculate the amount of gas entering a region.
+
+    Returns
+    -------
+    :
+    """
     bc = "gas"
     prefix = f"{PRIMARY}|{BC_ALIAS[bc]}"
     var[f"{prefix}|Import Foreign"] = _extract(IMPORT_FOREIGN, bus_carrier=bc)
@@ -566,7 +440,6 @@ def primary_gas() -> dict:
         component="Generator",
     )
 
-    # todo: move to primary - this link is only needed to track CO2
     var[f"{prefix}|Biogas|w/o CC"] = _extract(
         SUPPLY, carrier="biogas to gas", bus_carrier=bc
     )
@@ -577,15 +450,10 @@ def primary_gas() -> dict:
         DEMAND, carrier=["biogas to gas", "biogas to gas CC"], bus_carrier="biogas"
     )
 
-    return var
 
-
-def primary_waste() -> dict:
+def primary_waste():
     """
-
-    Parameters
-    ----------
-    var
+    Collect the amounts of municipal solid wate and HVC entering a region.
 
     Returns
     -------
@@ -623,10 +491,8 @@ def primary_waste() -> dict:
         component="Link",
     )
 
-    return var
 
-
-def primary_coal() -> dict:
+def primary_coal():
     """
     Calculate the amounts of coal consumed in a region.
 
@@ -657,10 +523,8 @@ def primary_coal() -> dict:
     )
     SUPPLY.drop(coal_generators.index, inplace=True)
 
-    return var
 
-
-def primary_hydrogen() -> dict:
+def primary_hydrogen():
     """
     Calculate the amounts of hydrogen imported into a region.
 
@@ -686,10 +550,8 @@ def primary_hydrogen() -> dict:
         SUPPLY, carrier="import H2", bus_carrier=bc, component="Generator"
     )
 
-    return var
 
-
-def primary_biomass() -> dict:
+def primary_biomass():
     """
     Calculate the amounts of biomass generated in a region.
 
@@ -715,10 +577,8 @@ def primary_biomass() -> dict:
         SUPPLY, bus_carrier="biogas", component="Generator"
     )
 
-    return var
 
-
-def primary_electricity() -> dict:
+def primary_electricity():
     """
     Calculate the electricity generated per region.
 
@@ -761,10 +621,8 @@ def primary_electricity() -> dict:
     var[f"{prefix}|Import Domestic"] = _extract(IMPORT_DOMESTIC, bus_carrier="AC")
     var[f"{prefix}|Import Foreign"] = _extract(IMPORT_FOREIGN, bus_carrier="AC")
 
-    return var
 
-
-def primary_uranium() -> dict:
+def primary_uranium():
     """
     Calculate the uranium demand for nuclear power plants per region.
 
@@ -788,17 +646,10 @@ def primary_uranium() -> dict:
 
     _extract(SUPPLY, bus_carrier="uranium", component="Generator", location="EU")
 
-    return var
 
-
-def primary_ammonia() -> dict:
+def primary_ammonia():
     """
     Calculate the ammonium imported per region.
-
-    Parameters
-    ----------
-    var
-        The collection to append new variables in.
 
     Returns
     -------
@@ -808,10 +659,8 @@ def primary_ammonia() -> dict:
     # there is no regional ammonium demand
     var[f"{PRIMARY}|NH3|Import"] = _extract(SUPPLY, carrier="import NH3")
 
-    return var
 
-
-def primary_methanol() -> dict:
+def primary_methanol():
     """
     Calculate methanol imported per region.
 
@@ -840,10 +689,8 @@ def primary_methanol() -> dict:
 
     _extract(SUPPLY, carrier="import methanol", location="EU")
 
-    return var
 
-
-def primary_heat() -> dict:
+def primary_heat():
     """
     Calculate heat generation and enthalpy of evaporation.
 
@@ -864,8 +711,6 @@ def primary_heat() -> dict:
         SUPPLY, carrier=carrier, component="Generator"
     )
     var[f"{prefix}|Geothermal"] = _extract(SUPPLY, carrier="geothermal heat")
-
-    return var
 
 
 def combine_variables(collection: SeriesCollector | dict) -> pd.Series:
@@ -921,9 +766,6 @@ def collect_system_cost() -> pd.Series:
     var["System Costs|OPEX"] = myopic_opex.groupby(IDX).sum()
     var["System Costs|CAPEX"] = myopic_capex.groupby(IDX).sum()
     var["System Costs"] = var["System Costs|CAPEX"] + var["System Costs|OPEX"]
-
-    # todo: enable, or test later
-    # assert vars["System Costs"].mul(1e9).sum() == n.objective, "Total system costs do not match the optimization result."
 
     return combine_variables(var)
 
@@ -1165,10 +1007,6 @@ def collect_secondary_energy() -> pd.Series:
         "naphtha for industry",
         "solid biomass for industry",
         "solid biomass for industry CC",
-        # todo: exclude Links that connect to EU buses and are only
-        #  used to track CO2 emissions from regional data until CO2
-        #  is not dropped from this analysis.
-        #  better: make primary methanol track those imports!
         "shipping methanol",
         "shipping oil",
         "kerosene for aviation",
