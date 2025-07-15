@@ -1053,7 +1053,7 @@ def combine_statistics(
     metric_name: str,
     is_unit: str,
     to_unit: str,
-    keep_regions: tuple = ("AT",),
+    keep_regions: tuple = ("AT", "GB", "ES", "FR", "DE", "IT"),
     region_nice_names: bool = True,
 ) -> pd.DataFrame:
     """

@@ -700,7 +700,14 @@ class Exporter:
         self,
         statistics: list,
         view_config: dict,
-        keep_regions: tuple = ("AT",),
+        keep_regions: tuple = (
+            "AT",
+            "GB",
+            "ES",
+            "FR",
+            "DE",
+            "IT",
+        ),  # todo: to global config
         region_nice_names: bool = True,
     ) -> None:
         self.statistics = statistics

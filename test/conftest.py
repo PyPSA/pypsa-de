@@ -2,7 +2,9 @@
 #
 # SPDX-License-Identifier: MIT
 
+import getpass
 import pathlib
+import subprocess
 import zipfile
 from functools import reduce
 from shutil import unpack_archive
@@ -180,3 +182,51 @@ def italy_shape(download_natural_earth, tmpdir):
     italy_shape_file_path = pathlib.Path(tmpdir, "italy_shape.geojson")
     italy_shape_file.to_file(italy_shape_file_path, driver="GeoJSON")
     yield italy_shape_file_path
+
+
+def pytest_addoption(parser) -> None:
+    """Register command line arguments."""
+    parser.addoption(
+        "--result-path", action="store", help="Path to the ESM results folder."
+    )
+
+
+def pytest_configure(config) -> None:
+    """Add environment info to HTML report."""
+    # The Environment section seems to be broken
+    # with pytest-metadata >= 3.x. We must use version < 3
+    # https://github.com/pytest-dev/pytest-html/issues/683
+    config._metadata["Username"] = getpass.getuser()
+    markers = config.option.markexpr or "No Markers"
+    config._metadata["Pytest markers"] = markers
+    config._metadata["Src directory"] = config.rootdir
+    result_path = _parse_result_path(config)
+    config._metadata["results path"] = result_path
+    config._metadata["Run name"] = result_path.parent
+    config._metadata["Git branch"] = _parse_git_branch()
+    config._metadata["Git HEAD"] = _parse_git_head_hash()
+
+
+def _parse_result_path(config) -> pathlib.Path:
+    """Parse the esm result path argument from CLI."""
+    result_path_arg = [
+        s.split("=", maxsplit=1)[-1]
+        for s in config.invocation_params.args
+        if s.startswith("--result-path=")
+    ]
+    result_path_default = pathlib.Path(config.rootdir) / "results"
+    return pathlib.Path(result_path_arg[0]) if result_path_arg else result_path_default
+
+
+def _parse_git_branch() -> str:
+    """Return the active Git branch."""
+    sp = subprocess.run("git branch", capture_output=True)
+    lines = sp.stdout.decode("utf-8").split("\n")
+    branch = [line for line in lines if line.startswith("*")]
+    return branch[0] if branch else "No branch detected."
+
+
+def _parse_git_head_hash() -> str:
+    """Return the has of the current HEAD."""
+    sp = subprocess.run("git rev-parse HEAD", capture_output=True)
+    return sp.stdout.decode("utf-8").strip() or "No HEAD detected."
