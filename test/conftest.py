@@ -227,6 +227,6 @@ def _parse_git_branch() -> str:
 
 
 def _parse_git_head_hash() -> str:
-    """Return the has of the current HEAD."""
+    """Return the hash for current HEAD."""
     sp = subprocess.run("git rev-parse HEAD", capture_output=True)
     return sp.stdout.decode("utf-8").strip() or "No HEAD detected."

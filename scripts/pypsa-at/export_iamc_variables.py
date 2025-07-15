@@ -499,11 +499,6 @@ def primary_coal():
     Coal is not produced by any Link, therefore it's safe to assume
     all Link withdrawal is imported fossil coal or lignite.
 
-    Parameters
-    ----------
-    var
-        The collection to append new variables in.
-
     Returns
     -------
     :
@@ -532,11 +527,6 @@ def primary_hydrogen():
     components, and various types of H2 pipelines, that bring
     Hydrogen into regions.
 
-    Parameters
-    ----------
-    var
-        The collection to append new variables in.
-
     Returns
     -------
     :
@@ -555,11 +545,6 @@ def primary_biomass():
     """
     Calculate the amounts of biomass generated in a region.
 
-    Parameters
-    ----------
-    var
-        The collection to append new variables in.
-
     Returns
     -------
     :
@@ -572,7 +557,7 @@ def primary_biomass():
 
     var[f"{prefix}|Solid"] = _extract(SUPPLY, bus_carrier=bc, component="Generator")
 
-    # biogas is another group
+    # biogas is a separate bus carrier group
     var[f"{PRIMARY}|Biogas"] = _extract(
         SUPPLY, bus_carrier="biogas", component="Generator"
     )
@@ -582,20 +567,12 @@ def primary_electricity():
     """
     Calculate the electricity generated per region.
 
-    Parameters
-    ----------
-    var
-        The collection to append new variables in.
-
     Returns
     -------
     :
-        The updated variables' collection.
     """
     prefix = f"{PRIMARY}|AC"
-    # var["Primary Energy|Hydro|PHS"] = _extract(
-    #     SUPPLY, carrier="PHS", component="StorageUnit"
-    # )
+
     var[f"{prefix}|Reservoir"] = _extract(
         SUPPLY, carrier="hydro", component="StorageUnit"
     )
@@ -626,11 +603,6 @@ def primary_uranium():
     """
     Calculate the uranium demand for nuclear power plants per region.
 
-    Parameters
-    ----------
-    var
-        The collection to append new variables in.
-
     Returns
     -------
     :
@@ -654,25 +626,20 @@ def primary_ammonia():
     Returns
     -------
     :
-        The updated variables' collection.
     """
     # there is no regional ammonium demand
-    var[f"{PRIMARY}|NH3|Import"] = _extract(SUPPLY, carrier="import NH3")
+    var[f"{PRIMARY}|NH3|Import"] = _extract(
+        SUPPLY, carrier="import NH3"
+    )  # todo: needed?
 
 
 def primary_methanol():
     """
     Calculate methanol imported per region.
 
-    Parameters
-    ----------
-    var
-        The collection to append new variables in.
-
     Returns
     -------
     :
-        The updated variables' collection.
     """
     regional_demand = (
         filter_by(DEMAND, bus_carrier="methanol", component="Link").groupby(IDX).sum()
@@ -694,15 +661,9 @@ def primary_heat():
     """
     Calculate heat generation and enthalpy of evaporation.
 
-    Parameters
-    ----------
-    var
-        The collection to append new variables in.
-
     Returns
     -------
     :
-        The updated variables' collection.
     """
     prefix = f"{PRIMARY}|{BC_ALIAS.get('rural heat', 'Heat')}"
 
@@ -713,7 +674,7 @@ def primary_heat():
     var[f"{prefix}|Geothermal"] = _extract(SUPPLY, carrier="geothermal heat")
 
 
-def combine_variables(collection: SeriesCollector | dict) -> pd.Series:
+def combine_variables(collection: SeriesCollector | dict) -> pd.Series | pd.DataFrame:
     """
     Combine variables into a single data series.
 
@@ -743,7 +704,6 @@ def collect_system_cost() -> pd.Series:
     Returns
     -------
     :
-        Total CAPEX plus OPEX per model region in billions EUR (2020).
     """
     # Nodal OPEX and nodal CAPEX in billion EUR2020
     # CAPEX and OPEX units are incorrect and need to be updated
@@ -762,7 +722,6 @@ def collect_system_cost() -> pd.Series:
 
     # FixMe: Why are there negative values in OPEX?
 
-    # rewrite using global myopic metrics
     var["System Costs|OPEX"] = myopic_opex.groupby(IDX).sum()
     var["System Costs|CAPEX"] = myopic_capex.groupby(IDX).sum()
     var["System Costs"] = var["System Costs|CAPEX"] + var["System Costs|OPEX"]
@@ -770,7 +729,7 @@ def collect_system_cost() -> pd.Series:
     return combine_variables(var)
 
 
-def collect_primary_energy() -> pd.Series:
+def collect_primary_energy():
     """
     Extract all primary energy variables from the networks.
 
@@ -784,7 +743,6 @@ def collect_primary_energy() -> pd.Series:
     Returns
     -------
     :
-        The primary energy for all regions and years.
     """
     primary_gas()
     primary_oil()
@@ -803,7 +761,7 @@ def collect_primary_energy() -> pd.Series:
     assert IMPORT_FOREIGN.empty, f"Import foreign is not empty: {IMPORT_FOREIGN}"
 
 
-def collect_storage_imbalances() -> pd.Series:
+def collect_storage_imbalances():
     """Extract all storage imbalances due to losses."""
     comps = ["Store", "StorageUnit"]
 
@@ -857,7 +815,7 @@ def collect_storage_imbalances() -> pd.Series:
     )
 
 
-def collect_losses_energy() -> pd.Series:
+def collect_losses_energy():
     # DSM Links with losses that connect to buses with stores
     prefix = f"{SECONDARY}|Losses"
 
@@ -912,7 +870,7 @@ def collect_losses_energy() -> pd.Series:
     ).mul(-1)
 
 
-def collect_secondary_energy() -> pd.Series:
+def collect_secondary_energy():
     """Extract all secondary energy variables from the networks."""
 
     transform_link(technology="CHP", carrier="urban central gas CHP")
@@ -1022,7 +980,7 @@ def collect_secondary_energy() -> pd.Series:
     assert remaining_demand.empty, f"{remaining_demand.index.unique('carrier')}"
 
 
-def collect_final_energy() -> pd.Series:
+def collect_final_energy():
     """Extract all final energy variables from the networks."""
 
     load_carrier = filter_by(DEMAND, component="Load").index.unique("carrier")
