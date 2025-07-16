@@ -43,6 +43,9 @@ IDX = YEAR_LOC + ["unit"]
 PRIMARY = "Primary Energy"
 SECONDARY = "Secondary Energy"
 FINAL = "Final Energy"
+TRANS_IN = "Transformation Input"
+TRANS_OUT = "Transformation Output"
+TRANS_BYPASS = "Transformation Bypass"
 
 BC_ALIAS = {
     "AC": "AC",
@@ -87,7 +90,7 @@ class SeriesCollector(dict):
         if key in self:
             idx = self[key].index.names
             assert value.index.names == idx, (
-                f"Denying to join existing index levels: {idx} with {value.index.names}"
+                f"Denying to join mismatching index: {idx} with {value.index.names}"
             )
             old = self.pop(key)
             super().__setitem__(key, old.add(value, fill_value=0))
@@ -102,11 +105,14 @@ def _process_single_input_link(
     bc_out: pd.Index,
     bc_in: str,
     technology: str,
-) -> dict:
+):
     demand_unit = demand.index.unique("unit").item()
     losses = supply.groupby(YEAR_LOC).sum() + demand.groupby(YEAR_LOC).sum()
     losses = insert_index_level(losses, demand_unit, "unit", pos=2).mul(-1)
 
+    var[f"{SECONDARY}|Demand|{BC_ALIAS[bc_in]}|{technology}"] = (
+        demand.groupby(IDX).sum().mul(-1)
+    )
     var[f"{SECONDARY}|Losses|{BC_ALIAS[bc_in]}|{technology}"] = losses[losses > 0]
     surplus = losses[losses < 0]
 
@@ -131,7 +137,15 @@ def aggregate_variables(label: str, pattern: str):
         f"Adding to existing keys causes data duplication. key={label}"
     )
     to_sum = {k: v for k, v in var.items() if re.match(pattern, k)}
-    var[label] = pd.concat(to_sum).groupby(IDX).sum()
+    if to_sum:
+        # variables may have different units. Overwriting units to
+        # yield one row per year and location to use in sankey diagrams
+        year_sum = pd.concat(to_sum).groupby(YEAR_LOC).sum()
+        var[label] = insert_index_level(year_sum, "MWh", "unit", pos=2)
+    else:
+        logger.debug(
+            f"No matches for label {label} and pattern {pattern}. Skipping aggregaion."
+        )
 
 
 def merge_variables(collection: SeriesCollector | dict) -> pd.Series | pd.DataFrame:
@@ -352,7 +366,7 @@ def collect_regional_nh3_loads():
     pd.testing.assert_series_equal(imbalances_iamc, imbalances_bus, check_names=False)
     if not imbalances_bus.empty:
         logger.warning(f"Imbalances detected for bus carrier {bc}:\n{imbalances_bus}.")
-    var[f"{FINAL}|{BC_ALIAS[bc]}"] = nh3_regional_supply.groupby(IDX).sum()
+    var[f"{FINAL}|{BC_ALIAS[bc]}|Agriculture"] = nh3_regional_supply.groupby(IDX).sum()
     _extract(DEMAND, component="Load", carrier=bc, bus_carrier=bc)
 
 
@@ -914,8 +928,8 @@ def collect_secondary_energy():
         carrier=["urban central H2 CHP", "urban central H2 retrofit CHP"],
     )
     transform_link(technology="CHP", carrier="urban central solid biomass CHP")
-    transform_link(technology="CHP w/o CC", carrier="waste CHP")
-    transform_link(technology="CHP w CC", carrier="waste CHP CC")
+    transform_link(technology="CHP", carrier="waste CHP")
+    transform_link(technology="CHP CC", carrier="waste CHP CC")
 
     transform_link(technology="Powerplant", carrier=["CCGT", "OCGT"])
     transform_link(technology="Powerplant", carrier="coal")
@@ -923,23 +937,20 @@ def collect_secondary_energy():
     transform_link(technology="Powerplant", carrier="solid biomass")
     transform_link(technology="Powerplant", carrier="nuclear")
 
-    transform_link(technology="BioSNG w/o CC", carrier="BioSNG")
-    transform_link(technology="BioSNG w CC", carrier="BioSNG CC")
+    transform_link(technology="BioSNG", carrier="BioSNG")
+    transform_link(technology="BioSNG CC", carrier="BioSNG CC")
     transform_link(technology="Sabatier", carrier="Sabatier")
 
     transform_link(technology="Electrolysis", carrier="H2 Electrolysis")
-    transform_link(technology="SMR w/o CC", carrier="SMR")
-    transform_link(technology="SMR w CC", carrier="SMR CC")
+    transform_link(technology="SMR", carrier="SMR")
+    transform_link(technology="SMR CC", carrier="SMR CC")
+    transform_link(technology="Steam Reforming", carrier="Methanol steam reforming")
     transform_link(
-        technology="Steam Reforming w/o CC", carrier="Methanol steam reforming"
+        technology="Steam Reforming CC", carrier="methanol steam reforming CC"
     )
-    transform_link(
-        technology="Steam Reforming w CC", carrier="methanol steam reforming CC"
-    )
-    transform_link(technology="SMR w CC", carrier="SMR CC")
 
-    transform_link(technology="Biomass2Liquids w/o CC", carrier="biomass to liquid")
-    transform_link(technology="Biomass2Liquids w CC", carrier="biomass to liquid CC")
+    transform_link(technology="Biomass2Liquids", carrier="biomass to liquid")
+    transform_link(technology="Biomass2Liquids CC", carrier="biomass to liquid CC")
     transform_link(technology="Fischer-Tropsch", carrier="Fischer-Tropsch")
     transform_link(
         technology="Unsustainable Bioliquids", carrier="unsustainable bioliquids"
@@ -1067,6 +1078,37 @@ def collect_final_energy():
     assert EXPORT_FOREIGN.empty, f"Export foreign is not empty: {EXPORT_FOREIGN}"
 
 
+def calculate_sankey_totals():
+    """Calculate energy total inputs and outputs for sankey diagrams."""
+    # negative lookahead regex to exclude Ambient by default
+    exclude = "(?!.*Ambient Heat)"
+
+    for bc in sorted(set(BC_ALIAS.values())):
+        aggregate_variables(f"{FINAL}|{bc}", rf"^{FINAL}\|{bc}")
+        aggregate_variables(f"{TRANS_OUT}|{bc}", rf"^{SECONDARY}\|{bc}")
+
+        if bc == "Heat":
+            exclude = ""
+        # find keys that start with 'Secondary Energy|', are not 'Ambient Heat',
+        # continue with any alphanumerics, and continues with the bus_carrier
+        aggregate_variables(
+            f"{TRANS_IN}|{bc}", rf"^{SECONDARY}\|{exclude}[a-zA-Z0-9\s]*\|{bc}"
+        )
+
+        # bypass amounts connect primary with final energy
+        transformation_out = var.get(f"{TRANS_OUT}|{bc}", pd.Series())
+        final_demand = var.get(f"{FINAL}|{bc}", pd.Series())
+        if not final_demand.empty and not transformation_out.empty:
+            bypass = final_demand.sub(transformation_out, fill_value=0).clip(lower=0)
+        elif not final_demand.empty and transformation_out.empty:
+            bypass = final_demand  # all comes from primary
+        else:  # all used in transformation
+            bypass = pd.Series()
+
+        if not bypass.empty:
+            var[f"{TRANS_BYPASS}|{bc}"] = bypass
+
+
 if __name__ == "__main__":
     if "snakemake" not in globals():
         snakemake = mock_snakemake(
@@ -1140,6 +1182,8 @@ if __name__ == "__main__":
     collect_secondary_energy()
     collect_final_energy()
     collect_system_cost()
+
+    calculate_sankey_totals()
 
     df = merge_variables(var)
 

@@ -24,18 +24,18 @@ def check_balances(df: pd.DataFrame):
 
             data = ds.filter(like=bc) / 1e6
             primary = data.filter(regex=rf"^\('Primary Energy\|{bc}\|")
-            assert (
-                abs(
-                    primary.sum()
-                    - data.filter(regex=rf"^\('Primary Energy\|{bc}'").sum()
-                )
-                < 1e-5
-            ), f"Sum category mismatch: {year} {region} {bc}"
+            _primary_agg = data.filter(regex=rf"^\('Primary Energy\|{bc}'")
+            assert abs(primary.sum() - _primary_agg.sum()) < 1e-5, (
+                f"Sum category mismatch: {year} {region} {bc}"
+            )
+
             secondary_supply = data.filter(regex=rf"^\('Secondary Energy\|{bc}")
             secondary_demand = data.filter(
                 regex=rf"^\('Secondary Energy\|[a-zA-Z0-9\s]*\|{bc}"
             )
-            final_demand = data.filter(regex=rf"^\('Final Energy\|{bc}")
+            final_demand = data.filter(regex=rf"^\('Final Energy\|{bc}\|")
+
+            # assert bypass + secondary supply == Final
 
             # ambient heat must be excluded because it is not a demand
             secondary_demand = secondary_demand.drop(

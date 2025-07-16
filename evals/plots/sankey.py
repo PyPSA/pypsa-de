@@ -381,35 +381,35 @@ def main():
     df = rename_aggregate(df, "TWh", level="Unit").div(1e6)
     df = filter_by(df, Year=year, Region=region)
 
-    # ['AC',
-    #  'Biomass',
-    #  'Coal',
-    #  'Gas',
-    #  'H2',
-    #  'Heat',
-    #  'Methanol',
-    #  'NH3',
-    #  'Oil',
-    #  'Uranium',
-    #  'Waste']
+    clean_mapping = {}
+    variables = df.index.unique("Variable")
+    for k, v in MAPPING.items():
+        if k in variables:
+            clean_mapping[k] = v
+        else:
+            print(f"Skipping '{k}' because it does not exist in {region} {year}.")
 
-    sankey_mapping = {
+    iamc = pyam.IamDataFrame(df)
+    fig = iamc.plot.sankey(mapping=clean_mapping)
+
+    fig.update_layout(height=600)
+
+    plotly.io.show(fig)
+
+
+if __name__ == "__main__":
+    FILEPATH = "/IdeaProjects/pypsa-at/results/v2025.02/KN2045_Mix/evaluation/exported_iamc_variables.xlsx"
+    MAPPING = {
         # AC
-        "Primary Energy|AC|Import Domestic": ("Domestic Import AC", "AC Primary"),
-        "Primary Energy|AC|Import Foreign": ("Foreign Import AC", "AC Primary"),
-        "Primary Energy|AC|Run-of-River": ("Run-of-River", "AC Primary"),
-        "Primary Energy|AC|Solar Rooftop": ("Solar (Rooftop)", "AC Primary"),
-        "Primary Energy|AC|Solar Utility": ("Solar (Utility)", "AC Primary"),
-        "Primary Energy|AC|Wind Offshore": ("Wind (Offshore)", "AC Primary"),
-        "Primary Energy|AC|Wind Onshore": ("Wind (Onshore)", "AC Primary"),
-        "Secondary Energy|Demand AC": ("AC Primary", "Transformation Input"),
-        "Secondary Energy|Bypass AC": (
-            "AC Primary",
-            "AC Bypass",
-        ),  # bypass = final - lossy secondary supply
-        # todo: not everything goes to transformation, some parts go to export and final demand
-        #  need to connect secondary AC demand to Transformation Input! Not sum(primary).
-        #  the rest is final AC demand (the bypass amount)
+        "Primary Energy|AC|Import Domestic": ("Domestic Import AC", "AC"),
+        "Primary Energy|AC|Import Foreign": ("Foreign Import AC", "AC"),
+        "Primary Energy|AC|Run-of-River": ("Run-of-River", "AC"),
+        "Primary Energy|AC|Solar Rooftop": ("Solar (Rooftop)", "AC"),
+        "Primary Energy|AC|Solar Utility": ("Solar (Utility)", "AC"),
+        "Primary Energy|AC|Wind Offshore": ("Wind (Offshore)", "AC"),
+        "Primary Energy|AC|Wind Onshore": ("Wind (Onshore)", "AC"),
+        # "Transformation Input|AC": ("Primary", "Transformation"),
+        # "Transformation Bypass|AC": ("Primary", "Bypass"),
         # Primary Energy|Biomass|Solid
         # Primary Energy|Biogas
         # Primary Energy|Coal|Hard
@@ -419,11 +419,28 @@ def main():
         # Primary Energy|Gas|Import Domestic
         # Primary Energy|Gas|Import Foreign
         # Primary Energy|Gas|Production
-        "Primary Energy|H2|Import Global": ("Global Import H2", "H2 Primary"),
-        "Primary Energy|H2|Import Domestic": ("Domestic Import H2", "H2 Primary"),
-        "Primary Energy|H2|Import Foreign": ("Foreign Import H2", "H2 Primary"),
-        # "Secondary Energy|Demand H2": ("H2 Primary", "Transformation Input"),
-        # "Secondary Energy|Bypass H2": ("H2 Primary", "H2 Bypass"),
+        "Primary Energy|H2|Import Global": ("Global Import H2", "H2"),
+        "Primary Energy|H2|Import Domestic": ("Domestic Import H2", "H2"),
+        "Primary Energy|H2|Import Foreign": ("Foreign Import H2", "H2"),
+        # sorted(df.filter(like="H2").index.get_level_values("Variable"))
+        "Secondary Energy|H2|AC|Electrolysis": ("Electrolysis", "H2"),
+        "Secondary Energy|Demand|AC|Electrolysis": ("AC", "Electrolysis"),
+        "Secondary Energy|Losses|AC|Electrolysis": ("Electrolysis", "Losses"),
+        "Secondary Energy|Heat|AC|Electrolysis": ("Electrolysis", "Heat"),
+        # "Secondary Energy|Gas|H2|Sabatier": ("H2", "Gas"),
+        # 'Secondary Energy|Heat|H2|Fischer-Tropsch': ("H2", "Heat"),
+        # 'Secondary Energy|Heat|H2|Methanolisation': ("H2", "Heat"),
+        # 'Secondary Energy|Heat|H2|Sabatier': ("H2", "Heat"),
+        # 'Secondary Energy|Losses|H2|Fischer-Tropsch': ("H2", "Losses"),
+        # 'Secondary Energy|Losses|H2|Methanolisation': ("H2", "Losses"),
+        # 'Secondary Energy|Losses|H2|Sabatier':("H2", "Losses"),
+        # 'Secondary Energy|Methanol|H2|Methanolisation': ("H2", "Methanol"),
+        # 'Secondary Energy|Oil|H2|Fischer-Tropsch': ("H2", "Oil"),
+        #
+        # "Transformation Input|H2": ("H2 Primary", "Transformation"),
+        # "Transformation Bypass|H2": ("H2 Primary", "Final"),
+        # # "Transformation Bypass|H2": ("Bypass", "Final"),
+        # "Transformation Output|H2": ("H2 Transformation", "Final"),
         # Secondary Energy|Ambient Heat|AC|Air Heat Pump
         # Secondary Energy|Ambient Heat|AC|Ground Heat Pump
         # Secondary Energy|Ambient Heat|Biomass|CHP
@@ -437,22 +454,4 @@ def main():
         # Primary Energy|Waste|Import Foreign
         # Primary Energy|Waste|Solid
     }
-    variables = df.index.unique("Variable")
-    for k in sankey_mapping:
-        if k in variables:
-            continue
-        print(f"Skipping '{k}' because it does not exist in {year} and {region}.")
-        sankey_mapping.pop(k)
-
-    sankey_mapping = {
-        k: v for k, v in sankey_mapping.items() if k in df.index.unique("Variable")
-    }
-
-    df = pyam.IamDataFrame(df)
-    fig = df.plot.sankey(mapping=sankey_mapping)
-    plotly.io.show(fig)
-
-
-if __name__ == "__main__":
-    FILEPATH = "/IdeaProjects/pypsa-at/results/v2025.02/KN2045_Mix/evaluation/exported_iamc_variables.xlsx"
     main()

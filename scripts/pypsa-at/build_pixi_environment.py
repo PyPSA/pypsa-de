@@ -41,6 +41,7 @@ def main():
         "mkdocstrings-python",
         "mknotebooks",
         "pixi-pycharm",
+        "ruff-lsp",
         "plotly",
         "pymdown-extensions",
         "pytest",

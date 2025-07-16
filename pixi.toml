@@ -605,6 +605,7 @@ pytest-metadata = ">=3.1.1,<4"
 git-delta = ">=0.18.2,<0.19"
 pandas-stubs = ">=2.2.3.250527,<3"
 starship = ">=1.23.0,<2"
+ruff-lsp = ">=0.0.62,<0.0.63"
 
 [pypi-dependencies]
 gurobipy = "==12.0.1"
