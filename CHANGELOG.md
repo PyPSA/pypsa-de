@@ -1,4 +1,6 @@
 # Changelog
+- Added an option to source industry energy demand from UBA MWMS (Projektionsbericht 2025) for the years 2025-2035
+- renamed some scripts
 - Added an option to source mobility demand from UBA MWMS (Projektionsbericht 2025) for the years 2025-2035
 - Renamed functions and script for exogenous mobility demand
 - Improved the transport demand data, added an option to source 2020 and 2025 data from AGEB instead of Aladin
