@@ -825,14 +825,16 @@ def must_run(n, params):
             n.links.loc[links_i, "p_min_pu"] = p_min_pu
 
 
-def modify_mobility_demand(n):
+def modify_mobility_demand(n, mobility_data_file):
     """
     Change loads in Germany to use exogenous data for road demand.
+
+    The mobility_data contains the
     """
     logger.info(
         "Overwriting land transport demand. In particular the `land_transport_electric_share` config setting will not be used."
     )
-    new_demand = pd.read_csv(snakemake.input.modified_mobility_data, index_col=0)
+    new_demand = pd.read_csv(mobility_data_file, index_col=0)
 
     simulation_period_correction_factor = n.snapshot_weightings.objective.sum() / 8760
 
@@ -886,7 +888,7 @@ def modify_mobility_demand(n):
 
     # Then directly use .values for assignment
     p_nom = (
-        new_demand.number_of_cars.values * 1e6 * snakemake.params.bev_charge_rate
+        new_demand.million_evs.values * 1e6 * snakemake.params.bev_charge_rate
     )  # same logic like in prepare_sector_network
 
     n.links.loc[BEV_charger_i, "p_nom"] = p_nom
@@ -901,7 +903,7 @@ def modify_mobility_demand(n):
         (n.stores.carrier == "EV battery") & (n.stores.bus.str.startswith("DE"))
     ].index
     e_nom = (
-        new_demand.number_of_cars.values
+        new_demand.million_evs.values
         * 1e6
         * snakemake.params.bev_energy
         * snakemake.params.bev_dsm_availability
@@ -1294,7 +1296,7 @@ if __name__ == "__main__":
         nyears,
     )
 
-    modify_mobility_demand(n)
+    modify_mobility_demand(n, snakemake.input.modified_mobility_data)
 
     new_boiler_ban(n)
 
