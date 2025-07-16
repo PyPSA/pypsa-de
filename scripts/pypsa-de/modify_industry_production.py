@@ -155,6 +155,6 @@ if __name__ == "__main__":
         ],
     )
 
-    # existing_industry.to_csv(
-    #     snakemake.output.industrial_production_per_country_tomorrow
-    # )
+    existing_industry.to_csv(
+        snakemake.output.industrial_production_per_country_tomorrow
+    )
