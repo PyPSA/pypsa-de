@@ -1267,32 +1267,51 @@ def scale_capacity(n, scaling):
                 ]
 
 
-def modify_industry_demand(n, industry_production_file, sector_ratios_file):
+def modify_industry_demand(
+    n,
+    year,
+    industry_energy_demand_file,
+    industry_production_file,
+    sector_ratios_file,
+    scale_non_energy=False,
+):
+    logger.info("Modifying industry demand in Germany.")
+
+    industry_production = pd.read_csv(
+        industry_production_file,
+        index_col="kton/a",
+    ).rename_axis("country")
+
     sector_ratios = pd.read_csv(
-        snakemake.input.industry_sector_ratios,
+        sector_ratios_file,
         header=[0, 1],
         index_col=0,
     ).rename_axis("carrier")
-    industry_production = pd.read_csv(
-        snakemake.input.industrial_production_per_country_tomorrow,
-        index_col="kton/a",
-    ).rename_axis("country")
+
+    new_demand = pd.read_csv(
+        industry_energy_demand_file,
+        index_col=0,
+    )[str(year)].mul(1e6)
 
     subcategories = ["HVC", "Methanol", "Chlorine", "Ammonia"]
     carrier = ["hydrogen", "methane", "naphtha"]
 
     ip = industry_production.loc["DE", subcategories]  # kt/a
     sr = sector_ratios["DE"].loc[carrier, subcategories]  # MWh/tMaterial
-    non_energy = sr.multiply(ip).sum(axis=1) * 1e3
+    _non_energy = sr.multiply(ip).sum(axis=1) * 1e3
 
-    # MWMS data 2025
-    uba_data = pd.Series(
-        {"fossil": 324, "electricity": 211, "biomass": 30, "hydrogen": 0, "heat": 48}
-    ).mul(1e6)
-    # TODO make sure this works for periods of all lengths
-    # TODO what happens if load - non_energy < 0?
+    non_energy = pd.Series(
+        {
+            "industry electricity": 0.0,
+            "low-temperature heat for industry": 0.0,
+            "solid biomass for industry": 0.0,
+            "H2 for industry": _non_energy["hydrogen"],
+            "coal for industry": 0.0,
+            "gas for industry": _non_energy["methane"],
+            "naphtha for industry": _non_energy["naphtha"],
+        }
+    )
 
-    uba_industry_without_non_energy = uba_data.sum()
     _industry_loads = [
         "solid biomass for industry",
         "gas for industry",
@@ -1306,45 +1325,60 @@ def modify_industry_demand(n, industry_production_file, sector_ratios_file):
     industry_loads = n.loads.query(
         f"carrier in {_industry_loads} and bus.str.startswith('DE')"
     )
-    pypsa_industry_without_non_energy = (
-        industry_loads.p_set.sum() * 8760 - non_energy.sum()
-    )  # MWh/a
-    # TODO Should we scale the non-energy use with this factor?
-    non_energy_scaling_factor = (
-        uba_industry_without_non_energy / pypsa_industry_without_non_energy
-    )
-    print(
-        f"Notused at the moment: Scaling factor for non-energy use: {non_energy_scaling_factor:.2f}"
-    )
 
-    # H2
-    h2_loads = n.loads.query(
-        "carrier.str.contains('H2 for industry') and bus.str.startswith('DE')"
+    if scale_non_energy:
+        new_demand_without_non_energy = new_demand.sum()
+        pypsa_industry_without_non_energy = (
+            industry_loads.p_set.sum() * 8760 - non_energy.sum()
+        )
+        non_energy_scaling_factor = (
+            new_demand_without_non_energy / pypsa_industry_without_non_energy
+        )
+        logger.info(
+            f"Scaling non-energy use by {non_energy_scaling_factor:.2f} to match UBA data."
+        )
+        non_energy_corrected = non_energy * non_energy_scaling_factor
+    else:
+        non_energy_corrected = non_energy
+
+    for carrier in [
+        "industry electricity",
+        "H2 for industry",
+        "solid biomass for industry",
+        "low-temperature heat for industry",
+    ]:
+        loads_i = n.loads.query(
+            f"carrier == '{carrier}' and bus.str.startswith('DE')"
+        ).index
+        logger.info(
+            f"Total load of {carrier} in DE before scaling: {n.loads.loc[loads_i, 'p_set'].sum() * 8760:.2f} MWh/a"
+        )
+        total_load = industry_loads.p_set.loc[loads_i].sum() * 8760
+        scaling_factor = (
+            new_demand[carrier] + non_energy_corrected[carrier]
+        ) / total_load
+        n.loads.loc[loads_i, "p_set"] *= scaling_factor
+        logger.info(
+            f"Total load of {carrier} in DE after scaling: {n.loads.loc[loads_i, 'p_set'].sum() * 8760:.2f} MWh/a"
+        )
+
+    # Fossil fuels are aggregated in UBA MWMS but have to be scaled separately
+    fossil_loads = industry_loads.query("carrier.str.contains('gas|coal|naphtha')")
+    fossil_totals = (
+        fossil_loads[["p_set", "carrier"]].groupby("carrier").p_set.sum() * 8760
     )
-    total_h2 = h2_loads.p_set.values.sum() * 8760
-    scaling_factor_h2 = (non_energy["hydrogen"] + uba_data["hydrogen"]) / total_h2
-
-    n.loads.loc[h2_loads.index, "p_set"] *= scaling_factor_h2
-
-    # electricity
-    electricity_loads = n.loads.query(
-        "carrier.str.contains('industry electricity') and bus.str.startswith('DE')"
+    fossil_energy = fossil_totals - non_energy[fossil_totals.index]
+    fossil_energy_corrected = fossil_energy * new_demand["fossil"] / fossil_energy.sum()
+    fossil_totals_corrected = (
+        fossil_energy_corrected + non_energy_corrected[fossil_totals.index]
     )
-    total_electricity = electricity_loads.p_set.values.sum() * 8760
-    scaling_factor_electricity = uba_data["electricity"] / total_electricity
-
-    n.loads.loc[electricity_loads.index, "p_set"] *= scaling_factor_electricity
-
-    # fossil fuels
-    fossil_loads = n.loads.query(
-        "carrier.str.contains('gas for industry|coal for industry|naphtha for industry') and bus.str.startswith('DE')"
-    )
-    total_fossil = fossil_loads.p_set.values.sum() * 8760
-    scaling_factor_fossil = (
-        non_energy["methane"] + non_energy["naphtha"] + uba_data["fossil"]
-    ) / total_fossil
-    n.loads.loc[fossil_loads.index, "p_set"] *= scaling_factor_fossil
-    # TODO this will have to be done separately for coal, gas and oil
+    for carrier in fossil_totals.index:
+        loads_i = fossil_loads.query(
+            f"carrier == '{carrier}' and bus.str.startswith('DE')"
+        ).index
+        n.loads.loc[loads_i, "p_set"] *= (
+            fossil_totals_corrected[carrier] / fossil_totals[carrier]
+        )
 
 
 if __name__ == "__main__":
@@ -1429,4 +1463,14 @@ if __name__ == "__main__":
 
     sanitize_custom_columns(n)
 
-    # n.export_to_netcdf(snakemake.output.network)
+    if snakemake.params.uba_for_industry:
+        modify_industry_demand(
+            n,
+            current_year,
+            snakemake.input.new_industrial_energy_demand,
+            snakemake.input.industrial_production_per_country_tomorrow,
+            snakemake.input.industry_sector_ratios,
+            scale_non_energy=snakemake.params.scale_industry_non_energy,
+        )
+
+    n.export_to_netcdf(snakemake.output.network)

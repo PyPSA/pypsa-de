@@ -559,6 +559,10 @@ rule modify_prenetwork:
         bev_charge_rate=config_provider("sector", "bev_charge_rate"),
         bev_energy=config_provider("sector", "bev_energy"),
         bev_dsm_availability=config_provider("sector", "bev_dsm_availability"),
+        uba_for_industry=config_provider("iiasa_database", "uba_for_industry"),
+        scale_industry_non_energy=config_provider(
+            "iiasa_database", "scale_industry_non_energy"
+        ),
     input:
         costs_modifications="ariadne-data/costs_{planning_horizons}-modifications.csv",
         network=resources(
@@ -592,6 +596,7 @@ rule modify_prenetwork:
         regions_onshore=resources("regions_onshore_base_s_{clusters}.geojson"),
         regions_offshore=resources("regions_offshore_base_s_{clusters}.geojson"),
         offshore_connection_points="ariadne-data/offshore_connection_points.csv",
+        new_industrial_energy_demand="ariadne-data/UBA_Projektionsbericht2025_Abbildung31_MWMS.csv",
     output:
         network=resources(
             "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_final.nc"
