@@ -832,7 +832,7 @@ def modify_mobility_demand(n):
     logger.info(
         "Overwriting land transport demand. In particular the `land_transport_electric_share` config setting will not be used."
     )
-    new_demand = pd.read_csv(snakemake.input.modified_mobility_demand, index_col=0)
+    new_demand = pd.read_csv(snakemake.input.modified_mobility_data, index_col=0)
 
     simulation_period_correction_factor = n.snapshot_weightings.objective.sum() / 8760
 

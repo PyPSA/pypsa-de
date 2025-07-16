@@ -126,7 +126,7 @@ def get_transport_data(
 if __name__ == "__main__":
     if "snakemake" not in globals():
         snakemake = mock_snakemake(
-            "build_exogenous_mobility_demand",
+            "build_exogenous_mobility_data",
             simpl="",
             clusters=27,
             opts="",
@@ -187,10 +187,10 @@ if __name__ == "__main__":
     # only get German data
     pop_layout = pop_layout[pop_layout.ct == "DE"].fraction
 
-    mobility_demand = pd.DataFrame(
+    mobility_data = pd.DataFrame(
         pop_layout.values[:, None] * transport_data.values,
         index=pop_layout.index,
         columns=transport_data.index,
     )
 
-    mobility_demand.to_csv(snakemake.output.mobility_demand)
+    mobility_data.to_csv(snakemake.output.mobility_data)
