@@ -1463,7 +1463,11 @@ if __name__ == "__main__":
 
     sanitize_custom_columns(n)
 
-    if snakemake.params.uba_for_industry:
+    if snakemake.params.uba_for_industry and current_year >= 2025:
+        if current_year >= 2040:
+            logger.error(
+                "The UBA for industry data is only available for 2025, 2030 and 2035. Please check your config."
+            )
         modify_industry_demand(
             n,
             current_year,
