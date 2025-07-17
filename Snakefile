@@ -374,7 +374,6 @@ rule build_exogenous_mobility_data:
         energy_totals_year=config_provider("energy", "energy_totals_year"),
     input:
         ariadne="resources/ariadne_database.csv",
-        clustered_pop_layout=resources("pop_layout_base_s_{clusters}.csv"),
         energy_totals=resources("energy_totals.csv"),
     output:
         mobility_data=resources(

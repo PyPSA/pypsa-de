@@ -39,7 +39,7 @@ def get_mobility_data(
         )
 
         mobility_data = mobility_data.div(3.6e-6)  # convert PJ to MWh
-        mobility_data["million_evs"] = 0.658407 + 0.120261  # BEV + PHEV
+        mobility_data["million_EVs"] = 0.658407 + 0.120261  # BEV + PHEV
 
         if ageb_for_mobility or uba_for_mobility:
             if uba_for_mobility:
@@ -60,7 +60,7 @@ def get_mobility_data(
             mobility_data = mobility_data.div(3.6e-3)  # convert PJ to MWH
             # https://www.kba.de/DE/Statistik/Produktkatalog/produkte/Fahrzeuge/fz27_b_uebersicht.html
             # FZ27_202101, table FZ 27.2, 1. January 2021:
-            mobility_data["million_evs"] = 0.358498 + 0.280149
+            mobility_data["million_EVs"] = 0.358498 + 0.280149
 
     elif year == "2025" and uba_for_mobility:
         # https://www.umweltbundesamt.de/sites/default/files/medien/11850/publikationen/projektionsbericht_2025.pdf, Abbildung 64 & 59,
@@ -75,7 +75,7 @@ def get_mobility_data(
             int(year)
         ]  # remove domestic navigation and aviation from UBA data to avoid double counting
         mobility_data = mobility_data.mul(1e6)  # convert TWh to MWh
-        mobility_data["million_evs"] = 2.7 + 1.2  # BEV + PHEV
+        mobility_data["million_EVs"] = 2.7 + 1.2  # BEV + PHEV
 
     elif year == "2030" and uba_for_mobility:
         mobility_data = pd.Series(
@@ -87,7 +87,7 @@ def get_mobility_data(
         )
         mobility_data["Liquids"] -= non_land_liquids[int(year)]
         mobility_data = mobility_data.mul(1e6)
-        mobility_data["million_evs"] = 8.7 + 1.8
+        mobility_data["million_EVs"] = 8.7 + 1.8
 
     elif year == "2035" and uba_for_mobility:
         mobility_data = pd.Series(
@@ -99,7 +99,7 @@ def get_mobility_data(
         )
         mobility_data["Liquids"] -= non_land_liquids[int(year)]
         mobility_data = mobility_data.mul(1e6)
-        mobility_data["million_evs"] = 18.9 + 1.8
+        mobility_data["million_EVs"] = 18.9 + 1.8
 
     else:
         if uba_for_mobility:
@@ -115,7 +115,7 @@ def get_mobility_data(
                 mobility_data.loc[fuel] += df.get((key, "TWh/yr"), 0.0)
 
         mobility_data = mobility_data.mul(1e6)  # convert TWh to MWh
-        mobility_data["million_evs"] = (
+        mobility_data["million_EVs"] = (
             df.loc["Stock|Transportation|LDV|BEV", "million"]
             + df.loc["Stock|Transportation|LDV|PHEV", "million"]
         )
@@ -132,7 +132,7 @@ if __name__ == "__main__":
             opts="",
             ll="vopt",
             sector_opts="none",
-            planning_horizons="2030",
+            planning_horizons="2020",
             run="KN2045_Mix",
         )
     configure_logging(snakemake)
@@ -182,15 +182,4 @@ if __name__ == "__main__":
         uba_for_mobility=snakemake.params.uba_for_mobility,
     )
 
-    # get German mobility weighting
-    pop_layout = pd.read_csv(snakemake.input.clustered_pop_layout, index_col=0)
-    # only get German data
-    pop_layout = pop_layout[pop_layout.ct == "DE"].fraction
-
-    mobility_data = pd.DataFrame(
-        pop_layout.values[:, None] * mobility_data.values,
-        index=pop_layout.index,
-        columns=mobility_data.index,
-    )
-
-    mobility_data.to_csv(snakemake.output.mobility_data)
+    mobility_data.to_csv(snakemake.output.mobility_data, header=False)
