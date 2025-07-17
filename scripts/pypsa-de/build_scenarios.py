@@ -182,6 +182,10 @@ def write_to_scenario_yaml(input, output, scenarios, df):
             )
             config[scenario] = {}
         if config[scenario].get("weather_year", False):
+            if snakemake.config["run"]["shared_resources"]["policy"] != False:
+                logger.warning(
+                    "If you are running scenarios with multiple weather years, make sure to deactivate shared_resources!"
+                )
             weather_year = config[scenario]["weather_year"]
             write_weather_dependent_config(config, scenario, weather_year)
 
