@@ -480,10 +480,8 @@ def primary_gas():
         component="Generator",
     )
 
-    var[f"{prefix}|Biogas|w/o CC"] = _extract(
-        SUPPLY, carrier="biogas to gas", bus_carrier=bc
-    )
-    var[f"{prefix}|Biogas|w CC"] = _extract(
+    var[f"{prefix}|Biogas"] = _extract(SUPPLY, carrier="biogas to gas", bus_carrier=bc)
+    var[f"{prefix}|Biogas CC"] = _extract(
         SUPPLY, carrier="biogas to gas CC", bus_carrier=bc
     )
 
@@ -1046,7 +1044,7 @@ def collect_final_energy():
     # CC Links have bus0 efficiencies < 1, i.e. they have losses
     for carrier in ("gas for industry CC", "solid biomass for industry CC"):
         bc = carrier.split(" for industry")[0]
-        var[f"{SECONDARY}|Losses|{BC_ALIAS[bc]}|CC"] = (
+        var[f"{SECONDARY}|Losses|{BC_ALIAS[bc]} CC"] = (
             _extract(SUPPLY, component="Link", carrier=carrier)
             .add(_extract(DEMAND, component="Link", carrier=carrier))
             .mul(-1)
