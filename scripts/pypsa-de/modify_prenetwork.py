@@ -1337,4 +1337,4 @@ if __name__ == "__main__":
 
     sanitize_custom_columns(n)
 
-    # n.export_to_netcdf(snakemake.output.network)
+    n.export_to_netcdf(snakemake.output.network)

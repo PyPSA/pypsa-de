@@ -44,7 +44,7 @@ iiasa_database:
   reference_scenario: KN2045_Mix
   region: Deutschland
   ageb_for_mobility: true # In 2020 use AGEB data for final energy demand and KBA for vehicles
-  uba_for_mobility: true # For 2025–2035 use MWMS scenario from UBA Projektionsbericht 2025
+  uba_for_mobility: false # For 2025–2035 use MWMS scenario from UBA Projektionsbericht 2025
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#foresight
 foresight: myopic
@@ -344,7 +344,7 @@ sector:
     2045: 0.03
     2050: 0.03
   land_transport_electric_share:
-    2020: 0.04
+    2020: 0.05
     2025: 0.15
     2030: 0.3
     2035: 0.45
@@ -352,7 +352,7 @@ sector:
     2045: 0.87
     2050: 0.97
   land_transport_ice_share:
-    2020: 0.95
+    2020: 0.94
     2025: 0.84
     2030: 0.68
     2035: 0.52
