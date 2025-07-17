@@ -362,24 +362,29 @@ if config["enable"]["retrieve"] and config["enable"].get("retrieve_cost_data", T
     ruleorder: modify_cost_data > retrieve_cost_data
 
 
-rule build_mobility_demand:
+rule build_exogenous_mobility_data:
     params:
         reference_scenario=config_provider("iiasa_database", "reference_scenario"),
         planning_horizons=config_provider("scenario", "planning_horizons"),
         leitmodelle=config_provider("iiasa_database", "leitmodelle"),
+        ageb_for_mobility=config_provider("iiasa_database", "ageb_for_mobility"),
+        uba_for_mobility=config_provider("iiasa_database", "uba_for_mobility"),
+        shipping_oil_share=config_provider("sector", "shipping_oil_share"),
+        aviation_demand_factor=config_provider("sector", "aviation_demand_factor"),
+        energy_totals_year=config_provider("energy", "energy_totals_year"),
     input:
         ariadne="resources/ariadne_database.csv",
-        clustered_pop_layout=resources("pop_layout_base_s_{clusters}.csv"),
+        energy_totals=resources("energy_totals.csv"),
     output:
-        mobility_demand=resources(
-            "mobility_demand_aladin_{clusters}_{planning_horizons}.csv"
+        mobility_data=resources(
+            "modified_mobility_data_{clusters}_{planning_horizons}.csv"
         ),
     resources:
         mem_mb=1000,
     log:
-        logs("build_mobility_demand_{clusters}_{planning_horizons}.log"),
+        logs("build_exogenous_mobility_data_{clusters}_{planning_horizons}.log"),
     script:
-        "scripts/pypsa-de/build_mobility_demand.py"
+        "scripts/pypsa-de/build_exogenous_mobility_data.py"
 
 
 rule build_egon_data:
@@ -541,9 +546,6 @@ rule modify_prenetwork:
         must_run=config_provider("must_run"),
         clustering=config_provider("clustering", "temporal", "resolution_sector"),
         H2_plants=config_provider("electricity", "H2_plants_DE"),
-        land_transport_electric_share=config_provider(
-            "sector", "land_transport_electric_share"
-        ),
         onshore_nep_force=config_provider("onshore_nep_force"),
         offshore_nep_force=config_provider("offshore_nep_force"),
         shipping_methanol_efficiency=config_provider(
@@ -553,6 +555,13 @@ rule modify_prenetwork:
         shipping_methanol_share=config_provider("sector", "shipping_methanol_share"),
         mwh_meoh_per_tco2=config_provider("sector", "MWh_MeOH_per_tCO2"),
         scale_capacity=config_provider("scale_capacity"),
+        bev_charge_rate=config_provider("sector", "bev_charge_rate"),
+        bev_energy=config_provider("sector", "bev_energy"),
+        bev_dsm_availability=config_provider("sector", "bev_dsm_availability"),
+        uba_for_industry=config_provider("iiasa_database", "uba_for_industry"),
+        scale_industry_non_energy=config_provider(
+            "iiasa_database", "scale_industry_non_energy"
+        ),
     input:
         costs_modifications="ariadne-data/costs_{planning_horizons}-modifications.csv",
         network=resources(
@@ -564,15 +573,20 @@ rule modify_prenetwork:
             else []
         ),
         costs=resources("costs_{planning_horizons}.csv"),
-        aladin_demand=resources(
-            "mobility_demand_aladin_{clusters}_{planning_horizons}.csv"
+        modified_mobility_data=resources(
+            "modified_mobility_data_{clusters}_{planning_horizons}.csv"
         ),
-        transport_data=resources("transport_data_s_{clusters}.csv"),
         biomass_potentials=resources(
             "biomass_potentials_s_{clusters}_{planning_horizons}.csv"
         ),
         industrial_demand=resources(
             "industrial_energy_demand_base_s_{clusters}_{planning_horizons}.csv"
+        ),
+        industrial_production_per_country_tomorrow=resources(
+            "industrial_production_per_country_tomorrow_{planning_horizons}-modified.csv"
+        ),
+        industry_sector_ratios=resources(
+            "industry_sector_ratios_{planning_horizons}.csv"
         ),
         pop_weighted_energy_totals=resources(
             "pop_weighted_energy_totals_s_{clusters}.csv"
@@ -581,6 +595,7 @@ rule modify_prenetwork:
         regions_onshore=resources("regions_onshore_base_s_{clusters}.geojson"),
         regions_offshore=resources("regions_offshore_base_s_{clusters}.geojson"),
         offshore_connection_points="ariadne-data/offshore_connection_points.csv",
+        new_industrial_energy_demand="ariadne-data/UBA_Projektionsbericht2025_Abbildung31_MWMS.csv",
     output:
         network=resources(
             "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_final.nc"
@@ -594,7 +609,7 @@ rule modify_prenetwork:
         "scripts/pypsa-de/modify_prenetwork.py"
 
 
-ruleorder: modify_industry_demand > build_industrial_production_per_country_tomorrow
+ruleorder: modify_industry_production > build_industrial_production_per_country_tomorrow
 
 
 rule modify_existing_heating:
@@ -655,7 +670,7 @@ rule build_existing_chp_de:
         "scripts/pypsa-de/build_existing_chp_de.py"
 
 
-rule modify_industry_demand:
+rule modify_industry_production:
     params:
         reference_scenario=config_provider("iiasa_database", "reference_scenario"),
     input:
@@ -670,9 +685,9 @@ rule modify_industry_demand:
     resources:
         mem_mb=1000,
     log:
-        logs("modify_industry_demand_{planning_horizons}.log"),
+        logs("modify_industry_production_{planning_horizons}.log"),
     script:
-        "scripts/pypsa-de/modify_industry_demand.py"
+        "scripts/pypsa-de/modify_industry_production.py"
 
 
 rule build_wasserstoff_kernnetz:
