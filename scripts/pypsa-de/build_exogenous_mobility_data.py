@@ -7,7 +7,7 @@ from scripts._helpers import configure_logging, mock_snakemake
 logger = logging.getLogger(__name__)
 
 
-def get_transport_data(
+def get_mobility_data(
     db,
     year,
     non_land_liquids,
@@ -15,7 +15,7 @@ def get_transport_data(
     uba_for_mobility=False,
 ):
     """
-    Retrieve the German mobility demand from the transport_data model.
+    Retrieve the German mobility demand from the transport model.
 
     Sum over the subsectors Bus, LDV, Rail, and Truck for the fuels
     electricity, hydrogen, and synthetic fuels.
@@ -23,14 +23,14 @@ def get_transport_data(
     subsectors = ["Bus", "LDV", "Rail", "Truck"]
     fuels = ["Electricity", "Hydrogen", "Liquids"]
 
-    transport_demand = pd.Series(0.0, index=fuels)
+    mobility_data = pd.Series(0.0, index=fuels)
 
     if year == "2020":
         logger.info(
             "For 2020, using hard-coded transport data from the Ariadne2-internal database."
         )
 
-        transport_demand = pd.Series(
+        mobility_data = pd.Series(
             {
                 "Electricity": 0.0 + 17.0 + 35.82 + 0.0,
                 "Hydrogen": 0.0 + 0.0 + 0.0 + 0.0,
@@ -38,8 +38,8 @@ def get_transport_data(
             }
         )
 
-        transport_demand = transport_demand.div(3.6e-6)  # convert PJ to MWh
-        transport_demand["number_of_cars"] = 0.658407 + 0.120261  # BEV + PHEV
+        mobility_data = mobility_data.div(3.6e-6)  # convert PJ to MWh
+        mobility_data["million_EVs"] = 0.658407 + 0.120261  # BEV + PHEV
 
         if ageb_for_mobility or uba_for_mobility:
             if uba_for_mobility:
@@ -47,7 +47,7 @@ def get_transport_data(
                     "For 2020, using historical AGEB and KBA data instead of UBA projections."
                 )
             # AGEB 2020, https://ag-energiebilanzen.de/daten-und-fakten/bilanzen-1990-bis-2030/?_jahresbereich-bilanz=2011-2020
-            transport_demand = pd.Series(
+            mobility_data = pd.Series(
                 {
                     "Electricity": 39129 + 2394,  # Schiene + Straße
                     "Hydrogen": 0,
@@ -57,49 +57,49 @@ def get_transport_data(
                     + 638820,  # Bio Strasse + Diesel Strasse + Diesel Schiene + Otto Strasse
                 }
             )
-            transport_demand = transport_demand.div(3.6e-3)  # convert PJ to MWH
+            mobility_data = mobility_data.div(3.6e-3)  # convert PJ to MWH
             # https://www.kba.de/DE/Statistik/Produktkatalog/produkte/Fahrzeuge/fz27_b_uebersicht.html
             # FZ27_202101, table FZ 27.2, 1. January 2021:
-            transport_demand["number_of_cars"] = 0.358498 + 0.280149
+            mobility_data["million_EVs"] = 0.358498 + 0.280149
 
     elif year == "2025" and uba_for_mobility:
         # https://www.umweltbundesamt.de/sites/default/files/medien/11850/publikationen/projektionsbericht_2025.pdf, Abbildung 64 & 59,
-        transport_demand = pd.Series(
+        mobility_data = pd.Series(
             {
                 "Electricity": 21,
                 "Hydrogen": 0.0,
                 "Liquids": 524 + 51,
             }
         )
-        transport_demand["Liquids"] -= non_land_liquids[
+        mobility_data["Liquids"] -= non_land_liquids[
             int(year)
         ]  # remove domestic navigation and aviation from UBA data to avoid double counting
-        transport_demand = transport_demand.mul(1e6)  # convert TWh to MWh
-        transport_demand["number_of_cars"] = 2.7 + 1.2  # BEV + PHEV
+        mobility_data = mobility_data.mul(1e6)  # convert TWh to MWh
+        mobility_data["million_EVs"] = 2.7 + 1.2  # BEV + PHEV
 
     elif year == "2030" and uba_for_mobility:
-        transport_demand = pd.Series(
+        mobility_data = pd.Series(
             {
                 "Electricity": 57,
                 "Hydrogen": 14,
                 "Liquids": 418 + 34 + 1,
             }
         )
-        transport_demand["Liquids"] -= non_land_liquids[int(year)]
-        transport_demand = transport_demand.mul(1e6)
-        transport_demand["number_of_cars"] = 8.7 + 1.8
+        mobility_data["Liquids"] -= non_land_liquids[int(year)]
+        mobility_data = mobility_data.mul(1e6)
+        mobility_data["million_EVs"] = 8.7 + 1.8
 
     elif year == "2035" and uba_for_mobility:
-        transport_demand = pd.Series(
+        mobility_data = pd.Series(
             {
                 "Electricity": 117,
                 "Hydrogen": 36,
                 "Liquids": 237 + 26 + 1,
             }
         )
-        transport_demand["Liquids"] -= non_land_liquids[int(year)]
-        transport_demand = transport_demand.mul(1e6)
-        transport_demand["number_of_cars"] = 18.9 + 1.8
+        mobility_data["Liquids"] -= non_land_liquids[int(year)]
+        mobility_data = mobility_data.mul(1e6)
+        mobility_data["million_EVs"] = 18.9 + 1.8
 
     else:
         if uba_for_mobility:
@@ -112,27 +112,27 @@ def get_transport_data(
         for fuel in fuels:
             for subsector in subsectors:
                 key = f"Final Energy|Transportation|{subsector}|{fuel}"
-                transport_demand.loc[fuel] += df.get((key, "TWh/yr"), 0.0)
+                mobility_data.loc[fuel] += df.get((key, "TWh/yr"), 0.0)
 
-        transport_demand = transport_demand.mul(1e6)  # convert TWh to MWh
-        transport_demand["number_of_cars"] = (
+        mobility_data = mobility_data.mul(1e6)  # convert TWh to MWh
+        mobility_data["million_EVs"] = (
             df.loc["Stock|Transportation|LDV|BEV", "million"]
             + df.loc["Stock|Transportation|LDV|PHEV", "million"]
         )
 
-    return transport_demand
+    return mobility_data
 
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
         snakemake = mock_snakemake(
-            "build_exogenous_mobility_demand",
+            "build_exogenous_mobility_data",
             simpl="",
             clusters=27,
             opts="",
             ll="vopt",
             sector_opts="none",
-            planning_horizons="2030",
+            planning_horizons="2020",
             run="KN2045_Mix",
         )
     configure_logging(snakemake)
@@ -173,8 +173,8 @@ if __name__ == "__main__":
     logger.info(
         f"Retrieving German mobility demand from {snakemake.params.leitmodelle['transport']} transport model."
     )
-    # get transport_data data
-    transport_data = get_transport_data(
+    # get mobility_data data
+    mobility_data = get_mobility_data(
         db,
         snakemake.wildcards.planning_horizons,
         non_land_liquids,
@@ -182,15 +182,4 @@ if __name__ == "__main__":
         uba_for_mobility=snakemake.params.uba_for_mobility,
     )
 
-    # get German mobility weighting
-    pop_layout = pd.read_csv(snakemake.input.clustered_pop_layout, index_col=0)
-    # only get German data
-    pop_layout = pop_layout[pop_layout.ct == "DE"].fraction
-
-    mobility_demand = pd.DataFrame(
-        pop_layout.values[:, None] * transport_data.values,
-        index=pop_layout.index,
-        columns=transport_data.index,
-    )
-
-    mobility_demand.to_csv(snakemake.output.mobility_demand)
+    mobility_data.to_csv(snakemake.output.mobility_data, header=False)

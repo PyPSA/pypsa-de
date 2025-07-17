@@ -825,89 +825,77 @@ def must_run(n, params):
             n.links.loc[links_i, "p_min_pu"] = p_min_pu
 
 
-def modify_mobility_demand(n):
+def modify_mobility_demand(n, mobility_data_file):
     """
     Change loads in Germany to use exogenous data for road demand.
+
+    The mobility_data contains the demand of Electricity, Hydrogen and Liquids in MWh/a, and the number of EVs in million.
     """
     logger.info(
         "Overwriting land transport demand. In particular the `land_transport_electric_share` config setting will not be used."
     )
-    new_demand = pd.read_csv(snakemake.input.modified_mobility_demand, index_col=0)
 
-    simulation_period_correction_factor = n.snapshot_weightings.objective.sum() / 8760
+    fraction_modelyear = n.snapshot_weightings.stores.sum() / 8760
 
-    # oil demand
-    if "land transport oil" in n.loads.carrier.unique():  # i.e. before 2050
-        oil_demand = pd.Series(
-            new_demand.Liquids.values * simulation_period_correction_factor,
-            index=new_demand.index + " land transport oil",
+    new_demand = pd.read_csv(mobility_data_file, header=None, index_col=0).iloc[:, 0]
+
+    number_of_EVs = new_demand.pop("million_EVs") * 1e6
+
+    new_demand *= fraction_modelyear
+
+    carrier_fuel_map = {
+        "land transport EV": "Electricity",
+        "land transport fuel cell": "Hydrogen",
+        "land transport oil": "Liquids",
+    }
+    for carrier, fuel in carrier_fuel_map.items():
+        loads_i = n.loads[
+            (n.loads.carrier == carrier) & n.loads.index.str.startswith("DE")
+        ]
+        old_demand = (
+            n.loads_t.p_set.loc[:, loads_i.index]
+            .sum(axis=1)
+            .mul(n.snapshot_weightings.stores)
+            .sum()
         )
-
-        profile = n.loads_t.p_set.loc[:, oil_demand.index]
-        profile /= profile.sum()
-        n.loads_t.p_set.loc[:, oil_demand.index] = (oil_demand * profile).div(
-            n.snapshot_weightings.objective, axis=0
+        scale_factor = new_demand[fuel] / old_demand
+        logger.info(
+            f"Scaling {carrier} loads in Germany by {scale_factor:.2f}.\nPrevious total demand: {old_demand:.2f} MWh/a, new total demand: {new_demand[fuel]:.2f} MWh/a."
         )
-
-    # hydrogen demand
-    h2_demand = pd.Series(
-        new_demand.Hydrogen.values * simulation_period_correction_factor,
-        index=new_demand.index + " land transport fuel cell",
-    )
-
-    profile = n.loads_t.p_set.loc[:, h2_demand.index]
-    profile /= profile.sum()
-    n.loads_t.p_set.loc[:, h2_demand.index] = (h2_demand * profile).div(
-        n.snapshot_weightings.objective, axis=0
-    )
-
-    # electricity demand
-    ev_demand = pd.Series(
-        new_demand.Electricity.values * simulation_period_correction_factor,
-        index=new_demand.index + " land transport EV",
-    )
-
-    profile = n.loads_t.p_set.loc[:, ev_demand.index]
-    profile /= profile.sum()
-    n.loads_t.p_set.loc[:, ev_demand.index] = (ev_demand * profile).div(
-        n.snapshot_weightings.objective, axis=0
-    )
+        n.loads_t.p_set.loc[:, loads_i.index] *= scale_factor
 
     # adjust BEV charger and V2G capacities
 
-    BEV_charger_i = n.links[
+    BEV_chargers = n.links[
         (n.links.carrier == "BEV charger") & (n.links.bus0.str.startswith("DE"))
-    ].index
-
-    # Check that buses in network and new_demand data appear in same order
-    assert [
-        idx.startswith(idx2) for (idx, idx2) in zip(BEV_charger_i, new_demand.index)
     ]
 
-    # Then directly use .values for assignment
-    p_nom = (
-        new_demand.number_of_cars.values * 1e6 * snakemake.params.bev_charge_rate
-    )  # same logic like in prepare_sector_network
-
-    n.links.loc[BEV_charger_i, "p_nom"] = p_nom
-
-    V2G_i = n.links[
-        (n.links.carrier == "V2G") & (n.links.bus0.str.startswith("DE"))
-    ].index
-    if not V2G_i.empty:
-        n.links.loc[V2G_i, "p_nom"] = p_nom * snakemake.params.bev_dsm_availability
-
-    dsm_i = n.stores[
-        (n.stores.carrier == "EV battery") & (n.stores.bus.str.startswith("DE"))
-    ].index
-    e_nom = (
-        new_demand.number_of_cars.values
-        * 1e6
-        * snakemake.params.bev_energy
-        * snakemake.params.bev_dsm_availability
+    scale_factor = (
+        number_of_EVs * snakemake.params.bev_charge_rate / BEV_chargers.p_nom.sum()
     )
-    if not dsm_i.empty:
-        n.stores.loc[dsm_i, "e_nom"] = e_nom
+    logger.info(
+        f"Scaling BEV charger capacities in Germany by {scale_factor:.2f} to match the new number of EVs.\nPrevious total capacity: {BEV_chargers.p_nom.sum():.2f} MW, new total capacity: {number_of_EVs * snakemake.params.bev_charge_rate:.2f} MW."
+    )
+    n.links.loc[BEV_chargers.index, "p_nom"] *= scale_factor
+
+    V2G = n.links[(n.links.carrier == "V2G") & (n.links.bus0.str.startswith("DE"))]
+
+    if not V2G.empty:
+        n.links.loc[V2G.index, "p_nom"] *= (
+            scale_factor * snakemake.params.bev_dsm_availability
+        )
+
+    dsm = n.stores[
+        (n.stores.carrier == "EV battery") & (n.stores.bus.str.startswith("DE"))
+    ]
+
+    if not dsm.empty:
+        scale_factor = (
+            number_of_EVs
+            * snakemake.params.bev_energy
+            * snakemake.params.bev_dsm_availability
+        ) / dsm.e_nom.sum()
+        n.stores.loc[dsm.index, "e_nom"] *= scale_factor
 
 
 def add_hydrogen_turbines(n):
@@ -1408,7 +1396,7 @@ if __name__ == "__main__":
         nyears,
     )
 
-    modify_mobility_demand(n)
+    modify_mobility_demand(n, snakemake.input.modified_mobility_data)
 
     new_boiler_ban(n)
 
