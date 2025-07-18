@@ -6,7 +6,13 @@ import pandas as pd
 import pypsa
 from shapely.geometry import Point
 
-from scripts._helpers import configure_logging, mock_snakemake, sanitize_custom_columns
+from scripts._helpers import (
+    configure_logging,
+    mock_snakemake,
+    sanitize_custom_columns,
+    set_scenario_config,
+    update_config_from_wildcards,
+)
 from scripts.add_electricity import load_costs
 from scripts.prepare_sector_network import lossy_bidirectional_links
 
@@ -1265,6 +1271,212 @@ def scale_capacity(n, scaling):
                 ]
 
 
+def _get_component_pair(n, n_ref, component_type):
+    """
+    Get component dataframes from both networks.
+
+    Parameters
+    ----------
+    n : pypsa.Network
+        Network object to modify.
+    n_ref : pypsa.Network
+        Reference network object.
+    component_type : str
+        Component type name.
+
+    Returns
+    -------
+    tuple
+        (component, baseline_component) dataframes.
+    """
+    if component_type == "StorageUnit":
+        component = getattr(n, "storage_units")
+        baseline_component = getattr(n_ref, "storage_units")
+    else:
+        component = getattr(n, component_type.lower() + "s")
+        baseline_component = getattr(n_ref, component_type.lower() + "s")
+    return component, baseline_component
+
+
+def _identify_non_german_extendable(component, component_type):
+    """
+    Identify non-German extendable components.
+
+    Parameters
+    ----------
+    component : pd.DataFrame
+        Component dataframe.
+    component_type : str
+        Component type name.
+
+    Returns
+    -------
+    pd.Series
+        Boolean series indicating components to fix.
+    """
+    # Identify non-German nodes
+    if component_type in ["Line", "Link"]:
+        # For lines and links, check both buses
+        non_german = component.filter(regex="bus[012]").apply(
+            lambda x: (~x.str.startswith("DE").any()) & (not x.name.startswith("EU")),
+            axis=1,
+        )
+    else:
+        # For other components, check if bus is not in Germany
+        non_german = ~component.bus.str.startswith(("DE", "EU"))
+
+    # Only fix extendable components
+    extendable = (
+        component.e_nom_extendable
+        if component_type == "Store"
+        else (
+            component.s_nom_extendable
+            if component_type == "Line"
+            else component.p_nom_extendable
+        )
+    )
+    return non_german & extendable
+
+
+def _apply_capacity_limits(
+    n, component_type, indices, baseline_component, slack, nom_min, nom_max
+):
+    """
+    Apply capacity limits to components.
+
+    Parameters
+    ----------
+    n : pypsa.Network
+        Network object to modify.
+    component_type : str
+        Component type name.
+    indices : pd.Index
+        Indices of components to modify.
+    baseline_component : pd.DataFrame
+        Reference component dataframe.
+    slack : float
+        Slack factor to apply to capacity limits.
+    nom_min : bool
+        Whether to set minimum capacity limit.
+    nom_max : bool
+        Whether to set maximum capacity limit.
+    """
+    # Determine capacity attributes based on component type
+    if component_type == "Store":
+        nom_attr, nom_opt_attr, nom_min_attr, nom_max_attr, extendable_attr = (
+            "e_nom",
+            "e_nom_opt",
+            "e_nom_min",
+            "e_nom_max",
+            "e_nom_extendable",
+        )
+        component_df = n.stores
+    elif component_type == "Line":
+        nom_attr, nom_opt_attr, nom_min_attr, nom_max_attr, extendable_attr = (
+            "s_nom",
+            "s_nom_opt",
+            "s_nom_min",
+            "s_nom_max",
+            "s_nom_extendable",
+        )
+        component_df = n.lines
+    else:
+        nom_attr, nom_opt_attr, nom_min_attr, nom_max_attr, extendable_attr = (
+            "p_nom",
+            "p_nom_opt",
+            "p_nom_min",
+            "p_nom_max",
+            "p_nom_extendable",
+        )
+        component_df = n.df(component_type)
+
+    if nom_min and nom_max and slack == 0:
+        # If both min and max are set, use optimized value directly
+        component_df.loc[indices, nom_attr] = baseline_component.loc[
+            indices, nom_opt_attr
+        ]
+        component_df.loc[indices, extendable_attr] = False
+    else:
+        if nom_min:
+            component_df.loc[indices, nom_min_attr] = baseline_component.loc[
+                indices
+            ].apply(
+                lambda row: max(
+                    np.floor(row[nom_opt_attr]) * (1 - slack),
+                    row[nom_min_attr],
+                ),
+                axis=1,
+            )
+        if nom_max:
+            component_df.loc[indices, nom_max_attr] = baseline_component.loc[
+                indices
+            ].apply(
+                lambda row: min(
+                    np.ceil(row[nom_opt_attr]) * (1 + slack),
+                    row[nom_max_attr],
+                ),
+                axis=1,
+            )
+
+
+def fix_foreign_investments(n, n_ref, slack=0, nom_min=True, nom_max=False):
+    """
+    For all extendable components located outside Germany, this function sets their
+    minimum and maximum capacity limits to match the optimized capacity from a
+    reference network. This effectively fixes the investment decisions for these
+    components to their reference values.
+
+    Components are identified as non-German based on their bus location:
+    - For Line and Link: any connected bus is outside Germany
+    - For other components: the primary bus is outside Germany
+
+    Capacities of EU components are not fixed.
+
+    Only components with extendable capacity are modified (those with
+    [p|s|e]_nom_extendable set to True).
+
+    Parameters
+    ----------
+    n : pypsa.Network
+        Network object to modify.
+    n_ref : pypsa.Network
+        Reference network object containing optimized capacity values.
+    slack : float, optional
+        Slack factor to apply to the capacity limits. Default is 0.
+    nom_min : bool, optional
+        Whether to set the minimum capacity limit. Default is True.
+    nom_max : bool, optional
+        Whether to set the maximum capacity limit. Default is False.
+
+    Returns
+    -------
+    None
+        Network is modified in-place with updated capacity limits.
+    """
+    # List of component types that can have investment decisions
+    investment_components = ["Generator", "StorageUnit", "Store", "Link", "Line"]
+
+    # For each component type
+    for component_type in investment_components:
+        component, baseline_component = _get_component_pair(n, n_ref, component_type)
+
+        to_fix = _identify_non_german_extendable(component, component_type)
+
+        if not any(to_fix):
+            continue
+
+        indices = component.index[to_fix]
+
+        # Set optimized capacity from reference network as lower and upper
+        # bound rounding values to the nearest integer and inserting slack
+        # to avoid constraint violations
+        _apply_capacity_limits(
+            n, component_type, indices, baseline_component, slack, nom_min, nom_max
+        )
+
+        logger.info(f"Fixed {sum(to_fix)} {component_type} components outside Germany")
+
+
 if __name__ == "__main__":
     if "snakemake" not in globals():
         snakemake = mock_snakemake(
@@ -1274,11 +1486,13 @@ if __name__ == "__main__":
             opts="",
             ll="vopt",
             sector_opts="none",
-            planning_horizons="2025",
-            run="KN2045_Mix",
+            planning_horizons="2045",
+            run="KN2045_Mix_10solarCAPEX_notfixed",
         )
 
     configure_logging(snakemake)
+    set_scenario_config(snakemake)
+    update_config_from_wildcards(snakemake.config, snakemake.wildcards)
     logger.info("Adding Ariadne-specific functionality")
 
     n = pypsa.Network(snakemake.input.network)
@@ -1346,5 +1560,22 @@ if __name__ == "__main__":
     scale_capacity(n, snakemake.params.scale_capacity)
 
     sanitize_custom_columns(n)
+
+    if (
+        snakemake.params["fix_foreign_investments"]["enable"]
+        and snakemake.wildcards.run
+        != snakemake.params["fix_foreign_investments"]["reference_scenario"]
+    ):
+        logger.info(
+            "Fixing investments for components outside Germany based on the reference scenario."
+        )
+        n_ref = pypsa.Network(snakemake.input.reference_network)
+        fix_foreign_investments(
+            n,
+            n_ref,
+            snakemake.params["fix_foreign_investments"]["slack"],
+            snakemake.params["fix_foreign_investments"]["nom_min"],
+            snakemake.params["fix_foreign_investments"]["nom_max"],
+        )
 
     n.export_to_netcdf(snakemake.output.network)

@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20253006_fix_chp_lifetime
+  prefix: 20250714_fix_neighbours
   name:
   # - ExPol
   - KN2045_Mix
@@ -76,6 +76,13 @@ existing_capacities:
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#countries
 # Germany plus 12 "Stromnachbarn"
 countries: ['AT', 'BE', 'CH', 'CZ', 'DE', 'DK', 'FR', 'GB', 'LU', 'NL', 'NO', 'PL', 'SE', 'ES', 'IT']
+
+fix_foreign_investments:
+  enable: false
+  reference_scenario: KN2045_Mix
+  nom_min: true
+  nom_max: true
+  slack: 1.e-5
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#snapshots
 snapshots:
