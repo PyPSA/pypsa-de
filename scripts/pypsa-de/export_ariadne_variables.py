@@ -5274,7 +5274,7 @@ if __name__ == "__main__":
 
     if "debug" == "debug":  # For debugging
         var = pd.Series()
-        idx = 6
+        idx = 1
         n = networks[idx]
         c = costs[idx]
         _industry_demand = industry_demands[idx]
