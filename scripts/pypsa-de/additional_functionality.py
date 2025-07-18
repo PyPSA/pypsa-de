@@ -835,7 +835,7 @@ def additional_functionality(n, snapshots, snakemake):
     else:
         logger.warning("No national CO2 budget specified!")
 
-    if isinstance(constraints["decentral_heat_pump_budgets"], dict):
+    if isinstance(constraints.get("decentral_heat_pump_budgets"), dict):
         add_decentral_heat_pump_budgets(
             n,
             constraints["decentral_heat_pump_budgets"],
