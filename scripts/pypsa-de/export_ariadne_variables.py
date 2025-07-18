@@ -1817,9 +1817,17 @@ def get_secondary_energy(n, region, _industry_demand):
         axis=0,
     ).sum()
     mwh_coal_per_mwh_coke = 1.366
+    coke_fraction = (
+        industry_demand.get("coke")
+        * mwh_coal_per_mwh_coke
+        / (
+            industry_demand.get("coke") * mwh_coal_per_mwh_coke
+            + industry_demand.get("coal")
+        )
+    )
     # Coke is added as a coal demand, so we need to convert back to units of coke for secondary energy
     var["Secondary Energy|Solids|Coal"] = var["Secondary Energy|Solids"] = (
-        industry_demand.get("coke", 0) / mwh_coal_per_mwh_coke
+        sum_load(n, "coal for industry", region) * coke_fraction / mwh_coal_per_mwh_coke
     )
 
     biomass_usage = (
@@ -1989,14 +1997,17 @@ def get_final_energy(
     # !: Pypsa-eur does not strictly distinguish between energy and
     # non-energy use
 
-    var["Final Energy|Industry|Electricity"] = industry_demand.get("electricity")
-    # or use: sum_load(n, "industry electricity", region)
+    var["Final Energy|Industry|Electricity"] = sum_load(
+        n, "industry electricity", region
+    )
     # electricity is not used for non-energy purposes
     var["Final Energy|Industry excl Non-Energy Use|Electricity"] = var[
         "Final Energy|Industry|Electricity"
     ]
 
-    var["Final Energy|Industry|Heat"] = industry_demand.get("low-temperature heat")
+    var["Final Energy|Industry|Heat"] = sum_load(
+        n, "low-temperature heat for industry", region
+    )
     # heat is not used for non-energy purposes
     var["Final Energy|Industry excl Non-Energy Use|Heat"] = var[
         "Final Energy|Industry|Heat"
@@ -2008,7 +2019,7 @@ def get_final_energy(
     # var["Final Energy|Industry|Geothermal"] = \
     # Not implemented
 
-    var["Final Energy|Industry|Gases"] = industry_demand.get("methane")
+    var["Final Energy|Industry|Gases"] = sum_load(n, "gas for industry", region)
 
     for gas_type in gas_fractions.index:
         var[f"Final Energy|Industry|Gases|{gas_type}"] = (
@@ -2030,7 +2041,7 @@ def get_final_energy(
     # var["Final Energy|Industry|Power2Heat"] = \
     # Q: misleading description
 
-    var["Final Energy|Industry|Hydrogen"] = industry_demand.get("hydrogen")
+    var["Final Energy|Industry|Hydrogen"] = sum_load(n, "H2 for industry", region)
     # subtract non-energy used hydrogen from total hydrogen demand
     var["Final Energy|Industry excl Non-Energy Use|Hydrogen"] = (
         var["Final Energy|Industry|Hydrogen"]
@@ -2074,16 +2085,29 @@ def get_final_energy(
 
     # var["Final Energy|Industry|Other"] = \
 
-    var["Final Energy|Industry|Solids|Biomass"] = industry_demand.get("solid biomass")
+    var["Final Energy|Industry|Solids|Biomass"] = sum_load(
+        n, "solid biomass for industry", region
+    )
     var["Final Energy|Industry excl Non-Energy Use|Solids|Biomass"] = var[
         "Final Energy|Industry|Solids|Biomass"
     ]
 
     mwh_coal_per_mwh_coke = 1.366
-    # Coke is added as a coal demand, so we need to convert back to units of coke for final energy
+    coke_fraction = (
+        industry_demand.get("coke")
+        * mwh_coal_per_mwh_coke
+        / (
+            industry_demand.get("coke") * mwh_coal_per_mwh_coke
+            + industry_demand.get("coal")
+        )
+    )
+    # Contains coke demand, which is a coal product
+    # Here coke is considered a secondary energy source
     var["Final Energy|Industry|Solids|Coal"] = (
-        industry_demand.get("coal")
-        + industry_demand.get("coke") / mwh_coal_per_mwh_coke
+        sum_load(n, "coal for industry", region) * (1 - coke_fraction)
+        + sum_load(n, "coal for industry", region)
+        * coke_fraction
+        / mwh_coal_per_mwh_coke
     )
     var["Final Energy|Industry excl Non-Energy Use|Solids|Coal"] = var[
         "Final Energy|Industry|Solids|Coal"
@@ -2571,10 +2595,10 @@ def get_final_energy(
     return var * MWh2TWh
 
 
-def get_emissions(n, region, _energy_totals, industry_demand):
+def get_emissions(n, region, _energy_totals, _industry_demand):
     energy_totals = _energy_totals.loc[region[0:2]]
 
-    industry_DE = industry_demand.filter(
+    industry_demand = _industry_demand.filter(
         like=region,
         axis=0,
     ).sum()
@@ -2880,8 +2904,22 @@ def get_emissions(n, region, _energy_totals, industry_demand):
     )  # considered 0 anyways
 
     mwh_coal_per_mwh_coke = 1.366  # from eurostat energy balance
-    # 0.3361 t/MWh, 1e-6 to convert to Mt
-    coking_emissions = industry_DE.coke * (mwh_coal_per_mwh_coke - 1) * 0.3361 * t2Mt
+    coke_fraction = (
+        industry_demand.get("coke")
+        * mwh_coal_per_mwh_coke
+        / (
+            industry_demand.get("coke") * mwh_coal_per_mwh_coke
+            + industry_demand.get("coal")
+        )
+    )
+    # 0.3361 t_CO2/MWh
+    coking_emissions = (
+        sum_load(n, "coal for industry", region)
+        * coke_fraction
+        * (mwh_coal_per_mwh_coke - 1)
+        * 0.3361
+        * t2Mt
+    )
     var["Emissions|Gross Fossil CO2|Energy|Demand|Industry"] = (
         co2_emissions.reindex(
             [
