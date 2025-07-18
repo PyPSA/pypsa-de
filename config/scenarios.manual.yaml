@@ -74,6 +74,20 @@ KN2045_Mix:
 # dient als Referenzszenario in der Familie der Ariadne-Szenarien
 
 
+LowDemand:
+  iiasa_database:
+    reference_scenario: ExPol # e.g., CO2 emissions from REMIND will follow ExPol
+    uba_for_industry: true
+    uba_for_mobility: true
+  solving:
+    constraints:
+      decentral_heat_pump_budgets:
+        DE: # UBA MWMS, Projektionsbericht 2025, Abbildung 48
+          2025: 12.0
+          2030: 26.0
+          2035: 38.0
+
+
 KN2045_Elek:
 # Fokus auf dem Hochlauf von Technologien zur direkten Elektrifizierung der Sektoren
 # Strom als präferierter Energieträger in der Endenergie, andere Energieträger ergänzend, wo nötig (Wasserstoff, synthetische Kraftstoffe)

@@ -535,6 +535,68 @@ def add_national_co2_budgets(n, snakemake, national_co2_budgets, investment_year
         )
 
 
+def add_decentral_heat_pump_budgets(n, decentral_heat_pump_budgets, investment_year):
+    carriers = [
+        "rural air heat pumprural ground heat pumpurban decentral air heat pump"
+    ]
+
+    heat_pumps = n.links.index[n.links.carrier.isin(carriers)]
+
+    if heat_pumps.empty:
+        logger.warning(
+            "No heat pumps found in the network. Skipping decentral heat pump budgets."
+        )
+        return
+
+    if investment_year not in decentral_heat_pump_budgets["DE"].keys():
+        logger.warning(
+            f"No decentral heat pump budget for {investment_year} found in the config file. Skipping."
+        )
+        return
+
+    logger.info("Adding decentral heat pump budgets")
+
+    for ct in decentral_heat_pump_budgets:
+        if ct != "DE":
+            logger.error(
+                f"Heat pump budget for countries other than `DE` is not yet supported. Found country {ct}. Please check the config file."
+            )
+
+        limit = decentral_heat_pump_budgets[ct][investment_year] * 1e6
+
+        logger.info(
+            f"Limiting decentral heat pump electricity consumption in country {ct} to {decentral_heat_pump_budgets[ct][investment_year]:.1%} MWh.",
+        )
+
+        lhs = []
+
+        lhs.append(
+            (
+                n.model["Link-p"].loc[:, heat_pumps] * n.snapshot_weightings.generators
+            ).sum()
+        )
+
+        cname = f"decentral_heat_pump_limit-{ct}"
+        n.model.add_constraints(
+            lhs <= limit,
+            name=f"GlobalConstraint-{cname}",
+        )
+        if cname in n.global_constraints.index:
+            logger.warning(
+                f"Global constraint {cname} already exists. Dropping and adding it again."
+            )
+            n.global_constraints.drop(cname, inplace=True)
+
+        n.add(
+            "GlobalConstraint",
+            cname,
+            constant=limit,
+            sense="<=",
+            type="",
+            carrier_attribute="",
+        )
+
+
 def force_boiler_profiles_existing_per_load(n):
     """
     This scales the boiler dispatch to the load profile with a factor common to
@@ -772,6 +834,13 @@ def additional_functionality(n, snapshots, snakemake):
         )
     else:
         logger.warning("No national CO2 budget specified!")
+
+    if isinstance(constraints["decentral_heat_pump_budgets"], dict):
+        add_decentral_heat_pump_budgets(
+            n,
+            constraints["decentral_heat_pump_budgets"],
+            investment_year,
+        )
 
     if investment_year == 2020:
         adapt_nuclear_output(n)

@@ -995,6 +995,10 @@ def _get_capacities(n, region, cap_func, cap_string="Capacity|"):
         like="solar thermal"
     ).sum()
 
+    var[cap_string + "Decentral Heat|Heat Pump"] = capacities_decentral_heat.filter(
+        like="heat pump"
+    ).sum()
+
     capacities_h2 = (
         cap_func(
             bus_carrier="H2",
@@ -5195,7 +5199,7 @@ if __name__ == "__main__":
             opts="",
             ll="vopt",
             sector_opts="None",
-            run="KN2045_Mix",
+            run="LowDemand",
         )
     configure_logging(snakemake)
     config = snakemake.config
@@ -5320,12 +5324,14 @@ if __name__ == "__main__":
     ac_projects_invest = df.query(
         "Variable == 'Investment|Energy Supply|Electricity|Transmission|AC|NEP|Onshore'"
     )[planning_horizons].values.sum()
-
+    active_years = [
+        int(year) for year in modelyears if int(year) in [2025, 2030, 2035, 2040]
+    ]
     df.loc[
         df.query(
             "Variable == 'Investment|Energy Supply|Electricity|Transmission|AC|Übernahme|Startnetz Delta'"
         ).index,
-        [2025, 2030, 2035, 2040],
+        active_years,
     ] += (ac_startnetz - ac_projects_invest) / 4
 
     for suffix in ["|AC|NEP", "|AC", "", " and Distribution"]:
@@ -5333,7 +5339,7 @@ if __name__ == "__main__":
             df.query(
                 f"Variable == 'Investment|Energy Supply|Electricity|Transmission{suffix}'"
             ).index,
-            [2025, 2030, 2035, 2040],
+            active_years,
         ] += (ac_startnetz - ac_projects_invest) / 4
 
     print("Assigning mean investments of year and year + 5 to year.")
