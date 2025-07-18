@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20250716_improve_industry_demand
+  prefix: 20250718_improve_heat_pump_demand
   name:
   # - ExPol
   - KN2045_Mix
@@ -479,7 +479,7 @@ solving:
         offwind:
           DE:
             2020: 7.8
-            2025: 11.3
+            2025: 12
             2030: 29.3 # uba Projektionsbericht and NEP without delayed BalWin 3
             2035: 50 # Planned projects until 2035 (offshore_connection_points.csv) -1.3 GW for potential delays
             2040: 65   # Planned projects until 2040 -1.5 GW for potential retirments
