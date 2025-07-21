@@ -9,10 +9,17 @@ selected other infrastructure.
 import logging
 
 import geopandas as gpd
+import matplotlib
+
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import pandas as pd
 import pypsa
-from pypsa.plot import add_legend_circles, add_legend_lines, add_legend_patches
+from pypsa.plot.maps.static import (
+    add_legend_circles,
+    add_legend_lines,
+    add_legend_patches,
+)
 
 from scripts._helpers import (
     configure_logging,
@@ -216,7 +223,7 @@ def plot_h2_map(n, regions):
 
     bus_colors = {"H2 Electrolysis": "#ff29d9", "H2 Fuel Cell": "#805394"}
 
-    n.plot(
+    n.plot.map(
         geomap=True,
         bus_sizes=bus_sizes,
         bus_colors=bus_colors,
@@ -227,7 +234,7 @@ def plot_h2_map(n, regions):
         **map_opts,
     )
 
-    n.plot(
+    n.plot.map(
         geomap=True,
         bus_sizes=0,
         link_colors=color_retrofit,
@@ -237,7 +244,7 @@ def plot_h2_map(n, regions):
         **map_opts,
     )
 
-    n.plot(
+    n.plot.map(
         geomap=True,
         bus_sizes=0,
         link_colors=color_kern,
