@@ -28,8 +28,7 @@ run:
   disable_progressbar: true
 
 pypsa-de:
-  db_name: ariadne2
-  leitmodelle:
+  leitmodelle: # Model data downloaded from public IIASA database 'ariadne2'
     general: REMIND-EU v1.1
     buildings: REMod v1.0
     transport: Aladin v1
