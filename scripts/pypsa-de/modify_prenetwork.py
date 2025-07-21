@@ -6,7 +6,13 @@ import pandas as pd
 import pypsa
 from shapely.geometry import Point
 
-from scripts._helpers import configure_logging, mock_snakemake, sanitize_custom_columns
+from scripts._helpers import (
+    configure_logging,
+    mock_snakemake,
+    sanitize_custom_columns,
+    set_scenario_config,
+    update_config_from_wildcards,
+)
 from scripts.add_electricity import load_costs
 from scripts.prepare_sector_network import lossy_bidirectional_links
 
@@ -1278,6 +1284,8 @@ if __name__ == "__main__":
         )
 
     configure_logging(snakemake)
+    set_scenario_config(snakemake)
+    update_config_from_wildcards(snakemake.config, snakemake.wildcards)
     logger.info("Adding PyPSA-DE specific functionality")
 
     n = pypsa.Network(snakemake.input.network)

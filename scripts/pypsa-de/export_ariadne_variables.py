@@ -14,7 +14,12 @@ import pandas as pd
 import pypsa
 from numpy import isclose
 
-from scripts._helpers import configure_logging, mock_snakemake
+from scripts._helpers import (
+    configure_logging,
+    mock_snakemake,
+    set_scenario_config,
+    update_config_from_wildcards,
+)
 from scripts.add_electricity import calculate_annuity, load_costs
 
 logger = logging.getLogger(__name__)
@@ -5161,6 +5166,8 @@ if __name__ == "__main__":
             run="KN2045_Mix",
         )
     configure_logging(snakemake)
+    set_scenario_config(snakemake)
+    update_config_from_wildcards(snakemake.config, snakemake.wildcards)
     config = snakemake.config
     config_industry = snakemake.params.config_industry
     planning_horizons = snakemake.params.planning_horizons

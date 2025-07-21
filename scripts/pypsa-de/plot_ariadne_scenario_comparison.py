@@ -6,7 +6,12 @@ matplotlib.use("Agg")  # Use a non-interactive backend
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from scripts._helpers import mock_snakemake
+from scripts._helpers import (
+    configure_logging,
+    mock_snakemake,
+    set_scenario_config,
+    update_config_from_wildcards,
+)
 
 
 def scenario_plot(df, var):
@@ -33,6 +38,10 @@ if __name__ == "__main__":
             # planning_horizons="2050",
             # run="KN2045_Mix"
         )
+
+    configure_logging(snakemake)
+    set_scenario_config(snakemake)
+    update_config_from_wildcards(snakemake.config, snakemake.wildcards)
 
     dfs = []
     for file in snakemake.input.exported_variables:

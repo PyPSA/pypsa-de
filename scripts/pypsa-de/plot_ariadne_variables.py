@@ -2,7 +2,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from scripts._helpers import mock_snakemake
+from scripts._helpers import (
+    configure_logging,
+    mock_snakemake,
+    set_scenario_config,
+    update_config_from_wildcards,
+)
 
 
 def plot_trade(
@@ -803,6 +808,10 @@ if __name__ == "__main__":
             run="KN2045_Mix",
             # configfiles="config/config.public.yaml"
         )
+
+    configure_logging(snakemake)
+    set_scenario_config(snakemake)
+    update_config_from_wildcards(snakemake.config, snakemake.wildcards)
 
     df = (
         pd.read_excel(
