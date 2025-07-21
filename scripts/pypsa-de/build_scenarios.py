@@ -182,11 +182,15 @@ def write_to_scenario_yaml(input, output, scenarios, df):
             )
             config[scenario] = {}
         if config[scenario].get("weather_year", False):
-            if snakemake.config["run"]["shared_resources"]["policy"] != False:
-                logger.warning(
-                    "If you are running scenarios with multiple weather years, make sure to deactivate shared_resources!"
-                )
             weather_year = config[scenario]["weather_year"]
+            default_weather_year = int(snakemake.config["snapshots"]["start"][:4])
+            if (
+                snakemake.config["run"]["shared_resources"]["policy"] != False
+                and weather_year != default_weather_year
+            ):
+                raise ValueError(
+                    f"The run uses shared resources, but weather year {weather_year} in scenario {scenario} does not match the start year of the snapshots {default_weather_year}. If you are running scenarios with multiple weather years, make sure to deactivate shared_resources!"
+                )
             write_weather_dependent_config(config, scenario, weather_year)
 
         reference_scenario = (
