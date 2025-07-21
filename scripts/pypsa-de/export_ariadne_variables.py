@@ -348,6 +348,7 @@ def add_system_cost_rows(n):
             df.loc[df.carrier == carrier, "lifetime"] = lifetime
         else:
             logger.error(f"Mean lifetime of {carrier} is not infinite!")
+            raise ValueError()
 
     logger.info("Overwriting lifetime of components to compute annuities")
 

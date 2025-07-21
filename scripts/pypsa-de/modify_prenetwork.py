@@ -448,6 +448,9 @@ def unravel_carbonaceous_fuels(n):
         logger.error(
             "There are loads at the EU oil bus. Please set config[sector][regional_oil_demand] to True to enable energy balances for oil."
         )
+        raise ValueError(
+            "There are loads at the EU oil bus. Please set config[sector][regional_oil_demand] to True to enable energy balances for oil."
+        )
 
     ##########################################
     ### meoh bus
@@ -725,6 +728,9 @@ def unravel_gasbus(n, costs):
     # check if loads are connected to EU gas bus
     if "EU gas for industry" in n.loads.index:
         logger.error(
+            "There are loads at the EU gas bus. Please set config[sector][regional_gas_demand] to True to enable energy balances for gas."
+        )
+        raise ValueError(
             "There are loads at the EU gas bus. Please set config[sector][regional_gas_demand] to True to enable energy balances for gas."
         )
 
@@ -1176,6 +1182,9 @@ def force_connection_nep_offshore(n, current_year, costs):
 
             if node_off not in n.generators.index:
                 logger.error(
+                    f"Assuming all AC projects are connected at locations where other generators exists. That is not the case for {node_off}. Terminating"
+                )
+                raise ValueError(
                     f"Assuming all AC projects are connected at locations where other generators exists. That is not the case for {node_off}. Terminating"
                 )
 

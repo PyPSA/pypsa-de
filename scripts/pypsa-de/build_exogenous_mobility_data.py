@@ -106,6 +106,9 @@ def get_mobility_data(
             logger.error(
                 f"Year {year} is not supported for UBA mobility projections. Please use only 2020, 2025, 2030, 2035."
             )
+            raise NotImplementedError(
+                f"Year {year} is not supported for UBA mobility projections. Please use only 2020, 2025, 2030, 2035."
+            )
 
         df = db[year].loc[snakemake.params.leitmodelle["transport"]]
 
