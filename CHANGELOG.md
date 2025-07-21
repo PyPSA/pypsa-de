@@ -1,4 +1,8 @@
 # Changelog
+- Added an option to source mobility demand from UBA MWMS (Projektionsbericht 2025) for the years 2025-2035
+- Renamed functions and script for exogenous mobility demand
+- Improved the transport demand data, added an option to source 2020 and 2025 data from AGEB instead of Aladin
+- Added a helper function to change the weather_year to build_scenario
 - Longer lifetime (40 years) is only applied to existing gas CHPs, not new ones. Added a new config entry `existing_capacities:fill_value_gas_chp_lifetime`
 - Bugfix: gas CHPs are extendable again
 - Simplified scenarion definition and made `Mix` the default scenario
