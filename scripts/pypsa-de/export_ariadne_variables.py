@@ -5168,7 +5168,6 @@ if __name__ == "__main__":
     configure_logging(snakemake)
     set_scenario_config(snakemake)
     update_config_from_wildcards(snakemake.config, snakemake.wildcards)
-    config = snakemake.config
     config_industry = snakemake.params.config_industry
     planning_horizons = snakemake.params.planning_horizons
     post_discretization = snakemake.params.post_discretization
@@ -5270,7 +5269,7 @@ if __name__ == "__main__":
                 costs[i],
                 "DE",
                 year=year,
-                version=config["version"],
+                version=snakemake.config["version"],
                 scenario=snakemake.wildcards.run,
             )
         )

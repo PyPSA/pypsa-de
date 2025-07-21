@@ -2846,7 +2846,6 @@ if __name__ == "__main__":
             os.makedirs(dir)
 
     # configs
-    config = snakemake.config
     planning_horizons = snakemake.params.planning_horizons
     tech_colors = snakemake.params.plotting["tech_colors"]
 
