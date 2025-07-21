@@ -63,7 +63,7 @@ def domestic_length_factor(n, carriers, region="DE"):
         if carrier not in (
             n.links.carrier.unique().tolist() + n.lines.carrier.unique().tolist()
         ):
-            print(f"Carrier '{carrier}' is neither in lines nor links.")
+            logger.info(f"Carrier '{carrier}' is neither in lines nor links.")
             continue  # Skip this carrier if not found in both links and lines
 
         # Loop through relevant components
@@ -94,7 +94,7 @@ def domestic_length_factor(n, carriers, region="DE"):
                     )
                     length_factors[(carrier, c.name)] = length_factor
                 else:
-                    print(
+                    logger.info(
                         f"No domestic or cross-border links found for {carrier} in {c.name}."
                     )
 
@@ -303,7 +303,7 @@ def sum_co2(n, carrier, region):
             .index("co2 atmosphere")
         )
     except KeyError:
-        print(
+        logger.info(
             "Warning: carrier `",
             carrier,
             "` not found in network.links.carrier!",
@@ -1096,7 +1096,7 @@ def _get_capacities(n, region, cap_func, cap_string="Capacity|"):
         #
         var[cap_string + "Methanol"] = capacities_methanol.get("methanolisation", 0)
     except KeyError:
-        print(
+        logger.info(
             "Warning: carrier `methanol` not found in network.links.carrier! Assuming 0 capacities."
         )
         var[cap_string + "Methanol"] = 0
@@ -3075,7 +3075,7 @@ def get_emissions(n, region, _energy_totals, industry_demand):
         - co2_negative_emissions.get("DAC", 0)
     )
 
-    print(
+    logger.info(
         "Differences in accounting for CO2 emissions:",
         emission_difference,
     )
@@ -5258,7 +5258,7 @@ if __name__ == "__main__":
 
     yearly_dfs = []
     for i, year in enumerate(planning_horizons):
-        print(f"Getting data for year {year}...")
+        logger.info(f"Getting data for year {year}...")
         yearly_dfs.append(
             get_data(
                 networks[i],
@@ -5281,7 +5281,7 @@ if __name__ == "__main__":
         yearly_dfs,
     )
 
-    print("Gleichschaltung of AC-Startnetz with investments for AC projects")
+    logger.info("Gleichschaltung of AC-Startnetz with investments for AC projects")
     # In this hacky part of the code we assure that the investments for the AC projects, match those of the NEP-AC-Startnetz
     # Thus the variable 'Investment|Energy Supply|Electricity|Transmission|AC' is equal to the sum of exogeneous AC projects, endogenous AC expansion and Übernahme of NEP costs (mainly Systemdienstleistungen (Reactive Power Compensation) and lines that are below our spatial resolution)
     ac_startnetz = 14.5 / 5 / EUR20TOEUR23  # billion EUR
@@ -5305,7 +5305,7 @@ if __name__ == "__main__":
             [2025, 2030, 2035, 2040],
         ] += (ac_startnetz - ac_projects_invest) / 4
 
-    print("Assigning mean investments of year and year + 5 to year.")
+    logger.info("Assigning mean investments of year and year + 5 to year.")
     investment_rows = df.loc[df["Variable"].str.contains("Investment")]
     average_investments = (
         investment_rows[planning_horizons]
@@ -5327,11 +5327,7 @@ if __name__ == "__main__":
     with pd.ExcelWriter(snakemake.output.exported_variables_full) as writer:
         df.round(5).to_excel(writer, sheet_name="data", index=False)
 
-    print(
-        "Dropping variables which are not in the template:",
-        *df.loc[df["Unit"] == "NA"]["Variable"],
-        sep="\n",
-    )
+    logger.info("Dropping variables which are not in the template.")
     ariadne_df = df.drop(df.loc[df["Unit"] == "NA"].index)
 
     meta = pd.Series(
