@@ -77,7 +77,7 @@ PyPSA-DE is a softfork of PyPSA-EUR. As such, large parts of the functionality a
 
 ## New Config Options
 
-- `iiasa_database` - interaction with IIASA database. Specify a database, and `leitmodelle` for demand and co2 emissions data in specific sectors
+- `pypsa-de` - interaction with IIASA database. Specify a database, and `leitmodelle` for demand and co2 emissions data in specific sectors
 - `wasserstoff_kernnetz` - configure which parts of the Wasserstoff Kernnetz should be included in the model
 - `new_decentral_fossil_boiler_ban` - specify in which country and which years to ban fossil boilers
 - `coal_generation_ban` - specify in which country and which years to ban electricity generation from coal
