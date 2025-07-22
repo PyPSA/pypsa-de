@@ -45,7 +45,11 @@ def add_capacity_limits(n, investment_year, limits_capacity, sense="maximum"):
                 logger.info(
                     f"Existing {c.name} {carrier} capacity in {ct}: {existing_capacity} {units}"
                 )
-
+                if extendable_index.empty:
+                    logger.warning(
+                        f"No extendable {c.name} {carrier} capacities found in {ct}. Skipping."
+                    )
+                    continue
                 nom = n.model[c.name + "-" + attr + "_nom"].loc[extendable_index]
 
                 lhs = nom.sum()
