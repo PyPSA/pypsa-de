@@ -47,6 +47,7 @@ iiasa_database:
   uba_for_mobility: false # For 2025–2035 use MWMS scenario from UBA Projektionsbericht 2025
   uba_for_industry: false # For 2025–2035 use MWMS scenario from UBA Projektionsbericht 2025
   scale_industry_non_energy: false # Scale non-energy industry demand directly proportional to energy demand
+
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#foresight
 foresight: myopic
 
