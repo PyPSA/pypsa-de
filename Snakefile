@@ -973,3 +973,48 @@ rule ariadne_report_only:
             RESULTS + "ariadne/report/elec_price_duration_curve.pdf",
             run=config_provider("run", "name"),
         ),
+
+
+rule solve_regret:
+    params:
+        solving=config_provider("solving"),
+        foresight=config_provider("foresight"),
+        co2_sequestration_potential=config_provider(
+            "sector", "co2_sequestration_potential", default=200
+        ),
+        custom_extra_functionality="data/custom_extra_functionality.py",
+        energy_year=config_provider("energy", "energy_totals_year"),
+    input:
+        decision=RESULTS.replace("{run}", "{decision}")
+        + "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
+        realization=RESULTS
+        + "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
+    output:
+        regret_network=RESULTS.replace("{run}", "{decision}")
+        + "regret_networks/realization_{run}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
+    shadow:
+        shadow_config
+    log:
+        solver=RESULTS.replace("{run}", "{decision}")
+        + "logs/realization_{run}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_solver.log",
+        memory=RESULTS.replace("{run}", "{decision}")
+        + "logs/realization_{run}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_memory.log",
+        python=RESULTS.replace("{run}", "{decision}")
+        + "logs/realization_{run}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_python.log",
+    threads: solver_threads
+    resources:
+        mem_mb=config_provider("solving", "mem_mb"),
+        runtime=config_provider("solving", "runtime", default="6h"),
+    script:
+        "scripts/pypsa-de/solve_regret.py"
+
+
+rule regret_all:
+    input:
+        regret_networks=expand(
+            RESULTS.replace("{run}", "{decision}")
+            + "regret_networks/realization_{run}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
+            run=config_provider("run", "name"),
+            decision=config_provider("run", "name"),
+            **config["scenario"],
+        ),
