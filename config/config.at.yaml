@@ -492,6 +492,9 @@ solving:
               # EEG2023; Ziel for 2024: 88 GW and for 2026: 128 GW,
               # assuming at least 1/3 of difference reached in 2025
             2025: 101
+        electrolysis:
+          AT:
+            2030: 1.0  # GW
   # For reference, this are the values specified in the laws
   # limits_capacity_min:
   #     Generator:
@@ -540,14 +543,14 @@ solving:
           2040: 215
           2045: 300
           2050: 300
-        AT:   # Setting to unreasonably high values, because the settings is required if 'limits_volume_min' is to be used
-          2020: 1_000
-          2025: 1_000
-          2030: 1_000
-          2035: 1_000
-          2040: 1_000
-          2045: 1_000
-          2050: 1_000
+#        AT:   # Setting to unreasonably high values, because the settings is required if 'limits_volume_min' is to be used
+#          2020: 1_000
+#          2025: 1_000
+#          2030: 1_000
+#          2035: 1_000
+#          2040: 1_000
+#          2045: 1_000
+#          2050: 1_000
       h2_derivate_import:
       # boundary condition lower?
         DE:
@@ -578,14 +581,14 @@ solving:
           2040: 0
           2045: 0
           2050: 0
-        AT:
-          2020: 0
-          2025: 0
-          2030: 4.5  # EAG Ausbauziel: 1 GW Elektrolyseleistung 2030 bei 4500 VLH
-          2035: 4.5
-          2040: 4.5
-          2045: 4.5
-          2050: 4.5
+#        AT:
+#          2020: 0
+#          2025: 0
+#          2030: 4.5  # EAG Ausbauziel: 1 GW Elektrolyseleistung 2030 bei 4500 VLH
+#          2035: 4.5
+#          2040: 4.5
+#          2045: 4.5
+#          2050: 4.5
     limits_power_max: # in GW
       DE:
         2020: 15

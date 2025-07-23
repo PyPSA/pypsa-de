@@ -93,7 +93,6 @@ atlite:
       dy: 0.3
       time: ['2019', '2019']
 
-
 renewable:
   onwind:
     capacity_per_sqkm: 1.4

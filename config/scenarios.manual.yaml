@@ -236,3 +236,14 @@ KN2045_NFhoch:
       2040: 0.24
       2045: 0.29
       2050: 0.33
+
+AT10_KN2040:
+# Basisszenario für PyPSA-AT mit Anpassungen des KN2045_Mix Szenarios aus PyPSA-DE with
+#   * custom administrative clustering für Austrian regions
+#   * calibrations
+solving:
+  constraints:
+    limits_capacity_min:
+      electrolysis:
+        AT:
+          2030: 1.0  # GW
