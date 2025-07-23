@@ -38,6 +38,8 @@ iiasa_database:
   - KN2045_NFhoch
   reference_scenario: KN2045_Mix
   region: Deutschland
+  ageb_for_mobility: true # In 2020 use AGEB data for final energy demand and KBA for vehicles
+  uba_for_mobility: false # For 2025–2035 use MWMS scenario from UBA Projektionsbericht 2025
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#foresight
 foresight: myopic
@@ -226,6 +228,23 @@ sector:
       2040: 0.6
       2045: 0.8
       2050: 1.0
+    subnodes:
+      enable: false
+      nlargest: 40
+      census_areas:
+        enable: true
+        min_district_heating_share: 0.01
+        processing:
+          min_area: [10000, 100000, 0, 1000000]
+          buffer_factor: [0.01, 0.05, 0.05, 0]
+      limit_ptes_potential:
+        enable: true
+        limit_mother_nodes: true
+        excluder_resolution: 10
+        osm_landcover_codes: [21, 23, 32, 33]
+        max_groundwater_depth: -10
+        min_area: 10000
+        default_capacity: 4500
   heat_vent:
     urban central: true
     urban decentral: true
@@ -288,26 +307,26 @@ sector:
     2045: 0.36
     2050: 0.43
   land_transport_fuel_cell_share:
-    2020: 0.05
-    2025: 0.05
-    2030: 0.05
-    2035: 0.05
-    2040: 0.05
-    2045: 0.05
-    2050: 0.05
+    2020: 0.01
+    2025: 0.01
+    2030: 0.02
+    2035: 0.03
+    2040: 0.03
+    2045: 0.03
+    2050: 0.03
   land_transport_electric_share:
     2020: 0.05
     2025: 0.15
     2030: 0.3
     2035: 0.45
-    2040: 0.7
-    2045: 0.85
-    2050: 0.95
+    2040: 0.72
+    2045: 0.87
+    2050: 0.97
   land_transport_ice_share:
-    2020: 0.9
-    2025: 0.8
-    2030: 0.65
-    2035: 0.5
+    2020: 0.94
+    2025: 0.84
+    2030: 0.68
+    2035: 0.52
     2040: 0.25
     2045: 0.1
     2050: 0.0
