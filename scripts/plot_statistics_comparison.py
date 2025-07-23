@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # SPDX-FileCopyrightText: : 2017-2023 The PyPSA-Eur Authors
 #
 # SPDX-License-Identifier: MIT
 
 import logging
-import re
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -79,7 +77,6 @@ def read_csv(input, output):
             keys=network_labels,
         )
         # get plot label and drop from index
-        label = df.columns.get_level_values(1).unique()[0]
         df.columns = df.columns.droplevel(1)
     except Exception as e:
         print(f"Error reading csv file for {output}: {e}")
@@ -93,7 +90,7 @@ if __name__ == "__main__":
 
         snakemake = mock_snakemake(
             "plot_statistics_comparison",
-            run="CurrentPolicies",
+            run="ExPol",
             country="DE",
             carrier="H2",
         )

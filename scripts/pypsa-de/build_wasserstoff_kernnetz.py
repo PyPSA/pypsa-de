@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # SPDX-FileCopyrightText: : 2020-2023 The PyPSA-Eur Authors
 #
 # SPDX-License-Identifier: MIT
@@ -8,9 +7,6 @@ Preprocess hydrogen kernnetz based on data from FNB Gas
 """
 
 import logging
-
-logger = logging.getLogger(__name__)
-
 import os
 import sys
 import uuid
@@ -26,6 +22,7 @@ from shapely.ops import nearest_points
 from scripts._helpers import configure_logging, mock_snakemake
 from scripts.build_gas_network import diameter_to_capacity
 
+logger = logging.getLogger(__name__)
 MANUAL_ADDRESSES = {
     "Oude Statenzijl": (7.205108658430258, 53.20183834422634),
     "Helgoland": (7.882663327316698, 54.183393795580166),
@@ -257,7 +254,7 @@ def geocode_locations(df):
     try:
         from geopy.extra.rate_limiter import RateLimiter
         from geopy.geocoders import Nominatim
-    except:
+    except ImportError:
         raise ModuleNotFoundError(
             "Optional dependency 'geopy' not found."
             "Install via 'conda install -c conda-forge geopy'"
@@ -432,7 +429,14 @@ def create_border_crossing(wkn, regions_onshore, regions_offshore):
 
     # extract DE border
     de = regions[regions.country.isin(["DE"])].union_all()
-    de_border = de.exterior
+
+    # Handle MultiPolygon case
+    if de.geom_type == "MultiPolygon":
+        largest_polygon = sorted(list(de.geoms), key=lambda x: x.area, reverse=True)[0]
+        de_border = largest_polygon.exterior
+    else:
+        de_border = de.exterior
+
     de_border_projected = gpd.GeoSeries([de_border], crs="EPSG:4326").to_crs(epsg=32633)
     de_polygon = Polygon(de_border_projected.iloc[0])
 
@@ -503,7 +507,8 @@ def filter_kernnetz(
     Filters the projects in the wkn DataFrame based on IPCEI participation and
     build years.
 
-    Parameters:
+    Parameters
+    ----------
     wkn : DataFrame
         The DataFrame containing project data for Wasserstoff Kernnetz.
 
@@ -518,7 +523,8 @@ def filter_kernnetz(
         If True, IPCEI and PCI projects are included, even if their 'build_year' exceeds the cutoff year,
         but non-IPCEI and non-PCI projects are still excluded beyond the cutoff year.
 
-    Returns:
+    Returns
+    -------
     DataFrame
         A filtered DataFrame based on the provided conditions.
     """

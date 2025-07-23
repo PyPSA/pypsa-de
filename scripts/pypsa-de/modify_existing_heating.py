@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import logging
 
 import pandas as pd
@@ -12,27 +11,21 @@ if __name__ == "__main__":
     if "snakemake" not in globals():
         snakemake = mock_snakemake(
             "modify_existing_heating",
-            run="KN2045_Bal_v4",
+            run="KN2045_Mix",
         )
 
     configure_logging(snakemake)
 
     existing_heating = pd.read_csv(snakemake.input.existing_heating, index_col=0)
 
-    logger.info(f"Heating demand before modification:{existing_heating.loc['Germany']}")
-
-    mapping = {
-        "gas boiler": "Gas Boiler",
-        "oil boiler": "Oil Boiler",
-        "air heat pump": "Heat Pump|Electrical|Air",
-        "ground heat pump": "Heat Pump|Electrical|Ground",
-        "biomass boiler": "Biomass Boiler",
-    }
+    logger.info(
+        f"Heating demand before modification:\n{existing_heating.loc['Germany']}"
+    )
 
     new_values = pd.Series()
 
     logger.warning(
-        f"Adjusting heating stock towards hard coded values from a previous REMod run. This is only a hotfix."
+        "Adjusting heating stock towards hard coded values from a\nprevious REMod run. This is only a hotfix."
     )  # Because REMod is not consistent and a better solution takes too long.
 
     new_values["gas boiler"] = 11.44  # million
@@ -49,6 +42,8 @@ if __name__ == "__main__":
     for tech, peak in new_values.items():
         existing_heating.at["Germany", tech] = peak
 
-    logger.info(f"Heating demand after modification: {existing_heating.loc['Germany']}")
+    logger.info(
+        f"Heating demand after modification:\n{existing_heating.loc['Germany']}"
+    )
 
     existing_heating.to_csv(snakemake.output.existing_heating)

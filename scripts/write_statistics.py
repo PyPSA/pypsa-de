@@ -1,15 +1,12 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # SPDX-FileCopyrightText: : 2017-2023 The PyPSA-Eur Authors
 #
 # SPDX-License-Identifier: MIT
 
 import logging
 
-import matplotlib.pyplot as plt
 import pandas as pd
 import pypsa
-import seaborn as sns
 from pypsa.statistics import get_carrier, get_country_and_carrier
 
 from scripts._helpers import configure_logging
@@ -33,7 +30,7 @@ if __name__ == "__main__":
 
         snakemake = mock_snakemake(
             "write_statistics",
-            run="CurrentPolicies",
+            run="ExPol",
             simpl="",
             ll="vopt",
             clusters="22",

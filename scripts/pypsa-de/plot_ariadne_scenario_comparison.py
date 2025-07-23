@@ -1,7 +1,8 @@
-# -*- coding: utf-8 -*-
-
 import os
 
+import matplotlib
+
+matplotlib.use("Agg")  # Use a non-interactive backend
 import matplotlib.pyplot as plt
 import pandas as pd
 
@@ -14,10 +15,10 @@ def scenario_plot(df, var):
         unit = "billion EUR2020/yr"
     df = df.droplevel("Unit")
     ax = df.T.plot(xlabel="years", ylabel=str(unit), title=str(var))
-    plt.close()
     prefix = snakemake.config["run"]["prefix"]
     var = var.replace("|", "-").replace("\\", "-").replace(" ", "-").replace("/", "-")
     ax.figure.savefig(f"results/{prefix}/ariadne_comparison/{var}", bbox_inches="tight")
+    plt.close(ax.figure)
 
 
 if __name__ == "__main__":
@@ -30,7 +31,7 @@ if __name__ == "__main__":
             # ll="vopt",
             # sector_opts="None",
             # planning_horizons="2050",
-            # run="KN2045_Bal_v4"
+            # run="KN2045_Mix"
         )
 
     dfs = []
@@ -48,5 +49,3 @@ if __name__ == "__main__":
 
     for var in df._get_label_or_level_values("Variable"):
         scenario_plot(df.xs(var, level="Variable"), var)
-
-    var = "Price|Carbon"

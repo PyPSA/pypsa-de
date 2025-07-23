@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-# SPDX-FileCopyrightText: : 2020-2024 The PyPSA-Eur Authors
+# SPDX-FileCopyrightText: Contributors to PyPSA-Eur <https://github.com/pypsa/pypsa-eur>
 #
 # SPDX-License-Identifier: MIT
 """
@@ -15,7 +14,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-from scripts._helpers import configure_logging, set_scenario_config
+from scripts._helpers import configure_logging, load_cutout, set_scenario_config
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +32,7 @@ if __name__ == "__main__":
     set_scenario_config(snakemake)
     coco.logging.getLogger().setLevel(coco.logging.CRITICAL)
 
-    cutout = atlite.Cutout(snakemake.input.cutout)
+    cutout = load_cutout(snakemake.input.cutout)
 
     grid_cells = cutout.grid.geometry
 
@@ -74,7 +73,7 @@ if __name__ == "__main__":
 
     for ct in countries:
         logger.debug(
-            f"The urbanization rate for {ct} is {round(urban_fraction[ct]*100)}%"
+            f"The urbanization rate for {ct} is {round(urban_fraction[ct] * 100)}%"
         )
 
         indicator_nuts3_ct = nuts3.country.apply(lambda x: 1.0 if x == ct else 0.0)

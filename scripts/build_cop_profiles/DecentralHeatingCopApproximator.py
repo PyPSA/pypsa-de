@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-# SPDX-FileCopyrightText: : 2020-2024 The PyPSA-Eur Authors
+# SPDX-FileCopyrightText: Contributors to PyPSA-Eur <https://github.com/pypsa/pypsa-eur>
 #
 # SPDX-License-Identifier: MIT
 
@@ -8,7 +7,8 @@ from typing import Union
 
 import numpy as np
 import xarray as xr
-from BaseCopApproximator import BaseCopApproximator
+
+from scripts.build_cop_profiles.BaseCopApproximator import BaseCopApproximator
 
 
 class DecentralHeatingCopApproximator(BaseCopApproximator):

@@ -4,7 +4,6 @@ on:
   pull_request:
     branches:
     - master
-    - main
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -15,35 +14,49 @@ jobs:
     name: Run validation
     if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: self-hosted
+    outputs:
+      validation_failed: ${{ steps.check_validation.outputs.failed }}
     steps:
     - uses: PyPSA/pypsa-validator@v0.2.5
+      id: validation
+      continue-on-error: true
       with:
         step: run-self-hosted-validation
         env_file: envs/environment.yaml
-        snakemake_config: config/config.yaml
+        snakemake_config: config/config.de.yaml
         pre_command: "build_scenarios -f"
         main_command: "ariadne_all"
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Check validation status
+      id: check_validation
+      run: |
+        if [[ "${{ steps.validation.outcome }}" == "failure" ]]; then
+          echo "failed=true" >> $GITHUB_OUTPUT
+        else
+          echo "failed=false" >> $GITHUB_OUTPUT
+        fi
 
   create-report:
     name: Create report
-    if: github.event.pull_request.head.repo.full_name == github.repository
     needs: run-validation
+    if: |
+      github.event.pull_request.head.repo.full_name == github.repository && 
+      needs.run-validation.outputs.validation_failed != 'true'
     runs-on: ubuntu-latest
     steps:
     - uses: PyPSA/pypsa-validator@v0.2.5
       with:
         step: create-comment
-        snakemake_config: config/config.yaml
+        snakemake_config: config/config.de.yaml
         # The path starting from prefix in config
         # For plot results/<prefix>/<scenario>/<plot_name>.png pass
         # <scenario>/<plot_name>.png
         plots: >
           "
-          KN2045_Bal_v4/ariadne/primary_energy.png
-          KN2045_Bal_v4/ariadne/secondary_energy.png
-          KN2045_Bal_v4/ariadne/final_energy.png
+          KN2045_Mix/ariadne/primary_energy.png
+          KN2045_Mix/ariadne/secondary_energy.png
+          KN2045_Mix/ariadne/final_energy.png
           ariadne_comparison/Trade-Secondary-Energy-Hydrogen-Volume.png
           ariadne_comparison/Trade-Secondary-Energy-Liquids-Hydrogen-Volume.png
           ariadne_comparison/Capacity-Electricity-Solar.png

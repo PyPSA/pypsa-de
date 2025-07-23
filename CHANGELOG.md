@@ -1,4 +1,15 @@
 # Changelog
+- Added an option to source mobility demand from UBA MWMS (Projektionsbericht 2025) for the years 2025-2035
+- Renamed functions and script for exogenous mobility demand
+- Improved the transport demand data, added an option to source 2020 and 2025 data from AGEB instead of Aladin
+- Added a helper function to change the weather_year to build_scenario
+- Longer lifetime (40 years) is only applied to existing gas CHPs, not new ones. Added a new config entry `existing_capacities:fill_value_gas_chp_lifetime`
+- Bugfix: gas CHPs are extendable again
+- Simplified scenarion definition and made `Mix` the default scenario
+- 0.3: workflow is all public now, no longer requires credentials to internal data
+- Allowing myopic optimization until 2050
+- CHP plants located in onshore regions without district heating are represented as EOP plants
+- updating technology cost data to v0.11.0
 - add option for Offhsore NEP to delay projects by x years (CurPol and KN2045minus_WorstCase are delayed by one year)
 - Force onwind south by increasing minimum capacity and decreasing capacity per sqkm
 - Adjusting aviation demand (from Aladin) and emission accounting (only domestic aviation for national target)
