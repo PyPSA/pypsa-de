@@ -4463,7 +4463,7 @@ def get_economy(n, region):
         "DC",
         "H2 pipeline",
         "H2 pipeline (Kernnetz)",
-        "H2 pipeline retrofitted" "renewable oil",
+        "H2 pipeline retrofittedrenewable oil",
         "renewable gas",
         "methanol",
     ]
