@@ -17,7 +17,9 @@ def scenario_plot(df, var):
     ax = df.T.plot(xlabel="years", ylabel=str(unit), title=str(var))
     prefix = snakemake.config["run"]["prefix"]
     var = var.replace("|", "-").replace("\\", "-").replace(" ", "-").replace("/", "-")
-    ax.figure.savefig(f"results/{prefix}/ariadne_comparison/{var}", bbox_inches="tight")
+    ax.figure.savefig(
+        f"results/{prefix}/scenario_comparison/{var}", bbox_inches="tight"
+    )
     plt.close(ax.figure)
 
 
@@ -44,8 +46,8 @@ if __name__ == "__main__":
     df = pd.concat(dfs, axis=0)
 
     prefix = snakemake.config["run"]["prefix"]
-    if not os.path.exists(f"results/{prefix}/ariadne_comparison/"):
-        os.mkdir(f"results/{prefix}/ariadne_comparison/")
+    if not os.path.exists(f"results/{prefix}/scenario_comparison/"):
+        os.mkdir(f"results/{prefix}/scenario_comparison/")
 
     for var in df._get_label_or_level_values("Variable"):
         scenario_plot(df.xs(var, level="Variable"), var)
