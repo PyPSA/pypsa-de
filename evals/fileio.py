@@ -343,7 +343,7 @@ def prepare_industry_demand(
     methane values in the resource file.
 
     The industry demand is read from resource files, and not
-    extracted from the postnetwork, because the postnetwork contains
+    extracted from the network, because the network contains
     demands in an aggregated form and the CSV files are on a per-sector
     granularity.
 
@@ -414,7 +414,7 @@ def prepare_industry_demand(
         comps="Link",
         bus_carrier="gas",
         carrier=["gas for industry", "gas for industry CC"],
-        drop_zero_rows=False,
+        drop_zeros=False,
         at_port=False,  # only port 0
     )
 
@@ -700,7 +700,14 @@ class Exporter:
         self,
         statistics: list,
         view_config: dict,
-        keep_regions: tuple = ("AT",),
+        keep_regions: tuple = (
+            "AT",
+            "GB",
+            "ES",
+            "FR",
+            "DE",
+            "IT",
+        ),  # todo: to global config
         region_nice_names: bool = True,
     ) -> None:
         self.statistics = statistics

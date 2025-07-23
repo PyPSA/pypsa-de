@@ -11,12 +11,15 @@ from evals.utils import filter_by
 Todo Notes
 * click country label
   -> Table energy amounts import + export
-* global market generators mit icon
-* global market generators label click -> show table
-* global market generators edge to bus node
-  -> geneartor capacity is line width
+* global import mit icon
+* global import label click -> show table
+* global import edge to bus node
+  -> generator capacity is line width
 * display extended capacity
 * labels grid must not overlap
+* solid waste transport
+* biomass transport
+
 """
 
 
@@ -46,7 +49,7 @@ def view_grid_capacity(
     grid_capactiy = collect_myopic_statistics(
         networks,
         statistic="grid_capacity",
-        drop_zero_rows=False,
+        drop_zeros=False,
         comps=["Link", "Line"],
     )
 
@@ -94,7 +97,7 @@ def view_grid_capacity(
         ([Carrier.AC, Carrier.DC], BusCarrier.AC),
         ([Carrier.gas_pipepline, Carrier.gas_pipepline_new], BusCarrier.CH4),
         (
-            [  # todo: use gettransmission_techs() instead of hardcoding
+            [  # todo: use get_transmission_techs() instead of hardcoding
                 Carrier.h2_pipeline,
                 Carrier.h2_pipeline_retro,
                 Carrier.h2_pipeline_kernnetz,

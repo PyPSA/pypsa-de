@@ -6,6 +6,7 @@ import pandas as pd
 import pypsa
 from shapely.geometry import Point
 
+from mods import modify_austrian_transmission_capacities
 from scripts._helpers import configure_logging, mock_snakemake, sanitize_custom_columns
 from scripts.add_electricity import load_costs
 from scripts.prepare_sector_network import lossy_bidirectional_links
@@ -1336,5 +1337,13 @@ if __name__ == "__main__":
     scale_capacity(n, snakemake.params.scale_capacity)
 
     sanitize_custom_columns(n)
+
+    if (
+        snakemake.params.modify_austrian_transmission_capacities
+        and current_year == 2020
+    ):
+        modify_austrian_transmission_capacities(
+            n, snakemake.input.austrian_transmission_capacities
+        )
 
     n.export_to_netcdf(snakemake.output.network)

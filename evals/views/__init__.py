@@ -1,6 +1,7 @@
 """Expose view functions from inside the views package to the module."""
 
 from evals.views.balances import (
+    view_balance_biomass,
     view_balance_carbon,
     view_balance_electricity,
     view_balance_heat,
@@ -41,6 +42,7 @@ __all__ = [
     "view_balance_heat",
     "view_balance_hydrogen",
     "view_balance_methane",
+    "view_balance_biomass",
     # timeseries
     "view_timeseries_hydrogen",
     "view_timeseries_methane",

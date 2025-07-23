@@ -198,7 +198,8 @@ class ESMChart:
 
             Returns
             -------
-            The sorted pandas Series.
+            :
+                The sorted pandas Series.
             """
             order = {s: i for i, s in enumerate(values)}
             return ser.apply(lambda x: order.get(x, 1000))

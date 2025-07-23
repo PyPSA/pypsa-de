@@ -357,11 +357,11 @@ def split_location_carrier(index: pd.MultiIndex, names: list) -> pd.MultiIndex:
         level due to the splitting.
     """
     idx_split = []
-    for *prefix, loc_category in index:
+    for *prefixes, loc_category in index:
         matches = re.match(Regex.region, loc_category)
-        location = matches.group() if matches else ""
+        location = matches.group().strip() if matches else ""
         technology = loc_category.removeprefix(location).strip()
-        idx_split.append((*prefix, location, technology))
+        idx_split.append((*prefixes, location, technology))
 
     return pd.MultiIndex.from_tuples(idx_split, names=names)
 
@@ -711,7 +711,7 @@ def calculate_input_share(
         # scaling takes into account that Link inputs and outputs are not equally large
         scaling = abs(supply.sum() / withdrawal.sum())
         # share takes multiple outputs into account
-        with np.errstate(divide="ignore", invalid="ignore"):  # let supply be zero
+        with np.errstate(divide="ignore", invalid="ignore"):  # silently divide by zero
             share = bus_carrier_supply / supply.sum()
         if scaling > 1.0:
             _carrier = _df.index.unique(DataModel.CARRIER).item()
@@ -723,8 +723,8 @@ def calculate_input_share(
         else:
             return withdrawal * scaling * share
 
-    groups = [DataModel.YEAR, DataModel.LOCATION, DataModel.CARRIER]
-    return df.groupby(groups, group_keys=False).apply(_input_share).mul(-1)
+    wo_bus_carrier = [s for s in df.index.names if s != "bus_carrier"]
+    return df.groupby(wo_bus_carrier, group_keys=False).apply(_input_share).mul(-1)
 
 
 def filter_for_carrier_connected_to(df: pd.DataFrame, bus_carrier: str | list):
@@ -1053,7 +1053,7 @@ def combine_statistics(
     metric_name: str,
     is_unit: str,
     to_unit: str,
-    keep_regions: tuple = ("AT",),
+    keep_regions: tuple = ("AT", "GB", "ES", "FR", "DE", "IT"),
     region_nice_names: bool = True,
 ) -> pd.DataFrame:
     """
@@ -1150,6 +1150,17 @@ def get_transmission_techs(networks: dict, bus_carrier: str | list = None) -> li
         )
 
     return sorted(transmission_techs)
+
+
+def show_link_bus_efficiencies(networks, year, like):
+    return (
+        networks[year]
+        .static("Link")
+        .filter(like=like, axis=0)
+        .filter(regex="bus|eff")
+        .iloc[0, :]
+        .T.sort_index()
+    )
 
 
 # def get_bus_carrier_names(

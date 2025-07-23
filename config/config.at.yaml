@@ -397,8 +397,8 @@ industry:
   # gas buses, however Generators in '{node} gas primary' buses introduce gas
   # energy at local nodes, which is then compressed to the local gas bus.
   # As a result, gas is not transported via pipelines. (might be t)
-#  oil_refining_emissions: 0  # 0.013
   gas_compression_losses: 0  # 0.04
+#  oil_refining_emissions: 0  # 0.013
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#solving
 solving:
@@ -550,7 +550,7 @@ solving:
           2040: 80
           2045: 125
           2050: 125
-      electrolysis:
+      electrolysis:  # in TWh/a
       # boundary condition lower?
         DE:
           2020: 0
@@ -560,6 +560,14 @@ solving:
           2040: 215
           2045: 300
           2050: 300
+        AT:   # Setting to unreasonably high values, because the settings is required if 'limits_volume_min' is to be used
+          2020: 1_000
+          2025: 1_000
+          2030: 1_000
+          2035: 1_000
+          2040: 1_000
+          2045: 1_000
+          2050: 1_000
       h2_derivate_import:
       # boundary condition lower?
         DE:
@@ -580,7 +588,7 @@ solving:
           2040: 220
           2045: 325
           2050: 325
-    limits_volume_min:
+    limits_volume_min:  # in TWh
       electrolysis:
         DE:
           2020: 0
@@ -590,6 +598,14 @@ solving:
           2040: 0
           2045: 0
           2050: 0
+        AT:
+          2020: 0
+          2025: 0
+          2030: 4.5  # EAG Ausbauziel: 1 GW Elektrolyseleistung 2030 bei 4500 VLH
+          2035: 4.5
+          2040: 4.5
+          2045: 4.5
+          2050: 4.5
     limits_power_max: # in GW
       DE:
         2020: 15
@@ -602,6 +618,11 @@ solving:
   solver:
     name: highs
     options: highs-default
+
+solver_options:
+  highs-default:
+    # refer to https://ergo-code.github.io/HiGHS/dev/options/definitions/
+    threads: 0  # automatic
 
 plotting:
   tech_colors:
@@ -639,7 +660,7 @@ electricity:
   estimate_renewable_capacities:
     year: 2019
   H2_plants_DE:
-    enable: true
+    enable: true  # todo: do we want really this for pypsa-at?
     start: 2030 # should be < force
     force: 2035
     cost_factor: 0.15 # repurposing cost of OCGT gas to H2 in % investment cost in EUR/MW source: Christidis et al (2023) - H2-Ready-Gaskraftwerke, Table 3 https://reiner-lemoine-institut.de/wp-content/uploads/2023/11/RLI-Studie-H2-ready_DE.pdf
@@ -686,12 +707,15 @@ offshore_nep_force:
   cutout_year: 2030
   delay_years: 0
 
-scale_capacity:
+# only works for Links -> Thus not well suited to update transmission grids
+scale_capacity:  # in MW
   2020:
     DE:
       CCGT: 10000
       "urban central gas CHP": 22000
 
 # pypsa-at modifications
-modify_nuts3_shapes:
-  enable: true
+mods:
+  modify_nuts3_shapes: true
+  modify_austrian_transmission_capacities: true  # scale_capacity does not work for Line components
+  modify_population_layouts: true

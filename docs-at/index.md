@@ -19,12 +19,13 @@ This site hosts the documentation for `pypsa-at`
 
 first, build the scenarios using the public DB access
 ``` sh
-snakemake build_scenarios --configfile=config/config.public.yaml -f
+snakemake build_scenarios -f --cores 'all'
 ```
+This is necessary, because PyPSA-AT uses assumptions from PyPSA-DE scenarios.  
 
-Start the analysis:
+Second, start the analysis:
 ``` sh
-snakemake ariadne_all --configfile=config/config.public.yaml -f
+snakemake all --cores 'all'
 ```
 
 ## Table Of Contents

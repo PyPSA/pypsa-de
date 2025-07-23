@@ -1,13 +1,13 @@
 import pathlib
-from importlib import resources
 
 
 def py_to_md_file(subdir):
-    """"""
-    directory = SRC_DIR / subdir
-    target = pathlib.Path(r"C:\Storage\esmtools\docs\reference") / subdir
+    """Generate all required markdown files in a subdirectory."""
+    source = SRC_DIR / subdir
+    package = SRC_DIR.stem
+    target = ROOTDIR / "docs-at" / "reference" / package / subdir
 
-    for p in directory.iterdir():
+    for p in source.iterdir():
         if p.suffix != ".py":
             continue
         if p.stem == "__init__" and not subdir:  # special index file
@@ -15,19 +15,20 @@ def py_to_md_file(subdir):
 
         if p.stem == "__init__":
             new = target / "index.md"
-            module = f"esmtools.{subdir}" if subdir else "esmtools"
+            module = f"{package}.{subdir}" if subdir else package
         else:
             new = target / (p.stem + ".md")
-            module = f"esmtools.{subdir}.{p.stem}" if subdir else f"esmtools.{p.stem}"
-        # print(str(new), f"::: {module}")
+            module = f"{package}.{subdir}.{p.stem}" if subdir else f"{package}.{p.stem}"
+
         target.mkdir(exist_ok=True)
         new.touch(exist_ok=True)
-        new.write_text(f"::: {module}")
+        new.write_text(f"::: {module}")  # overwrites all contents
 
 
 if __name__ == "__main__":
-    SRC_DIR = resources.files("pypsa-at") / "evals"
-
+    ROOTDIR = pathlib.Path(".").resolve()  # assuming CDW pypsa-at
+    assert ROOTDIR.stem == "pypsa-at", "Must run from repo root 'pypsa-at'"
+    SRC_DIR = ROOTDIR / "evals"
     py_to_md_file("")
     py_to_md_file("plots")
     py_to_md_file("views")

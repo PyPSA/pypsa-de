@@ -541,6 +541,7 @@ exports = []
 name = "Heat Energy Balance"
 unit = "TWh_th"
 file_name = "nodal_balance_heat_{location}"
+chart = "ESMBarChart"
 bus_carrier = ["urban central heat", "urban decentral heat", "rural heat"]
 cutoff = 0.001
 legend_order = [
@@ -628,6 +629,44 @@ exports = []
 #"waste CHP" = "Waste"
 #"waste CHP CC" = "Waste"
 
+[view_balance_biomass]
+name = "Solid Biomass Energy Balance"
+unit = "TWh_LHV"
+file_name = "nodal_balance_biomass_{location}"
+bus_carrier = "solid biomass"
+chart = "ESMBarChart"
+cutoff = 0.001
+legend_order = [
+#    # production ordered from zero to outside
+#    "Electricity",
+#    "Electricity (low voltage)",
+#    "Oil",
+#    "Solar Power",
+#    "Methane",
+#    "Hydrogen",
+#    "Electrolysis",
+#    "Sabatier",
+#    "Methanolisation",
+#    #    "CHP",
+#    "Waste",
+#    "CO2",
+#    "Coal",
+#    "Fischer-Tropsch",
+#    "Haber-Bosch",
+#    "Biomass",
+#    "Solid Biomass",
+#    # demand ordered from zero to outside
+#    "Demand",
+#    "Agriculture",
+#    "Direct Air Capture",
+#    "Industry",
+#    "Distribution Losses",
+#    "Heat Ventilation"
+]
+checks = ["balances_almost_zero"]
+exports = []
+
+[view_balance_biomass.categories]
 
 [view_demand_heat_production]
 name = "Energy Demand for Heat Production"

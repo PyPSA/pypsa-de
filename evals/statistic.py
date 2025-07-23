@@ -8,10 +8,11 @@ from pathlib import Path
 
 import pandas as pd
 import pypsa
+from deprecation import deprecated
 from pandas import DataFrame
 from pypsa.statistics import (
     StatisticsAccessor,
-    aggregate_timeseries,
+    get_transmission_carriers,
     get_weightings,
     groupers,
 )
@@ -133,7 +134,8 @@ def collect_myopic_statistics(
     networks: dict,
     statistic: str,
     aggregate_components: str | None = "sum",
-    drop_zero_rows: bool = True,
+    drop_zeros: bool = True,
+    drop_unit: bool = True,
     **kwargs: object,
 ) -> pd.DataFrame | pd.Series:
     """
@@ -151,9 +153,11 @@ def collect_myopic_statistics(
         The name of the metric to build.
     aggregate_components
         The aggregation function to combine components by.
-    drop_zero_rows
+    drop_zeros
         Whether to drop rows from the returned statistic that have
         only zeros as values.
+    drop_unit
+        Whether to drop the unit index level from the returned statistic.
     **kwargs
         Any key word argument accepted by the statistics function.
 
@@ -202,7 +206,7 @@ def collect_myopic_statistics(
     if kwargs.get("aggregate_time") is False:
         statistic.columns.name = DataModel.SNAPSHOTS
 
-    if drop_zero_rows:
+    if drop_zeros:
         if isinstance(statistic, pd.Series):
             statistic = statistic.loc[statistic != 0]
         elif isinstance(statistic, pd.DataFrame):
@@ -211,7 +215,7 @@ def collect_myopic_statistics(
             raise TypeError(f"Unknown statistic type '{type(statistic)}'")
 
     # assign the correct unit the statistic if possible
-    if "unit" in statistic.index.names:
+    if "unit" in statistic.index.names and drop_unit:
         if not statistic.empty:
             try:
                 statistic.attrs["unit"] = statistic.index.unique("unit").item()
@@ -437,6 +441,10 @@ class ESMStatistics(StatisticsAccessor):
         """
         Split energy amounts for StorageUnits.
 
+        This is done to properly separate primary energy and energy
+        storage, i.e. to separate the natural inflow (primary energy)
+        from storage dispatch (secondary energy).
+
         Parameters
         ----------
         aggregate_time
@@ -452,6 +460,14 @@ class ESMStatistics(StatisticsAccessor):
         :
             A DataFrame containing the split energy amounts for
             PHS and hydro.
+
+        Notes
+        -----
+        This was done int the ESM Toolbox. However, it does not
+        seem to make sense with PyPSA-AT models, because inflow
+        to PHS is zero. As a result, there is no splitting and
+        PHS is secondary energy only, while hydro is primary energy
+        only.
         """
         n = self._n
 
@@ -460,17 +476,19 @@ class ESMStatistics(StatisticsAccessor):
         for time_series in ("p_dispatch", "p_store", "spill", "inflow"):
             p = n.pnl("StorageUnit")[time_series].reindex(columns=idx, fill_value=0)
             weights = get_weightings(n, "StorageUnit")
-            phs[time_series] = aggregate_timeseries(p, weights, agg=aggregate_time)
+            phs[time_series] = n.statistics._aggregate_timeseries(
+                p, weights, agg=aggregate_time
+            )
 
-        efficiency = phs["p_store"] * n.static("StorageUnit")["efficiency_dispatch"]
-        part_inflow = phs["inflow"] / (phs["inflow"] + efficiency)
+        # calculate the potential dispatch energy for storages
+        stored_energy = phs["p_store"] * n.static("StorageUnit")["efficiency_dispatch"]
+        share_inflow = phs["inflow"] / (phs["inflow"] + stored_energy)
 
-        phs["Dispatched Power from Inflow"] = phs["p_dispatch"] * part_inflow
-        phs["Dispatched Power from Stored"] = phs["p_dispatch"] * (1 - part_inflow)
-        phs["Spill from Inflow"] = phs["spill"] * part_inflow
-        phs["Spill from Stored"] = phs["spill"] * (1 - part_inflow)
+        phs["Dispatched Power from Inflow"] = phs["p_dispatch"] * share_inflow
+        phs["Dispatched Power from Stored"] = phs["p_dispatch"] * (1 - share_inflow)
+        phs["Spill from Inflow"] = phs["spill"] * share_inflow
+        phs["Spill from Stored"] = phs["spill"] * (1 - share_inflow)
 
-        # use evaluation output carrier names
         mapper = {
             "p_dispatch": "Dispatched Power",
             "p_store": "Stored Power",
@@ -490,7 +508,6 @@ class ESMStatistics(StatisticsAccessor):
             [(r[1], f"{r[2]} {r[0]}", r[2]) for r in ser.index],
             names=DataModel.IDX_NAMES,
         )
-
         ser = ser.rename(
             index={"PHS": BusCarrier.AC, "hydro": BusCarrier.AC},
             level=DataModel.BUS_CARRIER,
@@ -613,12 +630,15 @@ class ESMStatistics(StatisticsAccessor):
             _bc = [bus_carrier] if isinstance(bus_carrier, str) else bus_carrier
             buses = buses.query("carrier in @_bc")
 
-        for port, c in product((0, 1), ("Link", "Line")):
+        carrier = get_transmission_carriers(n, bus_carrier).unique("carrier")  # Noqa: F841
+        comps = get_transmission_carriers(n, bus_carrier).unique("component")
+
+        for port, c in product((0, 1), comps):
             mask = trade_mask(n.static(c), scope).to_numpy()
             comp = n.static(c)[mask].reset_index()
 
             p = buses.merge(
-                comp,
+                comp.query("carrier.isin(@carrier)"),
                 left_on="Bus",
                 right_on=f"bus{port}",
                 suffixes=("_bus", ""),
@@ -629,10 +649,10 @@ class ESMStatistics(StatisticsAccessor):
                 if "location" in comp
                 else DataModel.LOCATION
             )
-            p = p.set_index([_location, DataModel.CARRIER, "carrier_bus"])
-            p.index.names = DataModel.IDX_NAMES
+            p = p.set_index([_location, DataModel.CARRIER, "carrier_bus", "unit"])
+            p.index.names = DataModel.IDX_NAMES + ["unit"]
             # branch components have reversed sign
-            p = p.filter(n.snapshots, axis=1).mul(-1.0)
+            p = p.filter(n.snapshots, axis=1).mul(-1)
             if direction == "export":
                 p = p.clip(upper=0)  # keep negative values (withdrawal)
             elif direction == "import":
@@ -642,7 +662,7 @@ class ESMStatistics(StatisticsAccessor):
 
             results_comp.append(insert_index_level(p, c, "component"))
 
-        result = pd.concat(results_comp)  # .groupby(DataModel.IDX_NAMES).sum()
+        result = pd.concat(results_comp)
 
         if aggregate_time:
             # assuming Link and Line have the same weights
@@ -705,6 +725,7 @@ class ESMStatistics(StatisticsAccessor):
 
         return trade_capacity.squeeze()
 
+    @deprecated("Not used anymore.")
     def ambient_heat(self) -> pd.Series | pd.DataFrame:
         """Calculate ambient heat energy amounts used by heat pumps."""
         energy_balance = self._n.statistics.energy_balance(
@@ -738,7 +759,7 @@ class ESMStatistics(StatisticsAccessor):
             hp = ser.unstack(DataModel.BUS_CARRIER)
             assert hp.shape[1] == 2, f"Unexpected number of bus_carrier: {hp.columns}."
             assert "low voltage" in hp.columns, (
-                f"AC missing in bus_carrier: {hp.columns}."
+                f"low voltage missing in bus_carrier: {hp.columns}."
             )
             return hp.T.sum()
 
@@ -786,7 +807,7 @@ class ESMStatistics(StatisticsAccessor):
 
         return ambient_heat
 
-    def grid_capactiy(
+    def grid_capacity(
         self,
         comps: list = None,
         bus_carrier: list = None,

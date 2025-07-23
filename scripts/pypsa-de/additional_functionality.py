@@ -242,7 +242,7 @@ def h2_production_limits(n, investment_year, limits_volume_min, limits_volume_ma
         limit_upper = limits_volume_max["electrolysis"][ct][investment_year] * 1e6
 
         logger.info(
-            f"limiting H2 electrolysis in DE between {limit_lower / 1e6} and {limit_upper / 1e6} TWh/a"
+            f"limiting H2 electrolysis in {ct} between {limit_lower / 1e6} and {limit_upper / 1e6} TWh/a"
         )
 
         production = n.links[

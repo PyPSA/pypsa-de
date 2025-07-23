@@ -1,7 +1,7 @@
 """Modify the NUTS3 shapefile for custom administrative clustering."""
 
-import sys
 import logging
+import sys
 
 import geopandas as gpd
 
@@ -28,6 +28,7 @@ def override_nuts(nuts_code: str | tuple, override: str, level: str = "level1") 
     -------
     :
     """
+    logger.debug(f"Overriding regions with code {nuts_code} to {override}.")
     mask = nuts3_regions.index.str.startswith(nuts_code)
     nuts3_regions.loc[mask, level] = override
 
@@ -68,7 +69,7 @@ if __name__ == "__main__":
     nuts3_regions = gpd.read_file(snakemake.input.nuts3_shapes).set_index("index")
 
     if not (
-        config.get("modify_nuts3_shapes", {}).get("enable")
+        config["mods"].get("modify_nuts3_shapes")
         and config["clustering"]["mode"] == "administrative"
     ):
         logger.info("Skipping NUTS3 shapefile modification.")
