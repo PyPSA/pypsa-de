@@ -699,7 +699,6 @@ def elec_val_plot(df, savepath):
         7.86,
         54.36,
     ]  # https://energy-charts.info/charts/installed_power/chart.htm?l=en&c=DE&year=2020
-
     elec_capacities["pypsa"] = [
         0,
         df.loc[("Capacity|Electricity|Hydro", "GW"), 2020],
@@ -865,7 +864,11 @@ if __name__ == "__main__":
         drop_regex=r"^(?!.*(Fossil|Renewables|Losses|Price|Volume)).+",
     )
 
-    if "2025" in df and df.loc["Final Energy|Industry excl Non-Energy Use|Hydrogen", "2025"].item() < 0:
+    if (
+        "2025" in df
+        and df.loc["Final Energy|Industry excl Non-Energy Use|Hydrogen", "2025"].item()
+        < 0
+    ):
         val = df.loc["Final Energy|Industry excl Non-Energy Use|Hydrogen", "2025"]
         df.loc["Final Energy|Industry excl Non-Energy Use|Hydrogen", "2025"] = 0
         df.loc["Final Energy|Hydrogen", "2025"] = 0

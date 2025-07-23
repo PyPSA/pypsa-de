@@ -10,8 +10,6 @@ import logging
 import numpy as np
 import pandas as pd
 import pypsa
-from add_electricity import sanitize_carriers
-from add_existing_baseyear import add_build_year_to_new_assets
 from pypsa.descriptors import expand_series
 from six import iterkeys
 
@@ -21,6 +19,8 @@ from scripts._helpers import (
     set_scenario_config,
     update_config_from_wildcards,
 )
+from scripts.add_electricity import sanitize_carriers
+from scripts.add_existing_baseyear import add_build_year_to_new_assets
 
 logger = logging.getLogger(__name__)
 
@@ -197,6 +197,7 @@ def concat_networks(
     """
     n = pypsa.Network()
 
+    # Loop over each input network file and its corresponding investment year
     for i, network_path in enumerate(network_paths):
         year = years[i]
         network = pypsa.Network(network_path)
@@ -226,12 +227,17 @@ def concat_networks(
         snapshots = n.snapshots.drop("now", errors="ignore").union(network_sns)
         n.set_snapshots(snapshots)
 
+        # Iterate all component types in the loaded network
         for component in network.iterate_components():
             pnl = getattr(n, component.list_name + "_t")
             for k in iterkeys(component.pnl):
                 pnl_year = component.pnl[k].copy().reindex(snapshots, level=1)
                 if pnl_year.empty and (not (component.name == "Load" and k == "p_set")):
                     continue
+                if k not in pnl:
+                    # TODO: for some reason efficiency2 isn't available, used this workaround:
+                    #  initialize an empty time-series DataFrame for any missing key in pnl (e.g., 'efficiency2')
+                    pnl[k] = pd.DataFrame(index=snapshots)
                 if component.name == "Load":
                     static_load = network.loads.loc[network.loads.p_set != 0]
                     static_load_t = expand_series(static_load.p_set, network_sns).T
