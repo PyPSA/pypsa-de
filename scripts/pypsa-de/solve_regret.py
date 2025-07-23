@@ -32,7 +32,9 @@ def fix_capacities(realization, decision):
         real = getattr(realization, name)
         deci = getattr(decision, name)
 
-        common = real.index.intersection(deci.index)
+        common = real.index.intersection(deci.index).difference(
+            real.query("carrier == 'BEV charger'").index
+        )
         if not real.index.equals(deci.index):
             logger.warning(
                 f"Indices of {name} in realization and decision networks do not match. "
@@ -43,12 +45,12 @@ def fix_capacities(realization, decision):
 
         if name == "links":
             virtual_links = [
-                "oil refining",
-                "gas compressing",
-                "BEV charger",
+                # "oil refining",
+                # "gas compressing",
+                # "BEV charger",
                 "land transport oil",
                 "land transport fuel cell",
-                "unsustainable bioliquids",
+                # "unsustainable bioliquids",
                 "solid biomass for industry",
                 "gas for industry",
                 "industry methanol",
@@ -60,9 +62,9 @@ def fix_capacities(realization, decision):
                 "shipping oil",
                 "kerosene for aviation",
                 "agriculture machinery oil",
-                "renewable oil",
-                "methanol",
-                "renewable gas",
+                # "renewable oil",
+                # "methanol",
+                # "renewable gas",
             ]
             real.loc[real.carrier.isin(virtual_links), "p_nom_extendable"] = True
             real.loc[real.carrier.isin(virtual_links), "p_nom_min"] = real.loc[
@@ -82,13 +84,14 @@ def fix_capacities(realization, decision):
             real.loc[
                 real.carrier == "electricity distribution grid", "p_nom_extendable"
             ] = True  # either this or load shedding?
-
-            real.loc[
-                real.carrier == "electricity distribution grid", "p_nom_extendable"
-            ] = True  # either this or load shedding?
             real.loc[real.carrier == "electricity distribution grid", "p_nom_min"] = (
                 real.loc[real.carrier == "electricity distribution grid", "p_nom"]
             )
+
+            real.loc[real.carrier == "methanolisation", "p_nom_extendable"] = True
+            real.loc[real.carrier == "methanolisation", "p_nom_min"] = real.loc[
+                real.carrier == "methanolisation", "p_nom"
+            ]
 
         if name == "generators":
             fuels = [
