@@ -886,13 +886,15 @@ def collect_losses_energy():
     )
 
     # DAC has no outputs but CO2, which is ignored in energy flows
-    var[f"{prefix}|AC|DAC"] = _extract(DEMAND, carrier="DAC", bus_carrier="AC").mul(-1)
-    var[f"{prefix}|Heat|DAC"] = _extract(
+    var[f"{SECONDARY}|Demand|AC|DAC"] = _extract(
+        DEMAND, carrier="DAC", bus_carrier="AC"
+    ).mul(-1)
+    var[f"{SECONDARY}|Demand|Heat|DAC"] = _extract(
         DEMAND,
         carrier="DAC",
         bus_carrier=["rural heat", "urban decentral heat", "urban central heat"],
     ).mul(-1)
-    var[f"{prefix}|Waste|HVC to air"] = _extract(
+    var[f"{SECONDARY}|Demand|Waste|HVC to air"] = _extract(
         DEMAND,
         carrier="HVC to air",
         component="Link",
@@ -900,13 +902,13 @@ def collect_losses_energy():
     ).mul(-1)
 
     # gas and hydrogen compressing cost energy
-    var[f"{prefix}|AC|H2 Compressing"] = _extract(
+    var[f"{SECONDARY}|Demand|AC|H2 Compressing"] = _extract(
         DEMAND,
         carrier=["H2 pipeline", "H2 pipeline (Kernnetz)", "H2 pipeline retrofitted"],
         component="Link",
         bus_carrier="AC",
     ).mul(-1)
-    var[f"{prefix}|AC|Gas Compressing"] = _extract(
+    var[f"{SECONDARY}|Demand|AC|Gas Compressing"] = _extract(
         DEMAND,
         carrier=["gas pipeline", "gas pipeline new"],
         component="Link",
@@ -1044,7 +1046,7 @@ def collect_final_energy():
     # CC Links have bus0 efficiencies < 1, i.e. they have losses
     for carrier in ("gas for industry CC", "solid biomass for industry CC"):
         bc = carrier.split(" for industry")[0]
-        var[f"{SECONDARY}|Losses|{BC_ALIAS[bc]} CC"] = (
+        var[f"{SECONDARY}|Losses|{BC_ALIAS[bc]}|Industry CC"] = (
             _extract(SUPPLY, component="Link", carrier=carrier)
             .add(_extract(DEMAND, component="Link", carrier=carrier))
             .mul(-1)

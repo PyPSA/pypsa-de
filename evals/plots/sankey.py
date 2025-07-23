@@ -381,9 +381,9 @@ def main():
     df = rename_aggregate(df, "TWh", level="Unit").div(1e6)
     df = filter_by(df, Year=year, Region=region)
 
-    clean_mapping = {}
+    raw_mapping = get_mapping(df)
     variables = df.index.unique("Variable")
-    for k, v in MAPPING.items():
+    for k, v in raw_mapping.items():
         if k in variables:
             clean_mapping[k] = v
         else:
@@ -397,61 +397,142 @@ def main():
     plotly.io.show(fig)
 
 
+def get_mapping(df) -> (dict, set):
+    mapping = {}
+    nodes = set()
+    for v in df.index.unique("Variable"):
+        # skip aggregations
+        if v.count("|") < 2:
+            continue
+
+        if v.startswith("Primary"):
+            _, bus_carrier, tech = v.split("|")
+            mapping[v] = (tech, bus_carrier)
+            nodes.add(tech)
+            nodes.add(bus_carrier)
+        elif v.startswith("Secondary"):
+            _, bc_output, bc_input, tech = v.split("|")
+            nodes.add(tech)
+            nodes.add(bc_input)
+            nodes.add(bc_output)
+            if bc_output == "Demand":
+                mapping[v] = (bc_input, tech)
+            elif bc_output == "Losses":
+                mapping[v] = (tech, bc_output)
+            else:  # Link supply
+                mapping[v] = (tech, bc_input)
+        elif v.startswith("Final"):
+            _, bus_carrier, tech = v.split("|")
+            mapping[v] = (bus_carrier, tech)
+            nodes.add(tech)
+            nodes.add(bus_carrier)
+        else:
+            raise ValueError(f"Unexpected variable '{v}'")
+
+    return mapping, nodes
+
+
+def sort_mapping(k):
+    if k.startswith("Primary"):
+        return 0
+    elif k.startswith("Secondary"):
+        return 1
+    elif k.startswith("Final"):
+        return 2
+    else:
+        raise ValueError(f"Unexpected key '{k}'")
+
+
+def get_xmap(nodes) -> dict:
+    # dict.fromkeys(sorted(nodes), "")
+    return {
+        "AC": 0.5,
+        "Agriculture": 1,
+        "Air Heat Pump": 0.5,
+        "Ambient Heat": "",
+        "BEV charger": 0.5,
+        "Base Load": "",
+        "Biogas CC": 0.5,
+        "Biomass": 0.5,
+        "Boiler": 0.5,
+        "CHP": 0.5,
+        "Distribution Grid": 0.5,
+        "Electrolysis": 0.5,
+        "Export": 0.0,
+        "Export Domestic": 1.0,
+        "Export Foreign": 1.0,
+        "Fischer-Tropsch": 0.5,
+        "Gas": 0.5,
+        "Gas Compressing": 0.5,
+        "Ground Heat Pump": 0.5,
+        "H2": 0.5,
+        "H2 Compressing": 0.5,
+        "HH & Services": 1.0,
+        "HVC from naphtha": 0.5,
+        "HVC to air": 0.5,
+        "Heat": 0.5,
+        "Import Domestic": 0.0,
+        "Import Foreign": 0.0,
+        "Import Global": 0.0,
+        "Industry": 1.0,
+        "Industry CC": 1.0,
+        "Losses": 1.0,
+        "Methanol": 0.5,
+        "Methanolisation": 0.5,
+        "Oil": 0.5,
+        "Powerplant": 0.5,
+        "Resistive Heater": 0.5,
+        "Run-of-River": 0.0,
+        "Sabatier": 0.5,
+        "Solar Rooftop": 0.0,
+        "Solar Utility": 0.0,
+        "Solid": 0.5,
+        "Transport": 1.0,
+        "Waste": 0.5,
+        "Water Pits": 0.5,
+        "Water Tank": 0.5,
+        "Wind Onshore": 0.0,
+    }
+
+
 if __name__ == "__main__":
     FILEPATH = "/IdeaProjects/pypsa-at/results/v2025.02/KN2045_Mix/evaluation/exported_iamc_variables.xlsx"
-    MAPPING = {
-        # AC
-        "Primary Energy|AC|Import Domestic": ("Domestic Import AC", "AC"),
-        "Primary Energy|AC|Import Foreign": ("Foreign Import AC", "AC"),
-        "Primary Energy|AC|Run-of-River": ("Run-of-River", "AC"),
-        "Primary Energy|AC|Solar Rooftop": ("Solar (Rooftop)", "AC"),
-        "Primary Energy|AC|Solar Utility": ("Solar (Utility)", "AC"),
-        "Primary Energy|AC|Wind Offshore": ("Wind (Offshore)", "AC"),
-        "Primary Energy|AC|Wind Onshore": ("Wind (Onshore)", "AC"),
-        # "Transformation Input|AC": ("Primary", "Transformation"),
-        # "Transformation Bypass|AC": ("Primary", "Bypass"),
-        # Primary Energy|Biomass|Solid
-        # Primary Energy|Biogas
-        # Primary Energy|Coal|Hard
-        # Primary Energy|Coal|Lignite
-        # Primary Energy|Gas|Biogas|w CC
-        # Primary Energy|Gas|Biogas|w/o CC
-        # Primary Energy|Gas|Import Domestic
-        # Primary Energy|Gas|Import Foreign
-        # Primary Energy|Gas|Production
-        "Primary Energy|H2|Import Global": ("Global Import H2", "H2"),
-        "Primary Energy|H2|Import Domestic": ("Domestic Import H2", "H2"),
-        "Primary Energy|H2|Import Foreign": ("Foreign Import H2", "H2"),
-        # sorted(df.filter(like="H2").index.get_level_values("Variable"))
-        "Secondary Energy|H2|AC|Electrolysis": ("Electrolysis", "H2"),
-        "Secondary Energy|Demand|AC|Electrolysis": ("AC", "Electrolysis"),
-        "Secondary Energy|Losses|AC|Electrolysis": ("Electrolysis", "Losses"),
-        "Secondary Energy|Heat|AC|Electrolysis": ("Electrolysis", "Heat"),
-        # "Secondary Energy|Gas|H2|Sabatier": ("H2", "Gas"),
-        # 'Secondary Energy|Heat|H2|Fischer-Tropsch': ("H2", "Heat"),
-        # 'Secondary Energy|Heat|H2|Methanolisation': ("H2", "Heat"),
-        # 'Secondary Energy|Heat|H2|Sabatier': ("H2", "Heat"),
-        # 'Secondary Energy|Losses|H2|Fischer-Tropsch': ("H2", "Losses"),
-        # 'Secondary Energy|Losses|H2|Methanolisation': ("H2", "Losses"),
-        # 'Secondary Energy|Losses|H2|Sabatier':("H2", "Losses"),
-        # 'Secondary Energy|Methanol|H2|Methanolisation': ("H2", "Methanol"),
-        # 'Secondary Energy|Oil|H2|Fischer-Tropsch': ("H2", "Oil"),
-        #
-        # "Transformation Input|H2": ("H2 Primary", "Transformation"),
-        # "Transformation Bypass|H2": ("H2 Primary", "Final"),
-        # # "Transformation Bypass|H2": ("Bypass", "Final"),
-        # "Transformation Output|H2": ("H2 Transformation", "Final"),
-        # Secondary Energy|Ambient Heat|AC|Air Heat Pump
-        # Secondary Energy|Ambient Heat|AC|Ground Heat Pump
-        # Secondary Energy|Ambient Heat|Biomass|CHP
-        # Secondary Energy|Ambient Heat|Coal|CHP
-        # Secondary Energy|Ambient Heat|Gas|Boiler
-        # Primary Energy|Methanol
-        # Primary Energy|NH3  # skip?
-        # Primary Energy|Oil|Import
-        # Primary Energy|Uranium
-        # Primary Energy|Waste|HVC from naphtha
-        # Primary Energy|Waste|Import Foreign
-        # Primary Energy|Waste|Solid
-    }
-    main()
+    df = read_iamc_data_frame()
+    mapping, nodes = get_mapping(df)
+    mapping_sorted = {k: mapping[k] for k in sorted(mapping, key=sort_mapping)}
+    xmap = get_xmap(nodes)
+    df = rename_aggregate(df, "TWh", level="Unit").div(1e6)
+    year = "2050"
+    region = "GB0"
+    df = filter_by(df, Year=year, Region=region)
+
+    clean_mapping = {}
+    variables = df.index.unique("Variable")
+    for k, v in mapping_sorted.items():
+        if k in variables:
+            clean_mapping[k] = v
+        else:
+            print(f"Skipping '{k}' because it does not exist in {region} {year}.")
+
+    iamc = pyam.IamDataFrame(df)
+
+    iamc_fig = iamc.plot.sankey(mapping=clean_mapping)
+    node = iamc_fig.data[0].node.to_plotly_json()
+    link = iamc_fig.data[0].link.to_plotly_json()
+
+    node["x"] = [xmap.get(label, 0.2) for label in node["label"]]
+    node["y"] = [xmap.get(label, 0.4) for label in node["label"]]
+    # node["y"] = [ymap[label] for label in node["label"]]
+    # node["color"] = [colormap[label] for label in node["label"]]
+
+    new_sankey = Sankey(
+        node=node,
+        link=link,
+        arrangement="fixed",  # necessary for x/y positions
+    )
+
+    fig = Figure(data=[new_sankey])
+
+    fig.update_layout(height=600)
+
+    plotly.io.show(fig)
