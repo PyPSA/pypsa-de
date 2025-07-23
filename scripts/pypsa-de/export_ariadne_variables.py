@@ -5294,6 +5294,9 @@ if __name__ == "__main__":
     yearly_dfs = []
     for i, year in enumerate(planning_horizons):
         print(f"Getting data for year {year}...")
+        decision = ""
+        if snakemake.wildcards.get("decision"):
+            decision = "_decision_" + snakemake.wildcards.decision
         yearly_dfs.append(
             get_data(
                 networks[i],
@@ -5305,7 +5308,7 @@ if __name__ == "__main__":
                 "DE",
                 year=year,
                 version=config["version"],
-                scenario=snakemake.wildcards.run,
+                scenario=snakemake.wildcards.run + decision,
             )
         )
 
