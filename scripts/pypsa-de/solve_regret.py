@@ -91,17 +91,22 @@ def fix_capacities(realization, decision):
             )
 
         if name == "generators":
-            fuels_and_vents = [
+            fuels = [
                 "lignite",
                 "coal",
                 "oil primary",
                 "uranium",
                 "gas primary",
+            ]
+            vents = [
                 "urban central heat vent",
                 "rural heat vent",
                 "urban decentral heat vent",
             ]
-            real.loc[real.carrier.isin(fuels_and_vents), "p_nom_extendable"] = True
+            real.loc[real.carrier.isin(fuels + vents), "p_nom_extendable"] = True
+            real.loc[real.carrier.isin(fuels), "p_nom_min"] = real.loc[
+                real.carrier.isin(fuels), "p_nom"
+            ]
 
     return realization
 
