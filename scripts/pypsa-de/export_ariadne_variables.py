@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 import pypsa
 from numpy import isclose
+from pypsa.statistics import get_transmission_carriers
 
 from scripts._helpers import configure_logging, mock_snakemake
 from scripts.add_electricity import calculate_annuity, load_costs
@@ -4336,14 +4337,187 @@ def get_policy(n, investment_year):
 def get_economy(n, region):
     var = pd.Series()
 
-    s = n.statistics
-    grouper = ["country", "carrier"]
-    system_cost = s.capex(groupby=grouper).add(s.opex(groupby=grouper))
+    def get_tsc(n, country):
+        n.statistics.set_parameters(drop_zero=False)
+        capex = n.statistics.capex(
+            groupby=pypsa.statistics.groupers["name", "carrier"], nice_names=False
+        )
+
+        opex = n.statistics.opex(
+            groupby=pypsa.statistics.groupers["name", "carrier"], nice_names=False
+        )
+
+        # filter inter country transmission lines and links
+        inter_country_lines = n.lines.bus0.map(n.buses.country) != n.lines.bus1.map(
+            n.buses.country
+        )
+        inter_country_links = n.links.bus0.map(n.buses.country) != n.links.bus1.map(
+            n.buses.country
+        )
+        #
+        transmission_carriers = get_transmission_carriers(n).get_level_values("carrier")
+        transmission_lines = n.lines.carrier.isin(transmission_carriers)
+        transmission_links = n.links.carrier.isin(transmission_carriers)
+        #
+        country_transmission_lines = (
+            (n.lines.bus0.str.contains(country)) & ~(n.lines.bus1.str.contains(country))
+        ) | (
+            ~(n.lines.bus0.str.contains(country)) & (n.lines.bus1.str.contains(country))
+        )
+        country_tranmission_links = (
+            (n.links.bus0.str.contains(country)) & ~(n.links.bus1.str.contains(country))
+        ) | (
+            ~(n.links.bus0.str.contains(country)) & (n.links.bus1.str.contains(country))
+        )
+        #
+        inter_country_transmission_lines = (
+            inter_country_lines & transmission_lines & country_transmission_lines
+        )
+        inter_country_transmission_links = (
+            inter_country_links & transmission_links & country_tranmission_links
+        )
+        inter_country_transmission_lines_i = inter_country_transmission_lines[
+            inter_country_transmission_lines
+        ].index
+        inter_country_transmission_links_i = inter_country_transmission_links[
+            inter_country_transmission_links
+        ].index
+        inter_country_transmission_i = inter_country_transmission_lines_i.union(
+            inter_country_transmission_links_i
+        )
+
+        #
+        tsc = pd.concat([capex, opex], axis=1, keys=["capex", "opex"])
+        tsc = tsc.reset_index().set_index("name")
+        tsc.loc[inter_country_transmission_i, ["capex", "opex"]] = (
+            tsc.loc[inter_country_transmission_i, ["capex", "opex"]] / 2
+        )
+        tsc.rename(
+            index={
+                index: index + " " + country for index in inter_country_transmission_i
+            },
+            inplace=True,
+        )
+        # rename inter region links and lines
+        to_rename_links = n.links[
+            (n.links.bus0.str.contains(region))
+            & (n.links.bus1.str.contains(region))
+            & ~(n.links.index.str.contains(region))
+        ].index
+        to_rename_lines = n.lines[
+            (n.lines.bus0.str.contains(region))
+            & (n.lines.bus1.str.contains(region))
+            & ~(n.lines.index.str.contains(region))
+        ].index
+        tsc.rename(
+            index={index: index + " " + region for index in to_rename_links},
+            inplace=True,
+        )
+        tsc.rename(
+            index={index: index + " " + region for index in to_rename_lines},
+            inplace=True,
+        )
+
+        tsc = (
+            tsc.filter(like=country, axis=0)
+            .drop("component", axis=1)
+            .groupby("carrier")
+            .sum()
+        )
+
+        return tsc
+
+    def get_link_opex(n, carriers, region, sw):
+        # get flow of electricity/hydrogen...
+        # multiply it with the marginal costs
+        supplying = n.links[
+            (n.links.carrier.isin(carriers))
+            & (n.links.bus0.str.startswith(region))
+            & (~n.links.bus1.str.startswith(region))
+        ].index
+
+        receiving = n.links[
+            (n.links.carrier.isin(carriers))
+            & (~n.links.bus0.str.startswith(region))
+            & (n.links.bus1.str.startswith(region))
+        ].index
+
+        trade_out = 0
+        for index in supplying:
+            # price of energy in trade country
+            marg_price = n.buses_t.marginal_price[n.links.loc[index].bus0]
+            trade = n.links_t.p1[index].mul(sw)
+            trade_out += marg_price.mul(trade).sum()
+
+        trade_in = 0
+        for index in receiving:
+            # price of energy in Germany
+            marg_price = n.buses_t.marginal_price[n.links.loc[index].bus0]
+            trade = n.links_t.p1[index].mul(sw)
+            trade_in += marg_price.mul(trade).sum()
+        return abs(trade_in) - abs(trade_out)
+        # > 0: costs for Germany
+        # < 0: profit for Germany
+
+    def get_line_opex(n, region, sw):
+        supplying = n.lines[
+            (n.lines.carrier.isin(["AC"]))
+            & (n.lines.bus0.str.startswith(region))
+            & (~n.lines.bus1.str.startswith(region))
+        ].index
+        receiving = n.lines[
+            (n.lines.carrier.isin(["AC"]))
+            & (~n.lines.bus0.str.startswith(region))
+            & (n.lines.bus1.str.startswith(region))
+        ].index
+
+        # i have to clip the trade
+        net_out = 0
+        for index in supplying:
+            trade = n.lines_t.p1[index].mul(sw)
+            trade_out = trade.clip(lower=0)  # positive
+            trade_in = trade.clip(upper=0)  # negative
+            marg_price_DE = n.buses_t.marginal_price[n.lines.loc[index].bus0]
+            marg_price_EU = n.buses_t.marginal_price[n.lines.loc[index].bus1]
+            net_out += (
+                trade_out.mul(marg_price_DE).sum() + trade_in.mul(marg_price_EU).sum()
+            )
+            # net_out > 0: Germany is exporting more electricity
+            # net_out < 0: Germany is importing more electricity
+
+        net_in = 0
+        for index in receiving:
+            trade = n.lines_t.p1[index].mul(sw)
+            trade_in = trade.clip(lower=0)  # positive
+            trade_out = trade.clip(upper=0)  # negative
+            trade_out = trade_out.clip(upper=0)
+            marg_price_EU = n.buses_t.marginal_price[n.lines.loc[index].bus0]
+            marg_price_DE = n.buses_t.marginal_price[n.lines.loc[index].bus1]
+            net_in += (
+                trade_in.mul(marg_price_EU).sum() + trade_out.mul(marg_price_DE).sum()
+            )
+            # net_in > 0: Germany is importing more electricity
+            # net_in < 0: Germany is exporting more electricity
+
+        return -net_out + net_in
+
+    trade_carriers = [
+        "DC",
+        "H2 pipeline",
+        "H2 pipeline (Kernnetz)",
+        "H2 pipeline retrofittedrenewable oil",
+        "renewable gas",
+        "methanol",
+    ]
+
+    sw = n.snapshot_weightings.generators
+    tsc = get_tsc(n, region).sum().sum()
+    trade_costs = get_link_opex(n, trade_carriers, region, sw) + get_line_opex(
+        n, region, sw
+    )
 
     # Cost|Total Energy System Cost in billion EUR2020/yr
-    var["Cost|Total Energy System Cost"] = round(
-        system_cost.groupby("country").sum()[region] / 1e9, 4
-    )
+    var["Cost|Total Energy System Cost"] = round((tsc + trade_costs) / 1e9, 4)
 
     return var
 
