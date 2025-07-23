@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-# coding: utf-8
+
 """
 Prepare PyPSA network for solving according to :ref:`opts` and :ref:`ll`, such
 as.

@@ -22,8 +22,9 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 import xarray as xr
-from _helpers import configure_logging, get_snapshots, set_scenario_config
 from shapely.geometry import Polygon
+
+from scripts._helpers import configure_logging, get_snapshots, set_scenario_config
 
 logger = logging.getLogger(__name__)
 

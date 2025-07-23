@@ -15,10 +15,11 @@ import xarray as xr
 from scripts._helpers import (
     configure_logging,
     get_snapshots,
+    sanitize_custom_columns,
     set_scenario_config,
     update_config_from_wildcards,
 )
-from scripts.add_electricity import flatten
+from scripts.add_electricity import flatten, sanitize_carriers
 from scripts.add_existing_baseyear import add_build_year_to_new_assets
 
 logger = logging.getLogger(__name__)
@@ -264,12 +265,7 @@ def update_heat_pump_efficiency(n: pypsa.Network, n_p: pypsa.Network, year: int)
 
     # get names of heat pumps in previous iteration that cannot be replaced by direct utilisation in this iteration
     heat_pump_idx_previous_iteration = n_p.links.index[
-        n_p.links.index.str.contains("heat pump")
-        & n_p.links.index.str[:-4].isin(
-            n.links_t.efficiency.columns.str.rstrip(  # sources that can be directly used are no longer represented by heat pumps in the dynamic efficiency dataframe
-                str(year)
-            )
-        )
+        n_p.links.index.str.contains("urban central.*heat pump")
     ]
     # construct names of same-technology heat pumps in the current iteration
     corresponding_idx_this_iteration = heat_pump_idx_previous_iteration.str[:-4] + str(
@@ -277,18 +273,22 @@ def update_heat_pump_efficiency(n: pypsa.Network, n_p: pypsa.Network, year: int)
     )
     # update efficiency of heat pumps in previous iteration in-place to efficiency in this iteration
     n_p.links_t["efficiency"].loc[:, heat_pump_idx_previous_iteration] = (
-        n.links_t["efficiency"].loc[:, corresponding_idx_this_iteration].values
+        n.links_t["efficiency"]
+        .reindex(columns=corresponding_idx_this_iteration, fill_value=0)
+        .values
     )
 
     # Change efficiency2 for heat pumps that use an explicitly modelled heat source
     previous_iteration_columns = heat_pump_idx_previous_iteration.intersection(
         n_p.links_t["efficiency2"].columns
     )
-    current_iteration_columns = corresponding_idx_this_iteration.intersection(
-        n.links_t["efficiency2"].columns
+    corresponding_columns_this_iteration = previous_iteration_columns.str[:-4] + str(
+        year
     )
     n_p.links_t["efficiency2"].loc[:, previous_iteration_columns] = (
-        n.links_t["efficiency2"].loc[:, current_iteration_columns].values
+        n.links_t["efficiency2"]
+        .reindex(columns=corresponding_columns_this_iteration, fill_value=0)
+        .values
     )
 
 
@@ -372,4 +372,7 @@ if __name__ == "__main__":
     disable_grid_expansion_if_limit_hit(n)
 
     n.meta = dict(snakemake.config, **dict(wildcards=dict(snakemake.wildcards)))
+
+    sanitize_custom_columns(n)
+    sanitize_carriers(n, snakemake.config)
     n.export_to_netcdf(snakemake.output[0])

@@ -91,6 +91,10 @@ local
 # private dev folder
 dev/*
 
+# ai coding tools
+CLAUDE.md
+.claude/
+.github/copilot-instructions.md
 #folder quick marimo evals
 .marimo/JM_marimo_bs
 

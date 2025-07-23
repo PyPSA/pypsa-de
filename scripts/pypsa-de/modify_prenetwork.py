@@ -826,87 +826,77 @@ def must_run(n, params):
             n.links.loc[links_i, "p_min_pu"] = p_min_pu
 
 
-def aladin_mobility_demand(n):
+def modify_mobility_demand(n, mobility_data_file):
     """
-    Change loads in Germany to use Aladin data for road demand.
+    Change loads in Germany to use exogenous data for road demand.
+
+    The mobility_data contains the demand of Electricity, Hydrogen and Liquids in MWh/a, and the number of EVs in million.
     """
-    # get aladin data
-    aladin_demand = pd.read_csv(snakemake.input.aladin_demand, index_col=0)
-
-    simulation_period_correction_factor = n.snapshot_weightings.objective.sum() / 8760
-
-    # oil demand
-    oil_demand = aladin_demand.Liquids * simulation_period_correction_factor
-    oil_index = n.loads[
-        (n.loads.carrier == "land transport oil") & (n.loads.index.str[:2] == "DE")
-    ].index
-    oil_demand.index = [f"{i} land transport oil" for i in oil_demand.index]
-
-    profile = n.loads_t.p_set.loc[:, oil_index]
-    profile /= profile.sum()
-    n.loads_t.p_set.loc[:, oil_index] = (oil_demand * profile).div(
-        n.snapshot_weightings.objective, axis=0
+    logger.info(
+        "Overwriting land transport demand. In particular the `land_transport_electric_share` config setting will not be used."
     )
 
-    # hydrogen demand
-    h2_demand = aladin_demand.Hydrogen * simulation_period_correction_factor
-    h2_index = n.loads[
-        (n.loads.carrier == "land transport fuel cell")
-        & (n.loads.index.str[:2] == "DE")
-    ].index
-    h2_demand.index = [f"{i} land transport fuel cell" for i in h2_demand.index]
+    fraction_modelyear = n.snapshot_weightings.stores.sum() / 8760
 
-    profile = n.loads_t.p_set.loc[:, h2_index]
-    profile /= profile.sum()
-    n.loads_t.p_set.loc[:, h2_index] = (h2_demand * profile).div(
-        n.snapshot_weightings.objective, axis=0
-    )
+    new_demand = pd.read_csv(mobility_data_file, header=None, index_col=0).iloc[:, 0]
 
-    # electricity demand
-    ev_demand = aladin_demand.Electricity * simulation_period_correction_factor
-    ev_index = n.loads[
-        (n.loads.carrier == "land transport EV") & (n.loads.index.str[:2] == "DE")
-    ].index
-    ev_demand.index = [f"{i} land transport EV" for i in ev_demand.index]
+    number_of_EVs = new_demand.pop("million_EVs") * 1e6
 
-    profile = n.loads_t.p_set.loc[:, ev_index]
-    profile /= profile.sum()
-    n.loads_t.p_set.loc[:, ev_index] = (ev_demand * profile).div(
-        n.snapshot_weightings.objective, axis=0
-    )
+    new_demand *= fraction_modelyear
+
+    carrier_fuel_map = {
+        "land transport EV": "Electricity",
+        "land transport fuel cell": "Hydrogen",
+        "land transport oil": "Liquids",
+    }
+    for carrier, fuel in carrier_fuel_map.items():
+        loads_i = n.loads[
+            (n.loads.carrier == carrier) & n.loads.index.str.startswith("DE")
+        ]
+        old_demand = (
+            n.loads_t.p_set.loc[:, loads_i.index]
+            .sum(axis=1)
+            .mul(n.snapshot_weightings.stores)
+            .sum()
+        )
+        scale_factor = new_demand[fuel] / old_demand
+        logger.info(
+            f"Scaling {carrier} loads in Germany by {scale_factor:.2f}.\nPrevious total demand: {old_demand:.2f} MWh/a, new total demand: {new_demand[fuel]:.2f} MWh/a."
+        )
+        n.loads_t.p_set.loc[:, loads_i.index] *= scale_factor
 
     # adjust BEV charger and V2G capacities
-    number_cars = pd.read_csv(snakemake.input.transport_data, index_col=0)[
-        "number cars"
-    ].filter(like="DE")
 
-    factor = (
-        aladin_demand.number_of_cars
-        * 1e6
-        / (
-            number_cars
-            * snakemake.params.land_transport_electric_share[
-                int(snakemake.wildcards.planning_horizons)
-            ]
-        )
-    )
-
-    BEV_charger_i = n.links[
+    BEV_chargers = n.links[
         (n.links.carrier == "BEV charger") & (n.links.bus0.str.startswith("DE"))
-    ].index
-    n.links.loc[BEV_charger_i].p_nom *= pd.Series(factor.values, index=BEV_charger_i)
+    ]
 
-    V2G_i = n.links[
-        (n.links.carrier == "V2G") & (n.links.bus0.str.startswith("DE"))
-    ].index
-    if not V2G_i.empty:
-        n.links.loc[V2G_i].p_nom *= pd.Series(factor.values, index=V2G_i)
+    scale_factor = (
+        number_of_EVs * snakemake.params.bev_charge_rate / BEV_chargers.p_nom.sum()
+    )
+    logger.info(
+        f"Scaling BEV charger capacities in Germany by {scale_factor:.2f} to match the new number of EVs.\nPrevious total capacity: {BEV_chargers.p_nom.sum():.2f} MW, new total capacity: {number_of_EVs * snakemake.params.bev_charge_rate:.2f} MW."
+    )
+    n.links.loc[BEV_chargers.index, "p_nom"] *= scale_factor
 
-    dsm_i = n.stores[
+    V2G = n.links[(n.links.carrier == "V2G") & (n.links.bus0.str.startswith("DE"))]
+
+    if not V2G.empty:
+        n.links.loc[V2G.index, "p_nom"] *= (
+            scale_factor * snakemake.params.bev_dsm_availability
+        )
+
+    dsm = n.stores[
         (n.stores.carrier == "EV battery") & (n.stores.bus.str.startswith("DE"))
-    ].index
-    if not dsm_i.empty:
-        n.stores.loc[dsm_i].e_nom *= pd.Series(factor.values, index=dsm_i)
+    ]
+
+    if not dsm.empty:
+        scale_factor = (
+            number_of_EVs
+            * snakemake.params.bev_energy
+            * snakemake.params.bev_dsm_availability
+        ) / dsm.e_nom.sum()
+        n.stores.loc[dsm.index, "e_nom"] *= scale_factor
 
 
 def add_hydrogen_turbines(n):
@@ -1280,7 +1270,7 @@ if __name__ == "__main__":
         )
 
     configure_logging(snakemake)
-    logger.info("Adding Ariadne-specific functionality")
+    logger.info("Adding PyPSA-DE specific functionality")
 
     n = pypsa.Network(snakemake.input.network)
     nhours = n.snapshot_weightings.generators.sum()
@@ -1293,7 +1283,7 @@ if __name__ == "__main__":
         nyears,
     )
 
-    aladin_mobility_demand(n)
+    modify_mobility_demand(n, snakemake.input.modified_mobility_data)
 
     new_boiler_ban(n)
 
