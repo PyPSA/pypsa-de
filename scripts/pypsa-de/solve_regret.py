@@ -41,6 +41,68 @@ def fix_capacities(realization, decision):
 
         real.loc[common, attr] = deci.loc[common, attr]
 
+        if name == "links":
+            virtual_links = [
+                "oil refining",
+                "gas compressing",
+                "BEV charger",
+                "land transport oil",
+                "land transport fuel cell",
+                "unsustainable bioliquids",
+                "solid biomass for industry",
+                "gas for industry",
+                "industry methanol",
+                "naphtha for industry",
+                "process emissions",
+                "coal for industry",
+                "H2 for industry",
+                "shipping methanol",
+                "shipping oil",
+                "kerosene for aviation",
+                "agriculture machinery oil",
+                "renewable oil",
+                "methanol",
+                "renewable gas",
+            ]
+            real.loc[real.carrier.isin(virtual_links), "p_nom_extendable"] = True
+            real.loc[real.carrier.isin(virtual_links), "p_nom_min"] = real.loc[
+                real.carrier.isin(virtual_links), "p_nom"
+            ]
+
+            real.loc[real.carrier == "SMR", "p_nom_extendable"] = True
+            real.loc[real.carrier == "SMR", "p_nom_min"] = real.loc[
+                real.carrier == "SMR", "p_nom"
+            ]
+
+            real.loc[real.carrier == "waste CHP", "p_nom_extendable"] = True
+            real.loc[real.carrier == "waste CHP", "p_nom_min"] = real.loc[
+                real.carrier == "waste CHP", "p_nom"
+            ]
+
+            real.loc[
+                real.carrier == "electricity distribution grid", "p_nom_extendable"
+            ] = True  # either this or load shedding?
+
+            real.loc[
+                real.carrier == "electricity distribution grid", "p_nom_extendable"
+            ] = True  # either this or load shedding?
+            real.loc[real.carrier == "electricity distribution grid", "p_nom_min"] = (
+                real.loc[real.carrier == "electricity distribution grid", "p_nom"]
+            )
+
+        if name == "generators":
+            fuels_and_vents = [
+                "lignite",
+                "coal",
+                "oil primary",
+                "uranium",
+                "gas primary",
+                "urban central heat vent",
+                "rural heat vent",
+                "urban decentral heat vent",
+            ]
+            real.loc[real.carrier.isin(fuels_and_vents), "p_nom_extendable"] = True
+
     return realization
 
 
@@ -52,7 +114,7 @@ if __name__ == "__main__":
             opts="",
             sector_opts="none",
             planning_horizons="2030",
-            realization="KN2045_Mix",
+            decision="KN2045_Mix",
             run="LowDemand",
         )
 
@@ -64,14 +126,14 @@ if __name__ == "__main__":
 
     np.random.seed(solve_opts.get("seed", 123))
 
-    if snakemake.input.realization == snakemake.input.decision:
-        import os
-        import sys
+    # if snakemake.input.realization == snakemake.input.decision:
+    #     import os
+    #     import sys
 
-        src = os.path.abspath(snakemake.input.realization)
-        dst = os.path.abspath(snakemake.output.regret_network)
-        os.symlink(src, dst)
-        sys.exit(0)
+    #     src = os.path.abspath(snakemake.input.realization)
+    #     dst = os.path.abspath(snakemake.output.regret_network)
+    #     os.symlink(src, dst)
+    #     sys.exit(0)
 
     logger.info("Loading realization and decision networks")
 
@@ -106,4 +168,4 @@ if __name__ == "__main__":
     logger.info(f"Maximum memory usage: {mem.mem_usage}")
 
     n.meta = dict(snakemake.config, **dict(wildcards=dict(snakemake.wildcards)))
-    n.export_to_netcdf(snakemake.output.network)
+    n.export_to_netcdf(snakemake.output.regret_network)
