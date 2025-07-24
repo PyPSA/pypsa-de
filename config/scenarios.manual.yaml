@@ -268,23 +268,22 @@ AT10_KN2040:
         time: ['2013', '2013']
   renewable:
     onwind:
-      cutout: europe-2013-sarah3-era5
+      cutout: default
     offwind-ac:
-      cutout: europe-2013-sarah3-era5
+      cutout: default
     offwind-dc:
-      cutout: europe-2013-sarah3-era5
+      cutout: default
     offwind-float:
-      cutout: europe-2013-sarah3-era5
+      cutout: default
     solar:
-      cutout: europe-2013-sarah3-era5
+      cutout: default
     solar-hsat:
-      cutout: europe-2013-sarah3-era5
+      cutout: default
     hydro:
-      cutout: europe-2013-sarah3-era5
-
+      cutout: default
   lines:
     dynamic_line_rating:
-      cutout: europe-2013-sarah3-era5
+      cutout: default
 
   clustering:
     mode: administrative
@@ -299,7 +298,6 @@ AT10_KN2040:
       ES: 1 # +1 islands
     temporal:
       resolution_sector: 365H
-
 
   sector:
     v2g: true
