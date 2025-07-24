@@ -6,8 +6,9 @@
 run:
   prefix: 20250717_improve_transport_demand
   name:
+  - AT10_KN2040
   # - ExPol
-  - KN2045_Mix
+  # - KN2045_Mix
   # - KN2045_Elek
   # - KN2045_H2
   # - KN2045_NFniedrig
