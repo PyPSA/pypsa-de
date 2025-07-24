@@ -45,12 +45,8 @@ def fix_capacities(realization, decision):
 
         if name == "links":
             virtual_links = [
-                # "oil refining",
-                # "gas compressing",
-                # "BEV charger",
                 "land transport oil",
                 "land transport fuel cell",
-                # "unsustainable bioliquids",
                 "solid biomass for industry",
                 "gas for industry",
                 "industry methanol",
@@ -62,35 +58,19 @@ def fix_capacities(realization, decision):
                 "shipping oil",
                 "kerosene for aviation",
                 "agriculture machinery oil",
-                # "renewable oil",
-                # "methanol",
-                # "renewable gas",
             ]
-            real.loc[real.carrier.isin(virtual_links), "p_nom_extendable"] = True
-            real.loc[real.carrier.isin(virtual_links), "p_nom_min"] = real.loc[
-                real.carrier.isin(virtual_links), "p_nom"
+            essential_links = [
+                "SMR",
+                "waste CHP",
             ]
-
-            real.loc[real.carrier == "SMR", "p_nom_extendable"] = True
-            real.loc[real.carrier == "SMR", "p_nom_min"] = real.loc[
-                real.carrier == "SMR", "p_nom"
+            bottleneck_links = [
+                "electricity distribution grid",
+                "methanolisation",
             ]
-
-            real.loc[real.carrier == "waste CHP", "p_nom_extendable"] = True
-            real.loc[real.carrier == "waste CHP", "p_nom_min"] = real.loc[
-                real.carrier == "waste CHP", "p_nom"
-            ]
-
-            real.loc[
-                real.carrier == "electricity distribution grid", "p_nom_extendable"
-            ] = True  # either this or load shedding?
-            real.loc[real.carrier == "electricity distribution grid", "p_nom_min"] = (
-                real.loc[real.carrier == "electricity distribution grid", "p_nom"]
-            )
-
-            real.loc[real.carrier == "methanolisation", "p_nom_extendable"] = True
-            real.loc[real.carrier == "methanolisation", "p_nom_min"] = real.loc[
-                real.carrier == "methanolisation", "p_nom"
+            links_to_free = virtual_links + essential_links + bottleneck_links
+            real.loc[real.carrier.isin(links_to_free), "p_nom_extendable"] = True
+            real.loc[real.carrier.isin(links_to_free), "p_nom_min"] = real.loc[
+                real.carrier.isin(links_to_free), "p_nom"
             ]
 
         if name == "generators":
@@ -110,6 +90,9 @@ def fix_capacities(realization, decision):
             real.loc[real.carrier.isin(fuels), "p_nom_min"] = real.loc[
                 real.carrier.isin(fuels), "p_nom"
             ]
+
+        if name == "stores":
+            real.loc[real.carrier == "co2", "e_nom_extendable"] = True
 
     return realization
 
