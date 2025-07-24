@@ -22,9 +22,7 @@ from scripts._helpers import (
 configfile: "config/config.default.yaml"
 configfile: "config/plotting.default.yaml"
 configfile: "config/config.de.yaml"
-
-
-# configfile: "config/config.at.yaml"  # AT package config file
+configfile: "config/config.at.yaml"  # AT10 default configuration
 
 
 run = config["run"]

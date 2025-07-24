@@ -1,51 +1,15 @@
-# SPDX-FileCopyrightText: : 2017-2023 The PyPSA-Eur Authors
-#
-# SPDX-License-Identifier: CC0-1.0
+# Basisszenario für PyPSA-AT mit Anpassungen des KN2045_Mix Szenarios aus PyPSA-DE with
+#   * custom administrative clustering für Austrian regions
+#   * calibrations
+#  run:
+#    prefix: v2025.03   # PyPSA-AT scenario names
 
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
-run:
-  prefix: v2025.02
-  name:
-  - KN2045_Mix
-  scenarios:
-    enable: true
-    manual_file: config/scenarios.manual.yaml
-    file: config/scenarios.automated.yaml
-  shared_resources:
-    policy: base #stops recalculating
-    exclude:
-    - existing_heating.csv   # specify files which should not be shared between scenarios
-    - costs
-    - retrieve_cost   # This is necessary to save retrieve_cost_data_{year}.log in the correct folder
-    - industry_sector_ratios
-    - build_industry_sector_ratios   # This is necessary to save build_industry_sector_ratios_data.log in the correct folder
-    - modify_existing_heating
-  disable_progressbar: true
+# restore pypsa-eur defaults
 
-iiasa_database:
-  db_name: ariadne2
-  leitmodelle:
-    general: REMIND-EU v1.1
-    buildings: REMod v1.0
-    transport: Aladin v1
-    industry: FORECAST v1.0
-  scenarios:
-  - ExPol
-  - KN2045_Elek
-  - KN2045_H2
-  - KN2045_Mix
-  - KN2045_NFniedrig
-  - KN2045_NFhoch
-  reference_scenario: KN2045_Mix
-  region: Deutschland
-  ageb_for_mobility: true # In 2020 use AGEB data for final energy demand and KBA for vehicles
-  uba_for_mobility: false # For 2025–2035 use MWMS scenario from UBA Projektionsbericht 2025
+#run:
+#  prefix: v2025.03
 
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#foresight
-foresight: myopic
-
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#scenario
-# Wildcard docs in https://pypsa-eur.readthedocs.io/en/latest/wildcards.html
+countries: ['AL', 'AT', 'BA', 'BE', 'BG', 'CH', 'CZ', 'DE', 'DK', 'EE', 'ES', 'FI', 'FR', 'GB', 'GR', 'HR', 'HU', 'IE', 'IT', 'LT', 'LU', 'LV', 'ME', 'MK', 'NL', 'NO', 'PL', 'PT', 'RO', 'RS', 'SE', 'SI', 'SK', 'XK']
 scenario:
   ll:
   - vopt
@@ -57,101 +21,47 @@ scenario:
   - none
   planning_horizons:
   - 2020
-#  - 2025
+#    - 2025
   - 2030
-#  - 2035
+#    - 2035
   - 2040
-#  - 2045
+#    - 2045
   - 2050
-
-existing_capacities:
-  grouping_years_power: [1920, 1950, 1955, 1960, 1965, 1970, 1975, 1980, 1985, 1990, 1995, 2000, 2005, 2010, 2015, 2020]
-  grouping_years_heat: [1980, 1985, 1990, 1995, 2000, 2005, 2010, 2015, 2019] # heat grouping years >= baseyear will be ignored
-  fill_value_gas_chp_lifetime: 40 # if no explicit lifetime is given use 40 years. The number was chosen s.t. the existing capacities in 2020 match with statistics.
-
-# from pypsa-eur default config:
-# countries
-# snapshots
-# atlite cutouts
-
+snapshots:
+  start: "2013-01-01"
+  end: "2014-01-01"
+  inclusive: 'left'
+atlite:
+  cutout_directory: cutouts
+  default_cutout: europe-2013-sarah3-era5
+  nprocesses: 4
+  show_progress: false
+  cutouts:
+    # use 'base' to determine geographical bounds and time span from config
+    # base:
+    # module: era5
+    europe-2013-sarah3-era5:
+      module: [sarah, era5] # in priority order
+      x: [-12., 42.]
+      y: [33., 72.]
+      dx: 0.3
+      dy: 0.3
+      time: ['2013', '2013']
 renewable:
   onwind:
-    capacity_per_sqkm: 1.4
-    correction_factor: 0.95
-    resource:
-      smooth: false  #this is false until correction to onshore wind speeds from GWA implemented
-      #based on Vestas_V112_3MW, but changing hub_height from 80m with time
-      turbine:
-        2020:
-          V: [0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 25, 25]
-          POW: [0., 0., 0.005, 0.15, 0.3, 0.525, 0.905, 1.375, 1.95, 2.58, 2.96, 3.05, 3.06, 3.06, 0.]
-          hub_height: 80.
-          P: 3.06
-        2030:
-          V: [0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 25, 25]
-          POW: [0., 0., 0.005, 0.15, 0.3, 0.525, 0.905, 1.375, 1.95, 2.58, 2.96, 3.05, 3.06, 3.06, 0.]
-          hub_height: 90.
-          P: 3.06
-        2040:
-          V: [0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 25, 25]
-          POW: [0., 0., 0.005, 0.15, 0.3, 0.525, 0.905, 1.375, 1.95, 2.58, 2.96, 3.05, 3.06, 3.06, 0.]
-          hub_height: 100.
-          P: 3.06
+    cutout: default
   offwind-ac:
-    capacity_per_sqkm: 6
-    landfall_length: 30
-    correction_factor: 0.95
-    resource:
-      smooth: true
-      #based on NREL_ReferenceTurbine_2020ATB_5.5MW, but changing hub_height from 80m with time
-      turbine:
-        2020:
-          V: [3.0, 3.2, 3.5, 3.8, 4.0, 4.2, 4.5, 4.8, 5.0, 5.2, 5.5, 5.8, 6.0, 6.2, 6.5, 6.8, 7.0, 7.2, 7.5, 7.8, 8.0, 8.2, 8.5, 8.8, 9.0, 9.2, 9.5, 9.8, 10.0, 10.2, 10.5, 10.8, 11.0, 11.2, 11.5, 11.8, 12.0, 12.2, 12.5, 12.8, 13.0, 13.2, 13.5, 13.8, 14.0, 14.2, 14.5, 14.8, 15.0, 15.2, 15.5, 15.8, 16.0, 16.2, 16.5, 16.8, 17.0, 17.2, 17.5, 17.8, 18.0, 18.2, 18.5, 18.8, 19.0, 19.2, 19.5, 19.8, 20.0, 20.2, 20.5, 20.8, 21.0, 21.2, 21.5, 21.8, 22.0, 22.2, 22.5, 22.8, 23.0, 23.2, 23.5, 23.8, 24.0, 24.2, 24.5, 24.8, 25.0]
-          POW: [0.0, 0.127, 0.178, 0.237, 0.305, 0.381, 0.468, 0.564, 0.671, 0.789, 0.919, 1.061, 1.216, 1.385, 1.567, 1.765, 1.977, 2.205, 2.45, 2.711, 2.99, 3.287, 3.602, 3.937, 4.291, 4.665, 5.06, 5.477, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 0.0]
-          hub_height: 120.
-          P: 5.5
-        2030:
-          V: [3.0, 3.2, 3.5, 3.8, 4.0, 4.2, 4.5, 4.8, 5.0, 5.2, 5.5, 5.8, 6.0, 6.2, 6.5, 6.8, 7.0, 7.2, 7.5, 7.8, 8.0, 8.2, 8.5, 8.8, 9.0, 9.2, 9.5, 9.8, 10.0, 10.2, 10.5, 10.8, 11.0, 11.2, 11.5, 11.8, 12.0, 12.2, 12.5, 12.8, 13.0, 13.2, 13.5, 13.8, 14.0, 14.2, 14.5, 14.8, 15.0, 15.2, 15.5, 15.8, 16.0, 16.2, 16.5, 16.8, 17.0, 17.2, 17.5, 17.8, 18.0, 18.2, 18.5, 18.8, 19.0, 19.2, 19.5, 19.8, 20.0, 20.2, 20.5, 20.8, 21.0, 21.2, 21.5, 21.8, 22.0, 22.2, 22.5, 22.8, 23.0, 23.2, 23.5, 23.8, 24.0, 24.2, 24.5, 24.8, 25.0]
-          POW: [0.0, 0.127, 0.178, 0.237, 0.305, 0.381, 0.468, 0.564, 0.671, 0.789, 0.919, 1.061, 1.216, 1.385, 1.567, 1.765, 1.977, 2.205, 2.45, 2.711, 2.99, 3.287, 3.602, 3.937, 4.291, 4.665, 5.06, 5.477, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 0.0]
-          hub_height: 130.
-          P: 5.5
-        2040:
-          V: [3.0, 3.2, 3.5, 3.8, 4.0, 4.2, 4.5, 4.8, 5.0, 5.2, 5.5, 5.8, 6.0, 6.2, 6.5, 6.8, 7.0, 7.2, 7.5, 7.8, 8.0, 8.2, 8.5, 8.8, 9.0, 9.2, 9.5, 9.8, 10.0, 10.2, 10.5, 10.8, 11.0, 11.2, 11.5, 11.8, 12.0, 12.2, 12.5, 12.8, 13.0, 13.2, 13.5, 13.8, 14.0, 14.2, 14.5, 14.8, 15.0, 15.2, 15.5, 15.8, 16.0, 16.2, 16.5, 16.8, 17.0, 17.2, 17.5, 17.8, 18.0, 18.2, 18.5, 18.8, 19.0, 19.2, 19.5, 19.8, 20.0, 20.2, 20.5, 20.8, 21.0, 21.2, 21.5, 21.8, 22.0, 22.2, 22.5, 22.8, 23.0, 23.2, 23.5, 23.8, 24.0, 24.2, 24.5, 24.8, 25.0]
-          POW: [0.0, 0.127, 0.178, 0.237, 0.305, 0.381, 0.468, 0.564, 0.671, 0.789, 0.919, 1.061, 1.216, 1.385, 1.567, 1.765, 1.977, 2.205, 2.45, 2.711, 2.99, 3.287, 3.602, 3.937, 4.291, 4.665, 5.06, 5.477, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 0.0]
-          hub_height: 140.
-          P: 5.5
+    cutout: default
   offwind-dc:
-    capacity_per_sqkm: 6
-    landfall_length: 30
-    correction_factor: 0.95
-    resource:
-      smooth: true
-      #based on NREL_ReferenceTurbine_2020ATB_5.5MW, but changing hub_height from 80m with time
-      turbine:
-        2020:
-          V: [3.0, 3.2, 3.5, 3.8, 4.0, 4.2, 4.5, 4.8, 5.0, 5.2, 5.5, 5.8, 6.0, 6.2, 6.5, 6.8, 7.0, 7.2, 7.5, 7.8, 8.0, 8.2, 8.5, 8.8, 9.0, 9.2, 9.5, 9.8, 10.0, 10.2, 10.5, 10.8, 11.0, 11.2, 11.5, 11.8, 12.0, 12.2, 12.5, 12.8, 13.0, 13.2, 13.5, 13.8, 14.0, 14.2, 14.5, 14.8, 15.0, 15.2, 15.5, 15.8, 16.0, 16.2, 16.5, 16.8, 17.0, 17.2, 17.5, 17.8, 18.0, 18.2, 18.5, 18.8, 19.0, 19.2, 19.5, 19.8, 20.0, 20.2, 20.5, 20.8, 21.0, 21.2, 21.5, 21.8, 22.0, 22.2, 22.5, 22.8, 23.0, 23.2, 23.5, 23.8, 24.0, 24.2, 24.5, 24.8, 25.0]
-          POW: [0.0, 0.127, 0.178, 0.237, 0.305, 0.381, 0.468, 0.564, 0.671, 0.789, 0.919, 1.061, 1.216, 1.385, 1.567, 1.765, 1.977, 2.205, 2.45, 2.711, 2.99, 3.287, 3.602, 3.937, 4.291, 4.665, 5.06, 5.477, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 0.0]
-          hub_height: 120.
-          P: 5.5
-        2030:
-          V: [3.0, 3.2, 3.5, 3.8, 4.0, 4.2, 4.5, 4.8, 5.0, 5.2, 5.5, 5.8, 6.0, 6.2, 6.5, 6.8, 7.0, 7.2, 7.5, 7.8, 8.0, 8.2, 8.5, 8.8, 9.0, 9.2, 9.5, 9.8, 10.0, 10.2, 10.5, 10.8, 11.0, 11.2, 11.5, 11.8, 12.0, 12.2, 12.5, 12.8, 13.0, 13.2, 13.5, 13.8, 14.0, 14.2, 14.5, 14.8, 15.0, 15.2, 15.5, 15.8, 16.0, 16.2, 16.5, 16.8, 17.0, 17.2, 17.5, 17.8, 18.0, 18.2, 18.5, 18.8, 19.0, 19.2, 19.5, 19.8, 20.0, 20.2, 20.5, 20.8, 21.0, 21.2, 21.5, 21.8, 22.0, 22.2, 22.5, 22.8, 23.0, 23.2, 23.5, 23.8, 24.0, 24.2, 24.5, 24.8, 25.0]
-          POW: [0.0, 0.127, 0.178, 0.237, 0.305, 0.381, 0.468, 0.564, 0.671, 0.789, 0.919, 1.061, 1.216, 1.385, 1.567, 1.765, 1.977, 2.205, 2.45, 2.711, 2.99, 3.287, 3.602, 3.937, 4.291, 4.665, 5.06, 5.477, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 0.0]
-          hub_height: 130.
-          P: 5.5
-        2040:
-          V: [3.0, 3.2, 3.5, 3.8, 4.0, 4.2, 4.5, 4.8, 5.0, 5.2, 5.5, 5.8, 6.0, 6.2, 6.5, 6.8, 7.0, 7.2, 7.5, 7.8, 8.0, 8.2, 8.5, 8.8, 9.0, 9.2, 9.5, 9.8, 10.0, 10.2, 10.5, 10.8, 11.0, 11.2, 11.5, 11.8, 12.0, 12.2, 12.5, 12.8, 13.0, 13.2, 13.5, 13.8, 14.0, 14.2, 14.5, 14.8, 15.0, 15.2, 15.5, 15.8, 16.0, 16.2, 16.5, 16.8, 17.0, 17.2, 17.5, 17.8, 18.0, 18.2, 18.5, 18.8, 19.0, 19.2, 19.5, 19.8, 20.0, 20.2, 20.5, 20.8, 21.0, 21.2, 21.5, 21.8, 22.0, 22.2, 22.5, 22.8, 23.0, 23.2, 23.5, 23.8, 24.0, 24.2, 24.5, 24.8, 25.0]
-          POW: [0.0, 0.127, 0.178, 0.237, 0.305, 0.381, 0.468, 0.564, 0.671, 0.789, 0.919, 1.061, 1.216, 1.385, 1.567, 1.765, 1.977, 2.205, 2.45, 2.711, 2.99, 3.287, 3.602, 3.937, 4.291, 4.665, 5.06, 5.477, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 5.5, 0.0]
-          hub_height: 140.
-          P: 5.5
-  offwind-float: # disabled at the moment
-    landfall_length: 30
-    capacity_per_sqkm: 6
-    correction_factor: 0.95
+    cutout: default
+  offwind-float:
+    cutout: default
   solar:
-    correction_factor: 0.9 # scaling to Abbildung 36 of https://www.ise.fraunhofer.de/de/veroeffentlichungen/studien/aktuelle-fakten-zur-photovoltaik-in-deutschland.html
+    cutout: default
   solar-hsat:
-    correction_factor: 0.9 # scaling to Abbildung 36 of https://www.ise.fraunhofer.de/de/veroeffentlichungen/studien/aktuelle-fakten-zur-photovoltaik-in-deutschland.html
-
+    cutout: default
+  hydro:
+    cutout: default
 lines:
   dynamic_line_rating:
     cutout: default
@@ -170,101 +80,12 @@ clustering:
   temporal:
     resolution_sector: 365H
 
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#co2-budget
-co2_budget:
-  2020: 0.720 # average emissions of 2019 to 2021 relative to 1990, excl LULUCF, EEA data, European Environment Agency. (2023a). Annual European Union greenhouse gas inventory 1990–2021 and inventory report 2023 - CRF Table. https://unfccc.int/documents/627830
-  2025: 0.648 # With additional measures (WAM) projection, CO2 excl LULUCF, European Environment Agency. (2023e). Member States’ greenhouse gas (GHG) emission projections 2023. https://www.eea.europa.eu/en/datahub/datahubitem-view/4b8d94a4-aed7-4e67-a54c-0623a50f48e8
-  2030: 0.450 # 55% reduction by 2030 (Ff55)
-  2035: 0.250
-  2040: 0.100 # 90% by 2040
-  2045: 0.050
-  2050: 0.000 # climate-neutral by 2050
-
-wasserstoff_kernnetz:
-  enable: true
-  reload_locations: false
-  divide_pipes: true
-  pipes_segment_length: 50
-  border_crossing: true
-  aggregate_build_years: "mean"
-  recalculate_length: true
-  aggregate_parallel_pipes: true
-  ipcei_pci_only: false
-  cutoff_year: 2028
-  force_all_ipcei_pci: true
-
-new_decentral_fossil_boiler_ban:
-  DE: 2029
-
-coal_generation_ban:
-  DE: 2038
-
-nuclear_generation_ban:
-  DE: 2022
-
-first_technology_occurrence:
-  Link:
-    H2 pipeline: 2025
-    H2 Electrolysis: 2025
-    H2 pipeline retrofitted: 2025
-
-costs:
-  horizon: "mean" # "optimist", "pessimist" or "mean"
-  NEP: 2023
-  transmission: "overhead" # either overhead line ("overhead") or underground cable ("underground")
-
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#sector
 sector:
-  chp:
-    enable: true # why was this disabled in pspsa-de?
   v2g: true
   solar_thermal: true
-  district_heating:
-    potential: 0.3
-    progress:
-      2020: 0.0
-      2025: 0.15
-      2030: 0.3
-      2035: 0.45
-      2040: 0.6
-      2045: 0.8
-      2050: 1.0
-    subnodes:
-      enable: false
-      nlargest: 40
-      census_areas:
-        enable: true
-        min_district_heating_share: 0.01
-        processing:
-          min_area: [10000, 100000, 0, 1000000]
-          buffer_factor: [0.01, 0.05, 0.05, 0]
-      limit_ptes_potential:
-        enable: true
-        limit_mother_nodes: true
-        excluder_resolution: 10
-        osm_landcover_codes: [21, 23, 32, 33]
-        max_groundwater_depth: -10
-        min_area: 10000
-        default_capacity: 4500
-  heat_vent:
-    urban central: true
-    urban decentral: true
-    rural: true
-  co2_spatial: true
-  biomass_spatial: true
   biomass_transport: true
-  #TBD what to include in config
-  #relax so no infeasibility in 2050 with no land transport demand
-  min_part_load_fischer_tropsch: 0.
-  regional_methanol_demand: true  #set to true if regional CO2 constraints needed
-  regional_oil_demand: true  #set to true if regional CO2 constraints needed
-  regional_coal_demand: true  #set to true if regional CO2 constraints needed
+  regional_methanol_demand: true
   gas_network: true
-  regional_gas_demand: true
-  H2_retrofit: true
-  biogas_upgrading_cc: true
-  biomass_to_liquid: true
-  biomass_to_liquid_cc: true
   electrobiofuels: true
   biosng: true
   biosng_cc: true
@@ -297,427 +118,36 @@ sector:
     max_size: 25
     years_of_storage: 25
   co2_network: true
-  # calculated based on ariadne "Stock|Space Heating"
-  # and then 2% of buildings renovated per year to reduce their demand by 80%
-  reduce_space_heat_exogenously_factor:
-    2020: 0.0
-    2025: 0.07
-    2030: 0.14
-    2035: 0.21
-    2040: 0.29
-    2045: 0.36
-    2050: 0.43
-  land_transport_fuel_cell_share:
-    2020: 0.01
-    2025: 0.01
-    2030: 0.02
-    2035: 0.03
-    2040: 0.03
-    2045: 0.03
-    2050: 0.03
-  land_transport_electric_share:
-    2020: 0.05
-    2025: 0.15
-    2030: 0.3
-    2035: 0.45
-    2040: 0.72
-    2045: 0.87
-    2050: 0.97
-  land_transport_ice_share:
-    2020: 0.94
-    2025: 0.84
-    2030: 0.68
-    2035: 0.52
-    2040: 0.25
-    2045: 0.1
-    2050: 0.0
-  imports:
+  imports:  # this is for renewable gas/H2/methanol/oil imports
     enable: true
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#industry
-industry:
-  ammonia: false
-  St_primary_fraction:
-    2020: 0.6
-    2025: 0.55
-    2030: 0.5
-    2035: 0.45
-    2040: 0.4
-    2045: 0.35
-    2050: 0.3
-  DRI_fraction:
-    2020: 0
-    2025: 0
-    2030: 0.05
-    2035: 0.3
-    2040: 0.6
-    2045: 1
-    2050: 1
-#HVC primary/recycling based on values used in Neumann et al https://doi.org/10.1016/j.joule.2023.06.016, linearly interpolated between 2020 and 2050
-#2020 recycling rates based on Agora https://static.agora-energiewende.de/fileadmin/Projekte/2021/2021_02_EU_CEAP/A-EW_254_Mobilising-circular-economy_study_WEB.pdf
-#fractions refer to the total primary HVC production in 2020
-#assumes 6.7 Mtplastics produced from recycling in 2020
-  HVC_primary_fraction:
-    2020: 1.0
-    2025: 0.9
-    2030: 0.8
-    2035: 0.7
-    2040: 0.6
-    2045: 0.5
-    2050: 0.4
-  HVC_mechanical_recycling_fraction:
-    2020: 0.12
-    2025: 0.15
-    2030: 0.18
-    2035: 0.21
-    2040: 0.24
-    2045: 0.27
-    2050: 0.30
-  HVC_chemical_recycling_fraction:
-    2020: 0.0
-    2025: 0.0
-    2030: 0.04
-    2035: 0.08
-    2040: 0.12
-    2045: 0.16
-    2050: 0.20
-  # 15 Mt HVC production (from IDEES) -> 6 Mt Plastikabfälle,
-  # To substitute for other waste, assume all Plastikabfall is used energetically whereas in reality ~40% is recycled
-  # see https://github.com/PyPSA/pypsa-ariadne/pull/292
-  HVC_environment_sequestration_fraction:
-    2020: 0.6
-    2025: 0.6
-    2030: 0.6
-    2035: 0.6
-    2040: 0.6
-    2045: 0.6
-    2050: 0.6
-  waste_to_energy: true
-  waste_to_energy_cc: true
-  # gas compression seems incompatible with gas network. Pipeline connect
+  # gas compression seems incompatible with gas network. Pipelines connect
   # gas buses, however Generators in '{node} gas primary' buses introduce gas
   # energy at local nodes, which is then compressed to the local gas bus.
-  # As a result, gas is not transported via pipelines. (might be t)
+  # As a result, gas is not transported via pipelines.
+  # Note, that gas compression AC withdrawal still is implemented. Losses are
+  # for methane to atmosphere.
   gas_compression_losses: 0  # 0.04
-#  oil_refining_emissions: 0  # 0.013
+  # oil_refining_emissions: 0  # 0.013
 
-# docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#solving
 solving:
-  runtime: 12h
-  mem_mb: 70000 #30000 is OK for 22 nodes, 365H; 140000 for 22 nodes 3H; 400000 for 44 nodes 3H
-  options:
-    custom_extra_functionality: "../scripts/pypsa-de/additional_functionality.py"
-    assign_all_duals: true
-    load_shedding: false
-    skip_iterations: true # settings for post-discretization: false
-    min_iterations: 1 # settings for post-discretization: 1
-    max_iterations: 1 # settings for post-discretization: 1
-    post_discretization:
-      enable: false
-      line_unit_size: 1698
-      line_threshold: 0.3
-      link_unit_size:
-        DC: 1000
-        gas pipeline: 1500
-        gas pipeline new: 1500
-        H2 pipeline: 4700
-        H2 pipeline retrofitted: 4700
-      link_threshold:
-        DC: 0.3
-        gas pipeline: 0.3
-        gas pipeline new: 0.3
-        H2 pipeline: 0.05
-        H2 pipeline retrofitted: 0.05
-      fractional_last_unit_size: true
   constraints:
-    efuel_export_ban: false
-    limits_capacity_max:
-      Generator:
-        onwind:
-          DE:
-            2020: 54.5
-            2025: 69
-            2030: 115 # EEG2023 Ziel für 2030
-            2035: 160 # EEG2023 Ziel für 2040
-            2040: 250
-            2045: 250
-            2050: 250
-        offwind:
-          DE:
-            2020: 7.8
-            2025: 11.3
-            2030: 29.3 # uba Projektionsbericht and NEP without delayed BalWin 3
-            2035: 50 # Planned projects until 2035 (offshore_connection_points.csv) -1.3 GW for potential delays
-            2040: 65   # Planned projects until 2040 -1.5 GW for potential retirments
-            2045: 70
-            2050: 70
-        solar:
-          DE:
-            2020: 53.7
-            2025: 110 # EEG2023; assumes for 2026: 128 GW, assuming a fair share reached by end of 2025
-            2030: 235 # PV Ziel 2030 + 20 GW
-            2035: 400
-            2040: 800
-            2045: 1000
-            2050: 1000
-      Store:
-        co2 sequestered:
-          DE:
-            2020: 0
-            2025: 0
-            2030: 10000
-            2035: 20000
-            2040: 50000
-            2045: 80000
-            2050: 80000
-      Link:
-        methanolisation:
-          DE:
-            2030: 5.7
-            2035: 5.7
-            2040: 5.7
-            2045: 5.7
-            2050: 5.7
-        Fischer-Tropsch:
-          DE:
-            2030: 2.5
-            2035: 2.5
-            2040: 2.5
-            2045: 2.5
-            2050: 2.5
-        HVC to air:
-          DE:
-            2020: 0 # all HVC in Germany is either burned or recycled
-            2025: 0
-            2030: 0
-            2035: 0
-            2040: 0
-            2045: 0
-            2050: 0
     limits_capacity_min:
-      Generator:
-        onwind:
-          DE:
-            2030: 99    # Wind-an-Land Law 2028
-            2035: 115   # Wind-an-Land Law 2030
-            2040: 157   # target 2035
-            2045: 160   # target 2040
-        offwind:
-          DE:
-            2030: 22.5   # 75% Wind-auf-See Law
-            2035: 35
-            2040: 42
-            2045: 50
-        solar:
-          DE:
-              # EEG2023; Ziel for 2024: 88 GW and for 2026: 128 GW,
-              # assuming at least 1/3 of difference reached in 2025
-            2025: 101
-        electrolysis:
+      Link:
+        H2 Electrolysis:
           AT:
-            2030: 1.0  # GW
-  # For reference, this are the values specified in the laws
-  # limits_capacity_min:
-  #     Generator:
-  #       onwind:
-  #         DE:
-  #           2030: 115 # Wind-an-Land Law
-  #           2035: 157 # Wind-an-Land Law
-  #           2040: 160 # Wind-an-Land Law
-  #           2045: 160
-  #       offwind:
-  #         DE:
-  #           2030: 30 # Wind-auf-See Law
-  #           2035: 40 # 40 Wind-auf-See Law
-  #           # assuming at least 1/3 of difference reached in 2040
-  #           2040: 50
-  #           2045: 70 #70 Wind-auf-See Law
-  #       solar:
-  #         DE:
-  #           # EEG2023; Ziel for 2024: 88 GW and for 2026: 128 GW,
-  #           # assuming at least 1/3 of difference reached in 2025
-  #           2025: 101
-  #           2030: 215 # PV strategy
-  #           2035: 309
-  #           2040: 400 # PV strategy
-  #           2045: 400
-  #           # What about the EEG2023 "Strommengenpfad"?
-    # boundary condition of maximum volumes
-    limits_volume_max:
-      # constrain electricity import in TWh
-      electricity_import:
-        DE:
-          2020: -20
-          2025: 0
-          2030: 0
-          2035: 40
-          2040: 80
-          2045: 125
-          2050: 125
-      electrolysis:  # in TWh/a
-      # boundary condition lower?
-        DE:
-          2020: 0
-          2025: 5
-          2030: 45
-          2035: 130
-          2040: 215
-          2045: 300
-          2050: 300
-#        AT:   # Setting to unreasonably high values, because the settings is required if 'limits_volume_min' is to be used
-#          2020: 1_000
-#          2025: 1_000
-#          2030: 1_000
-#          2035: 1_000
-#          2040: 1_000
-#          2045: 1_000
-#          2050: 1_000
-      h2_derivate_import:
-      # boundary condition lower?
-        DE:
-          2020: 0
-          2025: 0
-          2030: 10
-          2035: 105
-          2040: 200
-          2045: 300
-          2050: 300
-      h2_import:
-      # boundary condition lower?
-        DE:
-          2020: 0
-          2025: 5
-          2030: 15
-          2035: 115
-          2040: 220
-          2045: 325
-          2050: 325
-    limits_volume_min:  # in TWh
-      electrolysis:
-        DE:
-          2020: 0
-          2025: 0
-          2030: 0
-          2035: 0
-          2040: 0
-          2045: 0
-          2050: 0
-#        AT:
-#          2020: 0
-#          2025: 0
-#          2030: 4.5  # EAG Ausbauziel: 1 GW Elektrolyseleistung 2030 bei 4500 VLH
-#          2035: 4.5
-#          2040: 4.5
-#          2045: 4.5
-#          2050: 4.5
-    limits_power_max: # in GW
-      DE:
-        2020: 15
-        2025: 15
-        2030: 20
-        2035: 25
-        2040: 30
-        2045: 35
-        2050: 35
+            # EAG Ausbauziel: 1 GW Elektrolyseleistung in Ö.
+            2030: 1
+            2040: 1
+            2050: 1
   solver:
     name: highs
     options: highs-default
 
 solver_options:
+  # https://ergo-code.github.io/HiGHS/dev/options/definitions/
   highs-default:
-    # refer to https://ergo-code.github.io/HiGHS/dev/options/definitions/
-    threads: 0  # automatic
+    threads: 0
 
-plotting:
-  tech_colors:
-    load: "#111100"
-    H2 pipeline (Kernnetz): '#6b3161'
-    renewable oil: '#c9c9c9'
-    urban central H2 retrofit CHP: '#ff0000'
-    H2 retrofit OCGT: '#ff0000'
-    H2 retrofit CCGT: '#ff0000'
-    H2 OCGT: '#ff0000'
-    H2 CCGT: '#ff0000'
-    urban central H2 CHP: '#ff0000'
-    renewable gas: '#e05b09'
-  countries:
-  - all
-  - DE
-  - AT
-  carriers:
-  - electricity
-  - heat
-  - H2
-  - urban central heat
-  - urban decentral heat
-  - rural heat
-  carrier_groups:
-    electricity: [AC, low_voltage]
-
-# overwrite in config.default.yaml
-#powerplants_filter: (DateOut >= 2019 or DateOut != DateOut)
-electricity:
-  renewable_carriers: [solar, solar-hsat, onwind, offwind-ac, offwind-dc, hydro] # removed offwind-float
-  powerplants_filter: (DateOut >= 2019 or DateOut != DateOut) and not (Country == "DE" and Set == "CHP")
-  custom_powerplants: true
-  custom_file: resources/german_chp.csv
-  estimate_renewable_capacities:
-    year: 2019
-  H2_plants_DE:
-    enable: true  # todo: do we want really this for pypsa-at?
-    start: 2030 # should be < force
-    force: 2035
-    cost_factor: 0.15 # repurposing cost of OCGT gas to H2 in % investment cost in EUR/MW source: Christidis et al (2023) - H2-Ready-Gaskraftwerke, Table 3 https://reiner-lemoine-institut.de/wp-content/uploads/2023/11/RLI-Studie-H2-ready_DE.pdf
-    efficiency_loss: 0.05
-
-pypsa_eur:
-  Bus:
-  - AC
-  Link:
-  - DC
-  Generator:
-  - onwind
-  - offwind-ac
-  - offwind-dc
-  - solar-hsat
-  - solar
-  - ror
-  StorageUnit:
-  - PHS
-  - hydro
-  Store: []
-
-co2_price_add_on_fossils:
-  # 2020: 25
-  # 2025: 60
-
-must_run:
-  2020:
-    DE:
-      lignite: 0.4
-      # biogas: 0.6
-
-transmission_projects:
-  new_link_capacity: keep #keep or zero
-
-onshore_nep_force:
-  cutin_year: 2020
-  cutout_year: 2030
-
-#beware - may need to increase max offshore
-#to avoid infeasibilities
-offshore_nep_force:
-  cutin_year: 2025
-  cutout_year: 2030
-  delay_years: 0
-
-# only works for Links -> Thus not well suited to update transmission grids
-scale_capacity:  # in MW
-  2020:
-    DE:
-      CCGT: 10000
-      "urban central gas CHP": 22000
-
-# pypsa-at modifications
 mods:
   modify_nuts3_shapes: true
   modify_austrian_transmission_capacities: true  # scale_capacity does not work for Line components

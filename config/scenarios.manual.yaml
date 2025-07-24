@@ -241,8 +241,8 @@ AT10_KN2040:
 # Basisszenario für PyPSA-AT mit Anpassungen des KN2045_Mix Szenarios aus PyPSA-DE with
 #   * custom administrative clustering für Austrian regions
 #   * calibrations
-  run:
-    prefix: v2025.03   # PyPSA-AT scenario names
+#  run:
+#    prefix: v2025.03   # PyPSA-AT scenario names
 
   # restore pypsa-eur defaults
   countries: ['AL', 'AT', 'BA', 'BE', 'BG', 'CH', 'CZ', 'DE', 'DK', 'EE', 'ES', 'FI', 'FR', 'GB', 'GR', 'HR', 'HU', 'IE', 'IT', 'LT', 'LU', 'LV', 'ME', 'MK', 'NL', 'NO', 'PL', 'PT', 'RO', 'RS', 'SE', 'SI', 'SK', 'XK']
