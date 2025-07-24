@@ -30,7 +30,7 @@ if __name__ == "__main__":
 
     configure_logging(snakemake)
     set_scenario_config(snakemake)
-    coco.logging.getLogger().setLevel(coco.logging.CRITICAL)
+    coco.logging.getLogger().setLevel(logging.CRITICAL)
 
     cutout = load_cutout(snakemake.input.cutout)
 
