@@ -435,6 +435,7 @@ def add_power_capacities_installed_before_baseyear(
                         bus0 = spatial.biogas.df.loc[new_capacity.index, "nodes"].values
                     else:
                         logger.error(f"Generator {generator} not recognized.")
+                        raise ValueError(f"Generator {generator} not recognized.")
 
                     # We assume the electrical efficiency of a CHP for the biomass and biogas power plants
                     # The EOP from technology data seems to be somewhat too efficient

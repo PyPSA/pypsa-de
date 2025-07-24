@@ -8,7 +8,7 @@ ExPol:
 # Kernnetz is not assumed to be built
 # Not forcing renewables after 2030
 
-  iiasa_database:
+  pypsa-de:
     reference_scenario: ExPol
 
   co2_budget_DE_source: UBA
@@ -80,7 +80,7 @@ KN2045_Elek:
 # Ausbau der erneuerbaren Stromerzeugung erreicht politisch gesetzte Ziele
 # Importe erneuerbar erzeugter Energien auf mittlerem Niveau
 
-  iiasa_database:
+  pypsa-de:
     reference_scenario: KN2045_Elek
 
   solving:
@@ -135,7 +135,7 @@ KN2045_H2:
 # Direkte Elektrifizierung spielt dennoch wesentliche Rolle bei der Dekarbonisierung der Endenergie
 # Ausbau der erneuerbaren Stromerzeugung erreicht politisch gesetzte Ziele
 
-  iiasa_database:
+  pypsa-de:
     reference_scenario: KN2045_H2
 
   solving:
@@ -204,7 +204,7 @@ KN2045_NFniedrig:
 # Importe erneuerbar erzeugter Energien auf mittlerem Niveau
 # dient als Referenzszenario in der Familie der Ariadne-Szenarien
 
-  iiasa_database:
+  pypsa-de:
     reference_scenario: KN2045_NFniedrig
 
   sector:
@@ -224,7 +224,7 @@ KN2045_NFhoch:
 # Importe erneuerbar erzeugter Energien auf mittlerem Niveau
 # dient als Referenzszenario in der Familie der Ariadne-Szenarien
 
-  iiasa_database:
+  pypsa-de:
     reference_scenario: KN2045_NFhoch
 
   sector:
