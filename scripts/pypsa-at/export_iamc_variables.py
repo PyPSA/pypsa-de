@@ -800,7 +800,9 @@ def collect_primary_energy():
     primary_heat()
     primary_methanol()
 
-    assert filter_by(SUPPLY, component="Generator").empty
+    assert filter_by(SUPPLY, component="Generator").empty, (
+        f"Generators are not empty: {filter_by(SUPPLY, component='Generator')}"
+    )
     assert IMPORT_DOMESTIC.empty, f"Import domestic is not empty: {IMPORT_DOMESTIC}"
     assert IMPORT_FOREIGN.empty, f"Import foreign is not empty: {IMPORT_FOREIGN}"
 
@@ -814,6 +816,7 @@ def collect_storage_imbalances():
         "urban central water tanks": "Water Tank",  # Storage losses
         "coal": "Coal",  # FixMe: small unexplained imbalance accepted for now
         "PHS": "PHS",  # Pump efficiency
+        # "non-sequestered HVC": "Waste"
     }
 
     for carrier in filter_by(SUPPLY, component=comps).index.unique("carrier"):
@@ -826,9 +829,10 @@ def collect_storage_imbalances():
                 f"Store imbalances detected for carrier {carrier} with "
                 f"total imbalance of {balance.groupby('year').sum()}."
             )
-            # should raise KeyError if bc is not registered
             bc = balance.index.unique("bus_carrier").item()
-            tech = imbalanced_techs[carrier]
+            tech = imbalanced_techs[
+                carrier
+            ]  # raises KeyError if carrier is not registered
             var[f"{SECONDARY}|Losses|{BC_ALIAS[bc]}|{tech}"] = balance.groupby(
                 IDX
             ).sum()
@@ -932,6 +936,7 @@ def collect_secondary_energy():
     transform_link(technology="CHP CC", carrier="waste CHP CC")
 
     transform_link(technology="Powerplant", carrier=["CCGT", "OCGT"])
+    transform_link(technology="Powerplant", carrier="H2 OCGT")
     transform_link(technology="Powerplant", carrier="coal")
     transform_link(technology="Powerplant", carrier="lignite")
     transform_link(technology="Powerplant", carrier="solid biomass")
@@ -983,6 +988,7 @@ def collect_secondary_energy():
             "urban decentral air heat pump",
             "rural air heat pump",
             "urban central air heat pump",
+            "urban central ptes heat pump",
         ],
     )
 
