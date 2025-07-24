@@ -268,23 +268,23 @@ AT10_KN2040:
         time: ['2013', '2013']
   renewable:
     onwind:
-      cutout: europe-2019-sarah3-era5
+      cutout: europe-2013-sarah3-era5
     offwind-ac:
-      cutout: europe-2019-sarah3-era5
+      cutout: europe-2013-sarah3-era5
     offwind-dc:
-      cutout: europe-2019-sarah3-era5
+      cutout: europe-2013-sarah3-era5
     offwind-float:
-      cutout: europe-2019-sarah3-era5
+      cutout: europe-2013-sarah3-era5
     solar:
-      cutout: europe-2019-sarah3-era5
+      cutout: europe-2013-sarah3-era5
     solar-hsat:
-      cutout: europe-2019-sarah3-era5
+      cutout: europe-2013-sarah3-era5
     hydro:
-      cutout: europe-2019-sarah3-era5
+      cutout: europe-2013-sarah3-era5
 
   lines:
     dynamic_line_rating:
-      cutout: europe-2019-sarah3-era5
+      cutout: europe-2013-sarah3-era5
 
   clustering:
     mode: administrative
