@@ -52,6 +52,7 @@ def modify_austrian_transmission_capacities(
         n.static(c).update(overwrite)
 
     # todo: test if 2020 capacities are in result network
+    # todo: support all years. currently only 2020 is possible
 
 
 def modify_austrian_industry_demand(existing_industry, year):
@@ -72,3 +73,48 @@ def modify_biomass_potentials():
 
 def modify_heat_demand():
     """Update heat demands."""
+
+
+def add_natural_gas_import(n, snakemake):
+    """Add natural gas import generators."""
+
+    import_config = snakemake.config["sector"]["imports"]
+
+    if not import_config["enable"]:
+        return
+
+    logger.info("Adding natural gas import generators.")
+    import_options = import_config["price"]
+    gas_input_nodes = pd.read_csv(
+        snakemake.input.gas_input_nodes_simplified, index_col=0
+    )
+
+    if lng_price := import_options.get("gas_lng"):
+        p_nom = gas_input_nodes["lng"].dropna()
+        p_nom.rename(lambda x: x + " gas", inplace=True)
+        nodes = p_nom.index
+        n.add(
+            "Generator",
+            nodes,
+            suffix=" import lng",
+            bus=nodes,
+            carrier="gas",
+            p_nom_extendable=True,
+            marginal_cost=lng_price,
+            p_nom=p_nom,
+        )
+
+    if pipeline_price := import_options.get("gas_pipeline"):
+        p_nom = gas_input_nodes["pipeline"].dropna()
+        p_nom.rename(lambda x: x + " gas", inplace=True)
+        nodes = p_nom.index
+        n.add(
+            "Generator",
+            nodes,
+            suffix=" import pipeline",
+            bus=nodes,
+            carrier="gas",
+            p_nom_extendable=True,
+            marginal_cost=pipeline_price,
+            p_nom=p_nom,
+        )
