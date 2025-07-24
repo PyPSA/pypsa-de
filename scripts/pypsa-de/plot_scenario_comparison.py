@@ -18,7 +18,7 @@ def scenario_plot(df, var):
     prefix = snakemake.config["run"]["prefix"]
     var = var.replace("|", "-").replace("\\", "-").replace(" ", "-").replace("/", "-")
     ax.figure.savefig(
-        f"results/{prefix}/scenario_comparison/{var}", bbox_inches="tight"
+        f"results/{prefix}/scenario_comparison/{var}", bbox_inches="tight", dpi=100
     )
     plt.close(ax.figure)
 
