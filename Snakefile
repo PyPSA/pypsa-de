@@ -852,6 +852,8 @@ rule plot_ariadne_variables:
 
 
 rule ariadne_all:
+    params:
+        output_dir="results/" + config["run"]["prefix"] + "/scenario_comparison/",
     input:
         expand(RESULTS + "graphs/costs.svg", run=config_provider("run", "name")),
         # expand(
@@ -1078,6 +1080,8 @@ rule regret_all:
 
 
 rule regret_all_variables:
+    params:
+        output_dir="results/" + config["run"]["prefix"] + "/regret_comparison/",
     input:
         exported_variables=expand(
             RESULTS + "regret_variables/regret_variables_{decision}_full.xlsx",
