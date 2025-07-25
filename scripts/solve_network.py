@@ -26,7 +26,9 @@ Additionally, some extra constraints specified in :mod:`solve_network` are added
     based on the rule :mod:`solve_network`.
 """
 
+import contextlib
 import importlib
+import io
 import logging
 import os
 import pathlib
@@ -1378,9 +1380,12 @@ def solve_network(
         raise RuntimeError("Solving status 'warning'. Discarding solution.")
 
     if "infeasible" in condition:
-        labels = n.model.compute_infeasibilities()
-        logger.info(f"Labels:\n{labels}")
-        n.model.print_infeasibilities()
+        # labels = n.model.compute_infeasibilities()
+        # logger.info(f"Labels:\n{labels}")
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            n.model.print_infeasibilities()
+        logger.info(buf.getvalue())
         raise RuntimeError("Solving status 'infeasible'. Infeasibilities computed.")
 
     if status == "warning":
