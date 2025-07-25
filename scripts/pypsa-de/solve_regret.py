@@ -29,10 +29,17 @@ def fix_capacities(realization, decision):
         new = getattr(n, name)
         deci = getattr(decision, name)
 
-        if not new.index.equals(deci.index):
+        if not new.index.symmetric_difference(deci.index).empty:
             logger.error(
                 f"Indices of {name} in realization and decision networks do not match. "
                 "This may lead to unexpected results."
+            )
+            assert (
+                new.query(f"{attr}_extendable")
+                .index.symmetric_difference(deci.query(f"{attr}_extendable").index)
+                .empty
+            ), (
+                f"Indices of {name} with {attr}_extendable in realization and decision networks do not match."
             )
             # raise ValueError("Indices of realization and decision networks do not match.")
 
@@ -43,22 +50,25 @@ def fix_capacities(realization, decision):
         extendable_i = new.query(f"{attr}_extendable").index
 
         if not deci.query(f"{attr}_opt > {attr}_max").empty:
-            logger.error(
+            logger.warning(
                 f"Decision network have {name} with {attr}_opt > {attr}_max. "
-                "This may lead to unexpected results."
                 f"These assets are: {deci.query(f'{attr}_opt > {attr}_max').index.tolist()}"
             )
             _idx = deci.query(f"{attr}_opt > {attr}_max").index
-            deci.loc[_idx, attr + "_max"] = deci.loc[_idx, attr + "_opt"] = np.minimum(
-                deci.loc[_idx, attr + "_max"], deci.loc[_idx, attr + "_opt"]
+            deci.loc[_idx, attr + "_opt"] = deci.loc[_idx, attr + "_max"]
+            logger.warning(
+                f"Setting {name} with {attr}_opt > {attr}_max to {attr}_max."
             )
 
         if not deci.query(f"{attr}_min > {attr}_opt").empty:
-            logger.error(
+            ValueError(
                 f"Decision network have {name} with {attr}_min > {attr}_opt. "
                 "This may lead to unexpected results."
                 f"These assets are: {deci.query(f'{attr}_min > {attr}_opt').index.tolist()}"
             )
+            _idx = deci.query(f"{attr}_min > {attr}_opt").index
+            deci.loc[_idx, attr + "_opt"] = deci.loc[_idx, attr + "_min"]
+
         new.loc[common_i, attr] = deci.loc[common_i, attr]
         new.loc[common_i, attr + "_opt"] = deci.loc[common_i, attr + "_opt"]
         new.loc[common_i, attr + "_min"] = deci.loc[common_i, attr + "_min"]
@@ -82,7 +92,6 @@ def fix_capacities(realization, decision):
                 "shipping oil",
                 "kerosene for aviation",
                 "agriculture machinery oil",
-                # "urban central water pits charger", # This should have no effect on results since e_nom of the water pits store remains fixed and the energy to power ratio constraints force them to be the same, however it may avoid infeasibilitiesl
             ]
             # TODO double check if these are all needed
             essential_links = [
@@ -96,14 +105,22 @@ def fix_capacities(realization, decision):
                 "methanolisation",
                 "rural gas boiler",
                 "urban decentral gas boiler",
+                "urban central gas CHP",
+                # For 2035
+                "rural biomass boiler",
+                "urban decentral biomass boiler",
+                "DAC",
             ]
             links_to_free = virtual_links + essential_links + bottleneck_links
-            _idx = new.carrier.isin(links_to_free).index.intersection(extendable_i)
+            _idx = new.loc[new.carrier.isin(links_to_free)].index.intersection(
+                extendable_i
+            )
             new.loc[_idx, "p_nom_extendable"] = True
             # For essential links and bottleneck links allow more, but not less
-            _idx = new.carrier.isin(
-                essential_links + bottleneck_links
-            ).index.intersection(extendable_i)
+            links_to_limit = essential_links + bottleneck_links
+            _idx = new.loc[new.carrier.isin(links_to_limit)].index.intersection(
+                extendable_i
+            )
             new.loc[_idx, "p_nom_min"] = new.loc[_idx, "p_nom_opt"]
 
         if name == "generators":
@@ -119,37 +136,32 @@ def fix_capacities(realization, decision):
                 "rural heat vent",
                 "urban decentral heat vent",
             ]
-            _idx = new.carrier.isin(fuels + vents).index.intersection(extendable_i)
+            _idx = new.loc[new.carrier.isin(fuels + vents)].index.intersection(
+                extendable_i
+            )
             new.loc[_idx, "p_nom_extendable"] = True
             # For fuels allow more, but not less
-            _idx = new.carrier.isin(fuels).index.intersection(extendable_i)
+            _idx = new.loc[new.carrier.isin(fuels)].index.intersection(extendable_i)
             new.loc[_idx, "p_nom_min"] = new.loc[_idx, "p_nom_opt"]
 
         if name == "stores":
             # there is only one co2 atmosphere store which is always extendable, hence no intersection with extendable_i needed
-            new.loc[new.carrier == "co2", "e_nom_extendable"] = True
+            _idx = new.query("carrier == 'co2'").index
+            new.loc[_idx, "e_nom_extendable"] = True
 
             # Just making sure that the defaults are set correctly
-            assert (new.loc[new.carrier == "co2", "e_nom_min"] == 0).all()
-            assert (new.loc[new.carrier == "co2", "e_nom_max"] == np.inf).all()
-            assert (new.loc[new.carrier == "co2", "e_nom"] == 0).all()
+            assert (new.loc[_idx, "e_nom_min"] == 0).all()
+            assert (new.loc[_idx, "e_nom_max"] == np.inf).all()
+            assert (new.loc[_idx, "e_nom"] == 0).all()
 
             # TODO double check if these are all needed
             co2_stores = ["co2 stored", "co2 sequestered"]
-            _idx = new.carrier.isin(co2_stores).index.intersection(extendable_i)
-            new.loc[_idx, "e_nom_extendable"] = True
-            # Allow less, but not more
-            new.loc[_idx, "e_nom_max"] = new.loc[_idx, "e_nom_opt"]
-
-            _idx = new.carrier.isin(["urban central water pits"]).index.intersection(
+            _idx = new.loc[new.carrier.isin(co2_stores)].index.intersection(
                 extendable_i
             )
-            new.loc[_idx, "e_nom_extendable"] = (
-                True  # This should have no effect on results as long as p_nom of the water pits charger remains fixed and the energy to power ratio constraints force them to be the same, however it may avoid infeasibilities
-            )
-            new.loc[_idx, "e_nom_min"] = 0
-            new.loc[_idx, "e_nom_max"] = np.inf
-            new.loc[_idx, "e_nom"] = 0
+            new.loc[_idx, "e_nom_extendable"] = True
+            # TODO this should probably be active -  Allow less, but not more
+            # new.loc[_idx, "e_nom_max"] = new.loc[_idx, "e_nom_opt"]
 
     return n
 
@@ -162,8 +174,8 @@ if __name__ == "__main__":
             opts="",
             sector_opts="none",
             planning_horizons="2030",
-            decision="KN2045_Mix",
-            run="LowDemand",
+            decision="LowDemand",
+            run="AriadneDemand",
         )
 
     configure_logging(snakemake)
@@ -173,15 +185,6 @@ if __name__ == "__main__":
     solve_opts = snakemake.params.solving["options"]
 
     np.random.seed(solve_opts.get("seed", 123))
-
-    # if snakemake.input.realization == snakemake.input.decision:
-    #     import os
-    #     import sys
-
-    #     src = os.path.abspath(snakemake.input.realization)
-    #     dst = os.path.abspath(snakemake.output.regret_network)
-    #     os.symlink(src, dst)
-    #     sys.exit(0)
 
     logger.info("Loading realization and decision networks")
 
@@ -199,7 +202,10 @@ if __name__ == "__main__":
     )
 
     n = fix_capacities(realization, decision)
-
+    # TODO remove this attempt at a hotfix
+    n.links.loc[n.links.carrier == "methanolisation", "p_min_pu"] = 0.0
+    # n.links.loc[n.links.carrier.str.contains('vent'), 'p_max_pu'] = 1.0
+    n_pre = n.copy()
     with memory_logger(
         filename=getattr(snakemake.log, "memory", None), interval=logging_frequency
     ) as mem:
