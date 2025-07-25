@@ -15,11 +15,8 @@ def scenario_plot(df, var):
         unit = "billion EUR2020/yr"
     df = df.droplevel("Unit")
     ax = df.T.plot(xlabel="years", ylabel=str(unit), title=str(var))
-    prefix = snakemake.config["run"]["prefix"]
     var = var.replace("|", "-").replace("\\", "-").replace(" ", "-").replace("/", "-")
-    ax.figure.savefig(
-        f"results/{prefix}/scenario_comparison/{var}", bbox_inches="tight", dpi=100
-    )
+    ax.figure.savefig(snakemake.params.output_dir + var, bbox_inches="tight", dpi=100)
     plt.close(ax.figure)
 
 
