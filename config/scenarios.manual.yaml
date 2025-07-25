@@ -73,6 +73,9 @@ KN2045_Mix:
 # Importe erneuerbar erzeugter Energien auf mittlerem Niveau
 # dient als Referenzszenario in der Familie der Ariadne-Szenarien
 
+AriadneDemand:
+  electricity:
+    transmission_limit: v1
 
 LowDemand:
   iiasa_database:
@@ -100,7 +103,8 @@ LowDemand:
           H2 electrolysis:
             DE:
               2030: 0
-
+  electricity:
+    transmission_limit: v1
 
 KN2045_Elek:
 # Fokus auf dem Hochlauf von Technologien zur direkten Elektrifizierung der Sektoren

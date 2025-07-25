@@ -4,10 +4,11 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20250718_improve_heat_pump_demand
+  prefix: 20250725_regrets
   name:
   # - ExPol
-  - KN2045_Mix
+  # - KN2045_Mix
+  - AriadneDemand
   - LowDemand
   # - KN2045_Elek
   # - KN2045_H2
@@ -54,8 +55,6 @@ foresight: myopic
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#scenario
 # Wildcard docs in https://pypsa-eur.readthedocs.io/en/latest/wildcards.html
 scenario:
-  ll:
-  - vopt
   clusters:
   - 27 #current options: 27, 49
   opts:
