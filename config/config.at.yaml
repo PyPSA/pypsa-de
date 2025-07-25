@@ -1,13 +1,9 @@
 # Basisszenario für PyPSA-AT mit Anpassungen des KN2045_Mix Szenarios aus PyPSA-DE with
 #   * custom administrative clustering für Austrian regions
 #   * calibrations
-#  run:
-#    prefix: v2025.03   # PyPSA-AT scenario names
 
-# restore pypsa-eur defaults
-
-#run:
-#  prefix: v2025.03
+run:
+  prefix: v2025.03
 
 countries: ['AL', 'AT', 'BA', 'BE', 'BG', 'CH', 'CZ', 'DE', 'DK', 'EE', 'ES', 'FI', 'FR', 'GB', 'GR', 'HR', 'HU', 'IE', 'IT', 'LT', 'LU', 'LV', 'ME', 'MK', 'NL', 'NO', 'PL', 'PT', 'RO', 'RS', 'SE', 'SI', 'SK', 'XK']
 scenario:
@@ -120,6 +116,8 @@ sector:
   co2_network: true
   imports:  # this is for renewable gas/H2/methanol/oil imports
     enable: true
+
+industry:
   # gas compression seems incompatible with gas network. Pipelines connect
   # gas buses, however Generators in '{node} gas primary' buses introduce gas
   # energy at local nodes, which is then compressed to the local gas bus.
@@ -135,7 +133,8 @@ solving:
       Link:
         H2 Electrolysis:
           AT:
-            # EAG Ausbauziel: 1 GW Elektrolyseleistung in Ö.
+            # EAG Ausbauziel: 1 GW Elektrolyseleistung in MW_el in Ö.
+            # setting p_nom_opt here, which already is for M2_el input
             2030: 1
             2040: 1
             2050: 1

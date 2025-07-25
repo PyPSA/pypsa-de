@@ -570,6 +570,9 @@ rule modify_prenetwork:
         bev_dsm_availability=config_provider("sector", "bev_dsm_availability"),
     input:
         austrian_transmission_capacities="data/austrian_transmission_capacities.csv",
+        gas_input_nodes_simplified=resources(
+            "gas_input_locations_s_{clusters}_simplified.csv"
+        ),
         costs_modifications="ariadne-data/costs_{planning_horizons}-modifications.csv",
         network=resources(
             "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_brownfield.nc"

@@ -470,9 +470,41 @@ def primary_gas():
     prefix = f"{PRIMARY}|{BC_ALIAS[bc]}"
     var[f"{prefix}|Import Foreign"] = _extract(IMPORT_FOREIGN, bus_carrier=bc)
     var[f"{prefix}|Import Domestic"] = _extract(IMPORT_DOMESTIC, bus_carrier=bc)
-    var[f"{prefix}|Production"] = _extract(
+
+    # split generator types by Generator component name
+    natural_gas_generators = collect_myopic_statistics(
+        networks,
+        "supply",
+        groupby=["location", "name", "unit"],
+        bus_carrier="gas",
+        comps="Generator",
+        drop_unit=False,
+    )
+    var[f"{prefix}|Global Import LNG"] = (
+        natural_gas_generators.filter(like="gas lng import").groupby(IDX).sum()
+    )
+    var[f"{prefix}|Global Import Pipeline"] = (
+        natural_gas_generators.filter(like="gas pipeline import").groupby(IDX).sum()
+    )
+    var[f"{prefix}|Production"] = (
+        natural_gas_generators.filter(like="gas production").groupby(IDX).sum()
+    )
+
+    # remove all gas generators from global SUPPLY
+    gas_generation = _extract(
         SUPPLY, carrier="gas", bus_carrier=bc, component="Generator"
     )
+    assert (
+        gas_generation.sum()
+        == pd.concat(
+            [
+                var[f"{prefix}|Global Import LNG"],
+                var[f"{prefix}|Global Import Pipeline"],
+                var[f"{prefix}|Production"],
+            ]
+        ).sum()
+    )
+
     var[f"{prefix}|Import Global"] = _extract(
         SUPPLY,
         carrier="import gas",
@@ -816,7 +848,7 @@ def collect_storage_imbalances():
         "urban central water tanks": "Water Tank",  # Storage losses
         "coal": "Coal",  # FixMe: small unexplained imbalance accepted for now
         "PHS": "PHS",  # Pump efficiency
-        # "non-sequestered HVC": "Waste"
+        "non-sequestered HVC": "Waste",
     }
 
     for carrier in filter_by(SUPPLY, component=comps).index.unique("carrier"):
@@ -1175,7 +1207,7 @@ if __name__ == "__main__":
         .mul(-1)
     )
 
-    # global metrics
+    # Remove duplicated transmission technologies from global metrics
     drop_transmission_technologies()
 
     # collect transformed energy system variables. Note, that the order of

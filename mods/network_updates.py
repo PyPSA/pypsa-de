@@ -4,6 +4,7 @@ from logging import getLogger
 
 import pandas as pd
 import pypsa
+from snakemake.script import Snakemake
 
 logger = getLogger(__name__)
 
@@ -75,46 +76,71 @@ def modify_heat_demand():
     """Update heat demands."""
 
 
-def add_natural_gas_import(n, snakemake):
-    """Add natural gas import generators."""
+def unravel_gas_import_and_production(
+    n: pypsa.Network, snakemake: Snakemake, costs: pd.DataFrame
+):
+    """
+    Differentiate LNG, pipeline and production gas generators.
 
-    import_config = snakemake.config["sector"]["imports"]
+    Production is cheaper than pipeline gas and LNG is
+    more expensive than pipeline gas.
 
-    if not import_config["enable"]:
+    Parameters
+    ----------
+    n
+        The network before optimisation.
+    snakemake
+        The snakemake workflow object.
+    costs
+        The costs data for the current planning horizon.
+
+    Returns
+    -------
+    :
+    """
+    gas_generators = n.static("Generator").query("carrier == 'gas'")
+    if gas_generators.empty and snakemake.config["industry"].get(
+        "gas_compression_losses", 0
+    ):
+        logger.debug(
+            "Skipping unravel gas generators because industry.gas_compression_losses is set."
+        )
+        # the function fails if Generators is empty and compression losses == 0
         return
 
-    logger.info("Adding natural gas import generators.")
-    import_options = import_config["price"]
+    logger.info("Unravel gas import types.")
     gas_input_nodes = pd.read_csv(
         snakemake.input.gas_input_nodes_simplified, index_col=0
     )
 
-    if lng_price := import_options.get("gas_lng"):
-        p_nom = gas_input_nodes["lng"].dropna()
+    # remove combined gas generators
+
+    n.remove("Generator", gas_generators.index)
+    ariadne_gas_fuel_price = costs.at["gas", "fuel"]
+
+    for marginal_cost_scaling_factor, import_type in [
+        (1.2, "lng"),
+        (1, "pipeline"),
+        (0.95, "production"),
+    ]:
+        p_nom = gas_input_nodes[import_type].dropna()
         p_nom.rename(lambda x: x + " gas", inplace=True)
         nodes = p_nom.index
         n.add(
             "Generator",
             nodes,
-            suffix=" import lng",
+            suffix=" production"
+            if import_type == "production"
+            else f" {import_type} import",
             bus=nodes,
             carrier="gas",
-            p_nom_extendable=True,
-            marginal_cost=lng_price,
+            p_nom_extendable=False,
+            marginal_cost=ariadne_gas_fuel_price * marginal_cost_scaling_factor,
             p_nom=p_nom,
         )
 
-    if pipeline_price := import_options.get("gas_pipeline"):
-        p_nom = gas_input_nodes["pipeline"].dropna()
-        p_nom.rename(lambda x: x + " gas", inplace=True)
-        nodes = p_nom.index
-        n.add(
-            "Generator",
-            nodes,
-            suffix=" import pipeline",
-            bus=nodes,
-            carrier="gas",
-            p_nom_extendable=True,
-            marginal_cost=pipeline_price,
-            p_nom=p_nom,
-        )
+    old_p_nom = gas_generators["p_nom"].sum()
+    new_p_nom = n.static("Generator").query("carrier == 'gas'")["p_nom"].sum()
+    assert old_p_nom.round(8) == new_p_nom.round(8), (
+        f"Unraveling imports changed total capacities: old={old_p_nom}, new={new_p_nom}."
+    )
