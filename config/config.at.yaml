@@ -6,7 +6,7 @@ run:
   prefix: v2025.03
   name:
 #  - ExPol
-  - AT10_KN2040
+#  - AT10_KN2040
   - KN2045_Mix
 #  - KN2045_Elek
 #  - KN2045_H2

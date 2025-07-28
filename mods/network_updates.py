@@ -128,7 +128,7 @@ def unravel_gas_import_and_production(
     ariadne_gas_fuel_price = costs.at["gas", "fuel"]
     cost_factors = config["mods"]["unravel_natural_gas_imports"]
 
-    for marginal_cost_scaling_factor, import_type in ("lng", "pipeline", "production"):
+    for import_type in ("lng", "pipeline", "production"):
         cost_factor = cost_factors[import_type]
         p_nom = gas_input_nodes[import_type].dropna()
         p_nom.rename(lambda x: x + " gas", inplace=True)
@@ -151,7 +151,37 @@ def unravel_gas_import_and_production(
 
     # make sure that the total gas generator capacity was not changed by this modification
     old_p_nom = gas_generators["p_nom"].sum()
-    new_p_nom = n.static("Generator").query("carrier == 'gas'")["p_nom"].sum()
+    new_p_nom = (
+        n.static("Generator").query("carrier.str.endswith(' gas')")["p_nom"].sum()
+    )
     assert old_p_nom.round(8) == new_p_nom.round(8), (
         f"Unraveling imports changed total capacities: old={old_p_nom}, new={new_p_nom}."
     )
+
+
+def unravel_electricity_base_load(n: pypsa.Network, snakemake: Snakemake) -> None:
+    """
+    Split electricity bas load into sectoral loads.
+
+    Parameters
+    ----------
+    n
+    snakemake
+
+    Returns
+    -------
+    :
+    """
+    config = snakemake.config
+    print(config)
+
+    # base load is from: https://nbviewer.org/github/Open-Power-System-Data/datapackage_timeseries/blob/2020-10-06/main.ipynb
+    # total load=total generation−auxilary/self−consumption in power plants+imports−exports−consumption by storages
+    base_load = n.static("Load").query("carrier == 'electricity'")
+    print(base_load)
+
+    # rail demand from sectoral loads
+
+    # todo: households and services
+    # todo: electricity transport rail
+    # todo: electricity industry
