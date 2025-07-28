@@ -28,7 +28,7 @@ class ESMChart:
         The plotly configuration.
     """
 
-    # todo: avoid inheritance and use MixIn instead
+    # todo: avoid inheritance and use MixIns instead
 
     def __init__(self, df: pd.DataFrame, cfg: PlotConfig) -> None:
         self._df = df
@@ -81,7 +81,9 @@ class ESMChart:
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="esmtools" content="{{ esmtools }}" />
+<meta name="repo_name" content="{{ repo_name }}" />
+<meta name="repo_branch" content="{{ repo_branch }}" />
+<meta name="repo_hash" content="{{ repo_hash }}" />
 </head>
 <body>
     {{ fig }}

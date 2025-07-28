@@ -192,6 +192,7 @@ exports = []
 name = "Gas Storage Volumes"
 unit = "TWh"
 file_name = "capacity_gas_storage_{location}"
+chart = "ESMBarChart"
 bus_carrier = ["H2", "gas"]  # "co2 sequestered"
 cutoff = 0.00001  # 1 MWh
 legend_order = ["Methane Store", "Hydrogen Store"]

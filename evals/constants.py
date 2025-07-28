@@ -8,8 +8,9 @@ import importlib
 import re
 from datetime import datetime as dt
 from importlib.metadata import PackageNotFoundError
-from subprocess import CalledProcessError, check_output
+from subprocess import CalledProcessError
 
+import git
 from frozendict import frozendict
 
 # represents constants import time
@@ -1593,12 +1594,15 @@ except PackageNotFoundError:
     esmtools_version = "esmtools not installed."
 
 try:
-    git_hash = check_output("git rev-parse HEAD").strip().decode("utf-8")
+    repo = git.Repo(search_parent_directories=True)
+    branch = repo.active_branch.name
+    repo_name = repo.remotes.origin.url.split(".git")[0].split("/")[-1]
+    git_hash = repo.head.object.hexsha
 except (CalledProcessError, FileNotFoundError):
-    git_hash = "Not a git repo."
+    repo_name = branch = git_hash = "Not a git repo."
 
 RUN_META_DATA = {
-    "esmtools": f"{esmtools_version} ({git_hash})",
-    # todo: include model version and git hash
-    # todo: include model input data version and git hash
+    "repo_name": repo_name,
+    "repo_branch": branch,
+    "repo_hash": git_hash,
 }
