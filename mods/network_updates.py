@@ -76,6 +76,10 @@ def modify_heat_demand():
     """Update heat demands."""
 
 
+def electricity_base_load_split(n: pypsa.Network, snakemake: Snakemake):
+    """Split electricity base load to sectoral loads."""
+
+
 def unravel_gas_import_and_production(
     n: pypsa.Network, snakemake: Snakemake, costs: pd.DataFrame
 ):
@@ -98,14 +102,20 @@ def unravel_gas_import_and_production(
     -------
     :
     """
+    config = snakemake.config
     gas_generators = n.static("Generator").query("carrier == 'gas'")
-    if gas_generators.empty and snakemake.config["industry"].get(
-        "gas_compression_losses", 0
-    ):
+    if gas_generators.empty and config.get("gas_compression_losses", 0):
         logger.debug(
-            "Skipping unravel gas generators because industry.gas_compression_losses is set."
+            "Skipping unravel gas generators because "
+            "industry.gas_compression_losses is set."
         )
-        # the function fails if Generators is empty and compression losses == 0
+        return
+
+    if not config["mods"].get("unravel_natural_gas_imports", {}).get("enable"):
+        logger.debug(
+            "Skipping unravel natural gas imports because "
+            "the modification was not requested."
+        )
         return
 
     logger.info("Unravel gas import types.")
@@ -114,31 +124,32 @@ def unravel_gas_import_and_production(
     )
 
     # remove combined gas generators
-
     n.remove("Generator", gas_generators.index)
     ariadne_gas_fuel_price = costs.at["gas", "fuel"]
+    cost_factors = config["mods"]["unravel_natural_gas_imports"]
 
-    for marginal_cost_scaling_factor, import_type in [
-        (1.2, "lng"),
-        (1, "pipeline"),
-        (0.95, "production"),
-    ]:
+    for marginal_cost_scaling_factor, import_type in ("lng", "pipeline", "production"):
+        cost_factor = cost_factors[import_type]
         p_nom = gas_input_nodes[import_type].dropna()
         p_nom.rename(lambda x: x + " gas", inplace=True)
         nodes = p_nom.index
+        suffix = (
+            " production" if import_type == "production" else f" {import_type} import"
+        )
+        carrier = f"{import_type} gas"
+        marginal_cost = ariadne_gas_fuel_price * cost_factor
         n.add(
             "Generator",
             nodes,
-            suffix=" production"
-            if import_type == "production"
-            else f" {import_type} import",
+            suffix=suffix,
             bus=nodes,
-            carrier="gas",
+            carrier=carrier,
             p_nom_extendable=False,
-            marginal_cost=ariadne_gas_fuel_price * marginal_cost_scaling_factor,
+            marginal_cost=marginal_cost,
             p_nom=p_nom,
         )
 
+    # make sure that the total gas generator capacity was not changed by this modification
     old_p_nom = gas_generators["p_nom"].sum()
     new_p_nom = n.static("Generator").query("carrier == 'gas'")["p_nom"].sum()
     assert old_p_nom.round(8) == new_p_nom.round(8), (

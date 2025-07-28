@@ -4,7 +4,14 @@
 
 run:
   prefix: v2025.03
-
+  name:
+#  - ExPol
+  - AT10_KN2040
+  - KN2045_Mix
+#  - KN2045_Elek
+#  - KN2045_H2
+#  - KN2045_NFniedrig
+#  - KN2045_NFhoch
 countries: ['AL', 'AT', 'BA', 'BE', 'BG', 'CH', 'CZ', 'DE', 'DK', 'EE', 'ES', 'FI', 'FR', 'GB', 'GR', 'HR', 'HU', 'IE', 'IT', 'LT', 'LU', 'LV', 'ME', 'MK', 'NL', 'NO', 'PL', 'PT', 'RO', 'RS', 'SE', 'SI', 'SK', 'XK']
 scenario:
   ll:
@@ -134,7 +141,7 @@ solving:
         H2 Electrolysis:
           AT:
             # EAG Ausbauziel: 1 GW Elektrolyseleistung in MW_el in Ö.
-            # setting p_nom_opt here, which already is for M2_el input
+            # setting p_nom_opt here, which already is for MW_el input
             2030: 1
             2040: 1
             2050: 1
@@ -148,6 +155,21 @@ solver_options:
     threads: 0
 
 mods:
+
+  # AT10 administrative clustering
   modify_nuts3_shapes: true
-  modify_austrian_transmission_capacities: true  # scale_capacity does not work for Line components
+
+  # scale_capacity does not work for Line components, hence we use this
+  # modification to update any transmission capacity (Links or Lines)
+  modify_austrian_transmission_capacities: true
+
+  # update urban population share for AT regions
   modify_population_layouts: true
+
+  # split gas generators by type and multiply generator
+  # marginal costs by the following factors
+  unravel_natural_gas_imports:
+    enable: true
+    lng: 1.2
+    pipeline: 1.0
+    production: 0.95
