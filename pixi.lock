@@ -208,6 +208,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/ixmp4-0.9.8-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/jedi-0.19.2-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/jinja2-3.1.6-pyhd8ed1ab_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/jiter-0.10.0-py312h12e396e_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/joblib-1.4.2-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/jpype1-1.5.2-py312h68727a3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/json-c-0.18-h6688a6e_0.conda
@@ -384,6 +385,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/notebook-shim-0.2.4-pyhd8ed1ab_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/numexpr-2.10.2-py312h6a710ac_100.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/numpy-1.26.4-py312heda63a1_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/openai-1.97.1-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/openjdk-23.0.2-h53dfc1b_2.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/openjpeg-2.5.3-h5fbd93e_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/openldap-2.6.9-he970967_0.conda
@@ -3423,6 +3425,22 @@ packages:
   - pkg:pypi/jinja2?source=compressed-mapping
   size: 112714
   timestamp: 1741263433881
+- conda: https://conda.anaconda.org/conda-forge/linux-64/jiter-0.10.0-py312h12e396e_0.conda
+  sha256: 2d08c42c347fe32b4ec03c5c803a641812d65711b43a32a820cd13d9d1984d86
+  md5: a3f7a6978a83ba7ae8d68bbd336e731b
+  depends:
+  - __glibc >=2.17,<3.0.a0
+  - libgcc >=13
+  - python >=3.12,<3.13.0a0
+  - python_abi 3.12.* *_cp312
+  constrains:
+  - __glibc >=2.17
+  license: MIT
+  license_family: MIT
+  purls:
+  - pkg:pypi/jiter?source=hash-mapping
+  size: 309543
+  timestamp: 1747609999738
 - conda: https://conda.anaconda.org/conda-forge/noarch/joblib-1.4.2-pyhd8ed1ab_1.conda
   sha256: 51cc2dc491668af0c4d9299b0ab750f16ccf413ec5e2391b924108c1fbacae9b
   md5: bf8243ee348f3a10a14ed0cae323e0c1
@@ -6000,6 +6018,26 @@ packages:
   - cryptography>=3.0.0 ; extra == 'signedtoken'
   - pyjwt>=2.0.0,<3 ; extra == 'signedtoken'
   requires_python: '>=3.6'
+- conda: https://conda.anaconda.org/conda-forge/noarch/openai-1.97.1-pyhd8ed1ab_0.conda
+  sha256: 96032ebbe1a6f28cca7f737f06d84b8c9c5e410e16eb713225e0198626031505
+  md5: 6369ea4d2508c937f77a0efc747c5d5e
+  depends:
+  - anyio >=3.5.0,<5
+  - distro >=1.7.0,<2
+  - httpx >=0.23.0,<1
+  - jiter >=0.4.0,<1
+  - pydantic >=1.9.0,<3
+  - python >=3.9
+  - sniffio
+  - tqdm >4
+  - typing-extensions >=4.11,<5
+  - typing_extensions >=4.11,<5
+  license: MIT
+  license_family: MIT
+  purls:
+  - pkg:pypi/openai?source=hash-mapping
+  size: 302549
+  timestamp: 1753225278265
 - conda: https://conda.anaconda.org/conda-forge/linux-64/openjdk-23.0.2-h53dfc1b_2.conda
   sha256: aac6fe6db0841e77f832fc21132ac7ebec1a9b5bae004b5e69e3a210e53e3bf8
   md5: 47eea31e0c3f960459237823e5e21a32
