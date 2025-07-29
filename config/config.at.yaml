@@ -135,13 +135,23 @@ industry:
   # oil_refining_emissions: 0  # 0.013
 
 solving:
+  # The default CO2 budget uses the KSG targets, and the non CO2 emissions from the REMIND model in the KN2045_Mix scenario
+  co2_budget_national:
+    AT:
+      2020: 0.67
+      2025: 0.52
+      2030: 0.34
+      2035: 0.21
+      2040: 0.00
+      2045: -0.00
+      2050: -0.05
   constraints:
     limits_capacity_min:
       Link:
         H2 Electrolysis:
           AT:
-            # EAG Ausbauziel: 1 GW Elektrolyseleistung in MW_el in Ö.
-            # setting p_nom_opt here, which already is for MW_el input
+            # EAG Ausbauziel: 1 GW Elektrolyseleistung in MW_el in AT
+            # limit set for p_nom_opt, which already is for MW_el at bus0
             2030: 1
             2040: 1
             2050: 1
