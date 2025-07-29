@@ -1396,8 +1396,8 @@ if __name__ == "__main__":
             opts="",
             clusters="adm",
             configfiles="config/config.at.yaml",
-            sector_opts="",
-            planning_horizons=["2020", "2025", "2030", "2035", "2040", "2045"],
+            sector_opts="none",
+            planning_horizons="2040",
         )
     configure_logging(snakemake)
     set_scenario_config(snakemake)
