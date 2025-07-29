@@ -27,8 +27,15 @@ def add_capacity_limits(n, investment_year, limits_capacity, sense="maximum"):
                     f"Adding constraint on {c.name} {carrier} capacity in {ct} to be {sense} {limit} {units}"
                 )
 
+                if ct in n.meta["countries"]:
+                    location_mask = c.df.index.str[:2] == ct
+                elif ct in n.static("Bus")["location"].unique():  # clustered regions
+                    location_mask = c.df.index.str.startswith(ct)
+                else:
+                    raise ValueError(f"Unknown location code: '{ct}'.")
+
                 valid_components = (
-                    (c.df.index.str[:2] == ct)
+                    location_mask
                     & (c.df.carrier.str[: len(carrier)] == carrier)
                     & ~c.df.carrier.str.contains("thermal")
                 )  # exclude solar thermal
