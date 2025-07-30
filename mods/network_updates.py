@@ -172,13 +172,13 @@ def unravel_electricity_base_load(n: pypsa.Network, snakemake: Snakemake) -> Non
     -------
     :
     """
-    config = snakemake.config
-    print(config)
+    # config = snakemake.config
+    # print(config)
 
     # electricity base load is from: https://nbviewer.org/github/Open-Power-System-Data/datapackage_timeseries/blob/2020-10-06/main.ipynb
     # total load=total generation−auxilary/self−consumption in power plants+imports−exports−consumption by storages
-    base_load = n.static("Load").query("carrier == 'electricity'")
-    print(base_load)
+    # base_load = n.static("Load").query("carrier == 'electricity'")
+    # print(base_load)
 
     # energy_totals.csv:
     # contains load data for sectors:
