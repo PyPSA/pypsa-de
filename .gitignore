@@ -102,3 +102,4 @@ CLAUDE.md
 .pixi
 *.egg-info
 pixi.bak.*
+__marimo__/
