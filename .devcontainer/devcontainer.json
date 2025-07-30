@@ -1,0 +1,33 @@
+{
+    "name": "pypsa-at-pw",
+    "build": {
+      "context": "..",
+      "dockerfile": "Dockerfile"
+    },
+    "mounts": [
+      {
+        "source": "/mnt/storage",
+        "target": "/mnt/storage",
+        "type": "bind"
+      }
+    ],
+    "forwardPorts": [
+      8000,
+      2718
+    ],
+    "portsAttributes": {
+      "8000": {"label": "mkdocs"},
+      "2718": {"label": "marimo"}
+    },
+    "postCreateCommand": "git fetch --unshallow",
+    "postAttachCommand": "",
+    "customizations": {
+      "jetbrains": {
+        "backend": "PyCharm"
+      }
+    },
+    "containerEnv": {
+      "SHELL": "/bin/zsh"
+    },
+    "remoteUser": "root"
+  }
