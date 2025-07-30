@@ -6,6 +6,11 @@ import pandas as pd
 import pypsa
 from shapely.geometry import Point
 
+from mods import (
+    modify_austrian_transmission_capacities,
+    unravel_electricity_base_load,
+    unravel_gas_import_and_production,
+)
 from scripts._helpers import configure_logging, mock_snakemake, sanitize_custom_columns
 from scripts.add_electricity import load_costs
 from scripts.prepare_sector_network import lossy_bidirectional_links
@@ -1260,11 +1265,11 @@ if __name__ == "__main__":
         snakemake = mock_snakemake(
             "modify_prenetwork",
             simpl="",
-            clusters=27,
+            clusters="adm",
             opts="",
             ll="vopt",
             sector_opts="none",
-            planning_horizons="2025",
+            planning_horizons="2020",
             run="KN2045_Mix",
         )
 
@@ -1296,9 +1301,9 @@ if __name__ == "__main__":
 
     first_technology_occurrence(n)
 
-    unravel_carbonaceous_fuels(n)
+    # unravel_carbonaceous_fuels(n)
 
-    unravel_gasbus(n, costs)
+    # unravel_gasbus(n, costs)
 
     if snakemake.params.enable_kernnetz:
         fn = snakemake.input.wkn
@@ -1336,5 +1341,17 @@ if __name__ == "__main__":
     scale_capacity(n, snakemake.params.scale_capacity)
 
     sanitize_custom_columns(n)
+
+    # additional AT modifications:
+    unravel_gas_import_and_production(n, snakemake, costs)
+    unravel_electricity_base_load(n, snakemake)
+
+    if (
+        snakemake.params.modify_austrian_transmission_capacities
+        and current_year == 2020
+    ):
+        modify_austrian_transmission_capacities(
+            n, snakemake.input.austrian_transmission_capacities
+        )
 
     n.export_to_netcdf(snakemake.output.network)

@@ -27,8 +27,15 @@ def add_capacity_limits(n, investment_year, limits_capacity, sense="maximum"):
                     f"Adding constraint on {c.name} {carrier} capacity in {ct} to be {sense} {limit} {units}"
                 )
 
+                if ct in n.meta["countries"]:
+                    location_mask = c.df.index.str[:2] == ct
+                elif ct in n.static("Bus")["location"].unique():  # clustered regions
+                    location_mask = c.df.index.str.startswith(ct)
+                else:
+                    raise ValueError(f"Unknown location code: '{ct}'.")
+
                 valid_components = (
-                    (c.df.index.str[:2] == ct)
+                    location_mask
                     & (c.df.carrier.str[: len(carrier)] == carrier)
                     & ~c.df.carrier.str.contains("thermal")
                 )  # exclude solar thermal
@@ -242,7 +249,7 @@ def h2_production_limits(n, investment_year, limits_volume_min, limits_volume_ma
         limit_upper = limits_volume_max["electrolysis"][ct][investment_year] * 1e6
 
         logger.info(
-            f"limiting H2 electrolysis in DE between {limit_lower / 1e6} and {limit_upper / 1e6} TWh/a"
+            f"limiting H2 electrolysis in {ct} between {limit_lower / 1e6} and {limit_upper / 1e6} TWh/a"
         )
 
         production = n.links[
@@ -640,14 +647,14 @@ def add_h2_derivate_limit(n, investment_year, limits_volume_max):
             [
                 "EU renewable oil -> DE oil",
                 "EU methanol -> DE methanol",
-                "EU renewable gas -> DE gas",
+                # "EU renewable gas -> DE gas",
             ]
         ].index
         outgoing = n.links.loc[
             [
                 "DE renewable oil -> EU oil",
                 "DE methanol -> EU methanol",
-                "DE renewable gas -> EU gas",
+                # "DE renewable gas -> EU gas",
             ]
         ].index
 
@@ -758,7 +765,7 @@ def additional_functionality(n, snapshots, snakemake):
             constraints["limits_volume_max"],
         )
 
-    add_h2_derivate_limit(n, investment_year, constraints["limits_volume_max"])
+    # add_h2_derivate_limit(n, investment_year, constraints["limits_volume_max"])
 
     # force_boiler_profiles_existing_per_load(n)
     force_boiler_profiles_existing_per_boiler(n)

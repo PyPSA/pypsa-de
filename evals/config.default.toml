@@ -1,0 +1,824 @@
+[global]
+subdir = "evaluation"
+
+# Capacities
+
+[view_capacity_heat_production]
+name = "District Heat Production Capacities"
+unit = "GW"
+file_name = "capacity_heat_production_{location}"
+cutoff = 0.0001
+legend_order = [
+    "Storage Out",
+    "Solar Thermal",
+    "Fischer-Tropsch",
+    "Biomass CHP",
+    "Oil CHP",
+    "Waste CHP",
+    "Electrolysis",
+    "Haber-Bosch",
+    "Direct Air Capture",
+    "CHP",
+    "Heat Vent",
+    "Methanolisation",
+    "Fuel Cell",
+    "Resistive Heater",
+    "Gas Boiler",
+    "Gas CHP",
+    "Coal CHP",
+    "Heat Pump",
+    "Storage In",
+]
+checks = []
+exports = ["csv", "excel"]
+
+[view_capacity_heat_production.categories]
+"DAC" = "Direct Air Capture"
+"Fischer-Tropsch" = "Fischer-Tropsch"
+"Haber-Bosch" = "Haber-Bosch"
+"H2 Electrolysis" = "Electrolysis"
+"H2 Fuel Cell" = "Fuel Cell"
+"methanolisation" = "Methanolisation"
+"urban central air heat pump" = "Heat Pump"
+"urban central CHP" = "CHP"
+"urban central coal CHP" = "Coal CHP"
+"urban central gas CHP" = "Gas CHP"
+"urban central oil CHP" = "Oil CHP"
+"waste CHP" = "Waste CHP"
+"waste CHP CC" = "Waste CHP"
+"urban central gas boiler" = "Gas Boiler"
+"urban central heat vent" = "Heat Vent"
+"urban central lignite CHP" = "Coal CHP"
+"urban central resistive heater" = "Resistive Heater"
+"urban central solar thermal" = "Solar Thermal"
+"urban central solid biomass CHP" = "Biomass CHP"
+"urban central water tanks charger" = "Storage In"
+"urban central water tanks discharger" = "Storage Out"
+"urban central water pits charger" = "Storage In"
+"urban central water pits discharger" = "Storage Out"
+
+[view_capacity_heat_demand]
+name = "District Heat Demand Capacities"
+unit = "GW"
+file_name = "capacity_heat_production_{location}"
+cutoff = 0.0001
+legend_order = [
+    "Storage Out",
+    "Solar Thermal",
+    "Fischer-Tropsch",
+    "Biomass CHP",
+    "Oil CHP",
+    "Waste CHP",
+    "Electrolysis",
+    "Haber-Bosch",
+    "Direct Air Capture",
+    "CHP",
+    "Heat Vent",
+    "Methanolisation",
+    "Fuel Cell",
+    "Resistive Heater",
+    "Gas Boiler",
+    "Gas CHP",
+    "Coal CHP",
+    "Heat Pump",
+    "Storage In",
+]
+checks = []
+exports = ["csv", "excel"]
+
+[view_capacity_heat_demand.categories]
+"DAC" = "Direct Air Capture"
+"Fischer-Tropsch" = "Fischer-Tropsch"
+"Haber-Bosch" = "Haber-Bosch"
+"H2 Electrolysis" = "Electrolysis"
+"H2 Fuel Cell" = "Fuel Cell"
+"methanolisation" = "Methanolisation"
+"urban central air heat pump" = "Heat Pump"
+"urban central CHP" = "CHP"
+"urban central coal CHP" = "Coal CHP"
+"urban central gas CHP" = "Gas CHP"
+"urban central oil CHP" = "Oil CHP"
+"waste CHP" = "Waste CHP"
+"waste CHP CC" = "Waste CHP"
+"urban central gas boiler" = "Gas Boiler"
+"urban central heat vent" = "Heat Vent"
+"urban central lignite CHP" = "Coal CHP"
+"urban central resistive heater" = "Resistive Heater"
+"urban central solar thermal" = "Solar Thermal"
+"urban central solid biomass CHP" = "Biomass CHP"
+"urban central water tanks charger" = "Storage In"
+"urban central water tanks discharger" = "Storage Out"
+"urban central water pits charger" = "Storage In"
+"urban central water pits discharger" = "Storage Out"
+
+[view_capacity_electricity_production]
+name = "Optimal Capacity Electricity"
+unit = "GW"
+file_name = "capacity_ac_production_{location}"
+bus_carrier = ["AC", "low voltage", "EV battery", "home battery"]
+storage_links = ["BEV charger", "V2G"]
+chart = "ESMBarChart"
+cutoff = 0.0001
+legend_order = [
+    "Nuclear Power",
+    "Thermal Powerplants",
+    "Pumped Hydro Storage",
+    "Reservoir",
+    "Run-of-River",
+    "Wind Power",
+    "Coal",
+    "Hydrogen",
+    "Solar Power",
+    "Solid Biomass",
+    "Biogas",
+    "Oil",
+]
+checks = []
+exports = ["csv"]
+
+[view_capacity_electricity_production.categories]
+"CCGT" = "Thermal Powerplants"
+"H2 OCGT" = "Hydrogen"
+"H2 turbine" = "Hydrogen"
+"OCGT" = "Thermal Powerplants"
+"PHS" = "Pumped Hydro Storage"
+"allam gas" = "Thermal Powerplants"
+"biogas" = "Biogas"
+"coal" = "Coal"
+"hydro" = "Reservoir"
+"lignite" = "Coal"
+"nuclear" = "Nuclear Power"
+"offwind-ac" = "Wind Power"
+"offwind-dc" = "Wind Power"
+"oil" = "Oil"
+"onwind" = "Wind Power"
+"ror" = "Run-of-River"
+"solar" = "Solar Power"
+"solar rooftop" = "Solar Power"
+"solar-hsat" = "Solar Power"
+"solid biomass" = "Solid Biomass"
+"urban central CHP" = "Thermal Powerplants"
+"urban central coal CHP" = "Thermal Powerplants"
+"urban central gas CHP" = "Thermal Powerplants"
+"urban central H2 CHP" = "Thermal Powerplants"
+"urban central H2 retrofit CHP" = "Thermal Powerplants"
+"urban central lignite CHP" = "Thermal Powerplants"
+"urban central oil CHP" = "Thermal Powerplants"
+"urban central solid biomass CHP" = "Thermal Powerplants"
+"waste CHP" = "Thermal Powerplants"
+"waste CHP CC" = "Thermal Powerplants"
+
+[view_capacity_electricity_storage]
+name = "Power Storage Volumes"
+unit = "TWh"
+file_name = "capacity_ac_storage_{location}"
+bus_carrier = ["AC", "low voltage", "EV battery", "home battery"]
+chart = "ESMBarChart"
+cutoff = 0.1  # TWh
+legend_order = [
+    "Pumped Hydro Storage",
+    "Run-of-River",
+    "Car Battery"
+]
+checks = []
+exports = []
+
+[view_capacity_electricity_storage.categories]
+"EV battery" = "Car Battery"
+"PHS" = "Pumped Hydro Storage"
+"hydro" = "Run-of-River"
+
+[view_capacity_gas_storage]
+name = "Gas Storage Volumes"
+unit = "TWh"
+file_name = "capacity_gas_storage_{location}"
+chart = "ESMBarChart"
+bus_carrier = ["H2", "gas"]  # "co2 sequestered"
+cutoff = 0.00001  # 1 MWh
+legend_order = ["Methane Store", "Hydrogen Store"]
+checks = ["balances_almost_zero"]
+exports = []
+
+[view_capacity_gas_storage.categories]
+"H2 Store" = "Hydrogen Store"
+"gas" = "Methane Store"
+
+[view_capacity_hydrogen_production]
+name = "Optimal Capacity Hydrogen Production"
+unit = "GW"
+file_name = "capacity_hydrogen_production_{location}"
+bus_carrier = "H2"
+chart = "ESMBarChart"
+cutoff = 0.1  # GW
+legend_order = []
+checks = []
+exports = []
+
+[view_capacity_hydrogen_production.categories]
+
+[view_capacity_gas_production]
+name = "Optimal Capacity Methane Production"
+unit = "GW"
+file_name = "capacity_gas_production_{location}"
+bus_carrier = ["gas"]
+storage_links = ["gas", "import gas"]  # drops Generator and Storage Components
+chart = "ESMBarChart"
+cutoff = 0.1  # GW
+legend_order = []
+checks = []
+exports = []
+
+[view_capacity_gas_production.categories]
+
+# Balances
+
+[view_balance_carbon]
+name = "Carbon Dioxide Balance"
+unit = "Mt_co2"
+file_name = "balance_carbon_{location}"
+bus_carrier = ["co2", "co2 sequestered", "co2 stored"]
+chart = "ESMBarChart"
+cutoff = 0.1
+legend_order = [
+    # production ordered from zero to outside
+    "Fischer-Tropsch",
+    "Bioliquids",
+    "SynGas",
+    "SynGas (CC)",
+    "DAC",
+    "Agriculture",
+    "CHP",
+    "Sabatier",
+    "Bioliquids (CC)",
+    "Gas Compression",
+    "Biogas (CC)",
+    "CO2 Sequestration",
+    "Biofuels",
+    "HVC",
+    "Methanol Steam Reforming",
+    "Biogas",
+    "Methanolisation",
+    "SMR",
+    "CO2 Budget",
+    "CO2 ventilation",
+    "Oil Refining",
+    "Transport",
+    "CO2 Store",
+    "Electricity",
+    "CHP (CC)",
+    "Industry (CC)",
+    "Waste",
+    "Heat",
+    "Industry",
+    "Import Domestic",
+    "Import Foreign",
+    # demand ordered from zero to outside:
+
+    "Export Domestic",
+    "Export Foreign",
+]
+checks = []  # "balances_almost_zero" deactivated, because it is not applicable for carbon budgets
+exports = []
+
+[view_balance_carbon.categories]
+"co2" = "CO2 Budget"
+"biogas to gas" = "Biogas"
+"biogas to gas CC" = "Biogas (CC)"
+"biomass to liquid" = "Bioliquids"
+"biomass to liquid CC" = "Bioliquids (CC)"
+"BioSNG" = "SynGas"
+"BioSNG CC" = "SynGas (CC)"
+"CCGT" = "Electricity"
+"DAC" = "DAC"
+"Export Domestic" = "Export Domestic"
+"Export Foreign" = "Export Foreign"
+"Fischer-Tropsch" = "Fischer-Tropsch"
+"HVC to air" = "HVC"
+"Import Domestic" = "Import Domestic"
+"Import Foreign" = "Import Foreign"
+"Methanol steam reforming" = "Methanol Steam Reforming"
+"OCGT" = "Electricity"
+"SMR" = "SMR"
+"SMR CC" = "SMR"
+"Sabatier" = "Sabatier"
+"agriculture machinery oil" = "Agriculture"
+"co2 sequestered" = "CO2 Sequestration"
+"co2 stored" = "CO2 Store"
+"co2 vent" = "CO2 ventilation"
+"coal" = "Electricity"
+"coal for industry" = "Industry"
+"electrobiofuels" = "Biofuels"
+"gas compressing" = "Gas Compression"
+"gas for industry" = "Industry"
+"gas for industry CC" = "Industry (CC)"
+"industry methanol" = "Industry"
+"kerosene for aviation" = "Transport"
+"land transport oil" = "Transport"
+"lignite" = "Electricity"
+"methanolisation" = "Methanolisation"
+"municipal solid waste" = "Waste"
+"oil refining" = "Oil Refining"
+"process emissions" = "Industry"
+"process emissions CC" = "Industry (CC)"
+"rural gas boiler" = "Heat"
+"rural oil boiler" = "Heat"
+"shipping methanol" = "Transport"
+"shipping oil" = "Transport"
+"solid biomass for industry CC" = "Industry (CC)"
+"unsustainable bioliquids" = "Bioliquids"
+"urban central CHP" = "CHP"
+"urban central coal CHP" = "CHP"
+"urban central gas CHP" = "CHP"
+"urban central gas boiler" = "Heat"
+"urban central lignite CHP" = "CHP"
+"urban central oil CHP" = "CHP"
+"urban decentral gas boiler" = "Heat"
+"urban decentral oil boiler" = "Heat"
+"waste CHP" = "CHP"
+"waste CHP CC" = "CHP (CC)"
+
+[view_balance_fuels]
+name = "Fuel Balance"
+unit = "MWh_LHV"
+file_name = "nodal_balance_fuels_{location}"
+cutoff = 0.001
+legend_order = [
+    # production ordered from zero to outside
+
+    "Import Domestic",
+    "Import Foreign",
+    # demand ordered from zero to outside:
+
+    "Export Domestic",
+    "Export Foreign",
+]
+checks = ["balances_almost_zero"]
+exports = []
+
+[view_balance_fuels.categories]
+
+[view_balance_hydrogen]
+name = "Hydrogen Energy Balance"
+unit = "TWh"
+file_name = "nodal_balance_hydrogen_{location}"
+bus_carrier = "H2"
+chart = "ESMBarChart"
+cutoff = 0.1
+legend_order = [
+    # production ordered from zero to outside
+    "Electrolysis",
+    "SMR",
+    "H2 from Solid Biomass",
+    "Ammonia Cracking",
+    "Storage Out",
+    "Import Domestic",
+    "Import Foreign",
+    # demand ordered from zero to outside:
+    "Methanolisation",
+    "Methanol Steam Reforming",
+    "Industry",
+    "Transport",
+    "Electricity",
+    "Haber-Bosch",
+    "Fischer-Tropsch",
+    "Sabatier",
+    "Synth. Fuels",
+    "Storage In",
+    "Export Domestic",
+    "Export Foreign",
+]
+checks = ["balances_almost_zero"]
+exports = []
+
+[view_balance_hydrogen.categories]
+"ammonia cracker" = "Ammonia Cracking"
+"Export Foreign" = "Export Foreign"
+"Export Domestic" = "Export Domestic"
+"Fischer-Tropsch" = "Fischer-Tropsch"
+"H2 Electrolysis" = "Electrolysis"
+"H2 Fuel Cell" = "Electricity"
+"H2 OCGT" = "Electricity"
+"H2 for industry" = "Industry"
+"H2 turbine" = "Electricity"
+#"H2 Store" = "Storage"
+"Storage In" = "Storage In"
+"Storage Out" = "Storage Out"
+"Haber-Bosch" = "Haber-Bosch"
+"Import Foreign" = "Import Foreign"
+"Import Domestic" = "Import Domestic"
+"SMR" = "SMR"
+"SMR CC" = "SMR"
+"Sabatier" = "Sabatier"
+"electrobiofuels" = "Synth. Fuels"
+"land transport fuel cell" = "Transport"
+"methanolisation" = "Methanolisation"
+"Methanol steam reforming" = "Methanol Steam Reforming"
+"solid biomass to hydrogen" = "H2 from Solid Biomass"
+
+[view_balance_methane]
+name = "Methane Energy Balance"
+unit = "TWh"
+file_name = "nodal_balance_methane_{location}"
+bus_carrier = ["gas", "biogas", "gas for industry"]
+chart = "ESMBarChart"
+cutoff = 0.1
+legend_order = [
+    # production ordered from zero to outside
+
+    "Storage",
+    "Import Domestic",
+    "Import Foreign",
+    # demand ordered from zero to outside:
+
+    "Export Domestic",
+    "Export Foreign",
+]
+checks = ["balances_almost_zero"]
+exports = []
+
+[view_balance_methane.categories]
+
+[view_balance_electricity]
+name = "Electricity Energy Balance"
+unit = "TWh_el"
+file_name = "nodal_balance_electricity_{location}"
+bus_carrier = ["AC", "low voltage", "EV battery"]
+storage_links = ["BEV charger", "V2G"]
+chart = "ESMBarChart"
+cutoff = 0.1  # TWh
+legend_order = [
+    # production ordered from zero to outside
+    "Nuclear Power",
+    "Wind Power",
+    "Hydro Power",
+    "Solar Power",
+    "Solid Biomass",
+    "Waste",
+    "Coal",
+    "Methane",
+    "Hydrogen",
+    "Oil",
+    "Storage Out",
+    "Import Domestic",
+    "Import Foreign",
+    # demand ordered from zero to outside
+    "Base Load",
+    "Industry",
+    "Transport",
+    "Hydrogen",
+    "Heat",
+    "Distribution Grid", # demand and production!
+    "Hydrogen Compression",
+    "Methane Compression",
+    "Methanolisation",
+    "Agriculture",
+    "Haber-Bosch",
+    "Electrolysis",
+    "Direct Air Capture",
+    "Pumped Hydro Storage",
+    "Storage In",
+    "Export Domestic",
+    "Export Foreign",
+]
+checks = ["balances_almost_zero"]
+exports = []
+
+[view_balance_electricity.categories]
+"BEV charger" = "Transport"
+"CCGT" = "Methane"
+"DAC" = "Direct Air Capture"
+"Export Domestic" = "Export Domestic"
+"Export Foreign" = "Export Foreign"
+"H2 Electrolysis" = "Electrolysis"
+"H2 OCGT" = "Hydrogen"
+"H2 pipeline" = "Hydrogen Compression"
+"H2 pipeline (Kernnetz)" = "Hydrogen Compression"
+"Haber-Bosch" = "Haber-Bosch"
+"Import Domestic" = "Import Domestic"
+"Import Foreign" = "Import Foreign"
+"OCGT" = "Methane"
+"PHS" = "Pumped Hydro Storage"
+"V2G" = "Transport"
+"agriculture electricity" = "Agriculture"
+"coal" = "Coal"
+"electricity" = "Base Load"
+"electricity distribution grid" = "Distribution Grid"
+"gas pipeline" = "Methane Compression"
+"hydro" = "Hydro Power"
+"industry electricity" = "Industry"
+"land transport EV" = "Transport"
+"lignite" = "Coal"
+"methanolisation" = "Methanolisation"
+"nuclear" = "Nuclear Power"
+"offwind-ac" = "Wind Power"
+"offwind-dc" = "Wind Power"
+"onwind" = "Wind Power"
+"ror" = "Hydro Power"
+"rural air heat pump" = "Heat"
+"rural ground heat pump" = "Heat"
+"rural resistive heater" = "Heat"
+"solar" = "Solar Power"
+"solar rooftop" = "Solar Power"
+"solar-hsat" = "Solar Power"
+"solid biomass" = "Solid Biomass"
+"Storage In" = "Storage In"
+"Storage Out" = "Storage Out"
+"urban central CHP" = "Methane"
+"urban central air heat pump" = "Heat"
+"urban central coal CHP" = "Coal"
+"urban central gas CHP" = "Methane"
+"urban central lignite CHP" = "Coal"
+"urban central oil CHP" = "Oil"
+"urban central resistive heater" = "Heat"
+"urban central solid biomass CHP" = "Solid Biomass"
+"urban decentral air heat pump" = "Heat"
+"urban decentral resistive heater" = "Heat"
+"urban central H2 CHP" = "Heat"
+"urban central H2 retrofit CHP" = "Heat"
+"waste CHP" = "Waste"
+"waste CHP CC" = "Waste"
+
+[view_balance_heat]
+name = "Heat Energy Balance"
+unit = "TWh_th"
+file_name = "nodal_balance_heat_{location}"
+chart = "ESMBarChart"
+bus_carrier = ["urban central heat", "urban decentral heat", "rural heat"]
+cutoff = 0.001
+legend_order = [
+    # production ordered from zero to outside
+    "Electricity",
+    "Electricity (low voltage)",
+    "Oil",
+    "Solar Power",
+    "Methane",
+    "Hydrogen",
+    "Electrolysis",
+    "Sabatier",
+    "Methanolisation",
+    #    "CHP",
+    "Waste",
+    "CO2",
+    "Coal",
+    "Fischer-Tropsch",
+    "Haber-Bosch",
+    "Biomass",
+    "Solid Biomass",
+    # demand ordered from zero to outside
+    "Demand",
+    "Agriculture",
+    "Direct Air Capture",
+    "Industry",
+    "Distribution Losses",
+    "Heat Ventilation"
+]
+checks = ["balances_almost_zero"]
+exports = []
+
+[view_balance_heat.categories]
+#"AC" = "Electricity"
+#"H2" = "Hydrogen"
+#"co2 stored" = "CO2"
+#"coal" = "Coal"
+#"gas" = "Methane"
+#"lignite" = "Coal"
+#"low voltage" = "Electricity (low voltage)"
+#"non-sequestered HVC" = "Waste"
+#"oil" = "Oil"
+#"solid biomass" = "Solid Biomass"
+#
+#"DAC" = "Direct Air Capture"
+#"Fischer-Tropsch" = "Fischer-Tropsch"
+#"H2 Electrolysis" = "Electrolysis"
+#"Haber-Bosch" = "Haber-Bosch"
+#"Sabatier" = "Sabatier"
+#"agriculture heat" = "Agriculture"
+#"low-temperature heat for industry" = "Industry"
+#"methanolisation" = "Methanolisation"
+#"rural air heat pump" = "Electricity"
+#"rural biomass boiler" = "Biomass"
+#"rural gas boiler" = "Methane"
+#"rural ground heat pump" = "Electricity"
+#"rural heat" = "Demand"
+#"rural heat vent" = "Heat Ventilation"
+#"rural oil boiler" = "Oil"
+#"rural resistive heater" = "Electricity"
+#"rural solar thermal" = "Solar Power"
+#"urban central CHP" = "Methane"  # connected to gas bus
+#"urban central air heat pump" = "Electricity"
+#"urban central coal CHP" = "Coal"
+#"urban central gas CHP" = "Methane"
+#"urban central gas boiler" = "Methane"
+#"urban central heat" = "Demand"
+#"urban central heat losses" = "Distribution Losses"
+#"urban central heat vent" = "Heat Ventilation"
+#"urban central lignite CHP" = "Coal"
+#"urban central oil CHP" = "Oil"
+#"urban central resistive heater" = "Electricity"
+#"urban central solid biomass CHP" = "Biomass"
+#"urban central water tanks" = "Storage"
+##"urban central water tanks charger" = ""
+##"urban central water tanks discharger" = ""
+#"urban decentral air heat pump" = "Electricity"
+#"urban decentral biomass boiler" = "Biomass"
+#"urban decentral gas boiler" = "Methane"
+#"urban decentral heat" = "Demand"
+#"urban decentral heat vent" = "Heat Ventilation"
+#"urban decentral oil boiler" = "Oil"
+#"urban decentral resistive heater" = "Electricity"
+#"urban decentral solar thermal" = "Solar Power"
+#"waste CHP" = "Waste"
+#"waste CHP CC" = "Waste"
+
+[view_balance_biomass]
+name = "Solid Biomass Energy Balance"
+unit = "TWh_LHV"
+file_name = "nodal_balance_biomass_{location}"
+bus_carrier = "solid biomass"
+chart = "ESMBarChart"
+cutoff = 0.001
+legend_order = [
+#    # production ordered from zero to outside
+#    "Electricity",
+#    "Electricity (low voltage)",
+#    "Oil",
+#    "Solar Power",
+#    "Methane",
+#    "Hydrogen",
+#    "Electrolysis",
+#    "Sabatier",
+#    "Methanolisation",
+#    #    "CHP",
+#    "Waste",
+#    "CO2",
+#    "Coal",
+#    "Fischer-Tropsch",
+#    "Haber-Bosch",
+#    "Biomass",
+#    "Solid Biomass",
+#    # demand ordered from zero to outside
+#    "Demand",
+#    "Agriculture",
+#    "Direct Air Capture",
+#    "Industry",
+#    "Distribution Losses",
+#    "Heat Ventilation"
+]
+checks = ["balances_almost_zero"]
+exports = []
+
+[view_balance_biomass.categories]
+
+[view_demand_heat_production]
+name = "Energy Demand for Heat Production"
+unit = "TWh"
+file_name = "nodal_demand_heat_production_{location}"
+cutoff = 0.001
+legend_order = [
+    # from zero upwards:
+    "Oil",
+    "Coal",
+    "Methane",
+    "Waste",
+    "Solid Biomass",
+    "Electricity",
+    "Solar Power",
+    "Hydrogen"
+]
+checks = []
+exports = ["excel"]
+
+[view_demand_heat_production.categories]
+"AC" = "Electricity"
+"H2" = "Hydrogen"
+"coal" = "Coal"
+"gas" = "Methane"
+"renewable gas" = "Methane"
+"lignite" = "Coal"
+"low voltage" = "Electricity"
+"non-sequestered HVC" = "Waste"
+"oil" = "Oil"
+"rural heat" = "Solar Power"
+"solid biomass" = "Solid Biomass"
+"urban central heat" = "Solar Power"
+"urban decentral heat" = "Solar Power"
+
+[view_fed_total]
+name = "Final Energy Demand"
+unit = "TWh"
+file_name = "nodal_fed_total_{location}"
+cutoff = 0.001
+legend_order = [
+    # from zero upwards:
+    ""
+]
+checks = []
+exports = ["excel"]
+
+[view_fed_total.categories]
+"" = ""
+
+[view_timeseries_electricity]
+name = "Electricity Production and Demand"
+unit = "MWh_el"
+file_name = "timeseries_methane_{location}_{year}"
+bus_carrier = ["AC", "low voltage", "EV battery"]
+storage_links = ["BEV charger", "V2G"]
+chart = "ESMTimeSeriesChart"
+cutoff = 1  # MWh
+legend_order = [
+    "Net Import",
+    "Storage Out",
+    # --- zero ---
+    "Storage In",
+    "Net Export",
+]
+checks = ["balances_almost_zero"]
+exports = []
+
+[view_timeseries_electricity.categories]
+
+[view_timeseries_hydrogen]
+name = "Hydrogen Production and Demand"
+unit = "MWh_LHV"
+file_name = "timeseries_hydrogen_{location}_{year}"
+bus_carrier = "H2"
+chart = "ESMTimeSeriesChart"
+cutoff = 1  # MWh
+legend_order = [
+    "Net Import",
+    "Sabatier",
+    "Storage Out",
+    "H2 from Solid Biomass",
+    "Electrolysis",
+    # --- zero ---
+    "Storage In",
+    "Net Export",
+    "Electricity",
+    "Haber-Bosch",
+    "Synth. Fuels",
+    "Ammonia Cracking",
+    "Methanolisation",
+    "SMR",
+    "Fischer-Tropsch",
+    "Transport",
+    "Industry",
+]
+checks = ["balances_almost_zero"]
+exports = []
+
+[view_timeseries_hydrogen.categories]
+"ammonia cracker" = "Ammonia Cracking"
+"Fischer-Tropsch" = "Fischer-Tropsch"
+"H2 Electrolysis" = "Electrolysis"
+"H2 Fuel Cell" = "Electricity"
+"H2 OCGT" = "Electricity"
+"H2 for industry" = "Industry"
+"H2 turbine" = "Electricity"
+"Haber-Bosch" = "Haber-Bosch"
+"SMR" = "SMR"
+"SMR CC" = "SMR"
+"Sabatier" = "Sabatier"
+"electrobiofuels" = "Synth. Fuels"
+"land transport fuel cell" = "Transport"
+"methanolisation" = "Methanolisation"
+"solid biomass to hydrogen" = "H2 from Solid Biomass"
+"Net Export" = "Net Export"
+"Net Import" = "Net Import"
+"Storage In" = "Storage In"
+"Storage Out" = "Storage Out"
+
+[view_timeseries_methane]
+name = "Methane Production and Demand"
+unit = "MWh_LHV"
+file_name = "timeseries_methane_{location}_{year}"
+bus_carrier = ["gas", "biogas", "gas for industry"]
+chart = "ESMTimeSeriesChart"
+cutoff = 1  # MWh
+legend_order = [
+    "Net Import",
+    "Storage Out",
+    # --- zero ---
+    "Storage In",
+    "Net Export",
+]
+checks = ["balances_almost_zero"]
+exports = []
+
+[view_timeseries_methane.categories]
+
+[view_grid_capacity]
+name = "Transmission_test"
+unit = "TWh"
+file_name = "grid_test_{location}"
+cutoff = 0.00001  # 1 MWh
+legend_order = []
+checks = []
+exports = []
+
+[view_grid_capacity.categories]
+"" = ""
+
+[view_final_energy_demand]
+
+[view_final_energy_demand.catagories]

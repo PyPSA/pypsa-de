@@ -1,0 +1,185 @@
+# Basisszenario für PyPSA-AT mit Anpassungen des KN2045_Mix Szenarios aus PyPSA-DE with
+#   * custom administrative clustering für Austrian regions
+#   * calibrations
+
+run:
+  prefix: v2025.03
+  name:
+#  - ExPol
+#  - AT10_KN2040
+  - KN2045_Mix
+#  - KN2045_Elek
+#  - KN2045_H2
+#  - KN2045_NFniedrig
+#  - KN2045_NFhoch
+countries: ['AL', 'AT', 'BA', 'BE', 'BG', 'CH', 'CZ', 'DE', 'DK', 'EE', 'ES', 'FI', 'FR', 'GB', 'GR', 'HR', 'HU', 'IE', 'IT', 'LT', 'LU', 'LV', 'ME', 'MK', 'NL', 'NO', 'PL', 'PT', 'RO', 'RS', 'SE', 'SI', 'SK', 'XK']
+scenario:
+  ll:
+  - vopt
+  clusters:
+  - adm
+  opts:
+  - ''
+  sector_opts:
+  - none
+  planning_horizons:
+  - 2020
+#    - 2025
+  - 2030
+#    - 2035
+  - 2040
+#    - 2045
+  - 2050
+snapshots:
+  start: "2013-01-01"
+  end: "2014-01-01"
+  inclusive: 'left'
+atlite:
+  cutout_directory: cutouts
+  default_cutout: europe-2013-sarah3-era5
+  nprocesses: 4
+  show_progress: false
+  cutouts:
+    # use 'base' to determine geographical bounds and time span from config
+    # base:
+    # module: era5
+    europe-2013-sarah3-era5:
+      module: [sarah, era5] # in priority order
+      x: [-12., 42.]
+      y: [33., 72.]
+      dx: 0.3
+      dy: 0.3
+      time: ['2013', '2013']
+renewable:
+  onwind:
+    cutout: default
+  offwind-ac:
+    cutout: default
+  offwind-dc:
+    cutout: default
+  offwind-float:
+    cutout: default
+  solar:
+    cutout: default
+  solar-hsat:
+    cutout: default
+  hydro:
+    cutout: default
+lines:
+  dynamic_line_rating:
+    cutout: default
+
+clustering:
+  mode: administrative
+  administrative:
+    level: 0 # countries
+    AT: 2 # 10 regions
+    DE: 1 # 16 regions
+    DK: 1 # +1 islands
+    GB: 1 # +1 North Ireland
+    FR: 1 # +1 islands
+    IT: 1 # +2 islands
+    ES: 1 # +1 islands
+  temporal:
+    resolution_sector: 365H
+
+sector:
+  v2g: true
+  solar_thermal: true
+  biomass_transport: true
+  regional_methanol_demand: true
+  gas_network: true
+  electrobiofuels: true
+  biosng: true
+  biosng_cc: true
+  bioH2: true
+  municipal_solid_waste: true
+  cluster_heat_buses: true
+  hydrogen_turbines: true
+  methanol:
+    regional_methanol_demand: true
+    methanol_reforming: true
+    methanol_reforming_cc: true
+    methanol_to_kerosene: true
+    methanol_to_power:
+      ccgt: true
+      ccgt_cc: true
+      ocgt: true
+      allam: true
+    biomass_to_methanol: true
+    biomass_to_methanol_cc: true
+  ammonia: true
+  regional_co2_sequestration_potential:
+    enable: true
+    attribute:
+    - conservative estimate Mt
+    - conservative estimate GAS Mt
+    - conservative estimate OIL Mt
+    - conservative estimate aquifer Mt
+    include_onshore: false
+    min_size: 3
+    max_size: 25
+    years_of_storage: 25
+  co2_network: true
+  imports:  # this is for renewable gas/H2/methanol/oil imports
+    enable: true
+
+industry:
+  # gas compression seems incompatible with gas network. Pipelines connect
+  # gas buses, however Generators in '{node} gas primary' buses introduce gas
+  # energy at local nodes, which is then compressed to the local gas bus.
+  # As a result, gas is not transported via pipelines.
+  # Note, that gas compression AC withdrawal still is implemented. Losses are
+  # for methane to atmosphere.
+  gas_compression_losses: 0  # 0.04
+  # oil_refining_emissions: 0  # 0.013
+
+solving:
+  # The default CO2 budget uses the KSG targets, and the non CO2 emissions from the REMIND model in the KN2045_Mix scenario
+  co2_budget_national:
+    AT:
+      2020: 0.67
+      2025: 0.52
+      2030: 0.34
+      2035: 0.21
+      2040: 0.00
+      2045: -0.00
+      2050: -0.05
+  constraints:
+    limits_capacity_min:
+      Link:
+        H2 Electrolysis:
+          AT:
+            # EAG Ausbauziel: 1 GW Elektrolyseleistung in MW_el in AT
+            # limit set for p_nom_opt, which already is for MW_el at bus0
+            2030: 1
+            2040: 1
+            2050: 1
+  solver:
+    name: highs
+    options: highs-default
+
+solver_options:
+  # https://ergo-code.github.io/HiGHS/dev/options/definitions/
+  highs-default:
+    threads: 0
+
+mods:
+
+  # AT10 administrative clustering
+  modify_nuts3_shapes: true
+
+  # scale_capacity does not work for Line components, hence we use this
+  # modification to update any transmission capacity (Links or Lines)
+  modify_austrian_transmission_capacities: true
+
+  # update urban population share for AT regions
+  modify_population_layouts: true
+
+  # split gas generators by type and multiply generator
+  # marginal costs by the following factors
+  unravel_natural_gas_imports:
+    enable: true
+    lng: 1.2
+    pipeline: 1.0
+    production: 0.95

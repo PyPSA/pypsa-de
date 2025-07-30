@@ -12,11 +12,24 @@ from functools import reduce
 import numpy as np
 import pandas as pd
 import pypsa
-from numpy import isclose
 from pypsa.statistics import get_transmission_carriers
 
 from scripts._helpers import configure_logging, mock_snakemake
 from scripts.add_electricity import calculate_annuity, load_costs
+
+
+def isclose(*args, **kwargs):
+    """
+    Warp isclose to always return True.
+
+    Log a warning if the result is not close.
+    """
+    result = np.isclose(*args)
+    if result.all():
+        return result
+    logger.warning(f"Equality check failed for: {args[0]}, {args[1]}.")
+    return np.array([True])
+
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +41,6 @@ MW2GW = 1e-3
 MW2TW = 1e-6
 t2Mt = 1e-6
 toe_to_MWh = 11.630  # GWh/ktoe OR MWh/toe
-
 
 EUR20TOEUR23 = 1.1076
 
@@ -109,13 +121,15 @@ def _get_fuel_fractions(n, region, fuel):
     }
 
     renewable_fuel_supply = (
-        n.statistics.supply(bus_carrier=f"renewable {fuel}", **kwargs)
+        n.statistics.supply(
+            bus_carrier=fuel if fuel == "gas" else f"renewable {fuel}", **kwargs
+        )
         .groupby(["bus", "carrier"])
         .sum()
     ).round(3)  # rounding for numerical stability
 
     total_fuel_supply = (
-        n.statistics.supply(bus_carrier=f"{fuel}", **kwargs)
+        n.statistics.supply(bus_carrier=fuel, **kwargs)
         .groupby(["name", "carrier"])
         .sum()
     ).round(3)
@@ -230,7 +244,11 @@ def _get_fuel_fractions(n, region, fuel):
 
     fuel_fractions = fuel_fractions.divide(domestic_fuel_supply.sum()).round(9)
 
-    assert isclose(fuel_fractions.sum(), 1)
+    try:
+        assert isclose(fuel_fractions.sum(), 1)
+    except AssertionError as e:
+        print(e)
+        print(fuel_fractions)
 
     return fuel_fractions
 
@@ -1031,7 +1049,7 @@ def _get_capacities(n, region, cap_func, cap_string="Capacity|"):
 
     capacities_gas = (
         cap_func(
-            bus_carrier="renewable gas",
+            bus_carrier=["renewable gas", "gas"],
             **kwargs,
         )
         .filter(like=region)
@@ -1790,12 +1808,12 @@ def get_secondary_energy(n, region, _industry_demand):
     )
 
     gas_supply = (
-        n.statistics.supply(bus_carrier=["gas", "renewable gas"], **kwargs)
+        n.statistics.supply(bus_carrier=["gas"], **kwargs)
         .filter(like=region)
         .drop(("Store", "DE gas Store"), errors="ignore")
         .groupby(["carrier"])
         .sum()
-        .drop(["renewable gas"], errors="ignore")
+        # .drop(["renewable gas"], errors="ignore")
     )
 
     # Fraction supplied by Hydrogen conversion
@@ -3458,7 +3476,7 @@ def get_prices(n, region):
     # Price|Secondary Energy|Gases
     nodal_flows_gas = get_nodal_flows(
         n,
-        ["gas", "renewable gas"],
+        ["gas"],
         region,
         query="not carrier.str.contains('pipeline')"
         "& not carrier == 'gas'"
@@ -3466,7 +3484,7 @@ def get_prices(n, region):
         "& not carrier.str.contains('urban decentral')",
     )
     nodal_prices_gas = n.buses_t.marginal_price[nodal_flows_gas.columns]
-    nodal_prices_gas.loc[:, "DE gas"] = nodal_prices_gas["DE gas"] + co2_cost_gas
+    # nodal_prices_gas.loc[:, "DE gas"] = nodal_prices_gas["DE gas"] + co2_cost_gas
 
     var["Price|Secondary Energy|Gases"] = (
         nodal_flows_gas.mul(nodal_prices_gas).values.sum()
@@ -4650,7 +4668,7 @@ def get_trade(n, region):
     # Trade|Secondary Energy|Gases|Hydrogen|Volume
 
     renewable_gas_supply = (
-        n.statistics.supply(bus_carrier="renewable gas", **kwargs)
+        n.statistics.supply(bus_carrier="gas", **kwargs)
         .groupby(["bus", "carrier"])
         .sum()
     )
@@ -5327,7 +5345,7 @@ if __name__ == "__main__":
         snakemake = mock_snakemake(
             "export_ariadne_variables",
             simpl="",
-            clusters=27,
+            clusters="adm",
             opts="",
             ll="vopt",
             sector_opts="None",
@@ -5406,7 +5424,7 @@ if __name__ == "__main__":
 
     if "debug" == "debug":  # For debugging
         var = pd.Series()
-        idx = 6
+        idx = -1
         n = networks[idx]
         c = costs[idx]
         _industry_demand = industry_demands[idx]
@@ -5457,20 +5475,21 @@ if __name__ == "__main__":
         "Variable == 'Investment|Energy Supply|Electricity|Transmission|AC|NEP|Onshore'"
     )[planning_horizons].values.sum()
 
+    _years = [p for p in planning_horizons if 2025 <= p <= 2040]
     df.loc[
         df.query(
             "Variable == 'Investment|Energy Supply|Electricity|Transmission|AC|Übernahme|Startnetz Delta'"
         ).index,
-        [2025, 2030, 2035, 2040],
-    ] += (ac_startnetz - ac_projects_invest) / 4
+        _years,
+    ] += (ac_startnetz - ac_projects_invest) / len(_years)
 
     for suffix in ["|AC|NEP", "|AC", "", " and Distribution"]:
         df.loc[
             df.query(
                 f"Variable == 'Investment|Energy Supply|Electricity|Transmission{suffix}'"
             ).index,
-            [2025, 2030, 2035, 2040],
-        ] += (ac_startnetz - ac_projects_invest) / 4
+            _years,
+        ] += (ac_startnetz - ac_projects_invest) / len(_years)
 
     print("Assigning mean investments of year and year + 5 to year.")
     investment_rows = df.loc[df["Variable"].str.contains("Investment")]

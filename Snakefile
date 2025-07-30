@@ -22,6 +22,7 @@ from scripts._helpers import (
 configfile: "config/config.default.yaml"
 configfile: "config/plotting.default.yaml"
 configfile: "config/config.de.yaml"
+configfile: "config/config.at.yaml"  # AT10 default configuration
 
 
 run = config["run"]
@@ -62,6 +63,7 @@ include: "rules/build_sector.smk"
 include: "rules/solve_electricity.smk"
 include: "rules/postprocess.smk"
 include: "rules/development.smk"
+include: "rules/modify.smk"  # PyPSA-AT specific modifications
 
 
 if config["foresight"] == "overnight":
@@ -81,6 +83,7 @@ if config["foresight"] == "perfect":
 
 rule all:
     input:
+        expand(RESULTS + "validity_report.html", run=config["run"]["name"]),
         expand(RESULTS + "graphs/costs.svg", run=config["run"]["name"]),
         expand(
             resources("maps/power-network-s-{clusters}.pdf"),
@@ -146,6 +149,10 @@ rule all:
                 **config["scenario"],
             ),
         ),
+        expand(
+            RESULTS + "evaluation/HTML/sankey_diagram_EU_2050.html",
+            run=config["run"]["name"],
+        ),
     default_target: True
 
 
@@ -202,12 +209,12 @@ rule rulegraph:
         r"""
         # Generate DOT file using nested snakemake with the dumped final config
         echo "[Rule rulegraph] Using final config file: {input.config_file}"
-        snakemake --rulegraph all --configfile {input.config_file} --quiet | sed -n "/digraph/,\$p" > {output.dot}
+        snakemake all --rulegraph dot --configfile {input.config_file} --quiet | sed -n "/digraph/,\$p" > {output.dot}
 
         # Generate visualizations from the DOT file
         if [ -s {output.dot} ]; then
             echo "[Rule rulegraph] Generating PDF from DOT"
-            dot -Tpdf -o {output.pdf} {output.dot} || {{ echo "Error: Failed to generate PDF. Is graphviz installed?" >&2; exit 1; }}
+            dot -Tpdf -Gsize=16\!,23 -o {output.pdf} {output.dot} || {{ echo "Error: Failed to generate PDF. Is graphviz installed?" >&2; exit 1; }}
             
             echo "[Rule rulegraph] Generating PNG from DOT"
             dot -Tpng -o {output.png} {output.dot} || {{ echo "Error: Failed to generate PNG. Is graphviz installed?" >&2; exit 1; }}
@@ -240,7 +247,7 @@ rule filegraph:
         r"""
         # Generate DOT file using nested snakemake with the dumped final config
         echo "[Rule filegraph] Using final config file: {input.config_file}"
-        snakemake --filegraph all --configfile {input.config_file} --quiet | sed -n "/digraph/,\$p" > {output.dot}
+        snakemake all --filegraph --configfile {input.config_file} --quiet | sed -n "/digraph/,\$p" > {output.dot}
 
         # Generate visualizations from the DOT file
         if [ -s {output.dot} ]; then
@@ -526,6 +533,9 @@ rule modify_district_heat_share:
 
 rule modify_prenetwork:
     params:
+        modify_austrian_transmission_capacities=config_provider(
+            "mods", "modify_austrian_transmission_capacities"
+        ),
         efuel_export_ban=config_provider("solving", "constraints", "efuel_export_ban"),
         enable_kernnetz=config_provider("wasserstoff_kernnetz", "enable"),
         costs=config_provider("costs"),
@@ -559,6 +569,10 @@ rule modify_prenetwork:
         bev_energy=config_provider("sector", "bev_energy"),
         bev_dsm_availability=config_provider("sector", "bev_dsm_availability"),
     input:
+        austrian_transmission_capacities="data/austrian_transmission_capacities.csv",
+        gas_input_nodes_simplified=resources(
+            "gas_input_locations_s_{clusters}_simplified.csv"
+        ),
         costs_modifications="ariadne-data/costs_{planning_horizons}-modifications.csv",
         network=resources(
             "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_brownfield.nc"

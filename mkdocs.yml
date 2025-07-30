@@ -1,0 +1,126 @@
+site_name: pypsa-at
+docs_dir: docs-at
+repo_url: https://gitlab.aggm.at/philip.worschischek/pypsa-at
+edit_uri: docs-at
+site_dir: public
+
+nav:
+- Home: index.md
+- How-to-Guides:
+  - how-to-guides/index.md
+  - how-to-guides/run-scenarios.md
+  - how-to-guides/run-evaluations.md
+  - how-to-guides/soft-fork-merge-upstream.md
+- Tutorials:
+  - tutorials/index.md
+  - tutorials/model-modifications.md
+- Function Reference:
+  - Evaluations:
+    - reference/evals/index.md
+    - cli.py: reference/evals/cli.md
+    - configs.py: reference/evals/configs.md
+    - constants.py: reference/evals/constants.md
+    - fileio.py: reference/evals/fileio.md
+    - metric.py: reference/evals/metric.md
+    - statistic.py: reference/evals/statistic.md
+    - utils.py: reference/evals/utils.md
+    - Plots:
+      - reference/evals/plots/index.md
+      - _base.py: reference/evals/plots/_base.md
+      - barchart.py: reference/evals/plots/barchart.md
+      - facetbars.py: reference/evals/plots/facetbars.md
+      - gridmap.py: reference/evals/plots/gridmap.md
+      - timeseries.py: reference/evals/plots/timeseries.md
+    - Views:
+      - reference/evals/views/index.md
+      - capacity:
+        - reference/evals/views/capacity/index.md
+        - reference/evals/views/capacity/heat_capacity
+- Explanations:
+  - explanations/index.md
+
+theme:
+  name: "material"
+  logo: assets/logo.png
+  favicon: assets/logo.png
+  palette:
+  - media: "(prefers-color-scheme: dark)"
+    scheme: slate
+    toggle:
+      icon: material/brightness-4
+      name: Switch to light mode
+  - media: "(prefers-color-scheme: light)"
+    scheme: default
+    toggle:
+      icon: material/brightness-7
+      name: Switch to dark mode
+  features:
+  - navigation.indexes
+  - navigation.tracking
+  - navigation.footer
+#  - navigation.tabs
+  - content.footnote.tooltips
+  - content.code.copy
+  - content.code.select
+  - content.code.annotate
+  - toc.follow
+  - social
+
+extra:
+  social:
+  - icon: fontawesome/brands/gitlab
+    link: https://gitlab.aggm.at/philip.worschischek/pypsa-at
+    name: gitlab
+  generator: true
+
+copyright: Copyright &copy; 2024 - 2025 Austrian Gas Grid Management AG
+
+plugins:
+- search
+- badges
+- autorefs
+#- mknotebooks:
+#    execute: false
+#    timeout: 100
+#    preamble: ""
+#    allow_errors: false
+- marimo  # need to downgrade Python interpreter to 3.11?
+- mkdocstrings:
+    default_handler: python
+    handlers:
+      python:
+        options:
+          docstring_style: numpy
+          show_source: true
+          show_inheritance_diagram: false
+          annotations_path: full
+        import:
+        - url: https://pypsa.readthedocs.io/en/latest/objects.inv
+        - url: https://pypsa-eur.readthedocs.io/en/latest/objects.inv
+        - url: https://pathlib.readthedocs.io/en/latest/objects.inv
+        - url: https://pandas.pydata.org/pandas-docs/stable/objects.inv
+        - url: https://numpy.org/doc/stable/objects.inv
+        - url: https://docs.python.org/3/objects.inv
+        - url: https://python-visualization.github.io/folium/latest/objects.inv
+        selection:
+          members: yes
+#          filter: ["!^_[^_]"]
+          filters: []   # include all members fixme: not working for protected methods =(
+# https://squidfunk.github.io/mkdocs-material/reference/icons-emojis/
+markdown_extensions:
+- attr_list
+- pymdownx.emoji:
+    emoji_index: !!python/name:material.extensions.emoji.twemoji
+    emoji_generator: !!python/name:material.extensions.emoji.to_svg
+- codehilite
+- admonition
+- pymdownx.details
+- pymdownx.superfences
+- pymdownx.snippets
+- pymdownx.superfences
+- pymdownx.tabbed:
+    alternate_style: true
+- tables
+
+extra_css:
+- assets/css/custom.css

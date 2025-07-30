@@ -17,6 +17,7 @@ import logging
 
 import pandas as pd
 
+from mods.network_updates import modify_austrian_industry_demand
 from scripts._helpers import configure_logging, mock_snakemake
 
 logger = logging.getLogger(__name__)
@@ -76,9 +77,7 @@ if __name__ == "__main__":
             .multiply(1000)
         )
 
-    logger.info(
-        "German industry demand before modification",
-    )
+    logger.info(f"German industry demand {year} before modification")
     logger.info(
         existing_industry.loc[
             "DE",
@@ -137,7 +136,7 @@ if __name__ == "__main__":
         "DE", ["Electric arc", "Integrated steelworks", "DRI + Electric arc"]
     ] = ratio * ariadne.loc["Production|Steel", year]
 
-    logger.info("German demand after modification")
+    logger.info(f"German demand {year} after modification")
     logger.info(
         existing_industry.loc[
             "DE",
@@ -154,6 +153,8 @@ if __name__ == "__main__":
             ],
         ],
     )
+
+    existing_industry = modify_austrian_industry_demand(existing_industry, year)
 
     existing_industry.to_csv(
         snakemake.output.industrial_production_per_country_tomorrow

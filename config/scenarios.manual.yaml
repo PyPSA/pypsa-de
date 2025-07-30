@@ -236,3 +236,11 @@ KN2045_NFhoch:
       2040: 0.24
       2045: 0.29
       2050: 0.33
+
+AT10_KN2040:
+# Basisszenario für PyPSA-AT mit Anpassungen des KN2045_Mix Szenarios aus PyPSA-DE mit
+#   * custom administrative clustering für Austrian regions
+#   * Kalibrationen für Ausbaukorridore erneuerbarer Erzeugung je Region
+#   * Netto-bilanzielle Erzeugung aus erneuerbaren in Österreich 2040
+#   * detaillierte Abbildung der Netze für Strom, gas, Wasserstoff
+#   * Datenupdates für die Sektoren Industrie, Transport, Haushalte und Dienstleistungen

@@ -10,12 +10,16 @@ import logging
 
 import pandas as pd
 import pypsa
+from pypsa.statistics import groupers
 
+from evals.statistic import get_location
 from scripts._helpers import configure_logging, set_scenario_config
 
 pd.set_option("future.no_silent_downcasting", True)
 idx = pd.IndexSlice
 logger = logging.getLogger(__name__)
+
+groupers.add_grouper("location", get_location)
 
 OUTPUTS = [
     "costs",
@@ -32,6 +36,8 @@ OUTPUTS = [
     "nodal_capacities",
     "nodal_energy_balance",
     "nodal_capacity_factors",
+    "nodal_supply",
+    "nodal_withdrawal",
 ]
 
 
@@ -296,17 +302,33 @@ def calculate_market_values(n: pypsa.Network) -> pd.Series:
     )
 
 
+def calculate_nodal_supply(n: pypsa.Network) -> pd.Series:
+    """
+    Calculate the regional supply for each technology.
+    """
+    return n.statistics.supply(groupby=["carrier", "location", "bus_carrier"])
+
+
+def calculate_nodal_withdrawal(n: pypsa.Network) -> pd.Series:
+    """
+    Calculate the regional withdrawal for each technology.
+    """
+    return n.statistics.withdrawal(groupby=["carrier", "location", "bus_carrier"])
+
+
 if __name__ == "__main__":
     if "snakemake" not in globals():
         from scripts._helpers import mock_snakemake
 
         snakemake = mock_snakemake(
             "make_summary",
-            clusters="5",
             opts="",
-            sector_opts="",
-            planning_horizons="2030",
-            configfiles="config/test/config.overnight.yaml",
+            clusters="adm",
+            ll="vopt",
+            sector_opts="none",
+            planning_horizons=2020,
+            run="KN2045_Mix",
+            configfiles="config/config.at.yaml",
         )
 
     configure_logging(snakemake)

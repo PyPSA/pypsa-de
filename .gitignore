@@ -24,6 +24,7 @@ gurobi.log
 /data
 /cutouts
 /tmp
+/public  # mkdocs build
 doc/_build
 
 /scripts/old
@@ -49,6 +50,8 @@ dconf
 /data/bundle/nuts*
 data/gas_network/scigrid-gas/
 data/costs_*.csv
+# PyPSA-AT specific data files
+#/data/austrian_transmission_capacities.csv
 
 dask-worker-space/
 publications.jrc.ec.europa.eu/
@@ -92,3 +95,11 @@ dev/*
 CLAUDE.md
 .claude/
 .github/copilot-instructions.md
+#folder quick marimo evals
+.marimo/JM_marimo_bs
+
+# pixi environments
+.pixi
+*.egg-info
+pixi.bak.*
+__marimo__/

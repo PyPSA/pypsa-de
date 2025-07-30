@@ -512,9 +512,15 @@ def busmap_for_admin_regions(
     for country in tqdm.tqdm(buses["country"].unique()):
         buses_subset = buses.loc[buses["country"] == country]
 
+        regions_subset = admin_regions.loc[admin_regions["country"] == country]
+        # if params["cluster_network"]["algorithm"] != "substations":
+        #     # number substations become is rendered incorrect after
+        #     # separation of multi-polygons.
+        # regions_subset = with_split_multipolygons(regions_subset, "AT33")
+
         buses.loc[buses_subset.index, "busmap"] = gpd.sjoin_nearest(
             buses_subset.to_crs(epsg=3857),
-            admin_regions.loc[admin_regions["country"] == country].to_crs(epsg=3857),
+            regions_subset.to_crs(epsg=3857),
             how="left",
         )["admin"]
 
@@ -603,7 +609,16 @@ if __name__ == "__main__":
     if "snakemake" not in globals():
         from scripts._helpers import mock_snakemake
 
-        snakemake = mock_snakemake("cluster_network", clusters=60)
+        snakemake = mock_snakemake(
+            "cluster_network",
+            configfiles="config/config.public.yaml",
+            opts="",
+            clusters="adm",
+            ll="vopt",
+            sector_opts="none",
+            planning_horizons="2040",
+            run="8Gt_Bal_v3",
+        )
     configure_logging(snakemake)
     set_scenario_config(snakemake)
 
