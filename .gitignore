@@ -103,4 +103,3 @@ CLAUDE.md
 *.egg-info
 pixi.bak.*
 __marimo__/
-.github/
