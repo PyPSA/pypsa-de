@@ -82,7 +82,7 @@ test:
 	echo "Build scenarios..."
 	snakemake -call build_scenarios
 	echo "Run DACH config..."
-	snakemake -call ariadne_all --configfile=config/test/config.dach.yaml
+	snakemake -call all --configfile=config/test/config.at10.yaml
 	echo "All tests completed successfully."
 
 unit-test:
