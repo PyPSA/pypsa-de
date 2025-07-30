@@ -19,7 +19,10 @@ def main():
         shutil.rmtree(".pixi")
 
     # re-create pixi files from environment.yaml
-    run(["pixi", "init", "--import", "envs/linux-pinned.yaml"], check=True)
+    run(
+        ["pixi", "init", "--import", "envs/environment.yaml", "--platform", "linux-64"],
+        check=True,
+    )
 
     # correct the environment name
     pixi_toml = Path("pixi.toml")
@@ -60,6 +63,9 @@ def main():
     run(["pixi", "add", "--pypi"] + pypi_packages, check=True)
 
     run(["pixi", "shell"])
+
+    # format prompt to exclude conda env name
+    run(["pixi config set shell.change-ps1", "false"])
 
 
 if __name__ == "__main__":
