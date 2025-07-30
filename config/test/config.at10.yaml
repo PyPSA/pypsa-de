@@ -1,0 +1,63 @@
+# SPDX-FileCopyrightText: Contributors to PyPSA-DE <https://github.com/pypsa/pypsa-eur>
+#
+# SPDX-License-Identifier: CC0-1.0
+
+run:
+  prefix: "test-sector-myopic-at10"
+  name:
+  - KN2045_Mix
+
+# need to include additional neighbor countries, because the
+# administrative clustering will not filter lines to connected
+# to countries not listed in `countries` and consistency checks
+# raise an Exception for components that have buses not defined in
+# the buses table.
+countries: ['DE', 'AT', 'CH', "CZ", "SI", "HU", "IT"]
+clustering:
+#  mode: administrative
+#  administrative:
+#    level: 0 # countries
+#    AT: 2  # 10 regions
+#    DE: 0  # reduce complexity
+    # IT: 0  # no islands during tests
+  temporal:
+    resolution_sector: 24H
+
+snapshots:
+  start: "2013-03-01"
+  end: "2013-03-08"
+
+atlite:
+  default_cutout: dach-03-2013-sarah3-era5
+  cutouts:
+    dach-03-2013-sarah3-era5:
+      module: [sarah, era5] # in priority order
+      x: [5., 18.]
+      y: [45., 56.]
+      time: ["2013-03-01", "2013-03-08"]
+
+renewable:
+  onwind:
+    cutout: dach-03-2013-sarah3-era5
+  offwind-ac:
+    cutout: dach-03-2013-sarah3-era5
+    max_depth: false
+  offwind-dc:
+    cutout: dach-03-2013-sarah3-era5
+    max_depth: false
+  offwind-float:
+    cutout: dach-03-2013-sarah3-era5
+    max_depth: false
+    min_depth: false
+  solar:
+    cutout: dach-03-2013-sarah3-era5
+  solar-hsat:
+    cutout: dach-03-2013-sarah3-era5
+
+electricity:
+  renewable_carriers: [solar, solar-hsat, onwind, offwind-ac, offwind-dc] # removed hydro, offwind-float
+
+solving:
+  solver:
+    name: highs
+    options: highs-default  # simplex not powerful enough for at10
