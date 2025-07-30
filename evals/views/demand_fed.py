@@ -9,7 +9,7 @@ from evals.utils import (
     filter_by,
     filter_for_carrier_connected_to,
     get_heat_loss_factor,
-    split_urban_heat_losses_and_consumption,
+    split_urban_central_heat_losses_and_consumption,
 )
 
 
@@ -65,7 +65,7 @@ def view_final_energy_demand(
     # # todo: Is this correct? They probably had a good reason for that, but I just can't see it.
 
     loss_factor = get_heat_loss_factor(networks)
-    load_split_urban_heat = split_urban_heat_losses_and_consumption(
+    load_split_urban_heat = split_urban_central_heat_losses_and_consumption(
         load_withdrawal_urban_heat, loss_factor
     )
 

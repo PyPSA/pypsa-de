@@ -10,9 +10,7 @@ import pandas as pd
 from pypsa.statistics import get_transmission_carriers
 
 from evals.constants import (
-    ALIAS_COUNTRY,
     ALIAS_LOCATION,
-    ALIAS_REGION,
     UNITS,
     BusCarrier,
     Carrier,
@@ -289,7 +287,7 @@ def expand_to_time_series(
     df: pd.DataFrame | pd.Series, snapshots: pd.Index, nhours: int = 8760
 ) -> pd.DataFrame:
     """
-    Convert time aggregated values into a time series.
+    Convert time aggregated value to a time series.
 
     Any column label will be dropped and replaced by the given
     snapshots. It is assumed, that the metric holds yearly values, as
@@ -530,56 +528,6 @@ def aggregate_locations(
     return result
 
 
-def add_dummy_rows(df: pd.DataFrame, keep_regions: tuple) -> pd.DataFrame:
-    """
-    Add rows for missing year - country combinations.
-
-    This is required to export empty figures. Empty figures
-    are used in the VAMOS interface to show that a metric has
-    no data for a country. For example, Italy has no district
-    heat network and, as a result, no data in the respective
-    district heat production capacities evaluation chart.
-
-    Parameters
-    ----------
-    df
-        The data frame with a locations index level.
-    keep_regions
-        The regions to add empty rows for.
-
-    Returns
-    -------
-    :
-        The input data frame one with additional emtpy row
-        per missing country.
-    """
-    attrs = df.attrs
-    years = df.index.unique(DataModel.YEAR)  # assuming all required years are present
-    countries = list(ALIAS_COUNTRY.values())
-    regions = [loc for k, loc in ALIAS_REGION.items() if k.startswith(keep_regions)]
-    locations = countries + regions
-
-    idx_names_required = DataModel.YEAR_IDX_NAMES[:2]  # year, location
-    n_levels_to_add = df.index.nlevels - len(idx_names_required)
-    idx_required = pd.MultiIndex.from_product(
-        [years, locations], names=idx_names_required
-    )
-
-    idx_present = df.reset_index().set_index(idx_names_required).index.unique()
-    idx_missing_year_loc = idx_required.difference(idx_present)
-
-    if idx_missing_year_loc.empty:
-        return df
-
-    missing_items = [idx + ("",) * n_levels_to_add for idx in idx_missing_year_loc]
-    idx_missing = pd.MultiIndex.from_tuples(missing_items, names=df.index.names)
-    rows_missing = pd.DataFrame(index=idx_missing, columns=df.columns, data=pd.NA)
-    result = pd.concat([rows_missing, df])
-    result.attrs = attrs
-
-    return result
-
-
 def scale(df: pd.DataFrame, to_unit: str) -> pd.DataFrame:
     """
     Scale metric values to the specified target unit.
@@ -718,7 +666,7 @@ def filter_for_carrier_connected_to(df: pd.DataFrame, bus_carrier: str | list):
     )
 
 
-def split_urban_heat_losses_and_consumption(
+def split_urban_central_heat_losses_and_consumption(
     df: pd.DataFrame | pd.Series, heat_loss: int
 ) -> pd.DataFrame:
     """
@@ -812,9 +760,8 @@ def operations_override(networks: dict, component: str, operation: str) -> None:
     """
     Patch the used operations time series.
 
-    Note, that monkeypatching does not work anymore since PyPSA
-    >0.30, because the 'get_operations' function is not used
-    by the pypsa.statistics anymore.
+    Useful if a code block should use a different productive
+    component series. For example, `p_set` instead of `p`.
 
     Parameters
     ----------
@@ -823,11 +770,12 @@ def operations_override(networks: dict, component: str, operation: str) -> None:
     component
         The component to patch, e.g. Link, Store, etc.
     operation
-        The desired operations time series to use instead of 'p'.
+        The desired operations time series to use instead of 'p' or 'e'.
 
     Yields
     ------
-    None, passes to the with statement block.
+    :
+        Passes to the with statement block.
     """
     _temp_key = "_tmp"
 
@@ -1111,7 +1059,24 @@ def get_transmission_techs(networks: dict, bus_carrier: str | list = None) -> li
     return sorted(transmission_techs)
 
 
-def show_link_bus_efficiencies(networks, year, like):
+def print_link_bus_efficiencies(networks, year, like) -> pd.Series:
+    """
+    Debugging utility function to review Link branches.
+
+    Parameters
+    ----------
+    networks
+        The loaded networks.
+    year
+        The year to print the Link branches for.
+    like
+        A regex to filter the Link index.
+
+    Returns
+    -------
+    :
+        A pandas Series with the first Link filter result.
+    """
     return (
         networks[year]
         .static("Link")
@@ -1120,26 +1085,3 @@ def show_link_bus_efficiencies(networks, year, like):
         .iloc[0, :]
         .T.sort_index()
     )
-
-
-# def get_bus_carrier_names(
-#     networks: dict, sector: str
-# ) -> list[str]:
-#     """
-#     Get the bus carrier names from the networks.
-#
-#     Parameters
-#     ----------
-#     networks
-#         The loaded networks.
-#     sector
-#         The energy sector to return bus_carrier names for.
-#
-#     Returns
-#     -------
-#     :
-#         A list of bus carrier names.
-#     """
-#     bus_carrier = set()
-#     for n in networks.values():
-#         n.static("Bus").query("carrier.str.contains(@sector)", engine="python", inplace=True)

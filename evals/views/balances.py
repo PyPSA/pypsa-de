@@ -11,7 +11,7 @@ from evals.utils import (
     filter_for_carrier_connected_to,
     get_heat_loss_factor,
     rename_aggregate,
-    split_urban_heat_losses_and_consumption,
+    split_urban_central_heat_losses_and_consumption,
 )
 from evals.views.common import simple_bus_balance
 
@@ -103,7 +103,7 @@ def view_balance_heat(
             statistic="withdrawal",
             bus_carrier=bus_carrier,
         )
-        .pipe(split_urban_heat_losses_and_consumption, heat_loss_factor)
+        .pipe(split_urban_central_heat_losses_and_consumption, heat_loss_factor)
         .mul(-1)
     )
 
