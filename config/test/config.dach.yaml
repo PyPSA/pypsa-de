@@ -44,6 +44,7 @@ renewable:
     cutout: dach-03-2013-sarah3-era5
 
 clustering:
+  mode: busmap
   focus_weights: []
   temporal:
     resolution_sector: 3H
