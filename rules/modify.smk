@@ -54,19 +54,6 @@ rule export_iamc_variables:
         "../scripts/pypsa-at/export_iamc_variables.py"
 
 
-rule plot_iamc_variables:
-    input:
-        iamc_variables=RESULTS + "evaluation/exported_iamc_variables.xlsx",
-    output:
-        sankey=RESULTS + "evaluation/HTML/sankey_diagram_EU_2050.html",
-    resources:
-        mem_mb=16000,
-    log:
-        RESULTS + "logs/plot_iamc_variables.log",
-    script:
-        "../scripts/pypsa-at/plot_iamc_variables.py"
-
-
 rule validate_pypsa_at:  # rule to run integration tests on solved networks
     params:
         clustering=config_provider("clustering"),

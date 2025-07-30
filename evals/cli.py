@@ -24,7 +24,7 @@ run_eval "/opt/data/esm/results"
 ``` shell
 # run evaluations as a script and from project root without installing the package
 (but with your virtual env activated of course)
-PYTHONPATH="./" python evals/cli.py "results/v2025.02/KN2045_Mix" -n "view_balance_heat"
+(pypsa-at)$ PYTHONPATH="./" python evals/cli.py "results/v2025.02/KN2045_Mix" -n "view_balance_heat"
 ```
 """
 

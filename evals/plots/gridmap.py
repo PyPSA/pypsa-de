@@ -12,7 +12,6 @@ import pandas as pd
 from folium import GeoJson, plugins
 
 from evals.constants import ALIAS_COUNTRY, ALIAS_REGION, DataModel
-from evals.data.icons import RIGHT_TO_BRACKET_SOLID
 from evals.utils import filter_by, prettify_number
 
 
@@ -263,7 +262,7 @@ class TransmissionGridMap:
         ):
             fg = self.feature_groups[year]
             # need a new instance for every icon
-            icon = self._get_icon(RIGHT_TO_BRACKET_SOLID)
+            # icon = self._get_icon(RIGHT_TO_BRACKET_SOLID)
             popup_table = filter_by(self.import_energy, year=year, location=node)
             popup_table = popup_table.droplevel(
                 [DataModel.YEAR, DataModel.CARRIER, DataModel.BUS_CARRIER]
@@ -274,7 +273,7 @@ class TransmissionGridMap:
             popup_html = popup_table.to_frame().to_html(classes=bootstrap5_classes)
             folium.Marker(
                 location=icon_locations[node],
-                icon=folium.CustomIcon(icon, icon_size=(10, 10)),
+                # icon=folium.CustomIcon(icon, icon_size=(10, 10)),
                 popup=folium.Popup(popup_html),
                 tooltip="Global Import",
             ).add_to(fg)

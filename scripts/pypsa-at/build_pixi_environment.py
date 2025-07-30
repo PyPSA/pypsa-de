@@ -51,8 +51,8 @@ def main():
         "pytest-metadata",
         "xlsxwriter",
         "git-delta",
+        "gitpython",
         "pandas-stubs",
-        "starship",
     ]
     run(["pixi", "add"] + packages, check=True)
 

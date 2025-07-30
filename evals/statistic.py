@@ -8,7 +8,6 @@ from pathlib import Path
 
 import pandas as pd
 import pypsa
-from deprecation import deprecated
 from pandas import DataFrame
 from pypsa.statistics import (
     StatisticsAccessor,
@@ -18,7 +17,6 @@ from pypsa.statistics import (
 )
 
 from evals.constants import (
-    TRANSMISSION_CARRIER,
     UNITS,
     BusCarrier,
     Carrier,
@@ -310,13 +308,7 @@ class ESMStatistics(StatisticsAccessor):
                 sub_directory=run["name"][0],
             )["electricity rail"]
             * UNITS["TW"]
-        )  # fixme: data for 2019 only
-
-        # read_csv_files(
-        #     res(run["prefix"]),
-        #     glob="pop_weighted_energy_totals_s_adm.csv",
-        #     sub_directory=run["name"][0],
-        # ).filter(regex="electricity residential|electricity services").sum(axis=1)
+        )  # fixme: data for base year only
 
         p = (
             self.energy_balance(
@@ -349,7 +341,7 @@ class ESMStatistics(StatisticsAccessor):
             )
             # fixme: just a note. There is a bug in the old Toolbox that
             #  counts the aforementioned amounts as demand (although
-            #  the amounts should be clipped.)
+            #  the negative values should probably be clipped.)
             p[homes_and_trade] = p[homes_and_trade].clip(upper=0)
 
         # rename electricity base load to avoid mixing it up
@@ -463,11 +455,8 @@ class ESMStatistics(StatisticsAccessor):
 
         Notes
         -----
-        This was done int the ESM Toolbox. However, it does not
-        seem to make sense with PyPSA-AT models, because inflow
-        to PHS is zero. As a result, there is no splitting and
-        PHS is secondary energy only, while hydro is primary energy
-        only.
+        Not needed if all PHS are implemeted as closed loops. The method is kept
+        if open loop PHS is available.
         """
         n = self._n
 
@@ -560,7 +549,7 @@ class ESMStatistics(StatisticsAccessor):
                 df = df * su[efficiency]
             # The actual bus carrier is "AC" for both, PHS and hydro.
             # Since only PHS and hydro are considered, we can use the
-            # bus_carrier level.
+            # bus_carrier level to track groups.
             result = insert_index_level(df, index_name, DataModel.BUS_CARRIER, axis=1)
             results.append(result.T)
 
@@ -725,88 +714,6 @@ class ESMStatistics(StatisticsAccessor):
 
         return trade_capacity.squeeze()
 
-    @deprecated("Not used anymore.")
-    def ambient_heat(self) -> pd.Series | pd.DataFrame:
-        """Calculate ambient heat energy amounts used by heat pumps."""
-        energy_balance = self._n.statistics.energy_balance(
-            comps="Link",
-            bus_carrier=BusCarrier.heat_buses() + ["low voltage"],
-            groupby=DataModel.IDX_NAMES,
-        )
-        heat_pump = energy_balance.filter(like="heat pump", axis=0)
-
-        def _heat_minus_ac(ser: pd.Series) -> pd.Series:
-            """
-            Return the sum of AC withdrawal and heat supply.
-
-            This function assumes, that 1 MWh (electricity) is 1 MWh (thermal).
-
-            Parameters
-            ----------
-            ser
-                The input Series with location, carrier and
-                bus_carrier MultiIndex levels. The carrier is
-                expected to be one of the heat pump carriers.
-                The bus_carrier per carrier are AC and one of
-                the heat bus_carrier.
-
-            Returns
-            -------
-            :
-                The sum of AC withdrawal and heat supply per
-                carrier.
-            """
-            hp = ser.unstack(DataModel.BUS_CARRIER)
-            assert hp.shape[1] == 2, f"Unexpected number of bus_carrier: {hp.columns}."
-            assert "low voltage" in hp.columns, (
-                f"low voltage missing in bus_carrier: {hp.columns}."
-            )
-            return hp.T.sum()
-
-        ambient_heat = heat_pump.groupby(DataModel.CARRIER, group_keys=False).apply(
-            _heat_minus_ac
-        )
-
-        new_index_items = []
-        for loc, carr in ambient_heat.index:
-            if carr.startswith("rural"):
-                new_index_items.append((loc, carr, BusCarrier.HEAT_RURAL))
-            elif carr.startswith("urban decentral"):
-                new_index_items.append((loc, carr, BusCarrier.HEAT_URBAN_DECENTRAL))
-            elif carr.startswith("urban central"):
-                new_index_items.append((loc, carr, BusCarrier.HEAT_URBAN_CENTRAL))
-            else:
-                raise ValueError(f"Carrier {carr} not recognized.")
-        ambient_heat.index = pd.MultiIndex.from_tuples(
-            new_index_items, names=DataModel.IDX_NAMES
-        )
-
-        # def _add_bus_carrier_from_carrier_name(idx):
-        #     """"""
-        #     loc, carr = idx
-        #     if carr.startswith("rural"):
-        #         bus_carr = BusCarrier.HEAT_RURAL
-        #     elif carr.startswith("urban decentral"):
-        #         bus_carr = BusCarrier.HEAT_URBAN_DECENTRAL
-        #     elif carr.startswith("urban central"):
-        #         bus_carr = BusCarrier.HEAT_URBAN_CENTRAL
-        #     else:
-        #         raise ValueError(f"Carrier {carr} not recognized.")
-        #     # return (loc, carr, bus_carr)
-        #     return bus_carr
-        #
-        # bus_carrier = ambient_heat.index.map(_add_bus_carrier_from_carrier_name)
-        # bus_carrier.name = DataModel.BUS_CARRIER
-        #
-        # ambient_heat = insert_index_level(
-        #     ambient_heat, "ambient heat", DataModel.BUS_CARRIER, pos=2
-        # )
-
-        ambient_heat.attrs["name"] = "Ambient Heat"
-        ambient_heat.attrs["unit"] = "MWh"
-
-        return ambient_heat
-
     def grid_capacity(
         self,
         comps: list = None,
@@ -827,7 +734,7 @@ class ESMStatistics(StatisticsAccessor):
             The bus carrier to consider.
         carrier
             The carrier to consider, defaults to all
-            constants.TRANSMISSION_CARRIER.
+            transmission carriers in the network.
         append_grid
             Whether to add the grid lines to the result.
         align_edges
@@ -850,7 +757,7 @@ class ESMStatistics(StatisticsAccessor):
         the optimal capacity.
         """
         n = self._n
-        carrier = carrier or list(TRANSMISSION_CARRIER)
+        carrier = carrier or get_transmission_carriers(n, bus_carrier).unique("carrier")
         capacities = n.statistics.optimal_capacity(
             comps=comps or n.branch_components,
             bus_carrier=bus_carrier,
@@ -890,7 +797,7 @@ class ESMStatistics(StatisticsAccessor):
             The bus carrier to consider.
         carrier
             The carrier to consider, defaults to all
-            constants.TRANSMISSION_CARRIER.
+            transmission carrier in the network.
         aggregate_time
             The aggregation function aggregate by.
         append_grid
@@ -903,7 +810,7 @@ class ESMStatistics(StatisticsAccessor):
             between nodes.
         """
         n = self._n
-        carrier = carrier or list(TRANSMISSION_CARRIER)
+        carrier = carrier or get_transmission_carriers(n, bus_carrier).unique("carrier")
         comps = comps or n.branch_components
 
         energy_transmission = n.statistics.transmission(
@@ -915,13 +822,13 @@ class ESMStatistics(StatisticsAccessor):
         energy_transmission = filter_by(energy_transmission, carrier=carrier)
 
         # split directions:
-        # positive values are from bus0 to bus1
+        # positive values are from bus0 to bus1, i.e. bus1 supply
         bus0_to_bus1 = energy_transmission.clip(lower=0)
 
-        # negative values are from bus1 to bus0
+        # negative values are from bus1 to bus0, i.e. bus0 supply
         idx_names = list(energy_transmission.index.names)
         bus1_to_bus0 = energy_transmission.clip(upper=0).mul(-1)
-        # we reverse the node index levels to show positive values and
+        # reverse the node index levels to show positive values and
         # have a consistent way of interpreting the energy flow
         bus1_to_bus0 = bus1_to_bus0.swaplevel("bus0", "bus1")
         pos0, pos_1 = idx_names.index("bus0"), idx_names.index("bus1")
@@ -945,6 +852,6 @@ class ESMStatistics(StatisticsAccessor):
         result.name = f"{result.attrs['name']} ({result.attrs['unit']})"
 
         if append_grid:
-            result = add_grid_lines(n, result)
+            result = add_grid_lines(n.static("Bus"), result)
 
         return result.sort_index()

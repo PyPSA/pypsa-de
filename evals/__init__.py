@@ -1,1 +1,1 @@
-"""Mark directory as python package."""
+"""PyPSA-AT evaluations to produce views, plotly charts and folium maps ."""

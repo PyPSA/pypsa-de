@@ -18,7 +18,6 @@ from evals.constants import (
     Carrier,
     DataModel,
     Group,
-    Mapping,
     Regex,
     TradeTypes,
 )
@@ -432,46 +431,6 @@ def apply_cutoff(df: pd.DataFrame, limit: float, drop: bool = True) -> pd.DataFr
     result = df.mask(cond=df.abs() <= abs(limit), other=pd.NA)
     if drop:
         result = result.dropna(how="all", axis=0)
-    return result
-
-
-def get_mapping(map_name: str, map_type: str = "external") -> dict:
-    """
-    Extract a dictionary from the nested mapping definition.
-
-    Parameters
-    ----------
-    map_name
-        The name of the mapping component to extract. Different
-        evaluation contexts require different grouping of carrier.
-
-    map_type
-        The mapping type to extract. May be "internal" or "external",
-        defaults to "external". The internal mapping returns groups
-        of finer granularity than external.
-
-    Returns
-    -------
-    :
-        The combined mapping for the requested components.
-    """
-    # some mappings are provided directly in the evals functions.
-    if isinstance(map_name, dict):
-        return map_name
-
-    result = {}
-    for carrier, group_names in Mapping.carrier.items():
-        if isinstance(group_names, str):  # single entry
-            result[carrier] = group_names
-        elif isinstance(group_names, dict):
-            group = group_names.get(map_type)
-            if isinstance(group, str):
-                result[carrier] = group
-            elif isinstance(group, dict):
-                value = group.get(map_name, group["default"])
-                # skips renaming altogether if value is empty.
-                result[carrier] = value or carrier
-
     return result
 
 

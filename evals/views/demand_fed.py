@@ -33,12 +33,6 @@ def view_final_energy_demand(
     -------
     :
     """
-    #         _fetch_fed_transport(networks, result_path),
-    #         _fetch_fed_industry(networks, result_path),
-    # done    _fetch_fed_decentral_heat(networks),
-    # done    _fetch_fed_district_heat(networks),
-    # done  _fetch_fed_homes_and_trade(networks),  but broken
-
     link_supply_rural_heat = (
         collect_myopic_statistics(
             networks,
@@ -64,7 +58,6 @@ def view_final_energy_demand(
     ).drop(
         Carrier.low_temperature_heat_for_industry,
         level=DataModel.CARRIER,
-        # errors="ignore",
     )
 
     # # The Toolbox drops Italian urban heat technologies for unknown reasons.
@@ -140,23 +133,5 @@ def view_final_energy_demand(
         DataModel.LOCATION,
         DataModel.BUS_CARRIER,
     ]
-    # metric.defaults.plotly.file_name_template = "final_demand_{location}"
-    # metric.defaults.plotly.legend_header = "Energy Carrier"
-    # metric.cfg.plotly.footnotes = (
-    #     "International aviation and navigation are not included.",
-    #     "",
-    # )
-    # metric.defaults.plotly.category_orders = (
-    #     Group.coal,
-    #     Group.solar_thermal,
-    #     Group.h2,
-    #     Group.biomass,
-    #     Group.oil,
-    #     Group.ch4,
-    #     Group.electrictiy,
-    #     Group.heat_district,
-    # )
-    # metric.defaults.plotly.xaxis_title = "<b>Years</b>"
-    # metric.defaults.plotly.cutoff = 0.04
 
     exporter.export(result_path, subdir=subdir)

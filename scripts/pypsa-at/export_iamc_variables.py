@@ -1236,7 +1236,7 @@ if __name__ == "__main__":
             "Commit SHA": "",
             "Repository": "https://gitlab.aggm.at/philip.worschischek/pypsa-at",
             "Scenario": snakemake.wildcards.run,
-            "Quality Assessment": "draft",
+            "Quality Assessment": "demo",
             "Release for publication": "no",
         }
     ).to_frame("value")

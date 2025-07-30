@@ -3,7 +3,6 @@
 from pathlib import Path
 
 from evals.fileio import Exporter
-from evals.statistic import collect_myopic_statistics
 
 
 def view_price_map(
@@ -25,9 +24,7 @@ def view_price_map(
     """
     statistics = []
 
-    collect_myopic_statistics(
-        networks,
-    )
+    # marginal_cost = collect_myopic_statistics(networks, "")
 
     exporter = Exporter(statistics=statistics, view_config=config["view"])
     exporter.export(result_path, subdir=config["view"]["subdir"])
