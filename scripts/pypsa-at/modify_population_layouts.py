@@ -24,5 +24,5 @@ if __name__ == "__main__":
         )
     configure_logging(snakemake)
 
-    if snakemake.config["mods"].get("modify_population_layouts"):
+    if snakemake.config.get("mods", {}).get("modify_population_layouts"):
         main()
