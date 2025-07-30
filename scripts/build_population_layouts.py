@@ -30,8 +30,13 @@ if __name__ == "__main__":
 
     configure_logging(snakemake)
     set_scenario_config(snakemake)
-    coco.logging.getLogger().setLevel(coco.logging.CRITICAL)
-
+    try:
+        coco.logging.getLogger().setLevel(coco.logging.CRITICAL)
+    except AttributeError as e:
+        logger.warning(
+            f"Did not set country_converter log level, because "
+            f"the logging attribute is not available: {e}"
+        )
     cutout = load_cutout(snakemake.input.cutout)
 
     grid_cells = cutout.grid.geometry
