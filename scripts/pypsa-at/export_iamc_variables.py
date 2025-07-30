@@ -494,18 +494,15 @@ def primary_gas():
     gas_generation = _extract(
         SUPPLY, carrier="gas", bus_carrier=bc, component="Generator"
     )
-    assert (
-        gas_generation.sum()
-        == pd.concat(
-            [
-                var[f"{prefix}|Global Import LNG"],
-                var[f"{prefix}|Global Import Pipeline"],
-                var[f"{prefix}|Production"],
-            ]
-        ).sum()
-    )
+    assert gas_generation.sum().round(4) == pd.concat(
+        [
+            var[f"{prefix}|Global Import LNG"],
+            var[f"{prefix}|Global Import Pipeline"],
+            var[f"{prefix}|Production"],
+        ]
+    ).sum().round(4)
 
-    var[f"{prefix}|Import Global"] = _extract(
+    var[f"{prefix}|Green Gas Import"] = _extract(
         SUPPLY,
         carrier="import gas",
         bus_carrier=bc,

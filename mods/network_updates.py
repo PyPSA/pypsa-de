@@ -111,7 +111,7 @@ def unravel_gas_import_and_production(
         )
         return
 
-    if not config["mods"].get("unravel_natural_gas_imports", {}).get("enable"):
+    if not config.get("mods", {}).get("unravel_natural_gas_imports", {}).get("enable"):
         logger.debug(
             "Skipping unravel natural gas imports because "
             "the modification was not requested."
@@ -143,7 +143,7 @@ def unravel_gas_import_and_production(
             nodes,
             suffix=suffix,
             bus=nodes,
-            carrier=carrier,
+            carrier=carrier,  # fixme: still 'gas' in evals
             p_nom_extendable=False,
             marginal_cost=marginal_cost,
             p_nom=p_nom,
@@ -161,7 +161,7 @@ def unravel_gas_import_and_production(
 
 def unravel_electricity_base_load(n: pypsa.Network, snakemake: Snakemake) -> None:
     """
-    Split electricity bas load into sectoral loads.
+    Split electricity baseload into sectoral loads.
 
     Parameters
     ----------
