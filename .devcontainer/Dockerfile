@@ -1,7 +1,6 @@
 FROM debian:bookworm
 
-ARG PIXI_VERSION=v0.49.0
-ENV XPAUTH_PATH=/mnt/storage/xpress/xpauth.xpr
+ARG PIXI_VERSION=v0.50.2
 
 RUN mkdir -p /mnt/storage
 
@@ -16,17 +15,10 @@ RUN sh -c "$(wget -O- https://github.com/deluan/zsh-in-docker/releases/download/
     -t robbyrussell \
     -p git
 
-# Install Starship
+# Install starship
 RUN curl -sS https://starship.rs/install.sh | sh -s -- -y
 
+# Install pixi
 RUN curl -L -o /usr/local/bin/pixi -fsSL --compressed "https://github.com/prefix-dev/pixi/releases/download/${PIXI_VERSION}/pixi-$(uname -m)-unknown-linux-musl" \
     && chmod +x /usr/local/bin/pixi \
     && pixi info
-
-# build python environment: cannot find script
-# RUN python3 /IdeaProjects/pypsa-at/scripts/pypsa-at/build_pixi_environment.py
-
-# clone and install configuration files for git and other tools 
-# RUN git clone https://gitlab.aggm.at/philip.worschischek/dotfiles.git ../dotfiles \
-#     && ../dotfiles/setup.sh /.jbdevcontainer
-

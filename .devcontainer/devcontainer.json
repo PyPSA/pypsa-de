@@ -1,15 +1,12 @@
 {
-    "name": "pypsa-at-pw",
+    "name": "pypsa-at",
     "build": {
       "context": "..",
       "dockerfile": "Dockerfile"
     },
     "mounts": [
-      {
-        "source": "/mnt/storage",
-        "target": "/mnt/storage",
-        "type": "bind"
-      }
+      "source=/mnt/storage,target=/mnt/storage,type=bind",
+      "source=cutouts,target=${localWorkspaceFolder}/cutouts,type=bind"
     ],
     "forwardPorts": [
       8000,
