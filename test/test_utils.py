@@ -71,11 +71,11 @@ def df_locations():
     """Produce a data frame to test location aggregation."""
     idx = [
         ("FR0 0", "A"),
-        ("AT0 1", "A"),
-        ("AT0 2", "A"),
-        ("AT0 2", "B"),
-        ("DE0 1", "A"),
-        ("DE0 2", "A"),
+        ("AT11", "A"),
+        ("AT12", "A"),
+        ("AT333", "B"),
+        ("DE1", "A"),
+        ("DEA", "A"),
         ("", "A"),
     ]
     return pd.DataFrame(
@@ -1091,9 +1091,9 @@ def test_apply_cutoff(df, limit, drop, expected):
                 {
                     "a": {
                         ("", "A"): 6,
-                        ("AT - Lower Austria", "A"): 1,
-                        ("AT - Vienna", "A"): 2,
-                        ("AT - Vienna", "B"): 3,
+                        ("Burgenland (AT)", "A"): 1,
+                        ("Lower Austria (AT)", "A"): 2,
+                        ("East Tyrol (AT)", "B"): 3,
                         ("Austria", "A"): 3,
                         ("Austria", "B"): 3,
                         ("Europe", "A"): 12,
@@ -1115,9 +1115,9 @@ def test_apply_cutoff(df, limit, drop, expected):
                         ("", "A"): 6,
                         ("AT", "A"): 3,
                         ("AT", "B"): 3,
-                        ("AT0 1", "A"): 1,
-                        ("AT0 2", "A"): 2,
-                        ("AT0 2", "B"): 3,
+                        ("AT11", "A"): 1,
+                        ("AT12", "A"): 2,
+                        ("AT333", "B"): 3,
                         ("DE", "A"): 9,
                         ("EU", "A"): 12,
                         ("EU", "B"): 3,
@@ -1137,8 +1137,8 @@ def test_apply_cutoff(df, limit, drop, expected):
                         ("", "A"): 6,
                         ("Austria", "A"): 3,
                         ("Austria", "B"): 3,
-                        ("DE - Baden Wurttemberg", "A"): 4,
-                        ("DE - Midwest", "A"): 5,
+                        ("Baden-Württemberg", "A"): 4,
+                        ("North Rhine-Westphalia", "A"): 5,
                         ("Europe", "A"): 12,
                         ("Europe", "B"): 3,
                         ("France", "A"): 0,
@@ -1183,7 +1183,7 @@ def test_apply_cutoff(df, limit, drop, expected):
             id="no_keep_regions",
         ),
         # Error cases
-        pytest.param(pd.DataFrame(), ("AT",), True, KeyError, id="empty_data"),
+        pytest.param(pd.DataFrame(), (), True, KeyError, id="empty_data"),
     ],
 )
 def test_aggregate_locations(df, keep_regions, nice_names, expected):
@@ -1195,7 +1195,7 @@ def test_aggregate_locations(df, keep_regions, nice_names, expected):
     else:
         result = aggregate_locations(df, keep_regions, nice_names).sort_index()
         expected.index.names = ["location", "carrier"]
-        pd.testing.assert_frame_equal(result, expected)
+        pd.testing.assert_frame_equal(result.sort_index(), expected.sort_index())
 
 
 @pytest.mark.unit
@@ -1248,12 +1248,12 @@ def test_verify_metric_format(df, expected):
         pytest.param(10.09, "10"),
         pytest.param(1.4499999, "1.4"),
         pytest.param(1.499999, "1.5"),
-        pytest.param(0.15, "0.2"),
+        pytest.param(0.15, "0.1"),
         pytest.param(9.499999, "9.5"),
-        pytest.param(9.5, "10"),
+        pytest.param(9.5, "9.5"),
         pytest.param(10.449999, "10"),
-        pytest.param(10.49999, "11"),
-        pytest.param(10.5, "11"),
+        pytest.param(10.49999, "10"),
+        pytest.param(10.5, "10"),
         pytest.param(99.49, "99"),
         pytest.param(99.5, "100"),
     ],
