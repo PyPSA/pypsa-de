@@ -3,7 +3,6 @@
 import logging
 import re
 from contextlib import contextmanager
-from decimal import ROUND_HALF_UP, Decimal, localcontext
 
 import numpy as np
 import pandas as pd
@@ -158,7 +157,7 @@ def get_unit(s: str, ignore_suffix: bool = True) -> str:
     """
     if matches := re.findall(Regex.unit, s):
         unit = matches[-1].strip("()")
-        if ignore_suffix:
+        if ignore_suffix and "_" in unit:
             return "_".join(unit.split("_")[:-1])
         else:
             return matches[-1].strip("()")
@@ -426,7 +425,7 @@ def apply_cutoff(df: pd.DataFrame, limit: float, drop: bool = True) -> pd.DataFr
     :
         A data frame without values that are smaller than the limit.
     """
-    result = df.mask(cond=df.abs() <= abs(limit), other=pd.NA)
+    result = df.mask(cond=df.abs() < abs(limit), other=pd.NA)
     if drop:
         result = result.dropna(how="all", axis=0)
     return result
@@ -806,13 +805,18 @@ def prettify_number(x: float) -> str:
         The formatted number as a string with 1 or 0 decimal places,
         depending on the magnitude of the input value.
     """
-    if abs(round(x, 0)) >= 10:
-        with localcontext():
-            return str(round(round(Decimal(x), 1), 0))
+    # if abs(round(x, 0)) >= 10:
+    #     with localcontext():
+    #         return str(round(round(Decimal(x), 1), 0))
+    # else:
+    #     with localcontext() as ctx:
+    #         ctx.rounding = ROUND_HALF_UP
+    #         return str(round(round(Decimal(x), 2), 1))
+    #
+    if abs(x) >= 10:
+        return f"{int(round(x, 0)):d}"
     else:
-        with localcontext() as ctx:
-            ctx.rounding = ROUND_HALF_UP
-            return str(round(round(Decimal(x), 2), 1))
+        return f"{round(x, 1):.1f}"
 
 
 def add_grid_lines(buses: pd.DataFrame, statistic: pd.Series) -> pd.DataFrame:
