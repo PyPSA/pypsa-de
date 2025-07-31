@@ -58,11 +58,11 @@ jobs:
         for file in envs/*.lock.yaml; do
           if [ -f "$file" ]; then
             echo "Processing $file"
-            if ! grep -q "name: pypsa-de" "$file"; then
-              # Insert name: pypsa-de before channels section
-              sed -i '7a name: pypsa-de' "$file"
+            if ! grep -q "name: pypsa-at" "$file"; then
+              # Insert name: pypsa-at before channels section
+              sed -i '7a name: pypsa-at' "$file"
             else
-              echo "name: pypsa-de already exists in $file"
+              echo "name: pypsa-at already exists in $file"
             fi
           fi
         done
