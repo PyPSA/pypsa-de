@@ -81,7 +81,7 @@ test:
 	echo "Running tests..."
 	echo "Build scenarios..."
 	snakemake -call build_scenarios
-	echo "Run DACH config..."
+	echo "Run AT10 test config..."
 	snakemake -call all --configfile=config/test/config.at10.yaml
 	echo "All tests completed successfully."
 
