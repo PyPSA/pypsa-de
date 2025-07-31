@@ -76,7 +76,7 @@ jobs:
     - uses: conda-incubator/setup-miniconda@v3
       with:
         miniforge-version: latest
-        activate-environment: pypsa-de
+        activate-environment: pypsa-at
         channel-priority: strict
 
     - name: Cache Conda env
@@ -89,7 +89,7 @@ jobs:
     - name: Update environment
       if: steps.cache-env.outputs.cache-hit != 'true'
       run: |
-        conda env update -n pypsa-de -f ${{ env.env_file }}
+        conda env update -n pypsa-at -f ${{ env.env_file }}
         echo "Run conda list" && conda list
 
     - name: Run snakemake test workflows

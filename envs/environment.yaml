@@ -16,6 +16,9 @@ dependencies:
 - ruamel.yaml
 - jpype1
 
+# pypsa-at specific
+- frozendict
+
 # Inhouse packages
 - pypsa>=0.32.1
 - atlite>=0.3
