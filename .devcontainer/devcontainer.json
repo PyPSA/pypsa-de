@@ -6,7 +6,7 @@
     },
     "mounts": [
       "source=/mnt/storage,target=/mnt/storage,type=bind",
-      "source=cutouts,target=/IdeaProjects/pypsa-at/cutouts,type=bind"
+      "source=cutouts,target=/IdeaProjects/pypsa-at/cutouts,type=volume,readonly"
     ],
     "forwardPorts": [
       8000,
