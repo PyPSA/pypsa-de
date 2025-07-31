@@ -54,10 +54,19 @@ def fix_capacities(realization, decision):
                 f"Decision network have {name} with {attr}_opt > {attr}_max. "
                 f"These assets are: {deci.query(f'{attr}_opt > {attr}_max').index.tolist()}"
             )
-            _idx = deci.query(f"{attr}_opt > {attr}_max").index
+            _idx = deci.query(
+                f"{attr}_opt > {attr}_max and not (carrier == 'DC' and build_year > 0)"
+            ).index
             deci.loc[_idx, attr + "_opt"] = deci.loc[_idx, attr + "_max"]
             logger.warning(
-                f"Setting {name} with {attr}_opt > {attr}_max to {attr}_max."
+                f"Setting {attr}_opt > {attr}_max to {attr}_max for indices: {_idx.tolist()}."
+            )
+            _idx = deci.query(
+                f"{attr}_opt > {attr}_max and (carrier == 'DC' and build_year > 0)"
+            ).index
+            deci.loc[_idx, attr + "_max"] = deci.loc[_idx, attr + "_opt"]
+            logger.warning(
+                f"Setting {attr}_max = {attr}_opt for indices: {_idx.tolist()}."
             )
 
         if not deci.query(f"{attr}_min > {attr}_opt").empty:
