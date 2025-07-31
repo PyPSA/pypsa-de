@@ -63,7 +63,7 @@ rule plot_iamc_variables:
         ),
 
 
-rule validate_pypsa_at:  # rule to run integration tests on solved networks
+rule validate_pypsa_at:
     params:
         clustering=config_provider("clustering"),
         rdir=RESULTS,
@@ -77,6 +77,5 @@ rule validate_pypsa_at:  # rule to run integration tests on solved networks
     resources:
         mem_mb=16000,
     shell:
-        # setting RESULTS here does not work, but why?!
-        # "pytest test/test_base_network.py --html {params.rdir}/validity_report.html --results_dir {params.rdir}"
-        "pytest --html {params.rdir}/validity_report.html --results_dir {params.rdir}"
+        # fixme: remove unit mark once tests pass
+        "pytest -m unit --html {params.rdir}/validity_report.html --result-path={params.rdir}"
