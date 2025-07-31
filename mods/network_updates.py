@@ -1,5 +1,9 @@
 """Functions to update the industry demand in the PyPSA-AT model."""
 
+# SPDX-FileCopyrightText: 2023-2025 Austrian Gas Grid Management AG
+#
+# SPDX-License-Identifier: MIT
+# For license information, see the LICENSE.txt file in the project root.
 from logging import getLogger
 
 import pandas as pd

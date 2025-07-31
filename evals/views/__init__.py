@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2023-2025 Austrian Gas Grid Management AG
+#
+# SPDX-License-Identifier: MIT
+# For license information, see the LICENSE.txt file in the project root.
 """Expose view functions from inside the views package to the module."""
 
 from evals.views.balances import (

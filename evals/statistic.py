@@ -1,4 +1,8 @@
-"""Collect statistics for ESM evaluations."""  # noqa: A005
+# SPDX-FileCopyrightText: 2023-2025 Austrian Gas Grid Management AG
+#
+# SPDX-License-Identifier: MIT
+# For license information, see the LICENSE.txt file in the project root.
+"""Collect statistics for evaluations."""  # noqa: A005
 
 import logging
 from functools import partial

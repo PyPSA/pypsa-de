@@ -1,9 +1,13 @@
+# SPDX-FileCopyrightText: 2023-2025 Austrian Gas Grid Management AG
+#
+# SPDX-License-Identifier: MIT
+# For license information, see the LICENSE.txt file in the project root.
 [global]
 subdirectory = "esm/data"
 
 [view.capacity.heat_capacity]
 name = "override"
-file_name  = "heatKapas_{location}"
+file_name  = "heat_capas_{location}"
 
 [view.capacity.heat_capacity.categories]
 "DAC" = "testing override"
