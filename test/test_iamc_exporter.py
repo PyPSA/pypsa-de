@@ -3,7 +3,7 @@ from itertools import product
 import pandas as pd
 import pytest
 
-from test.views.test_evals import Constants
+from test.test_evals import Constants
 
 
 @pytest.fixture(scope="module")
