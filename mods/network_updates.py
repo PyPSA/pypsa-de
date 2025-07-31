@@ -143,7 +143,7 @@ def unravel_gas_import_and_production(
             nodes,
             suffix=suffix,
             bus=nodes,
-            carrier=carrier,  # fixme: still 'gas' in evals
+            carrier=carrier,
             p_nom_extendable=False,
             marginal_cost=marginal_cost,
             p_nom=p_nom,

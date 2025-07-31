@@ -80,6 +80,8 @@ BC_ALIAS = {
     # Store
     "urban central water pits": "Heat",
     "urban central water tanks": "Heat",
+    "urban decentral water tanks": "Heat",
+    "rural water tanks": "Heat"
 }
 
 
@@ -121,7 +123,7 @@ def _process_single_input_link(
         var[label] = filter_by(supply, bus_carrier=bc).groupby(IDX).sum()
 
     if not surplus.empty:
-        assert technology in ("CHP", "Boiler", "Ground Heat Pump", "Air Heat Pump"), (
+        assert technology in ("CHP", "CHP CC", "Boiler", "Ground Heat Pump", "Air Heat Pump"), (
             f"Unexpected technology with efficiencies > 1: {technology}."
         )
         heat_ambient = rename_aggregate(surplus, "MWh_th", level="unit").mul(-1)
@@ -471,43 +473,10 @@ def primary_gas():
     var[f"{prefix}|Import Foreign"] = _extract(IMPORT_FOREIGN, bus_carrier=bc)
     var[f"{prefix}|Import Domestic"] = _extract(IMPORT_DOMESTIC, bus_carrier=bc)
 
-    # split generator types by Generator component name
-    natural_gas_generators = collect_myopic_statistics(
-        networks,
-        "supply",
-        groupby=["location", "name", "unit"],
-        bus_carrier="gas",
-        comps="Generator",
-        drop_unit=False,
-    )
-    var[f"{prefix}|Global Import LNG"] = (
-        natural_gas_generators.filter(like="gas lng import").groupby(IDX).sum()
-    )
-    var[f"{prefix}|Global Import Pipeline"] = (
-        natural_gas_generators.filter(like="gas pipeline import").groupby(IDX).sum()
-    )
-    var[f"{prefix}|Production"] = (
-        natural_gas_generators.filter(like="gas production").groupby(IDX).sum()
-    )
-
-    # remove all gas generators from global SUPPLY
-    gas_generation = _extract(
-        SUPPLY, carrier="gas", bus_carrier=bc, component="Generator"
-    )
-    assert gas_generation.sum().round(4) == pd.concat(
-        [
-            var[f"{prefix}|Global Import LNG"],
-            var[f"{prefix}|Global Import Pipeline"],
-            var[f"{prefix}|Production"],
-        ]
-    ).sum().round(4)
-
-    var[f"{prefix}|Green Gas Import"] = _extract(
-        SUPPLY,
-        carrier="import gas",
-        bus_carrier=bc,
-        component="Generator",
-    )
+    var[f"{prefix}|Global Import LNG"] = _extract(SUPPLY, bus_carrier=bc, component="Generator", carrier="lng gas")
+    var[f"{prefix}|Global Import Pipeline"] = _extract(SUPPLY, bus_carrier=bc, component="Generator", carrier="pipeline gas")
+    var[f"{prefix}|Domestic Production"] = _extract(SUPPLY, bus_carrier=bc, component="Generator", carrier="production gas")
+    var[f"{prefix}|Green Global Import"] = _extract(SUPPLY, carrier="import gas", bus_carrier=bc, component="Link")
 
     var[f"{prefix}|Biogas"] = _extract(SUPPLY, carrier="biogas to gas", bus_carrier=bc)
     var[f"{prefix}|Biogas CC"] = _extract(
@@ -611,7 +580,7 @@ def primary_hydrogen():
     prefix = f"{PRIMARY}|{BC_ALIAS[bc]}"
     var[f"{prefix}|Import Foreign"] = _extract(IMPORT_FOREIGN, bus_carrier=bc)
     var[f"{prefix}|Import Domestic"] = _extract(IMPORT_DOMESTIC, bus_carrier=bc)
-    var[f"{prefix}|Import Global"] = _extract(
+    var[f"{prefix}|Green Import Global"] = _extract(
         SUPPLY, carrier="import H2", bus_carrier=bc, component="Generator"
     )
 
@@ -718,7 +687,7 @@ def primary_ammonia():
     bc = "NH3"
     prefix = f"{PRIMARY}|{BC_ALIAS[bc]}"
     # todo: needed?
-    var[f"{prefix}|Import"] = _extract(SUPPLY, carrier="import NH3")
+    var[f"{prefix}|Green Global Import"] = _extract(SUPPLY, carrier="import NH3")
 
     aggregate_variables(prefix, pattern=rf"^{prefix.replace('|', r'\|')}")
 
@@ -744,7 +713,7 @@ def primary_methanol():
     )
 
     deficit = regional_demand.add(regional_production, fill_value=0)
-    var[f"{prefix}|Import"] = deficit.mul(-1)
+    var[f"{prefix}|Green Global Import"] = deficit.mul(-1)
 
     aggregate_variables(prefix, pattern=rf"^{prefix.replace('|', r'\|')}")
 
@@ -841,8 +810,11 @@ def collect_storage_imbalances():
     comps = ["Store", "StorageUnit"]
 
     imbalanced_techs = {
-        "urban central water pits": "Water Pits",  # Storage losses
-        "urban central water tanks": "Water Tank",  # Storage losses
+        # Storage losses:
+        "urban central water pits": "Water Pits",
+        "urban central water tanks": "Water Tank",
+        "urban decentral water tanks": "Water Tank",
+        "rural water tanks": "Water Tank",
         "coal": "Coal",  # FixMe: small unexplained imbalance accepted for now
         "PHS": "PHS",  # Pump efficiency
         "non-sequestered HVC": "Waste",
@@ -906,6 +878,12 @@ def collect_losses_energy():
         .add(_extract(DEMAND, carrier="BEV charger", component="Link"))
         .mul(-1)
     )
+    var[f"{prefix}|AC|V2G"] = (
+        _extract(SUPPLY, carrier="V2G", component="Link")
+        .add(_extract(DEMAND, carrier="V2G", component="Link"))
+        .mul(-1)
+    )
+
     # drop the supply/demand at the other bus side of (dis)charger links
     _extract(
         SUPPLY,
@@ -962,10 +940,15 @@ def collect_secondary_energy():
     )
     transform_link(technology="CHP", carrier="urban central solid biomass CHP")
     transform_link(technology="CHP", carrier="waste CHP")
+
     transform_link(technology="CHP CC", carrier="waste CHP CC")
+    transform_link(technology="CHP CC", carrier="urban central gas CHP CC")
+    transform_link(technology="CHP CC", carrier="urban central solid biomass CHP CC")
 
     transform_link(technology="Powerplant", carrier=["CCGT", "OCGT"])
     transform_link(technology="Powerplant", carrier="H2 OCGT")
+    transform_link(technology="Powerplant", carrier="H2 Fuel Cell")
+    transform_link(technology="Powerplant", carrier=["OCGT methanol", "CCGT methanol", "CCGT methanol CC", "allam methanol"])
     transform_link(technology="Powerplant", carrier="coal")
     transform_link(technology="Powerplant", carrier="lignite")
     transform_link(technology="Powerplant", carrier="solid biomass")
@@ -980,12 +963,16 @@ def collect_secondary_energy():
     transform_link(technology="SMR CC", carrier="SMR CC")
     transform_link(technology="Steam Reforming", carrier="Methanol steam reforming")
     transform_link(
-        technology="Steam Reforming CC", carrier="methanol steam reforming CC"
+        technology="Steam Reforming CC", carrier="Methanol steam reforming CC"
     )
 
+    transform_link(technology="Biomass2Hydrogen", carrier="solid biomass to hydrogen")
     transform_link(technology="Biomass2Liquids", carrier="biomass to liquid")
     transform_link(technology="Biomass2Liquids CC", carrier="biomass to liquid CC")
+    transform_link(technology="Biomass2Methanol", carrier="biomass-to-methanol")
+    transform_link(technology="Biomass2Methanol CC", carrier="biomass-to-methanol CC")
     transform_link(technology="Fischer-Tropsch", carrier="Fischer-Tropsch")
+    transform_link(technology="Methanol2Oil", carrier="methanol-to-kerosene")
     transform_link(
         technology="Unsustainable Bioliquids", carrier="unsustainable bioliquids"
     )
@@ -1149,10 +1136,13 @@ if __name__ == "__main__":
         snakemake = mock_snakemake(
             "export_iamc_variables",
             run="KN2045_Mix",
+            prefix="test-sector-myopic-at10",
+            config="config/test/config.at10.yaml"
         )
     configure_logging(snakemake)
 
     networks = read_networks(snakemake.input.networks)
+    networks = read_networks("/IdeaProjects/pypsa-at/results/test-sector-myopic-at10/KN2045_Mix")
 
     groupby = ["location", "carrier", "bus_carrier", "unit"]
     kwargs = {
@@ -1204,7 +1194,8 @@ if __name__ == "__main__":
         .mul(-1)
     )
 
-    # Remove duplicated transmission technologies from global metrics
+    # Remove transmission technologies from SUPPLY/DEMAND because
+    # they are tracken in separate IMPORT/EXPORT statistics
     drop_transmission_technologies()
 
     # collect transformed energy system variables. Note, that the order of
