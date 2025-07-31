@@ -19,6 +19,7 @@ https://pyam-iamc.readthedocs.io/en/stable/
 
 import logging
 import re
+from itertools import product
 
 import pandas as pd
 from pyam import IamDataFrame
@@ -342,6 +343,13 @@ def collect_regional_nh3_loads():
             if re.match(rf"^Secondary Energy\|{BC_ALIAS[bc]}", k)
         }
     )
+    nh3_regional_demand = merge_variables(
+        {
+            k: v
+            for k, v in var.items()
+            if re.match(rf"^Secondary Energy\|Demand\|{BC_ALIAS[bc]}", k)
+        }
+    )
     nh3_eu_demand = DEMAND.filter(like=BC_ALIAS[bc])
     nh3_eu_import = merge_variables(
         {
@@ -353,6 +361,7 @@ def collect_regional_nh3_loads():
     imbalances_iamc = (
         nh3_regional_supply.groupby("year")
         .sum()
+        .sub(nh3_regional_demand.groupby("year").sum(), fill_value=0)
         .add(nh3_eu_import.groupby("year").sum(), fill_value=0)
         .add(nh3_eu_demand.groupby("year").sum(), fill_value=0)
     )
@@ -370,7 +379,7 @@ def collect_regional_nh3_loads():
 
     # check that imbalances are equal to imbalances in the network
     pd.testing.assert_series_equal(imbalances_iamc, imbalances_bus, check_names=False)
-    if not imbalances_bus.empty:
+    if not imbalances_bus.abs().le(1e-3).all():
         logger.warning(f"Imbalances detected for bus carrier {bc}:\n{imbalances_bus}.")
     var[f"{FINAL}|{BC_ALIAS[bc]}|Agriculture"] = nh3_regional_supply.groupby(IDX).sum()
     _extract(DEMAND, component="Load", carrier=bc, bus_carrier=bc)
@@ -862,8 +871,6 @@ def collect_storage_charger_discharger_pairs():
         "urban central water tanks",
         "urban decentral water tanks",
         "urban central water pits",
-        "battery",
-        "home battery",
     )
 
     for storage_system in storage_systems:
@@ -900,6 +907,36 @@ def collect_losses_energy():
         .add(_extract(DEMAND, carrier="V2G", component="Link"))
         .mul(-1)
     )
+
+    # losses due to battery loading and unloading
+    for tech, charge in product(("battery", "home battery"), ("charger", "discharger")):
+        var[f"{prefix}|AC|{tech.title()} storage"] = (
+            _extract(SUPPLY, carrier=f"{tech} {charge}", component="Link")
+            .add(_extract(DEMAND, carrier=f"{tech} {charge}", component="Link"))
+            .mul(-1)
+        )
+
+    # var[f"{prefix}|AC|Battery storage"] = (
+    #     _extract(SUPPLY, carrier="battery charger", component="Link")
+    #     .add(_extract(DEMAND, carrier="battery charger", component="Link"))
+    #     .mul(-1)
+    # )
+    # var[f"{prefix}|AC|Battery storage"] = (
+    #     _extract(SUPPLY, carrier="battery discharger", component="Link")
+    #     .add(_extract(DEMAND, carrier="battery discharger", component="Link"))
+    #     .mul(-1)
+    # )
+    # var[f"{prefix}|AC|Home Battery storage"] = (
+    #     _extract(SUPPLY, carrier="home battery charger", component="Link")
+    #     .add(_extract(DEMAND, carrier="home battery charger", component="Link"))
+    #     .mul(-1)
+    # )
+    # var[f"{prefix}|AC|Home Battery storage"] = (
+    #     _extract(SUPPLY, carrier="home battery discharger", component="Link")
+    #     .add(_extract(DEMAND, carrier="home battery discharger", component="Link"))
+    #     .mul(-1)
+    # )
+
     # DAC has no outputs but CO2, which is ignored in energy flows
     var[f"{SECONDARY}|Demand|AC|DAC"] = _extract(
         DEMAND, carrier="DAC", bus_carrier="AC"
