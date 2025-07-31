@@ -862,7 +862,7 @@ def collect_storage_charger_discharger_pairs():
             DEMAND,
             carrier=f"{storage_system} discharger"
         ))
-        assert discharger_losses.abs().le(1.5).all(), f"Discharger Losses detected for carrier: {storage_system}"
+        assert discharger_losses.abs().le(1.5).all(), f"Storage system imbalances detected for carrier: {storage_system}"
 
 
 def collect_losses_energy():
