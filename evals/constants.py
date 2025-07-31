@@ -445,7 +445,7 @@ class Regex:
 
     # matches: startswith 2 capital letters, followed by up to 3 digits,
     # 1 space, and any number of digits for optional subnets.
-    region: re.Pattern = re.compile(r"^[A-Z]{2}[\d,A-G]{0,3}\s*\d*")
+    region: re.Pattern = re.compile(r"^(?!.*CH4)[A-Z]{2}[\d,A-G]{0,3}\s*\d*")
 
     # matches: startswith 2 capital letters, followed by up to 3 digits,
     # groups: only the first 2 letters that are the country code
