@@ -29,11 +29,11 @@ def exported_variables(results) -> pd.Series:
     return iamc.stack()
 
 
-@pytest.mark("integration")
+@pytest.mark.integration
 @pytest.mark.parametrize(
     ("year", "region"),
     [
-        product(Constants.YEARS, Constants.LOCATIONS),
+        *product(Constants.YEARS, Constants.LOCATIONS),
     ],
 )
 def test_biogas_balances(
