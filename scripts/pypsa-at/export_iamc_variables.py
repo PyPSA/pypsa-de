@@ -883,16 +883,16 @@ def collect_losses_energy():
         .add(_extract(DEMAND, carrier="V2G", component="Link"))
         .mul(-1)
     )
-    var[f"{prefix}|AC|Large Batteries"] = (
-        _extract(SUPPLY, carrier="home battery discharger", component="Link")
-        .add(_extract(DEMAND, carrier="battery charger", component="Link"))
-        .mul(-1)
-    )
-    var[f"{prefix}|AC|Home Batteries"] = (
-        _extract(SUPPLY, carrier="battery discharger", component="Link")
-        .add(_extract(DEMAND, carrier="battery charger", component="Link"))
-        .mul(-1)
-    )
+    # var[f"{prefix}|AC|Large Batteries"] = (
+    #     _extract(SUPPLY, carrier="home battery discharger", component="Link")
+    #     .add(_extract(DEMAND, carrier="battery charger", component="Link"))
+    #     .mul(-1)
+    # )
+    # var[f"{prefix}|AC|Home Batteries"] = (
+    #     _extract(SUPPLY, carrier="battery discharger", component="Link")
+    #     .add(_extract(DEMAND, carrier="battery charger", component="Link"))
+    #     .mul(-1)
+    # )
 
     # DAC has no outputs but CO2, which is ignored in energy flows
     var[f"{SECONDARY}|Demand|AC|DAC"] = _extract(
