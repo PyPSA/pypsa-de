@@ -831,47 +831,47 @@ def collect_storage_imbalances():
                 f"total imbalance of {balance.groupby('year').sum()}."
             )
             bc = balance.index.unique("bus_carrier").item()
-            tech = imbalanced_techs[
-                carrier
-            ]  # raises KeyError if carrier is not registered
-            var[f"{SECONDARY}|Losses|{BC_ALIAS[bc]}|{tech}"] = balance.groupby(
-                IDX
-            ).sum()
+            label = f"{SECONDARY}|Losses|{BC_ALIAS[bc]}|{imbalanced_techs[carrier]}"
+            var[label] = balance.groupby(IDX).sum()
         else:
             logger.debug(f"No Store imbalances detected for carrier: {carrier}.")
 
         SUPPLY.drop(supply.index, inplace=True)
         DEMAND.drop(demand.index, inplace=True)
 
-    # collect water pit losses here, to combine them with storage
-    # labels and prevent duplicates in the IAMC data frame.
-    var[f"{SECONDARY}|Losses|Heat|Water Pits"] = (
-        _extract(
+
+
+
+def collect_storage_charger_discharger_pairs():
+    # Assuming, that Links used to supply to storages have efficiencies of 1.0
+    # i.e. they do not have losses themselves and the supply/demand balance
+    # from Store components contain all standing losses.
+    # drop the supply/demand at the other bus side of (dis)charger links
+    storage_systems = ("rural water tanks", "urban central water tanks", "urban decentral water tanks", "urban central water pits", "battery", "home battery")
+
+    for storage_system in storage_systems:
+        charger_losses = _extract(SUPPLY, carrier=f"{storage_system} charger").add(_extract(
+            DEMAND,
+            carrier=f"{storage_system} charger"
+        ))
+        assert charger_losses.abs().le(1.5).all(), f"Charger Losses detected for carrier: {storage_system}"
+        discharger_losses = _extract(
             SUPPLY,
-            carrier="urban central water pits discharger",
-            bus_carrier="urban central heat",
-            component="Link",
-        )
-        .add(
-            _extract(
-                DEMAND,
-                carrier="urban central water pits charger",
-                bus_carrier="urban central heat",
-                component="Link",
-            )
-        )
-        .mul(-1)
-    )
+            carrier=f"{storage_system} discharger"
+        ).add(_extract(
+            DEMAND,
+            carrier=f"{storage_system} discharger"
+        ))
+        assert discharger_losses.abs().le(1.5).all(), f"Discharger Losses detected for carrier: {storage_system}"
 
 
 def collect_losses_energy():
-    # DSM Links with losses that connect to buses with stores
     prefix = f"{SECONDARY}|Losses"
 
     var[f"{prefix}|AC|Distribution Grid"] = (
         _extract(SUPPLY, carrier="electricity distribution grid")
-        + _extract(DEMAND, carrier="electricity distribution grid")
-    ).mul(-1)
+        .add(_extract(DEMAND, carrier="electricity distribution grid")
+    ).mul(-1))
 
     var[f"{prefix}|AC|BEV charger"] = (
         _extract(SUPPLY, carrier="BEV charger", component="Link")
@@ -883,17 +883,15 @@ def collect_losses_energy():
         .add(_extract(DEMAND, carrier="V2G", component="Link"))
         .mul(-1)
     )
-
-    # drop the supply/demand at the other bus side of (dis)charger links
-    _extract(
-        SUPPLY,
-        carrier="urban central water pits charger",
-        bus_carrier="urban central water pits",
+    var[f"{prefix}|AC|Large Batteries"] = (
+        _extract(SUPPLY, carrier="home battery discharger", component="Link")
+        .add(_extract(DEMAND, carrier="battery charger", component="Link"))
+        .mul(-1)
     )
-    _extract(
-        DEMAND,
-        carrier="urban central water pits discharger",
-        bus_carrier="urban central water pits",
+    var[f"{prefix}|AC|Home Batteries"] = (
+        _extract(SUPPLY, carrier="battery discharger", component="Link")
+        .add(_extract(DEMAND, carrier="battery charger", component="Link"))
+        .mul(-1)
     )
 
     # DAC has no outputs but CO2, which is ignored in energy flows
@@ -950,6 +948,7 @@ def collect_secondary_energy():
     transform_link(technology="Powerplant", carrier="H2 Fuel Cell")
     transform_link(technology="Powerplant", carrier=["OCGT methanol", "CCGT methanol", "CCGT methanol CC", "allam methanol"])
     transform_link(technology="Powerplant", carrier="coal")
+    transform_link(technology="Powerplant", carrier="oil")
     transform_link(technology="Powerplant", carrier="lignite")
     transform_link(technology="Powerplant", carrier="solid biomass")
     transform_link(technology="Powerplant", carrier="nuclear")
@@ -966,6 +965,7 @@ def collect_secondary_energy():
         technology="Steam Reforming CC", carrier="Methanol steam reforming CC"
     )
 
+    transform_link(technology="Ammonia2Hydrogen", carrier="ammonia cracker")
     transform_link(technology="Biomass2Hydrogen", carrier="solid biomass to hydrogen")
     transform_link(technology="Biomass2Liquids", carrier="biomass to liquid")
     transform_link(technology="Biomass2Liquids CC", carrier="biomass to liquid CC")
@@ -1141,7 +1141,7 @@ if __name__ == "__main__":
         )
     configure_logging(snakemake)
 
-    networks = read_networks(snakemake.input.networks)
+    # networks = read_networks(snakemake.input.networks)
     networks = read_networks("/IdeaProjects/pypsa-at/results/test-sector-myopic-at10/KN2045_Mix")
 
     groupby = ["location", "carrier", "bus_carrier", "unit"]
@@ -1204,6 +1204,7 @@ if __name__ == "__main__":
 
     collect_primary_energy()
     collect_storage_imbalances()
+    collect_storage_charger_discharger_pairs()
     collect_losses_energy()
     collect_secondary_energy()
     collect_final_energy()
