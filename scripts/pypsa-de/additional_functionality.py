@@ -541,7 +541,9 @@ def add_national_co2_budgets(n, snakemake, national_co2_budgets, investment_year
 
 def add_decentral_heat_pump_budgets(n, decentral_heat_pump_budgets, investment_year):
     carriers = [
-        "rural air heat pumprural ground heat pumpurban decentral air heat pump"
+        "rural air heat pump",
+        "rural ground heat pump",
+        "urban decentral air heat pump",
     ]
 
     heat_pumps = n.links.index[n.links.carrier.isin(carriers)]
@@ -579,6 +581,8 @@ def add_decentral_heat_pump_budgets(n, decentral_heat_pump_budgets, investment_y
                 n.model["Link-p"].loc[:, heat_pumps] * n.snapshot_weightings.generators
             ).sum()
         )
+
+        lhs = sum(lhs)
 
         cname = f"decentral_heat_pump_limit-{ct}"
         n.model.add_constraints(
