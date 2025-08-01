@@ -1,0 +1,8 @@
+Pygments
+mkdocs
+mkdocs-marimo
+mkdocs-material
+mkdocs-material-extensions
+mkdocstrings-python
+mknotebooks
+pymdown-extensions

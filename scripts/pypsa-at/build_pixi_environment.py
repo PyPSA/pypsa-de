@@ -36,21 +36,13 @@ def main():
 
     # add pypsa-at packages
     packages = [
-        "Pygments",
         "click",
         "folium",
         "frozendict",
         "markdown",
-        "mkdocs",
-        "mkdocs-marimo",
-        "mkdocs-material",
-        "mkdocs-material-extensions",
-        "mkdocstrings-python",
-        "mknotebooks",
         "pixi-pycharm",
         "ruff-lsp",
         "plotly",
-        "pymdown-extensions",
         "pytest",
         "pytest-html",
         "pytest-cov",

@@ -4,8 +4,8 @@
 
 version: 2
 
-sphinx:
-  configuration: doc/conf.py
+mkdocs:
+  configuration: mkdocs.yml
 
 build:
   os: ubuntu-22.04
@@ -16,4 +16,4 @@ build:
 
 python:
   install:
-  - requirements: doc/requirements.txt
+  - requirements: docs-at/requirements.txt
