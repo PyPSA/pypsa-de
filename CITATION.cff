@@ -1,11 +1,10 @@
 cff-version: 1.2.0
-message: "pypsa-de"
-title: "PyPSA-DE - Hochaufgelöstes, sektorengekoppeltes Modell des deutschen Energiesystems"
-repository: https://github.com/PyPSA/pypsa-de
-version: 0.3.0
-doi: "10.5281/zenodo.15096969"
-date-released: "Mar 27, 2025"
+message: "pypsa-at"
+title: "PyPSA-AT - Sektorengekoppeltes Energiesystemmodell des österreichischen Energiesystems"
+repository: https://github.com/AGGM-AG/pypsa-at
+version: 0.0.0
+date-released: "none"
 license: MIT
 authors:
-  - family-names: Lindner, Seibold, Geis, Brown
-    given-names: Michael, Toni, Julian, Tom
+  - family-names: Worschischek, Avetisjan, Wernhart
+    given-names: Philip, Vartan, Helmut

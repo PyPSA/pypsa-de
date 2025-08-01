@@ -10,8 +10,8 @@ assignees: ''
 
 ## Checklist
 
-- [ ] I am using the current [`master`](https://github.com/PyPSA/pypsa-eur/tree/master) branch or the latest [release](https://github.com/PyPSA/pypsa-eur/releases). Please indicate.
-- [ ] I am running on an up-to-date [`pypsa-eur` environment](https://github.com/PyPSA/pypsa-eur/blob/master/envs/environment.yaml). Update via `conda env update -f envs/environment.yaml`.
+- [ ] I am using the current [`main`](https://github.com/AGGM-AG/pypsa-at/tree/main) branch, else please indicate.
+- [ ] I am running on an up-to-date [`pypsa-at` environment](https://github.com/AGGM-AG/pypsa-at/blob/main/envs/environment.yaml). Update via `conda env update -f envs/environment.yaml`.
 
 ## Describe the Bug
 

@@ -17,10 +17,10 @@ body:
     options:
     - label: >
         I have confirmed this bug exists on the lastest
-        [release](https://github.com/pypsa/PyPSA-DE/releases) of PyPSA-DE.
+        [release](https://github.com/AGGM-AG/pypsa-at/releases) of PyPSA-AT.
     - label: >
         I have confirmed this bug exists on the current
-        [`master`](https://github.com/pypsa/PyPSA-DE/tree/master) branch of PyPSA-DE.
+        [`main`](https://github.com/AGGM-AG/pypsa-at/tree/main) branch of PyPSA-AT.
 
 - type: textarea
   id: problem
