@@ -19,6 +19,7 @@ dependencies:
 # pypsa-at specific
 - frozendict
 - pytest-html
+- sourcery
 
 # Inhouse packages
 - pypsa>=0.32.1
