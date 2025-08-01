@@ -1196,10 +1196,7 @@ if __name__ == "__main__":
         )
     configure_logging(snakemake)
 
-    # networks = read_networks(snakemake.input.networks)
-    networks = read_networks(
-        "/IdeaProjects/pypsa-at/results/test-sector-myopic-at10/KN2045_Mix"
-    )
+    networks = read_networks(snakemake.input.networks)
 
     groupby = ["location", "carrier", "bus_carrier", "unit"]
     kwargs = {
