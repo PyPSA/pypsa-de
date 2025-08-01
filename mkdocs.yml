@@ -3,6 +3,7 @@ docs_dir: docs-at
 repo_url: https://gitlab.aggm.at/philip.worschischek/pypsa-at
 edit_uri: docs-at
 site_dir: public
+site_url: https://myproject.readthedocs.io
 
 nav:
 - Home: index.md
@@ -71,9 +72,9 @@ theme:
 
 extra:
   social:
-  - icon: fontawesome/brands/gitlab
-    link: https://gitlab.aggm.at/philip.worschischek/pypsa-at
-    name: gitlab
+  - icon: fontawesome/brands/github
+    link: https://github.com/aggm-ag/pypsa-at
+    name: github
   generator: true
 
 copyright: Copyright &copy; 2024 - 2025 Austrian Gas Grid Management AG
