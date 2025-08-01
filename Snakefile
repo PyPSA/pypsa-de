@@ -1080,8 +1080,6 @@ rule regret_all:
 
 
 rule regret_all_variables:
-    params:
-        output_dir="results/" + config["run"]["prefix"] + "/regret_comparison/",
     input:
         exported_variables=expand(
             RESULTS + "regret_variables/regret_variables_{decision}_full.xlsx",

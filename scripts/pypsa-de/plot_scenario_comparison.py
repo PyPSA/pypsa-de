@@ -9,14 +9,14 @@ import pandas as pd
 from scripts._helpers import mock_snakemake
 
 
-def scenario_plot(df, var):
+def scenario_plot(df, output_dir, var):
     unit = df._get_label_or_level_values("Unit")[0]
     if var.startswith("Investment"):
         unit = "billion EUR2020/yr"
     df = df.droplevel("Unit")
     ax = df.T.plot(xlabel="years", ylabel=str(unit), title=str(var))
     var = var.replace("|", "-").replace("\\", "-").replace(" ", "-").replace("/", "-")
-    ax.figure.savefig(snakemake.params.output_dir + var, bbox_inches="tight", dpi=100)
+    ax.figure.savefig(f"{output_dir}/{var}.png", bbox_inches="tight", dpi=100)
     plt.close(ax.figure)
 
 
@@ -43,8 +43,16 @@ if __name__ == "__main__":
     df = pd.concat(dfs, axis=0)
 
     prefix = snakemake.config["run"]["prefix"]
-    if not os.path.exists(f"results/{prefix}/scenario_comparison/"):
-        os.mkdir(f"results/{prefix}/scenario_comparison/")
+    root_dir = snakemake.input[0][: snakemake.input[0].find(prefix)]
+    comparison_dir = (
+        "regret_comparison/"
+        if "regret_variables" in snakemake.input[0]
+        else "scenario_comparison/"
+    )
+    output_dir = root_dir + prefix + "/" + comparison_dir
+
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
 
     for var in df._get_label_or_level_values("Variable"):
-        scenario_plot(df.xs(var, level="Variable"), var)
+        scenario_plot(df.xs(var, level="Variable"), output_dir, var)
