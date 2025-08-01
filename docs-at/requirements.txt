@@ -1,5 +1,6 @@
 Pygments
 mkdocs
+mkdocs-badges
 mkdocs-marimo
 mkdocs-material
 mkdocs-material-extensions
