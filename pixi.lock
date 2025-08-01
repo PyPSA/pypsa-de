@@ -646,6 +646,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/f7/35/ebb920761d3add7bf64a1c42d2bba9e170efcf95f19946f26202487801e6/mkdocs_badges-0.4.5-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/a3/58/35da89ee790598a0700ea49b2a66594140f44dec458c07e8e3d4979137fc/ply-3.11-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/00/2a/cd77620274a8c7053d637aa6cdbd76427f53217432f07aaf41110bc40a60/pyomo-6.9.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+      - pypi: https://files.pythonhosted.org/packages/e0/d1/a2c83fd38312355f1b97a1cf6e03dc4deb02ac5194680d34056b3e4cd5fb/sourcery-1.37.0-py2.py3-none-manylinux1_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/44/e7/5c072b990bddccc4a78a186d641e50257993c50658cddc0d4bf300acd1e1/tsam-2.3.9-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/80/ab/e2116546ecc50ce1e3cff74aeb37b488abb73b93568b0a1fe44969c24a6f/xpress-9.6.0-1-cp312-cp312-manylinux1_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/68/19/b336b1fb7f6d7428812886c59bcba0f8bb168ca8a9df823b9ba32ed79805/xpresslibs-9.6.0-1-cp38-abi3-manylinux1_x86_64.whl
@@ -8286,6 +8287,10 @@ packages:
   - pkg:pypi/soupsieve?source=hash-mapping
   size: 37773
   timestamp: 1746563720271
+- pypi: https://files.pythonhosted.org/packages/e0/d1/a2c83fd38312355f1b97a1cf6e03dc4deb02ac5194680d34056b3e4cd5fb/sourcery-1.37.0-py2.py3-none-manylinux1_x86_64.whl
+  name: sourcery
+  version: 1.37.0
+  sha256: b674457203201c6716b5318f15964f904f482837ef7a32e6bef0f68b03db6cb6
 - conda: https://conda.anaconda.org/conda-forge/linux-64/sqlalchemy-2.0.42-py312h4c3975b_0.conda
   sha256: b056a6b741566c72d2feb54610854de938ebb995ce521295718d622d7dc8c8af
   md5: 590596904f502f85bb5ddcf09447dd4c
