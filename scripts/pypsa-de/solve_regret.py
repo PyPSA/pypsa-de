@@ -10,9 +10,25 @@ from scripts._helpers import (
     set_scenario_config,
     update_config_from_wildcards,
 )
-from scripts.solve_network import solve_network
+from scripts.solve_network import prepare_network, solve_network
 
 logger = logging.getLogger(__name__)
+
+
+def check_matching_components(new, deci, name, attr):
+    if not new.index.symmetric_difference(deci.index).empty:
+        logger.error(
+            f"Indices of {name} in realization and decision networks do not match. "
+            "This may lead to unexpected results."
+            f"Offending indices are: {new.index.symmetric_difference(deci.index).tolist()}"
+        )
+        assert (
+            new.query(f"{attr}_extendable")
+            .index.symmetric_difference(deci.query(f"{attr}_extendable").index)
+            .empty
+        ), (
+            f"Indices of {name} with {attr}_extendable in realization and decision networks do not match."
+        )
 
 
 def fix_capacities(realization, decision):
@@ -29,55 +45,28 @@ def fix_capacities(realization, decision):
         new = getattr(n, name)
         deci = getattr(decision, name)
 
-        if not new.index.symmetric_difference(deci.index).empty:
-            logger.error(
-                f"Indices of {name} in realization and decision networks do not match. "
-                "This may lead to unexpected results."
-            )
-            assert (
-                new.query(f"{attr}_extendable")
-                .index.symmetric_difference(deci.query(f"{attr}_extendable").index)
-                .empty
-            ), (
-                f"Indices of {name} with {attr}_extendable in realization and decision networks do not match."
-            )
-            # raise ValueError("Indices of realization and decision networks do not match.")
-
-        common_i = new.index.intersection(deci.index).difference(
-            new.query("carrier == 'BEV charger'").index
-        )  # Exclude BEV chargers from modification because the p_nom are taken from UBA
-
-        extendable_i = new.query(f"{attr}_extendable").index
-
-        if not deci.query(f"{attr}_opt > {attr}_max").empty:
+        greater = deci.query(f"{attr}_opt > {attr}_max")
+        if not greater.empty:
             logger.warning(
                 f"Decision network have {name} with {attr}_opt > {attr}_max. "
-                f"These assets are: {deci.query(f'{attr}_opt > {attr}_max').index.tolist()}"
+                f"These assets are: {greater.index.tolist()}"
             )
-            _idx = deci.query(
-                f"{attr}_opt > {attr}_max and not (carrier == 'DC' and build_year > 0)"
-            ).index
-            deci.loc[_idx, attr + "_opt"] = deci.loc[_idx, attr + "_max"]
-            logger.warning(
-                f"Setting {attr}_opt > {attr}_max to {attr}_max for indices: {_idx.tolist()}."
-            )
-            _idx = deci.query(
-                f"{attr}_opt > {attr}_max and (carrier == 'DC' and build_year > 0)"
-            ).index
-            deci.loc[_idx, attr + "_max"] = deci.loc[_idx, attr + "_opt"]
-            logger.warning(
-                f"Setting {attr}_max = {attr}_opt for indices: {_idx.tolist()}."
-            )
-
-        if not deci.query(f"{attr}_min > {attr}_opt").empty:
-            ValueError(
+        smaller = deci.query(f"{attr}_min > {attr}_opt")
+        if not smaller.empty:
+            logger.error(
                 f"Decision network have {name} with {attr}_min > {attr}_opt. "
                 "This may lead to unexpected results."
-                f"These assets are: {deci.query(f'{attr}_min > {attr}_opt').index.tolist()}"
+                f"These assets are: {smaller.index.tolist()}"
             )
-            _idx = deci.query(f"{attr}_min > {attr}_opt").index
-            deci.loc[_idx, attr + "_opt"] = deci.loc[_idx, attr + "_min"]
 
+        check_matching_components(new, deci, name, attr)
+
+        common_i = new.query("carrier != 'BEV charger'").index.intersection(
+            deci.query("carrier != 'BEV charger'").index
+        )  # Exclude BEV chargers from modification because the p_nom are taken from UBA
+        extendable_i = new.query(f"{attr}_extendable").index
+
+        # Copy all assets (maybe this should only be done for current planning horizon)
         new.loc[common_i, attr] = deci.loc[common_i, attr]
         new.loc[common_i, attr + "_opt"] = deci.loc[common_i, attr + "_opt"]
         new.loc[common_i, attr + "_min"] = deci.loc[common_i, attr + "_min"]
@@ -85,6 +74,8 @@ def fix_capacities(realization, decision):
 
         # Ideally nothing should be extendable
         new.loc[extendable_i, attr + "_extendable"] = False
+        # In this case p_nom = p_nom_opt
+        new.loc[extendable_i, attr] = new.loc[extendable_i, attr + "_opt"]
 
         if name == "links":
             virtual_links = [
@@ -106,7 +97,7 @@ def fix_capacities(realization, decision):
             essential_links = [
                 "SMR",
                 "waste CHP",
-                "biogas to gas",
+                # "biogas to gas",
             ]
             # TODO double check if these are all needed
             bottleneck_links = [
@@ -125,12 +116,27 @@ def fix_capacities(realization, decision):
                 extendable_i
             )
             new.loc[_idx, "p_nom_extendable"] = True
+
             # For essential links and bottleneck links allow more, but not less
             links_to_limit = essential_links + bottleneck_links
             _idx = new.loc[new.carrier.isin(links_to_limit)].index.intersection(
                 extendable_i
             )
             new.loc[_idx, "p_nom_min"] = new.loc[_idx, "p_nom_opt"]
+
+            # For DC fix everything to p_nom_opt
+            _idx = new.loc[new.carrier == "DC"].index.intersection(extendable_i)
+            new.loc[_idx, "p_nom_min"] = new.loc[_idx, "p_nom_opt"]
+            new.loc[_idx, "p_nom_max"] = new.loc[_idx, "p_nom_opt"]
+            new.loc[_idx, "p_nom_extendable"] = True
+
+        if name == "lines":
+            # For lines fix everything to s_nom_opt
+            _idx = new.index.intersection(extendable_i)
+
+            new.loc[_idx, "s_nom_min"] = new.loc[_idx, "s_nom_opt"]
+            new.loc[_idx, "s_nom_max"] = new.loc[_idx, "s_nom_opt"]
+            new.loc[_idx, "s_nom_extendable"] = True
 
         if name == "generators":
             fuels = [
@@ -149,19 +155,11 @@ def fix_capacities(realization, decision):
                 extendable_i
             )
             new.loc[_idx, "p_nom_extendable"] = True
-            # For fuels allow more, but not less
-            _idx = new.loc[new.carrier.isin(fuels)].index.intersection(extendable_i)
-            new.loc[_idx, "p_nom_min"] = new.loc[_idx, "p_nom_opt"]
 
         if name == "stores":
-            # there is only one co2 atmosphere store which is always extendable, hence no intersection with extendable_i needed
+            # there is only one co2 atmosphere store which should always be extendable, hence no intersection with extendable_i needed
             _idx = new.query("carrier == 'co2'").index
             new.loc[_idx, "e_nom_extendable"] = True
-
-            # Just making sure that the defaults are set correctly
-            assert (new.loc[_idx, "e_nom_min"] == 0).all()
-            assert (new.loc[_idx, "e_nom_max"] == np.inf).all()
-            assert (new.loc[_idx, "e_nom"] == 0).all()
 
             # TODO double check if these are all needed
             co2_stores = ["co2 stored", "co2 sequestered"]
@@ -169,9 +167,20 @@ def fix_capacities(realization, decision):
                 extendable_i
             )
             new.loc[_idx, "e_nom_extendable"] = True
-            # TODO this should probably be active -  Allow less, but not more
-            # new.loc[_idx, "e_nom_max"] = new.loc[_idx, "e_nom_opt"]
 
+            # Allow less, but not more
+            if (
+                min(
+                    decision.global_constraints.mu.get("co2_sequestration_limit"),
+                    realization.global_constraints.mu.get("co2_sequestration_limit"),
+                )
+                < 1
+            ):
+                new.loc[_idx, "e_nom_max"] = new.loc[_idx, "e_nom_opt"]
+
+        # Above several assets were switch to extendable again, for these the p_nom value is restored, i.e. set to the value from the decision network
+        _idx = new.query(f"{attr}_extendable").index.intersection(extendable_i)
+        new.loc[_idx, attr] = deci.loc[_idx, attr]
     return n
 
 
@@ -184,7 +193,7 @@ if __name__ == "__main__":
             sector_opts="none",
             planning_horizons="2030",
             decision="LowDemand",
-            run="AriadneDemand",
+            run="LowDemand",
         )
 
     configure_logging(snakemake)
@@ -211,10 +220,36 @@ if __name__ == "__main__":
     )
 
     n = fix_capacities(realization, decision)
-    # TODO remove this attempt at a hotfix
-    n.links.loc[n.links.carrier == "methanolisation", "p_min_pu"] = 0.0
-    # n.links.loc[n.links.carrier.str.contains('vent'), 'p_max_pu'] = 1.0
+
     n_pre = n.copy()
+
+    logger.info("Adding CO2 removal service outside DE.")
+    n.add("Carrier", "CO2 removal service")
+
+    # pypsa calculates with CO2-tonnes-equivalent not single units of CO2 -> marginal cost in €/tCO2
+
+    n.add(
+        "Generator",
+        "CO2 removal service",
+        bus="co2 atmosphere",
+        carrier="CO2 removal service",
+        p_nom=1e6,
+        marginal_cost=350,
+        p_nom_extendable=False,
+        p_min_pu=0,
+        p_max_pu=1.0,
+        sign=-1,
+    )
+
+    prepare_network(
+        n,
+        solve_opts=snakemake.params.solving["options"],
+        foresight=snakemake.params.foresight,
+        planning_horizons=planning_horizons,
+        co2_sequestration_potential=snakemake.params["co2_sequestration_potential"],
+        limit_max_growth=snakemake.params.get("sector", {}).get("limit_max_growth"),
+    )
+
     with memory_logger(
         filename=getattr(snakemake.log, "memory", None), interval=logging_frequency
     ) as mem:

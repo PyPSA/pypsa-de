@@ -983,13 +983,15 @@ rule solve_regret:
         co2_sequestration_potential=config_provider(
             "sector", "co2_sequestration_potential", default=200
         ),
-        custom_extra_functionality="data/custom_extra_functionality.py",
+        custom_extra_functionality=input_custom_extra_functionality,
         energy_year=config_provider("energy", "energy_totals_year"),
     input:
         decision=RESULTS.replace("{run}", "{decision}")
         + "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
         realization=RESULTS
         + "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
+        co2_totals_name=resources("co2_totals.csv"),
+        energy_totals=resources("energy_totals.csv"),
     output:
         regret_network=RESULTS
         + "regret_networks/decision_{decision}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
