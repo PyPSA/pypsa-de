@@ -3,7 +3,7 @@ docs_dir: docs-at
 repo_url: https://gitlab.aggm.at/philip.worschischek/pypsa-at
 edit_uri: docs-at
 site_dir: public
-site_url: https://myproject.readthedocs.io
+site_url: https://pypsa-at.readthedocs.io
 
 nav:
 - Home: index.md
