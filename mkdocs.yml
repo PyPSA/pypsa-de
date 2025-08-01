@@ -108,8 +108,6 @@ plugins:
         - url: https://numpy.org/doc/stable/objects.inv
         - url: https://docs.python.org/3/objects.inv
         - url: https://python-visualization.github.io/folium/latest/objects.inv
-        selection:
-          members: yes
 
 # https://squidfunk.github.io/mkdocs-material/reference/icons-emojis/
 markdown_extensions:
