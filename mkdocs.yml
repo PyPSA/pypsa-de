@@ -15,6 +15,9 @@ nav:
   - tutorials/index.md
   - tutorials/model-modifications.md
 - Function Reference:
+  - Modifications:
+    - reference/mods/index.md
+    - network_updates.py: reference/mods/network_updates.md
   - Evaluations:
     - reference/evals/index.md
     - cli.py: reference/evals/cli.md

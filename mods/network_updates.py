@@ -1,4 +1,4 @@
-"""Functions to update the industry demand in the PyPSA-AT model."""
+"""Functions to update resources during the `snakemake` workflow."""
 
 # SPDX-FileCopyrightText: 2023-2025 Austrian Gas Grid Management AG
 #
