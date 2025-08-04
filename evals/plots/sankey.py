@@ -8,11 +8,82 @@ import pandas as pd
 import plotly
 import pyam
 from plotly.graph_objs import Figure, Sankey
+from pyam.index import get_index_levels
 
 from evals.utils import filter_by, rename_aggregate
 
 pd.set_option("display.width", 250)
 pd.set_option("display.max_columns", 20)
+
+
+def sankey(df: pyam.IamDataFrame, mapping: dict) -> Figure:
+    """
+    Plot a sankey diagram.
+
+    It is currently only possible to create this diagram for single years.
+
+    Parameters
+    ----------
+    df
+        Data to be plotted
+    mapping
+        Assigns the source and target component of a variable
+
+        .. code-block:: python
+
+            {
+                variable: (source, target),
+            }
+
+    Returns
+    -------
+    :
+        The generated plotly figure.
+    """
+
+    # Check for duplicates
+    for col in [name for name in df.dimensions if name != "variable"]:
+        levels = get_index_levels(df._data, col)
+        if len(levels) > 1:
+            raise ValueError(f"Non-unique values in column {col}: {levels}")
+
+    # Concatenate the data with source and target columns
+    _df = pd.DataFrame.from_dict(
+        mapping, orient="index", columns=["source", "target"]
+    ).merge(df._data, how="left", left_index=True, right_on="variable")
+    label_mapping = {
+        label: i
+        for i, label in enumerate(set(pd.concat([_df["source"], _df["target"]])))
+    }
+    _df.replace(label_mapping, inplace=True)
+    region = get_index_levels(_df, "region")[0]
+    unit = get_index_levels(_df, "unit")[0]
+    year = get_index_levels(_df, "year")[0]
+    fig = Figure(
+        data=[
+            Sankey(
+                valuesuffix=unit,
+                node=dict(
+                    pad=15,
+                    thickness=10,
+                    line=dict(color="black", width=0.5),
+                    label=pd.Series(list(label_mapping)),
+                    hovertemplate="%{label}: %{value}<extra></extra>",
+                    color="blue",
+                ),
+                link=dict(
+                    arrowlen=15,
+                    source=_df.source,
+                    target=_df.target,
+                    value=_df.value,
+                    hovertemplate='"%{source.label}" to "%{target.label}": \
+                %{value}<extra></extra>',
+                ),
+            )
+        ]
+    )
+    fig.update_layout(title_text=f"region: {region}, year: {year}", font_size=10)
+    return fig
 
 
 def read_iamc_data_frame(filepath):
@@ -68,6 +139,17 @@ def sort_mapping(k):
         return 2
     else:
         raise ValueError(f"Unexpected key '{k}'")
+
+
+def remove_missing_variables(m: dict) -> dict:
+    clean_mapping = {}
+    variables = df.index.unique("Variable")
+    for k, v in m.items():
+        if k in variables:
+            clean_mapping[k] = v
+        else:
+            print(f"Skipping '{k}' because it does not exist in AT {year}.")
+    return clean_mapping
 
 
 def get_xmap(nodes) -> dict:
@@ -131,34 +213,52 @@ if __name__ == "__main__":
     xmap = get_xmap(nodes)
     df = rename_aggregate(df, "TWh", level="Unit").div(1e6)
     year = "2050"
-    region = "FR0"
-    df = filter_by(df, Year=year, Region=region)
 
-    clean_mapping = {}
-    variables = df.index.unique("Variable")
-    for k, v in mapping_sorted.items():
-        if k in variables:
-            clean_mapping[k] = v
-        else:
-            print(f"Skipping '{k}' because it does not exist in {region} {year}.")
+    at_regions = [s for s in df.index.unique("Region") if s.startswith("AT")]
+    df = filter_by(df, Year=year, Region=at_regions)
+    df = rename_aggregate(df, "AT", level="Region")
+
+    # AC
+    variable_mapper_ac = {
+        "Primary Energy|AC|Import Domestic": "Primary Energy|AC|Total Import",
+        "Primary Energy|AC|Import Foreign": "Primary Energy|AC|Total Import",
+        "Primary Energy|AC|Reservoir": "Primary Energy|AC|Hydro Power",
+        "Primary Energy|AC|Run-of-River": "Primary Energy|AC|Hydro Power",
+        "Primary Energy|AC|Solar HSAT": "Primary Energy|AC|Solar Power",
+        "Primary Energy|AC|Solar Rooftop": "Primary Energy|AC|Solar Power",
+        "Primary Energy|AC|Solar Utility": "Primary Energy|AC|Solar Power",
+        "Primary Energy|AC|Wind Onshore": "Primary Energy|AC|Wind Power",
+        "Primary Energy|AC|Wind Offshore": "Primary Energy|AC|Wind Power",
+    }
+    df = rename_aggregate(df, variable_mapper_ac, level="Variable")
+
+    mapping = {
+        "Primary Energy|AC|Total Import": ("Import", "AC"),
+        "Primary Energy|AC|Hydro Power": ("Hydro Power", "AC"),
+        "Primary Energy|AC|Solar Power": ("Solar Power", "AC"),
+        "Primary Energy|AC|Wind Power": ("Wind Power", "AC"),
+    }
+
+    # clean_mapping = remove_missing_variables(mapping_sorted)
 
     iamc = pyam.IamDataFrame(df)
 
-    iamc_fig = iamc.plot.sankey(mapping=clean_mapping)
-    node = iamc_fig.data[0].node.to_plotly_json()
-    link = iamc_fig.data[0].link.to_plotly_json()
+    iamc_fig = sankey(iamc, mapping=mapping)
+    iamc_fig.update_layout(height=800)
+    # node = iamc_fig.data[0].node.to_plotly_json()
+    # link = iamc_fig.data[0].link.to_plotly_json()
+    #
+    # node["x"] = [xmap.get(label, 0.2) for label in node["label"]]
+    # node["y"] = [xmap.get(label, 0.4) for label in node["label"]]
+    #
+    # new_sankey = Sankey(
+    #     node=node,
+    #     link=link,
+    #     arrangement="fixed",  # necessary for x/y positions
+    # )
+    #
+    # fig = Figure(data=[new_sankey])
+    #
+    # fig.update_layout(height=800)
 
-    node["x"] = [xmap.get(label, 0.2) for label in node["label"]]
-    node["y"] = [xmap.get(label, 0.4) for label in node["label"]]
-
-    new_sankey = Sankey(
-        node=node,
-        link=link,
-        arrangement="fixed",  # necessary for x/y positions
-    )
-
-    fig = Figure(data=[new_sankey])
-
-    fig.update_layout(height=800)
-
-    plotly.io.show(fig)
+    plotly.io.show(iamc_fig)

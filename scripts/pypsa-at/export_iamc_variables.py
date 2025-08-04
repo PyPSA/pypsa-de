@@ -842,7 +842,7 @@ def collect_storage_imbalances():
         "urban central water tanks": "Water Tank",
         "urban decentral water tanks": "Water Tank",
         "rural water tanks": "Water Tank",
-        "coal": "Coal",  # FixMe: small unexplained imbalance accepted for now
+        "coal": "Coal",  # FixMe: small unexplained imbalances
         "PHS": "PHS",  # Pump efficiency
         "non-sequestered HVC": "Waste",
     }
