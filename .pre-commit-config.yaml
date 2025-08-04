@@ -51,10 +51,3 @@ repos:
   rev: v0.11.0
   hooks:
   - id: snakefmt
-
-
-- repo: https://github.com/sourcery-ai/sourcery
-  rev: v1.37.0
-  hooks:
-  - id: sourcery
-    args: [--diff=git diff HEAD, --no-summary]
