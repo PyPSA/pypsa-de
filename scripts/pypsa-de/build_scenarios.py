@@ -178,7 +178,7 @@ def write_to_scenario_yaml(input, output, scenarios, df):
     for scenario in scenarios:
         if config.get(scenario) is None:
             logger.warning(
-                f"Found an empty scenario config for {scenario}. Using default config `pypsa.de.yaml`."
+                f"Found an empty scenario config for {scenario}. Using default config `pypsa.at.yaml`."
             )
             config[scenario] = {}
         if config[scenario].get("weather_year", False):
@@ -199,7 +199,7 @@ def write_to_scenario_yaml(input, output, scenarios, df):
             .get(
                 "reference_scenario",
                 snakemake.config["iiasa_database"]["reference_scenario"],
-            )  # Using the default reference scenario from pypsa.de.yaml
+            )  # Using the default reference scenario from pypsa.at.yaml
         )
 
         planning_horizons = [
