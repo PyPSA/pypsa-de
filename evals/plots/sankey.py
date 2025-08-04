@@ -15,37 +15,13 @@ pd.set_option("display.width", 250)
 pd.set_option("display.max_columns", 20)
 
 
-def read_iamc_data_frame():
+def read_iamc_data_frame(filepath):
     xls = pd.read_excel(
-        "/IdeaProjects/pypsa-at/results/v2025.02/KN2045_Mix/evaluation/exported_iamc_variables.xlsx",
+        filepath,
         index_col=[0, 1, 2, 3, 4],
     )
     xls.columns.name = "Year"
     return xls.stack()
-
-
-def main():
-    year = "2050"
-    region = "GB0"
-
-    df = read_iamc_data_frame()
-    df = rename_aggregate(df, "TWh", level="Unit").div(1e6)
-    df = filter_by(df, Year=year, Region=region)
-
-    raw_mapping = get_mapping(df)
-    variables = df.index.unique("Variable")
-    for k, v in raw_mapping.items():
-        if k in variables:
-            clean_mapping[k] = v
-        else:
-            print(f"Skipping '{k}' because it does not exist in {region} {year}.")
-
-    iamc = pyam.IamDataFrame(df)
-    fig = iamc.plot.sankey(mapping=clean_mapping)
-
-    fig.update_layout(height=600)
-
-    plotly.io.show(fig)
 
 
 def get_mapping(df) -> (dict, set):
@@ -147,14 +123,15 @@ def get_xmap(nodes) -> dict:
 
 
 if __name__ == "__main__":
-    FILEPATH = "/IdeaProjects/pypsa-at/results/v2025.02/KN2045_Mix/evaluation/exported_iamc_variables.xlsx"
-    df = read_iamc_data_frame()
+    df = read_iamc_data_frame(
+        filepath="/IdeaProjects/pypsa-at/results/v2025.03/AT10_KN2040/evaluation/exported_iamc_variables.xlsx"
+    )
     mapping, nodes = get_mapping(df)
     mapping_sorted = {k: mapping[k] for k in sorted(mapping, key=sort_mapping)}
     xmap = get_xmap(nodes)
     df = rename_aggregate(df, "TWh", level="Unit").div(1e6)
     year = "2050"
-    region = "GB0"
+    region = "FR0"
     df = filter_by(df, Year=year, Region=region)
 
     clean_mapping = {}
@@ -173,8 +150,6 @@ if __name__ == "__main__":
 
     node["x"] = [xmap.get(label, 0.2) for label in node["label"]]
     node["y"] = [xmap.get(label, 0.4) for label in node["label"]]
-    # node["y"] = [ymap[label] for label in node["label"]]
-    # node["color"] = [colormap[label] for label in node["label"]]
 
     new_sankey = Sankey(
         node=node,
@@ -184,6 +159,6 @@ if __name__ == "__main__":
 
     fig = Figure(data=[new_sankey])
 
-    fig.update_layout(height=600)
+    fig.update_layout(height=800)
 
     plotly.io.show(fig)
