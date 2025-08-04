@@ -2,7 +2,7 @@
 
 add the wanted upstream remotes to git
 ```sh 
-git remote add pypsa-de https://github.org/PyPSA/pypsa-de.git
+git remote add pypsa-de https://github.com/PyPSA/pypsa-de.git
 ```
 
 fetch the upstream remotes

@@ -1,9 +1,9 @@
-"""Functions to update resources during the `snakemake` workflow."""
-
 # SPDX-FileCopyrightText: 2023-2025 Austrian Gas Grid Management AG
 #
 # SPDX-License-Identifier: MIT
 # For license information, see the LICENSE.txt file in the project root.
+"""Functions to update resources during the `snakemake` workflow."""
+
 from logging import getLogger
 
 import pandas as pd
@@ -86,7 +86,7 @@ def electricity_base_load_split(n: pypsa.Network, snakemake: Snakemake):
 
 def unravel_gas_import_and_production(
     n: pypsa.Network, snakemake: Snakemake, costs: pd.DataFrame
-):
+) -> None:
     """
     Differentiate LNG, pipeline and production gas generators.
 
@@ -105,6 +105,7 @@ def unravel_gas_import_and_production(
     Returns
     -------
     :
+        Updates the pypsa.Network in place.
     """
     config = snakemake.config
     gas_generators = n.static("Generator").query("carrier == 'gas'")
@@ -153,7 +154,7 @@ def unravel_gas_import_and_production(
             p_nom=p_nom,
         )
 
-    # make sure that the total gas generator capacity was not changed by this modification
+    # make sure that this modification does not change the total gas generator capacity
     old_p_nom = gas_generators["p_nom"].sum()
     new_p_nom = (
         n.static("Generator").query("carrier.str.endswith(' gas')")["p_nom"].sum()

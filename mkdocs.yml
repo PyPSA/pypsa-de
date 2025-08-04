@@ -1,6 +1,6 @@
 site_name: pypsa-at
 docs_dir: docs-at
-repo_url: https://gitlab.aggm.at/philip.worschischek/pypsa-at
+repo_url: https://github.com/aggm-ag/pypsa-at
 edit_uri: docs-at
 site_dir: public
 site_url: https://pypsa-at.readthedocs.io
