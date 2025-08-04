@@ -57,7 +57,9 @@ jobs:
 
     - name: Push Docker image with existing tag
       if: steps.check_image.outputs.exists == 'false'
-      run: docker push ghcr.io/${{ env.IMAGE_NAME }}:${{ env.hash_last_changed }}
+      run: |-
+        docker tag ghcr.io/${{ env.IMAGE_NAME }}:${{ github.sha }} ghcr.io/${{ env.IMAGE_NAME }}:${{ env.hash_last_changed }}
+        docker push ghcr.io/${{ env.IMAGE_NAME }}:${{ env.hash_last_changed }}
 
     - name: 'Add SHA tag to existing image' # when rebuild is not needed
       if: env.hash_last_changed != github.sha
