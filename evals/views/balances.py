@@ -41,7 +41,7 @@ def view_balance_electricity(
     config: dict,
 ) -> None:
     """
-    Evaluate the electricity production & demand by country and year.
+    Evaluate the electricity production and demand by country and year.
 
     Returns
     -------
@@ -49,7 +49,7 @@ def view_balance_electricity(
 
     Notes
     -----
-    Balances do nat add up to zero, because of transmission losses and
+    Balances do not add up to zero, because of transmission losses and
     storage cycling (probably).
     """
     simple_bus_balance(networks, config, result_path)

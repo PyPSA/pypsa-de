@@ -4,12 +4,15 @@
 # For license information, see the LICENSE.txt file in the project root.
 """Module for Sankey diagram."""
 
+import re
+
 import pandas as pd
 import plotly
 import pyam
 from plotly.graph_objs import Figure, Sankey
 from pyam.index import get_index_levels
 
+from evals.constants import COLOUR
 from evals.utils import filter_by, rename_aggregate
 
 pd.set_option("display.width", 250)
@@ -55,29 +58,37 @@ def sankey(df: pyam.IamDataFrame, mapping: dict) -> Figure:
         label: i
         for i, label in enumerate(set(pd.concat([_df["source"], _df["target"]])))
     }
-    _df.replace(label_mapping, inplace=True)
+    _df = _df.replace(label_mapping)
+
+    def get_carrier_color(s) -> str:
+        carrier = re.findall(r"\|AC", s)[0].strip("|")
+        color_map = {"AC": COLOUR.red}
+        return color_map[carrier]
+
+    _df["color"] = _df.index.get_level_values("variable").map(get_carrier_color)
+
     region = get_index_levels(_df, "region")[0]
-    unit = get_index_levels(_df, "unit")[0]
+    unit = " " + get_index_levels(_df, "unit")[0]
     year = get_index_levels(_df, "year")[0]
     fig = Figure(
         data=[
             Sankey(
                 valuesuffix=unit,
                 node=dict(
-                    pad=15,
-                    thickness=10,
+                    # pad=15,
+                    # thickness=10,
                     line=dict(color="black", width=0.5),
                     label=pd.Series(list(label_mapping)),
                     hovertemplate="%{label}: %{value}<extra></extra>",
-                    color="blue",
+                    color=_df.color,
                 ),
                 link=dict(
-                    arrowlen=15,
+                    # arrowlen=15,
                     source=_df.source,
                     target=_df.target,
                     value=_df.value,
-                    hovertemplate='"%{source.label}" to "%{target.label}": \
-                %{value}<extra></extra>',
+                    color=_df.color,
+                    hovertemplate='"%{source.label}" to "%{target.label}": %{value}<extra></extra> ',
                 ),
             )
         ]
@@ -220,7 +231,7 @@ if __name__ == "__main__":
 
     # AC
     variable_mapper_ac = {
-        "Primary Energy|AC|Import Domestic": "Primary Energy|AC|Total Import",
+        # "Primary Energy|AC|Import Domestic": "Primary Energy|AC|Total Import",
         "Primary Energy|AC|Import Foreign": "Primary Energy|AC|Total Import",
         "Primary Energy|AC|Reservoir": "Primary Energy|AC|Hydro Power",
         "Primary Energy|AC|Run-of-River": "Primary Energy|AC|Hydro Power",
@@ -229,14 +240,78 @@ if __name__ == "__main__":
         "Primary Energy|AC|Solar Utility": "Primary Energy|AC|Solar Power",
         "Primary Energy|AC|Wind Onshore": "Primary Energy|AC|Wind Power",
         "Primary Energy|AC|Wind Offshore": "Primary Energy|AC|Wind Power",
+        "Secondary Energy|AC|Biomass|CHP": "Secondary Energy|AC|CHP",
+        "Secondary Energy|AC|Biomass|CHP CC": "Secondary Energy|AC|CHP",
+        "Secondary Energy|AC|Gas|CHP": "Secondary Energy|AC|CHP",
+        "Secondary Energy|AC|Gas|CHP CC": "Secondary Energy|AC|CHP",
+        "Secondary Energy|AC|Waste|CHP": "Secondary Energy|AC|CHP",
+        "Secondary Energy|AC|Waste|CHP CC": "Secondary Energy|AC|CHP",
+        "Secondary Energy|AC|Gas|Powerplant": "Secondary Energy|AC|Power Plant",
+        "Secondary Energy|AC|H2|Powerplant": "Secondary Energy|AC|Power Plant",
+        "Secondary Energy|AC|Methanol|Powerplant": "Secondary Energy|AC|Power Plant",
+        # "Final Energy|AC|Export Domestic": "Final Energy|AC|Total Export",
+        "Final Energy|AC|Export Foreign": "Final Energy|AC|Total Export",
+        "Secondary Energy|Losses|AC|BEV charger": "Secondary Energy|Losses|AC",
+        "Secondary Energy|Losses|AC|Battery storage": "Secondary Energy|Losses|AC",
+        "Secondary Energy|Losses|AC|Distribution Grid": "Secondary Energy|Losses|AC",
+        "Secondary Energy|Losses|AC|Electrolysis": "Secondary Energy|Losses|AC",
+        "Secondary Energy|Losses|AC|Haber-Bosch": "Secondary Energy|Losses|AC",
+        "Secondary Energy|Losses|AC|Home Battery storage": "Secondary Energy|Losses|AC",
+        "Secondary Energy|Losses|AC|Methanolisation": "Secondary Energy|Losses|AC",
+        "Secondary Energy|Losses|AC|Resistive Heater": "Secondary Energy|Losses|AC",
+        "Secondary Energy|Losses|AC|V2G": "Secondary Energy|Losses|AC",
     }
     df = rename_aggregate(df, variable_mapper_ac, level="Variable")
+
+    # _idx = list(df.index[0])
+    # _idx[3] = "Primary Energy|AC"
+    # df.loc[_idx] = df.query("Variable.str.startswith('Primary Energy|AC|') & 'Domestic' not in Variable")
 
     mapping = {
         "Primary Energy|AC|Total Import": ("Import", "AC"),
         "Primary Energy|AC|Hydro Power": ("Hydro Power", "AC"),
         "Primary Energy|AC|Solar Power": ("Solar Power", "AC"),
         "Primary Energy|AC|Wind Power": ("Wind Power", "AC"),
+        # "Primary Energy|AC": ("AC", "AC"),
+        # supply
+        "Secondary Energy|AC|CHP": ("CHP", "AC"),
+        "Secondary Energy|AC|Power Plant": ("Power Plant", "AC"),
+        # demand
+        "Secondary Energy|Demand|AC|Air Heat Pump": ("AC", "Heat Pump"),
+        "Secondary Energy|Demand|AC|Ground Heat Pump": ("AC", "Heat Pump"),
+        "Secondary Energy|Demand|AC|DAC": ("AC", "DAC"),
+        "Secondary Energy|Demand|AC|Electrolysis": ("AC", "Electrolysis"),
+        "Secondary Energy|Demand|AC|Gas Compressing": (
+            "AC",
+            "Gas Compressing",
+        ),
+        "Secondary Energy|Demand|AC|H2 Compressing": ("AC", "H2 Compressing"),
+        "Secondary Energy|Demand|AC|Haber-Bosch": ("AC", "Haber-Bosch"),
+        "Secondary Energy|Demand|AC|Methanolisation": (
+            "AC",
+            "Methanolisation",
+        ),
+        "Secondary Energy|Demand|AC|Resistive Heater": (
+            "AC",
+            "Heat Secondary",
+        ),
+        "Secondary Energy|Losses|AC": ("AC", "Losses"),
+        # Load
+        # "Final Energy|AC": ("AC", "AC Final"),
+        "Final Energy|AC|Agriculture": ("AC", "Agriculture"),
+        "Final Energy|AC|Base Load": ("AC", "Base Load"),
+        "Final Energy|AC|Total Export": ("AC", "Export"),
+        "Final Energy|AC|Industry": ("AC", "Industry"),
+        "Final Energy|AC|Transport": ("AC", "Transport"),
+        # Secondary Energy|Losses|AC|BEV charger
+        # Secondary Energy|Losses|AC|Battery storage
+        # Secondary Energy|Losses|AC|Distribution Grid
+        # Secondary Energy|Losses|AC|Electrolysis
+        # Secondary Energy|Losses|AC|Haber-Bosch
+        # Secondary Energy|Losses|AC|Home Battery storage
+        # Secondary Energy|Losses|AC|Methanolisation
+        # Secondary Energy|Losses|AC|Resistive Heater
+        # Secondary Energy|Losses|AC|V2G
     }
 
     # clean_mapping = remove_missing_variables(mapping_sorted)
