@@ -847,7 +847,10 @@ def collect_storage_imbalances():
         "non-sequestered HVC": "Waste",
     }
 
-    for carrier in filter_by(SUPPLY, component=comps).index.unique("carrier"):
+    carrier_supply = filter_by(SUPPLY, component=comps).index.unique("carrier")
+    carrier_demand = filter_by(DEMAND, component=comps).index.unique("carrier")
+
+    for carrier in carrier_supply.union(carrier_demand):
         supply = filter_by(SUPPLY, component=comps, carrier=carrier)
         demand = filter_by(DEMAND, component=comps, carrier=carrier)
         balance = supply.add(demand, fill_value=0).mul(-1)
