@@ -8,10 +8,8 @@ Collect constant values and identifiers used for evaluations.
 Values in this module do not need to be changed during runtime.
 """
 
-import importlib
 import re
 from datetime import datetime as dt
-from importlib.metadata import PackageNotFoundError
 from subprocess import CalledProcessError
 
 import git
@@ -792,17 +790,14 @@ ALIAS_LOCATION_REV: frozendict = frozendict({v: k for k, v in ALIAS_LOCATION.ite
 
 
 try:
-    esmtools_version = importlib.metadata.version("esmtools")
-except PackageNotFoundError:
-    esmtools_version = "esmtools not installed."
-
-try:
     repo = git.Repo(search_parent_directories=True)
     branch = repo.active_branch.name
     repo_name = repo.remotes.origin.url.split(".git")[0].split("/")[-1]
     git_hash = repo.head.object.hexsha
 except (CalledProcessError, FileNotFoundError):
     repo_name = branch = git_hash = "Not a git repo."
+except TypeError:
+    repo_name = branch = git_hash = "Detached HEAD"
 
 RUN_META_DATA = {
     "repo_name": repo_name,
