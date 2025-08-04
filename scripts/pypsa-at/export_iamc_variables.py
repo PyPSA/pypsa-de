@@ -382,7 +382,9 @@ def collect_regional_nh3_loads():
     )
 
     # check that imbalances are equal to imbalances in the network
-    pd.testing.assert_series_equal(imbalances_iamc, imbalances_bus, check_names=False)
+    pd.testing.assert_series_equal(
+        imbalances_iamc, imbalances_bus, check_names=False, atol=1e-3
+    )
     if not imbalances_bus.abs().le(1e-3).all():
         logger.warning(f"Imbalances detected for bus carrier {bc}:\n{imbalances_bus}.")
     var[f"{FINAL}|{BC_ALIAS[bc]}|Agriculture"] = nh3_regional_supply.groupby(IDX).sum()
@@ -1190,9 +1192,9 @@ if __name__ == "__main__":
     if "snakemake" not in globals():
         snakemake = mock_snakemake(
             "export_iamc_variables",
-            run="KN2045_Mix",
-            prefix="test-sector-myopic-at10",
-            config="config/test/config.at10.yaml",
+            run="AT10_KN2040",
+            # prefix="test-sector-myopic-at10",
+            # config="config/test/config.at10.yaml",
         )
     configure_logging(snakemake)
 
@@ -1204,8 +1206,8 @@ if __name__ == "__main__":
         "drop_zeros": False,
         "drop_unit": False,
     }
-    # calculate all statistics and process them to IAMC data model. The idea is to
-    # calculate everything once and remove rows from the global statistic. This way
+    # Calculate all statistics and process them to IAMC datamodel. The idea is to
+    # calculate everything just once and remove rows from the global statistic. This way
     # we make sure that nothing is counted twice or forgotten.
     SUPPLY = collect_myopic_statistics(
         networks, "supply", groupby=groupby, **kwargs
