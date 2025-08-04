@@ -15,13 +15,13 @@ This repository contains the entire scientific project, including data sources a
 You need `conda` or `mamba` to run the analysis. Using conda, you can create an environment from within which you can run the analysis:
 
 ```
-conda env create -f envs/{os}-pinned.yaml
+conda env create -f envs/{os}.lock.yaml
 ```
 
 Where `{os}` should be replaced with your operating system, e.g. for linux the command would be:
 
 ```
-conda env create -f envs/linux-pinned.yaml
+conda env create -f envs/linux-64.lock.yaml
 ```
 
 ## Run the analysis
