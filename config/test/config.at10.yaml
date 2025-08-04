@@ -5,7 +5,7 @@
 run:
   prefix: "test-sector-myopic-at10"
   name:
-  - KN2045_Mix
+  - AT10_KN2040
 
 # need to include additional neighbor countries, because the
 # administrative clustering will not filter lines to connected
