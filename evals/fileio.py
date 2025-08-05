@@ -415,9 +415,10 @@ class Exporter:
 
         self.export_plotly(output_path)
 
-        if "excel" in self.view_config.get("exports", []):
+        export_formats = self.view_config.get("exports", [])
+        if "excel" in export_formats:
             self.export_excel(output_path)
-        if "csv" in self.view_config.get("exports", []):
+        if "csv" in export_formats:
             self.export_csv(output_path)
 
         # always run tests after the export

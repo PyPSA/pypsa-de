@@ -7,6 +7,7 @@
 from pathlib import Path
 
 from evals import plots as plots
+from evals.constants import DataModel as DM
 from evals.constants import Group, TradeTypes
 from evals.fileio import Exporter
 from evals.statistic import collect_myopic_statistics
@@ -104,5 +105,20 @@ def view_sankey(
         view_config=config["view"],
     )
 
-    df = exporter.df
-    print(df)
+    # df = exporter.df
+    # print(df)
+
+    chart_class = getattr(plots, config["view"]["chart"])
+    exporter.defaults.plotly.chart = chart_class
+
+    exporter.defaults.plotly.plotby = [DM.YEAR, DM.LOCATION]
+    exporter.defaults.plotly.pivot_index = [
+        DM.COMPONENT,
+        DM.YEAR,
+        DM.LOCATION,
+        DM.CARRIER,
+        DM.BUS_CARRIER,
+    ]
+    # exporter.defaults.plotly.xaxis_title = ""
+
+    exporter.export(result_path, config["global"]["subdir"])

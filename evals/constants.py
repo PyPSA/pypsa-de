@@ -645,6 +645,7 @@ COLOUR_SCHEME: dict = {
     "OCGT": COLOUR.brown,
     # light grey - hydrogen
     "Hydrogen": COLOUR.blue_pastel,
+    "H2": COLOUR.blue_pastel,
     "Electrolysis": COLOUR.blue_pastel,
     "SMR": COLOUR.yellow_bright,
     "Hydrogen Tube Storage": COLOUR.blue_pastel,
@@ -677,6 +678,7 @@ COLOUR_SCHEME: dict = {
     "Nuclear Power": COLOUR.orange,
     # light blue - electricity
     "Electricity": COLOUR.blue_celestial,
+    "AC": COLOUR.blue_celestial,
     "Electricity CHP": COLOUR.blue_celestial,
     "Battery Storage": COLOUR.coral,
     "Car Battery": COLOUR.coral,

@@ -34,7 +34,7 @@ class ESMChart:
 
     # todo: avoid inheritance and use MixIns instead
 
-    def __init__(self, df: pd.DataFrame, cfg: PlotConfig) -> None:
+    def __init__(self, df: pd.DataFrame, cfg: PlotConfig):
         self._df = df
         self.cfg = cfg
         self.fig = go.Figure()
@@ -160,10 +160,10 @@ class ESMChart:
         df: pd.DataFrame, by: str, values: tuple, ascending: bool = False
     ) -> pd.DataFrame:
         """
-        Sort a data frame by first appearance in values.
+        Sort a data frame by the first appearance in values.
 
         Sort a data frame by the given column and first appearance
-        in a given iterable.
+        in the given iterable.
 
         Parameters
         ----------
