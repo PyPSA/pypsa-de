@@ -295,7 +295,9 @@ def simple_storage_capacity(
 
 
 def _parse_view_config_items(networks: dict, config: dict) -> tuple:
-    bus_carrier = config["view"]["bus_carrier"]
+    bus_carrier = (
+        config["view"]["bus_carrier"] or None
+    )  # replace '' by None because TOML has no None type
     transmission_techs = get_transmission_techs(networks, bus_carrier)
     transmission_comps = [comp for comp, carr in transmission_techs]
     transmission_carrier = [carr for comp, carr in transmission_techs]

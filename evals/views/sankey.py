@@ -13,6 +13,7 @@ from evals.fileio import Exporter
 from evals.statistic import collect_myopic_statistics
 from evals.utils import (
     filter_by,
+    rename_aggregate,
 )
 from evals.views.common import _parse_view_config_items
 
@@ -94,7 +95,8 @@ def view_sankey(
                 component=transmission_comps,
                 carrier=transmission_carrier,
             )
-            # .pipe(rename_aggregate, alias)
+            .pipe(rename_aggregate, alias)
+            .abs()
             # .droplevel(DM.COMPONENT)
         )
         trade.attrs["unit"] = config["view"]["unit"]
