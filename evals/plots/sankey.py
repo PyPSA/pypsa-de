@@ -24,14 +24,14 @@ pd.set_option("display.max_columns", 20)
 # idx = df_plot.droplevel("year").droplevel("location").index.drop_duplicates()
 # dict.fromkeys(idx, ("", ""))
 mapping = {
-    ("Generator", "offwind-ac", "AC"): ("", ""),
-    ("Generator", "onwind", "AC"): ("", ""),
-    ("Generator", "ror", "AC"): ("", ""),
+    ("Generator", "offwind-ac", "AC"): ("Wind Power", "AC"),
+    ("Generator", "onwind", "AC"): ("Wind Power", "AC"),
+    ("Generator", "ror", "AC"): ("Hydro Power", "AC"),
     ("Generator", "rural heat vent", "rural heat"): ("", ""),
     ("Generator", "rural solar thermal", "rural heat"): ("", ""),
-    ("Generator", "solar", "AC"): ("", ""),
-    ("Generator", "solar rooftop", "low voltage"): ("", ""),
-    ("Generator", "solar-hsat", "AC"): ("", ""),
+    ("Generator", "solar", "AC"): ("Solar Power", "AC"),
+    ("Generator", "solar rooftop", "low voltage"): ("Solar Power", "AC"),
+    ("Generator", "solar-hsat", "AC"): ("Solar Power", "AC"),
     ("Generator", "unsustainable solid biomass", "solid biomass"): ("", ""),
     ("Generator", "urban decentral heat vent", "urban decentral heat"): ("", ""),
     ("Generator", "urban decentral solar thermal", "urban decentral heat"): ("", ""),
@@ -441,43 +441,97 @@ class SankeyChart(ESMChart):
         self._df.columns = ["value"]
 
     @staticmethod
-    def _add_source_target_columns(idx: tuple):
-        return pd.Series(mapping.get(idx))
+    def _add_source_target_columns(idx: tuple) -> pd.Series:
+        return pd.Series(mapping.get(idx, ""))
+
+    def _map_customdata(self, data) -> pd.DataFrame:
+        carrier_values = [
+            f"{c}: {v:.2f} {self.unit}" for c, v in zip(data["carrier"], data["value"])
+        ]
+        return "\n".join(carrier_values)
+        # data["customdata"] = ""
+        #
+        # data = data.groupby(["source", "target"]).sum()
+        #
+        # return data
 
     def plot(self):
         # Concatenate the data with source and target columns
 
         _df = self._df.copy()  # preserve original
+
+        # [*_df.groupby(level=_df.index.names)][0]
+
+        # df_agg = _df.groupby(level=0).apply(self.custom_aggregate).reset_index()
+
         _df["index"] = _df.index  # convert to tuples
         _df[["source", "target"]] = _df["index"].apply(self._add_source_target_columns)
+        _df = _df.drop(columns=["index"])
+        df_agg = _df
+
         label_mapping = {
             label: i
             for i, label in enumerate(set(pd.concat([_df["source"], _df["target"]])))
         }
-        _df["source_id"] = _df["source"].map(label_mapping)
-        _df["target_id"] = _df["target"].map(label_mapping)
-
-        # df_agg = _df.groupby(["source", "target"]).sum()
-
-        _df = _df.drop(columns=["index"])
+        df_agg["source_id"] = df_agg["source"].map(label_mapping)
+        df_agg["target_id"] = df_agg["target"].map(label_mapping)
 
         # _df = df_mapping.merge(df._data, how="left", left_index=True, right_on="variable")
-        label_mapping = {
-            label: i
-            for i, label in enumerate(set(pd.concat([_df["source"], _df["target"]])))
-        }
-        _df = _df.replace(label_mapping)
+        # _df = _df.replace(label_mapping)
+
+        df_agg["customdata"] = df_agg.groupby(["source", "target"]).apply(
+            self._map_customdata
+        )
+        to_concat = []
+        for _, data in df_agg.groupby(["source", "target"]):
+            source, target = _
+
+            if source == "" and target == "":
+                continue
+
+            # assert data.index.unique("bus_carrier").item()
+            # assert data.index.unique("component").item()
+            data = data.reset_index()
+
+            carrier_values = [
+                f"{c}: {v:.2f} {self.unit}"
+                for c, v in zip(data["carrier"], data["value"])
+            ]
+            data["customdata"] = "\n".join(carrier_values)
+
+            to_concat.append(data)
+
+        df_agg = pd.concat(to_concat)
+
+        df_agg = (
+            df_agg.groupby(["source", "target"])
+            .agg(
+                {
+                    "value": "sum",
+                    "source": "first",
+                    "target": "first",
+                    "source_id": "first",
+                    "target_id": "first",
+                    "customdata": "first",
+                }
+            )
+            .reset_index(drop=True)
+        )
 
         # def get_carrier_color(s) -> str:
         #     carrier = re.findall(r"\|AC", s)[0].strip("|")
         #     color_map = {"AC": COLOUR.red}
         #     return color_map[carrier]
 
-        _df["color"] = _df.index.get_level_values("bus_carrier").map(COLOUR_SCHEME)
-        # _df["label"] =
-        _df["color"] = _df["color"].replace(
-            np.nan, COLOUR.red
-        )  # todo: map all colors and remove me
+        df_agg["color"] = df_agg.index.get_level_values("bus_carrier").map(
+            COLOUR_SCHEME
+        )
+
+        # todo: map all and remove me
+        df_agg = df_agg.query("source != '' or target != ''")
+        df_agg["color"] = df_agg["color"].replace(np.nan, COLOUR.red)
+
+        label = pd.Series(list(label_mapping))
 
         self.fig = Figure(
             data=[
@@ -487,25 +541,26 @@ class SankeyChart(ESMChart):
                         # pad=15,
                         # thickness=10,
                         line=dict(color="black", width=0.5),
-                        label=pd.Series(list(label_mapping)),
+                        label=label,
                         hovertemplate="%{label}: %{value}<extra></extra>",
-                        color=_df.color,
+                        color=df_agg.color,
+                        # groups=[[1, 2], [3, 4]],
                     ),
                     link=dict(
                         # arrowlen=15,
-                        source=_df.source_id,
-                        target=_df.target_id,
-                        value=_df.value,
-                        color=_df.color,
+                        source=df_agg.source_id,
+                        target=df_agg.target_id,
+                        value=df_agg.value,
+                        color=df_agg.color,
                         hovertemplate='"%{source.label}" to "%{target.label}": %{value}<extra></extra> ',
                     ),
                 )
             ]
         )
 
-        self._set_base_layout()
-        self._style_title_and_legend_and_xaxis_label()
-        self._append_footnotes()
+        # self._set_base_layout()
+        # self._style_title_and_legend_and_xaxis_label()
+        # self._append_footnotes()
 
         plotly.io.show(self.fig)  # todo: remove debugging
 
