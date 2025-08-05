@@ -826,3 +826,16 @@ exports = []
 [view_final_energy_demand]
 
 [view_final_energy_demand.catagories]
+
+[view_sankey]
+name = "Sankey Diagram"
+unit = "TWh"
+file_name = "sankey_{location}"
+bus_carrier = ""  # all bus_carrier
+chart = "SankeyChart"
+cutoff = 0.00001  # 1 MWh
+legend_order = []
+checks = []
+exports = []
+
+[view_sankey.categories]

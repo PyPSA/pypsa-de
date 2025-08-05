@@ -602,7 +602,7 @@ ALIAS_COUNTRY: frozendict = frozendict(
     }
 )
 ALIAS_COUNTRY_REV: frozendict = frozendict({v: k for k, v in ALIAS_COUNTRY.items()})
-COLOUR_SCHEME_BMK: dict = {
+COLOUR_SCHEME: dict = {
     # dark blue - coal
     Group.coal: COLOUR.blue_dark,
     Group.pp_coal: COLOUR.blue_dark,

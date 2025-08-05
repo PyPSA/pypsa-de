@@ -20,7 +20,7 @@ from evals.configs import ViewDefaults
 from evals.constants import (
     ALIAS_COUNTRY,
     ALIAS_REGION,
-    COLOUR_SCHEME_BMK,
+    COLOUR_SCHEME,
     NOW,
     TITLE_SUFFIX,
     DataModel,
@@ -491,7 +491,7 @@ class Exporter:
             f"Some categories are not defined in legend order: {missing}"
         )
 
-        no_color = [c for c in categories.values() if c not in COLOUR_SCHEME_BMK]
+        no_color = [c for c in categories.values() if c not in COLOUR_SCHEME]
         assert len(no_color) == 0, (
             f"Some categories used in the view do not have a color assigned: {no_color}"
         )

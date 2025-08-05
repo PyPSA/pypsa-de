@@ -12,11 +12,19 @@ import pyam
 from plotly.graph_objs import Figure, Sankey
 from pyam.index import get_index_levels
 
-from evals.constants import COLOUR
+from evals.constants import COLOUR, COLOUR_SCHEME
 from evals.utils import filter_by, rename_aggregate
 
 pd.set_option("display.width", 250)
 pd.set_option("display.max_columns", 20)
+
+
+class SankeyNode:
+    def __init__(self, bus_carrier, label, variables):
+        self.bus_carrier: str = bus_carrier
+        self.label = label
+        self.variables = variables
+        self.color = COLOUR_SCHEME[bus_carrier]
 
 
 def sankey(df: pyam.IamDataFrame, mapping: dict) -> Figure:
@@ -249,6 +257,8 @@ if __name__ == "__main__":
         "Secondary Energy|AC|Gas|Powerplant": "Secondary Energy|AC|Power Plant",
         "Secondary Energy|AC|H2|Powerplant": "Secondary Energy|AC|Power Plant",
         "Secondary Energy|AC|Methanol|Powerplant": "Secondary Energy|AC|Power Plant",
+        "Secondary Energy|Demand|AC|Air Heat Pump": "Secondary Energy|Demand|AC|Heat Pump",
+        "Secondary Energy|Demand|AC|Ground Heat Pump": "Secondary Energy|Demand|AC|Heat Pump",
         # "Final Energy|AC|Export Domestic": "Final Energy|AC|Total Export",
         "Final Energy|AC|Export Foreign": "Final Energy|AC|Total Export",
         "Secondary Energy|Losses|AC|BEV charger": "Secondary Energy|Losses|AC",
@@ -260,6 +270,16 @@ if __name__ == "__main__":
         "Secondary Energy|Losses|AC|Methanolisation": "Secondary Energy|Losses|AC",
         "Secondary Energy|Losses|AC|Resistive Heater": "Secondary Energy|Losses|AC",
         "Secondary Energy|Losses|AC|V2G": "Secondary Energy|Losses|AC",
+    }
+    variable_mapper_gas = {
+        "Primary Energy|Gas|Biogas": "Primary Energy|Gas|Biogas",
+        "Primary Energy|Gas|Biogas CC": "Primary Energy|Gas|Biogas",
+        "Primary Energy|Gas|Domestic Production": "Primary Energy|Gas|Biogas",
+        "Primary Energy|Gas|Global Import LNG": "",
+        "Primary Energy|Gas|Global Import Pipeline": "",
+        "Primary Energy|Gas|Green Global Import": "",
+        "Primary Energy|Gas|Import Domestic": "",
+        "Primary Energy|Gas|Import Foreign": "",
     }
     df = rename_aggregate(df, variable_mapper_ac, level="Variable")
 
@@ -277,8 +297,7 @@ if __name__ == "__main__":
         "Secondary Energy|AC|CHP": ("CHP", "AC"),
         "Secondary Energy|AC|Power Plant": ("Power Plant", "AC"),
         # demand
-        "Secondary Energy|Demand|AC|Air Heat Pump": ("AC", "Heat Pump"),
-        "Secondary Energy|Demand|AC|Ground Heat Pump": ("AC", "Heat Pump"),
+        "Secondary Energy|Demand|AC|Heat Pump": ("AC", "Heat Pump"),
         "Secondary Energy|Demand|AC|DAC": ("AC", "DAC"),
         "Secondary Energy|Demand|AC|Electrolysis": ("AC", "Electrolysis"),
         "Secondary Energy|Demand|AC|Gas Compressing": (

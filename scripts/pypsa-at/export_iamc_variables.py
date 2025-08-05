@@ -1257,8 +1257,8 @@ if __name__ == "__main__":
     # they are tracken in separate IMPORT/EXPORT statistics
     drop_transmission_technologies()
 
-    # collect transformed energy system variables. Note, that the order of
-    # collection is relevant for assertions statements.
+    # collect transformed energy system variables. Note that the
+    # collection order is relevant for assertion statements.
     var = SeriesCollector()
 
     collect_primary_energy()

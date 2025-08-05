@@ -6,7 +6,7 @@
 
 from dataclasses import dataclass, field
 
-from evals.constants import COLOUR_SCHEME_BMK, DataModel, Group
+from evals.constants import COLOUR_SCHEME, DataModel, Group
 
 
 @dataclass()
@@ -35,7 +35,7 @@ class PlotConfig:
     facet_column: str = DataModel.BUS_CARRIER
 
     category_orders: tuple = ()
-    colors: dict = field(default_factory=lambda: COLOUR_SCHEME_BMK)
+    colors: dict = field(default_factory=lambda: COLOUR_SCHEME)
     pattern: dict = field(
         default_factory=lambda: dict.fromkeys(
             [
@@ -80,7 +80,7 @@ class ExcelConfig:
     chart_width: int = 20  # cm
     chart_switch_axis: bool = False  # switch categories with x-axis
     chart_colors: dict = field(
-        default_factory=lambda: {k: v.lstrip("#") for k, v in COLOUR_SCHEME_BMK.items()}
+        default_factory=lambda: {k: v.lstrip("#") for k, v in COLOUR_SCHEME.items()}
     )
     # pivot tables to use the following labels as index or column
     pivot_index: str | list = field(
