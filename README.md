@@ -1,3 +1,6 @@
+[![CodeQL](https://github.com/AGGM-AG/pypsa-at/actions/workflows/codeql.yaml/badge.svg?branch=main&event=push)](https://github.com/AGGM-AG/pypsa-at/actions/workflows/codeql.yaml)
+[![Test workflows](https://github.com/AGGM-AG/pypsa-at/actions/workflows/test.yaml/badge.svg?branch=main&event=push)](https://github.com/AGGM-AG/pypsa-at/actions/workflows/test.yaml)
+[![Validator Bot](https://github.com/AGGM-AG/pypsa-at/actions/workflows/validate.yaml/badge.svg?branch=main&event=push)](https://github.com/AGGM-AG/pypsa-at/actions/workflows/validate.yaml)
 
 # PyPSA-AT: A Sector-Coupled Open Optimisation Model of the Austrian Energy System
 
