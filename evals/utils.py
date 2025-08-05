@@ -42,8 +42,10 @@ def verify_metric_format(metric: pd.DataFrame) -> None:
     assert isinstance(metric, pd.DataFrame), (
         f"Metric must be a DataFrame, but {type(metric)} was passed."
     )
-    assert set(metric.index.names).issubset(set(DataModel.YEAR_IDX_NAMES)), (
-        f"Metric index levels must contain {DataModel.YEAR_IDX_NAMES}, "
+    assert set(metric.index.names).issubset(
+        set(DataModel.YEAR_IDX_NAMES + [DataModel.COMPONENT])
+    ), (
+        f"Metric index levels must contain {DataModel.YEAR_IDX_NAMES + [DataModel.COMPONENT]}, "
         f"but {metric.index.names} is set."
     )
     assert metric.columns.names in ([DataModel.METRIC], [DataModel.SNAPSHOTS]), (
@@ -439,8 +441,8 @@ def aggregate_eu(df: pd.DataFrame, agg: str = "sum") -> pd.DataFrame:
     """
     Calculate the EU region as the sum of all country regions.
 
-    The carrier 'import net', 'export net', 'Import European' and '
-    Export European' need to be removed from the EU data set.
+    The carrier 'import net', 'export net', 'Import European' and
+    'Export European' need to be removed from the EU data set.
     The total import and export over all countries evens out and
     is not required for EU location. The non-EU imports
     are named differently, e.g. 'global import'.
