@@ -284,7 +284,7 @@ class Exporter:
             "IT",
         ),  # todo: move to global config
         region_nice_names: bool = True,
-    ) -> None:
+    ):
         self.statistics = statistics
         units = {stat.attrs["unit"] for stat in statistics}
         assert len(units) == 1, f"Mixed units cannot be exported: {units}."

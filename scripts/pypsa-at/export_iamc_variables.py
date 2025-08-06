@@ -220,9 +220,7 @@ def transform_link(carrier: str | list, technology: str) -> None:
         for bus_carrier_demand in bc_in:
             demand_bc = filter_by(demand, bus_carrier=bus_carrier_demand)
             demand_share = demand_bc.sum() / demand.sum()
-            # scaling takes into account that Link inputs and outputs are not equally large
-            # scaling = abs(supply.sum() / demand.sum())
-            supply_bc = supply * demand_share  # * scaling
+            supply_bc = supply * demand_share
             _process_single_input_link(
                 supply_bc,
                 demand_bc,
