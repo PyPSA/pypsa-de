@@ -346,6 +346,8 @@ class Exporter:
 
         df_plot = _add_dummy_rows(df_plot, self.keep_regions)
 
+        df_plot = df_plot.filter(like="Europe", axis=0).filter(like="2050", axis=0)
+
         for idx, data in df_plot.groupby(cfg.plotby):
             chart = cfg.chart(data, cfg)
             chart.plot()

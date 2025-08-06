@@ -94,7 +94,7 @@ def view_sankey(
         .pipe(
             drop_from_multtindex_by_regex, "co2|process emissions", level="bus_carrier"
         )
-        # .pipe(rename_aggregate, dict.fromkeys(storage_links, Group.storage_out))
+        .pipe(rename_aggregate, {"hydro": "hydro supply", "PHS": "PHS supply"})
         # .droplevel(DM.COMPONENT)
     )
     supply.attrs["unit"] = "MWh"
@@ -115,14 +115,15 @@ def view_sankey(
         .pipe(
             drop_from_multtindex_by_regex, "co2|process emissions", level="bus_carrier"
         )
+        .pipe(rename_aggregate, {"hydro": "hydro demand", "PHS": "PHS demand"})
         .mul(-1)
-        # .droplevel(DM.COMPONENT)
     )
     demand.attrs["unit"] = supply.attrs["unit"]
 
     # todo:
     #  - calculate regional oil import from regional oil demand
     #  - calculate regional NH3 Load from regional NH3 production
+    #  - calculate StorageUnit losses
     storage_systems = (
         "rural water tanks",
         "urban central water tanks",
@@ -196,37 +197,6 @@ def view_sankey(
             print(f"Skipping carrier '{carrier}' due to empty supply or demand.")
             continue
         link_losses.append(collect_imbalances(link_supply, link_demand))
-
-        # link_demand_bus_carrier = link_demand.index.unique("bus_carrier")
-        # if len(link_demand_bus_carrier) >1 and "AC" not in link_demand_bus_carrier:
-        #     _to_concat = []
-        #     for bc in link_demand_bus_carrier:
-        #         _split = filter_by(link_demand, bus_carrier=bc).groupby(["component", "year", "location", "carrier"]).sum()
-        #         _share = _split / link_demand.groupby(["component", "year", "location", "carrier"]).sum()
-        #         _to_concat.append(insert_index_level(_share, bc, "bus_carrier", pos=4))
-        #     input_split = pd.concat(_to_concat)
-        #
-        # link_supply = link_supply.groupby(["component", "year", "location", "carrier"]).sum()
-        # link_demand = link_demand.groupby(["component", "year", "location", "carrier"]).sum()
-        # balance = link_supply.add(link_demand)
-        # if balance.le(0).all():
-        #     if len(link_demand_bus_carrier) > 1:
-        #         if "AC" in link_demand_bus_carrier:
-        #             link_demand_bus_carrier = "AC"  # assuming all losses are electricity
-        #         else:
-        #
-        #             raise ValueError(f"Multiple bus carriers detected for demand:\n{link_demand}")
-        #     else:
-        #         link_demand_bus_carrier = link_demand_bus_carrier.item()
-        #
-        #     losses = insert_index_level(balance, link_demand_bus_carrier, "bus_carrier", pos=3)
-        #     link_losses.append(losses)
-        # elif balance.gt(0).all():
-        #     print(carrier)
-        #     surplus = insert_index_level(balance, "ambient heat", "bus_carrier", pos=3)
-        #     link_losses.append(surplus)
-        # else:
-        #     raise ValueError(f"Mixed balances detected for carrier '{carrier}':\n{balance}")
 
     trade_statistics = []
     for scope, direction, alias in [
