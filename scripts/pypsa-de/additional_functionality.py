@@ -9,7 +9,9 @@ from scripts.prepare_sector_network import determine_emission_sectors
 logger = logging.getLogger(__name__)
 
 
-def add_capacity_limits(n, investment_year, limits_capacity, sense="maximum"):
+def add_capacity_limits(
+    n, investment_year, limits_capacity, snakemake, sense="maximum"
+):
     for c in n.iterate_components(limits_capacity):
         logger.info(f"Adding {sense} constraints for {c.list_name}")
 
@@ -56,6 +58,16 @@ def add_capacity_limits(n, investment_year, limits_capacity, sense="maximum"):
 
                 cname = f"capacity_{sense}-{ct}-{c.name}-{carrier.replace(' ', '-')}"
 
+                if snakemake.params.get("regret_run"):
+                    logger.info(
+                        f"Skipping capacity limit adjustment for {c.name} {carrier} with planning horizons {investment_year}, because of regret run."
+                    )
+                    if cname in n.global_constraints.index:
+                        logger.warning(
+                            f"Global constraint {cname} already exists. Dropping it."
+                        )
+                        n.global_constraints.drop(cname, inplace=True)
+                    continue
                 if cname in n.global_constraints.index:
                     logger.warning(
                         f"Global constraint {cname} already exists. Dropping and adding it again."
@@ -809,11 +821,11 @@ def additional_functionality(n, snapshots, snakemake):
     constraints = snakemake.params.solving["constraints"]
 
     add_capacity_limits(
-        n, investment_year, constraints["limits_capacity_min"], "minimum"
+        n, investment_year, constraints["limits_capacity_min"], snakemake, "minimum"
     )
 
     add_capacity_limits(
-        n, investment_year, constraints["limits_capacity_max"], "maximum"
+        n, investment_year, constraints["limits_capacity_max"], snakemake, "maximum"
     )
 
     add_power_limits(n, investment_year, constraints["limits_power_max"])

@@ -134,7 +134,9 @@ def add_land_use_constraint_perfect(n: pypsa.Network) -> None:
         n.buses.loc[bus, name] = df_carrier.p_nom_max.values
 
 
-def add_land_use_constraint(n: pypsa.Network, planning_horizons: str) -> None:
+def add_land_use_constraint(
+    n: pypsa.Network, planning_horizons: str, regret_run=False
+) -> None:
     """
     Add land use constraints for renewable energy potential.
 
@@ -161,6 +163,11 @@ def add_land_use_constraint(n: pypsa.Network, planning_horizons: str) -> None:
         "offwind-dc",
         "offwind-float",
     ]:
+        if regret_run:
+            logger.info(
+                f"Skipping land use constraint adjustment for {carrier} with planning horizons {planning_horizons}, because of regret run."
+            )
+            continue
         ext_i = (n.generators.carrier == carrier) & ~n.generators.p_nom_extendable
         grouper = n.generators.loc[ext_i].index.str.replace(
             f" {carrier}.*$", "", regex=True
@@ -185,7 +192,9 @@ def add_land_use_constraint(n: pypsa.Network, planning_horizons: str) -> None:
     n.generators["p_nom_max"] = n.generators["p_nom_max"].clip(lower=0)
 
 
-def add_solar_potential_constraints(n: pypsa.Network, config: dict) -> None:
+def add_solar_potential_constraints(
+    n: pypsa.Network, config: dict, regret_run=False
+) -> None:
     """
     Add constraint to make sure the sum capacity of all solar technologies (fixed, tracking, ets. ) is below the region potential.
 
@@ -203,6 +212,12 @@ def add_solar_potential_constraints(n: pypsa.Network, config: dict) -> None:
     rename = {} if PYPSA_V1 else {"Generator-ext": "Generator"}
 
     solar_carriers = ["solar", "solar-hsat"]
+
+    if regret_run:
+        logger.info(
+            "Skipping solar potential constraint adjustment, because of regret run."
+        )
+        return
     solar = n.generators[
         n.generators.carrier.isin(solar_carriers) & n.generators.p_nom_extendable
     ].index
@@ -424,6 +439,7 @@ def prepare_network(
     planning_horizons: str | None,
     co2_sequestration_potential: dict[str, float],
     limit_max_growth: dict[str, Any] | None = None,
+    regret_run: bool = False,
 ) -> None:
     """
     Prepare network with various constraints and modifications.
@@ -513,7 +529,7 @@ def prepare_network(
         n.snapshot_weightings[:] = 8760.0 / nhours
 
     if foresight == "myopic":
-        add_land_use_constraint(n, planning_horizons)
+        add_land_use_constraint(n, planning_horizons, regret_run)
 
     if foresight == "perfect":
         add_land_use_constraint_perfect(n)
@@ -1281,7 +1297,9 @@ def solve_network(
         ) and {"solar-hsat", "solar"}.issubset(
             config["electricity"]["extendable_carriers"]["Generator"]
         ):
-            add_solar_potential_constraints(n, config)
+            add_solar_potential_constraints(
+                n, config, snakemake.params.get("regret_run", False)
+            )
 
         if n.config.get("sector", {}).get("tes", False):
             if n.buses.index.str.contains(
@@ -1401,11 +1419,12 @@ if __name__ == "__main__":
         from scripts._helpers import mock_snakemake
 
         snakemake = mock_snakemake(
-            "solve_sector_network",
+            "solve_sector_network_myopic",
+            simpl="",
+            clusters=27,
             opts="",
-            clusters="5",
-            configfiles="config/test/config.overnight.yaml",
-            sector_opts="",
+            sector_opts="none",
+            run="LowDemand",
             planning_horizons="2030",
         )
     configure_logging(snakemake)
