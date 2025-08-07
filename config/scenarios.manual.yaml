@@ -74,13 +74,24 @@ KN2045_Mix:
 # dient als Referenzszenario in der Familie der Ariadne-Szenarien
 
 AriadneDemand:
+  solving:
+    options:
+      noisy_costs: false
+  electricity:
+    transmission_losses: 0
+    transmission_limit: v1
 
 LowDemand:
   iiasa_database:
     reference_scenario: ExPol # e.g., CO2 emissions from REMIND will follow ExPol
     uba_for_industry: true
     uba_for_mobility: true
+  electricity:
+    transmission_limit: v1
   solving:
+    options:
+      transmission_losses: 0
+      noisy_costs: false
     constraints:
       decentral_heat_pump_budgets:
         DE: # UBA MWMS, Projektionsbericht 2025, Abbildung 48
