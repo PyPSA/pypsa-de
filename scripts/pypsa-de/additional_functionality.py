@@ -544,6 +544,8 @@ def add_decentral_heat_pump_budgets(n, decentral_heat_pump_budgets, investment_y
         "rural air heat pump",
         "rural ground heat pump",
         "urban decentral air heat pump",
+        "rural resistive heater",
+        "urban decentral resistive heater",
     ]
 
     heat_pumps = n.links.index[n.links.carrier.isin(carriers)]
@@ -573,6 +575,7 @@ def add_decentral_heat_pump_budgets(n, decentral_heat_pump_budgets, investment_y
         logger.info(
             f"Limiting decentral heat pump electricity consumption in country {ct} to {decentral_heat_pump_budgets[ct][investment_year]:.1%} MWh.",
         )
+        heat_pumps = heat_pumps[heat_pumps.str.startswith(ct)]
 
         lhs = []
 
@@ -585,16 +588,16 @@ def add_decentral_heat_pump_budgets(n, decentral_heat_pump_budgets, investment_y
         lhs = sum(lhs)
 
         cname = f"decentral_heat_pump_limit-{ct}"
-        n.model.add_constraints(
-            lhs <= limit,
-            name=f"GlobalConstraint-{cname}",
-        )
         if cname in n.global_constraints.index:
             logger.warning(
                 f"Global constraint {cname} already exists. Dropping and adding it again."
             )
             n.global_constraints.drop(cname, inplace=True)
 
+        n.model.add_constraints(
+            lhs <= limit,
+            name=f"GlobalConstraint-{cname}",
+        )
         n.add(
             "GlobalConstraint",
             cname,
