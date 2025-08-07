@@ -21,24 +21,27 @@ from evals.utils import (
 )
 from evals.views.common import _parse_view_config_items
 
+IDX = ["year", "component", "location", "carrier"]
+pd.set_option("display.width", 250)
+pd.set_option("display.max_columns", 20)
+pd.set_option("display.max_rows", 500)
+
 
 def _process_single_input_link(
     supply: pd.Series,
     demand: pd.Series,
     bc_in: str,
 ):
-    _idx = ["year", "component", "location", "carrier"]
-    balance = supply.groupby(_idx).sum() + demand.groupby(_idx).sum()
+    balance = supply.groupby(IDX).sum() + demand.groupby(IDX).sum()
     losses = balance[balance < 0]
     surplus = balance[balance > 0]
-    losses = insert_index_level(losses, bc_in, "bus_carrier", pos=4)
+    # losses = insert_index_level(losses, bc_in, "bus_carrier", pos=4)
+    losses = insert_index_level(losses, f"{bc_in} losses", "bus_carrier", pos=4).mul(-1)
     surplus = insert_index_level(surplus, "ambient heat", "bus_carrier", pos=4)
-
-    if not losses.empty:
-        # need to rename the carrier to avoid mixing with supply
-        carrier = losses.index.unique("carrier").item()
-        losses = rename_aggregate(losses, f"{carrier} losses")
-
+    # if not losses.empty:
+    #     # need to rename the carrier to avoid mixing with supply
+    #     carrier = losses.index.unique("carrier").item()
+    #     losses = rename_aggregate(losses, f"{carrier} losses")
     return pd.concat([losses, surplus])
 
 
@@ -82,7 +85,6 @@ def view_sankey(
         collect_myopic_statistics(
             networks,
             statistic="supply",
-            # bus_carrier=bus_carrier,
             aggregate_components=None,
         )
         .pipe(
@@ -95,7 +97,6 @@ def view_sankey(
             drop_from_multtindex_by_regex, "co2|process emissions", level="bus_carrier"
         )
         .pipe(rename_aggregate, {"hydro": "hydro supply", "PHS": "PHS supply"})
-        # .droplevel(DM.COMPONENT)
     )
     supply.attrs["unit"] = "MWh"
 
@@ -103,7 +104,6 @@ def view_sankey(
         collect_myopic_statistics(
             networks,
             statistic="withdrawal",
-            # bus_carrier=bus_carrier,
             aggregate_components=None,
         )
         .pipe(
@@ -124,67 +124,83 @@ def view_sankey(
     #  - calculate regional oil import from regional oil demand
     #  - calculate regional NH3 Load from regional NH3 production
     #  - calculate StorageUnit losses
-    storage_systems = (
-        "rural water tanks",
-        "urban central water tanks",
-        "urban decentral water tanks",
-        "urban central water pits",
-    )
 
-    for storage_system in storage_systems:
-        charger = f"{storage_system} charger"
-        charger_losses = (
-            filter_by(supply, carrier=charger)
-            .droplevel("bus_carrier")
-            .add(filter_by(demand, carrier=charger).droplevel("bus_carrier"))
+    grid_losses = (
+        filter_by(supply, carrier="electricity distribution grid")
+        .groupby(IDX)
+        .sum()
+        .add(
+            filter_by(demand, carrier="electricity distribution grid")
+            .groupby(IDX)
+            .sum()
         )
-        assert charger_losses.abs().le(1.5).all(), (
-            f"Charger Losses detected for carrier: {storage_system}"
-        )
-        supply.drop(charger, level="carrier", inplace=True)
-        demand.drop(charger, level="carrier", inplace=True)
-        discharger = f"{storage_system} discharger"
-        discharger_losses = (
-            filter_by(supply, carrier=discharger)
-            .droplevel("bus_carrier")
-            .add(filter_by(demand, carrier=discharger).droplevel("bus_carrier"))
-        )
-        assert discharger_losses.abs().le(1.5).all(), (
-            f"Storage system imbalances detected for carrier: {storage_system}"
-        )
-        supply.drop(discharger, level="carrier", inplace=True)
-        demand.drop(discharger, level="carrier", inplace=True)
+    )
+    grid_losses = insert_index_level(grid_losses, "losses", "bus_carrier", pos=4)
+    supply.drop("electricity distribution grid", level="carrier", inplace=True)
+    demand.drop("electricity distribution grid", level="carrier", inplace=True)
+
+    # storage_systems = (
+    #     "rural water tanks",
+    #     "urban central water tanks",
+    #     "urban decentral water tanks",
+    #     "urban central water pits",
+    # )
+    #
+    # for storage_system in storage_systems:
+    #     charger = f"{storage_system} charger"
+    #     charger_losses = (
+    #         filter_by(supply, carrier=charger)
+    #         .droplevel("bus_carrier")
+    #         .add(filter_by(demand, carrier=charger).droplevel("bus_carrier"))
+    #     )
+    #     assert charger_losses.abs().le(1.5).all(), (
+    #         f"Charger Losses detected for carrier: {storage_system}"
+    #     )
+    #     supply.drop(charger, level="carrier", inplace=True)
+    #     demand.drop(charger, level="carrier", inplace=True)
+    #     discharger = f"{storage_system} discharger"
+    #     discharger_losses = (
+    #         filter_by(supply, carrier=discharger)
+    #         .droplevel("bus_carrier")
+    #         .add(filter_by(demand, carrier=discharger).droplevel("bus_carrier"))
+    #     )
+    #     assert discharger_losses.abs().le(1.5).all(), (
+    #         f"Storage system imbalances detected for carrier: {storage_system}"
+    #     )
+    #     supply.drop(discharger, level="carrier", inplace=True)
+    #     demand.drop(discharger, level="carrier", inplace=True)
 
     for_industry_losses = []
-    for_industry_carrier = (
-        "coal for industry",
-        "gas for industry",
-        "gas for industry CC",
-        "naphtha for industry",
-        "solid biomass for industry",
-        "solid biomass for industry CC",
-        "low-temperature heat for industry",
-    )
-    for industry_carrier in for_industry_carrier:
-        industry_supply = filter_by(supply, carrier=industry_carrier, component="Link")
-        industry_demand = filter_by(demand, carrier=industry_carrier, component="Link")
-        if industry_supply.empty and industry_demand.empty:
-            continue
-        demand_bus_carrier = industry_demand.index.unique("bus_carrier").item()
-        balance = industry_supply.droplevel("bus_carrier").add(
-            industry_demand.droplevel("bus_carrier")
-        )
-        if balance.le(0).all():
-            losses = insert_index_level(
-                balance, demand_bus_carrier, "bus_carrier", pos=4
-            )
-            for_industry_losses.append(losses)
-        elif balance.abs().gt(1e-3).any():
-            raise ValueError(
-                f"Unexpected carrier '{industry_carrier}' supplies energy to Load bus."
-            )
-        supply.drop(industry_supply.index, inplace=True)
-        demand.drop(industry_demand.index, inplace=True)
+    # for_industry_carrier = (
+    #     "coal for industry",
+    #     "gas for industry",
+    #     "gas for industry CC",
+    #     "naphtha for industry",
+    #     "solid biomass for industry",
+    #     "solid biomass for industry CC",
+    #     "low-temperature heat for industry",
+    #     "agriculture machinery oil",
+    # )
+    # for industry_carrier in for_industry_carrier:
+    #     industry_supply = filter_by(supply, carrier=industry_carrier, component="Link")
+    #     industry_demand = filter_by(demand, carrier=industry_carrier, component="Link")
+    #     if industry_supply.empty and industry_demand.empty:
+    #         continue
+    #     demand_bus_carrier = industry_demand.index.unique("bus_carrier").item()
+    #     balance = industry_supply.droplevel("bus_carrier").add(
+    #         industry_demand.droplevel("bus_carrier")
+    #     )
+    #     if balance.le(0).all():
+    #         losses = insert_index_level(
+    #             balance, demand_bus_carrier, "bus_carrier", pos=4
+    #         )
+    #         for_industry_losses.append(losses)
+    #     elif balance.abs().gt(1e-3).any():
+    #         raise ValueError(
+    #             f"Unexpected carrier '{industry_carrier}' supplies energy to Load bus."
+    #         )
+    #     supply.drop(industry_supply.index, inplace=True)
+    #     demand.drop(industry_demand.index, inplace=True)
 
     link_losses = []
     link_supply_carrier = filter_by(supply, component="Link").index.unique("carrier")
@@ -193,10 +209,12 @@ def view_sankey(
     for carrier in link_carrier:
         link_supply = filter_by(supply, carrier=carrier, component="Link")
         link_demand = filter_by(demand, carrier=carrier, component="Link")
+        # balance = link_supply.droplevel("bus_carrier").add(link_demand.droplevel("bus_carrier")).groupby(["year", "component", "location", "carrier"]).sum()
         if link_supply.empty or link_demand.empty:
             print(f"Skipping carrier '{carrier}' due to empty supply or demand.")
             continue
         link_losses.append(collect_imbalances(link_supply, link_demand))
+        # demand.drop(link_demand.index, inplace=True)
 
     trade_statistics = []
     for scope, direction, alias in [
@@ -211,7 +229,6 @@ def view_sankey(
                 statistic="trade_energy",
                 scope=scope,
                 direction=direction,
-                # bus_carrier=bus_carrier,
                 aggregate_components=None,
             )
             # the trade statistic wrongly finds transmission between EU -> country buses.
@@ -224,13 +241,12 @@ def view_sankey(
             .pipe(drop_from_multtindex_by_regex, "co2", level="bus_carrier")
             .pipe(rename_aggregate, alias)
             .abs()
-            # .droplevel(DM.COMPONENT)
         )
         trade.attrs["unit"] = supply.attrs["unit"]
         trade_statistics.append(trade)
 
     exporter = Exporter(
-        statistics=[supply, demand]
+        statistics=[supply, demand, grid_losses]
         + trade_statistics
         + for_industry_losses
         + link_losses,

@@ -4,6 +4,7 @@
 # For license information, see the LICENSE.txt file in the project root.
 """Module for Sankey diagram."""
 
+import dataclasses
 import re
 
 import pandas as pd
@@ -12,7 +13,7 @@ import pyam
 from plotly.graph_objs import Figure, Sankey
 from pyam.index import get_index_levels
 
-from evals.constants import COLOUR, COLOUR_SCHEME, RUN_META_DATA
+from evals.constants import COLOUR, RUN_META_DATA
 from evals.constants import DataModel as DM
 from evals.plots._base import ESMChart
 from evals.utils import (
@@ -21,12 +22,51 @@ from evals.utils import (
     rename_aggregate,
 )
 
-pd.set_option("display.width", 250)
-pd.set_option("display.max_columns", 20)
+# Transformationsblöcke je ENergieträger
+# Zusammenfassung Erngeiträger
+# Alle Losses in Grau und je Tranformationblock (Energieträger)
+
+
+BUS_CARRIER_COLORS = {
+    "biogas": COLOUR.green_sage,
+    "coal": COLOUR.grey_dark,
+    "H2": COLOUR.green_mint,
+    "NH3": COLOUR.yellow_canary,
+    "lignite": COLOUR.brown_dark,
+    "gas": COLOUR.brown_light,
+    "municipal solid waste": COLOUR.grey_light,
+    "AC": COLOUR.blue_celestial,
+    "oil primary": COLOUR.red_deep,
+    "rural heat": COLOUR.yellow_golden,
+    "low voltage": COLOUR.blue_celestial,
+    "solid biomass": COLOUR.green_sage,
+    "uranium": COLOUR.orange_mellow,
+    "urban central heat": COLOUR.yellow_golden,
+    "urban decentral heat": COLOUR.yellow_golden,
+    "EV battery": COLOUR.blue_celestial,
+    "methanol": COLOUR.salmon,
+    "oil": COLOUR.red_deep,
+    "non-sequestered HVC": COLOUR.grey_light,
+    "agriculture machinery oil": COLOUR.red_deep,
+    "battery": COLOUR.blue_celestial,
+    "ambient heat": COLOUR.yellow_golden,
+    "home battery": COLOUR.blue_celestial,
+    "industry methanol": COLOUR.salmon,
+    "kerosene for aviation": COLOUR.red_deep,
+    "shipping methanol": COLOUR.salmon,
+    "gas for industry": COLOUR.brown_light,
+    "naphtha for industry": COLOUR.red_deep,
+    "solid biomass for industry": COLOUR.green_sage,
+    "rural water tanks": COLOUR.yellow_golden,
+    "urban central water pits": COLOUR.yellow_golden,
+    "urban central water tanks": COLOUR.yellow_golden,
+    "urban decentral water tanks": COLOUR.yellow_golden,
+}
 
 # idx = df_plot.sort_index(level="bus_carrier").droplevel("year").droplevel("location").index.drop_duplicates()
+# idx = self._df.sort_index(level="carrier").index.drop_duplicates()
 # dict.fromkeys(idx, ("", ""))
-mapping = {
+LINK_MAPPING = {
     # value - id (component, carrier, bus_carrier): (source, target) nodes
     ("Generator", "offwind-ac", "AC"): ("Wind Power", "AC Primary"),
     ("Generator", "onwind", "AC"): ("Wind Power", "AC Primary"),
@@ -40,8 +80,8 @@ mapping = {
     ("Line", "Import Domestic", "AC"): ("Import", "AC Primary"),
     ("Link", "CCGT methanol", "AC"): ("Power plant", "AC Secondary Input"),
     ("Link", "CCGT methanol CC", "AC"): ("Power plant", "AC Secondary Input"),
-    ("Link", "DAC", "AC"): ("AC Secondary Input", "DAC"),
-    ("Link", "H2 Fuel Cell", "AC"): ("Power plant", "AC Secondary Input"),
+    ("Link", "DAC", "AC"): ("AC Secondary Output", "DAC"),
+    ("Link", "H2 Fuel Cell", "AC"): ("CHP", "AC Secondary Input"),
     ("Link", "Haber-Bosch", "AC"): ("AC Secondary Output", "Haber-Bosch"),
     ("Link", "Haber-Bosch losses", "AC"): ("AC Secondary Output", "Losses"),
     ("Link", "OCGT", "AC"): ("Power plant", "AC Secondary Input"),
@@ -82,7 +122,7 @@ mapping = {
     ("Link", "urban central H2 CHP", "AC"): ("CHP", "AC Secondary Input"),
     ("StorageUnit", "hydro", "AC"): ("", ""),  # todo: rename supply/demand
     ("StorageUnit", "PHS", "AC"): ("", ""),  # todo: rename supply/demand
-    ("Link", "BEV charger", "EV battery"): ("AC Secondary Output", "Car Battery"),
+    ("Link", "BEV charger", "EV battery"): ("", ""),
     ("Link", "V2G", "EV battery"): ("Car Battery", "AC Secondary Input"),
     ("Link", "V2G losses", "EV battery"): ("Car Battery", "Car Charger Losses"),
     ("Load", "land transport EV", "EV battery"): ("Transport", "Car Battery"),
@@ -93,8 +133,8 @@ mapping = {
         "H2 Secondary Output",
         "Fischer-Tropsch Losses",
     ),
-    ("Link", "H2 Fuel Cell", "H2"): ("H2 Secondary Output", "Power Plant"),
-    ("Link", "H2 Fuel Cell losses", "H2"): ("Power Plant", "Power Plant Losses"),
+    ("Link", "H2 Fuel Cell", "H2"): ("H2 Secondary Output", "CHP"),
+    ("Link", "H2 Fuel Cell losses", "H2"): ("CHP", "CHP Losses"),
     ("Link", "Haber-Bosch", "H2"): ("H2 Secondary Output", "Haber-Bosch"),
     ("Link", "Haber-Bosch losses", "H2"): ("Haber-Bosch", "Haber-Bosch Losses"),
     ("Link", "Methanol steam reforming", "H2"): (
@@ -135,270 +175,1026 @@ mapping = {
     ("Load", "land transport fuel cell", "H2"): ("H2 Secondary Output", "Transport"),
     ("Load", "H2 for industry", "H2"): ("H2 Secondary Output", "Industry"),
     ("Store", "H2 Store", "H2"): ("", ""),  # todo: drop
-    ("Generator", "import NH3", "NH3"): ("", ""),
-    ("Link", "Haber-Bosch", "NH3"): ("", ""),
-    ("Link", "ammonia cracker", "NH3"): ("", ""),
-    ("Link", "ammonia cracker losses", "NH3"): ("", ""),
-    ("Load", "NH3", "NH3"): ("", ""),
-    ("Store", "ammonia store", "NH3"): ("", ""),
-    ("Link", "agriculture machinery oil", "agriculture machinery oil"): ("", ""),
-    ("Load", "agriculture machinery oil", "agriculture machinery oil"): ("", ""),
-    ("Link", "rural air heat pump", "ambient heat"): ("", ""),
-    ("Link", "rural ground heat pump", "ambient heat"): ("", ""),
-    ("Link", "urban decentral air heat pump", "ambient heat"): ("", ""),
-    ("Link", "electricity distribution grid", "ambient heat"): ("", ""),
-    ("Link", "urban central air heat pump", "ambient heat"): ("", ""),
-    ("Link", "urban central coal CHP", "ambient heat"): ("", ""),
-    ("Link", "urban central gas boiler", "ambient heat"): ("", ""),
-    ("Link", "urban central ptes heat pump", "ambient heat"): ("", ""),
-    ("Link", "urban central solid biomass CHP", "ambient heat"): ("", ""),
-    ("Link", "urban central solid biomass CHP CC", "ambient heat"): ("", ""),
-    ("Link", "urban central oil CHP", "ambient heat"): ("", ""),
-    ("Link", "urban central gas CHP", "ambient heat"): ("", ""),
-    ("Link", "urban central lignite CHP", "ambient heat"): ("", ""),
-    ("Link", "battery charger", "battery"): ("", ""),
-    ("Link", "battery discharger", "battery"): ("", ""),
-    ("Link", "battery discharger losses", "battery"): ("", ""),
-    ("Store", "battery", "battery"): ("", ""),
-    ("Generator", "unsustainable biogas", "biogas"): ("", ""),
-    ("Generator", "biogas", "biogas"): ("", ""),
-    ("Link", "biogas to gas", "biogas"): ("", ""),
-    ("Link", "biogas to gas CC", "biogas"): ("", ""),
-    ("Generator", "coal", "coal"): ("", ""),
-    ("Link", "coal for industry", "coal"): ("", ""),
-    ("Link", "urban central coal CHP", "coal"): ("", ""),
-    ("Link", "coal", "coal"): ("", ""),
-    ("Link", "coal losses", "coal"): ("", ""),
-    ("Link", "urban central coal CHP losses", "coal"): ("", ""),
-    ("Store", "coal", "coal"): ("", ""),
-    ("Load", "coal for industry", "coal for industry"): ("", ""),
-    ("Generator", "production gas", "gas"): ("", ""),
-    ("Generator", "lng gas", "gas"): ("", ""),
-    ("Generator", "pipeline gas", "gas"): ("", ""),
-    ("Link", "BioSNG", "gas"): ("", ""),
-    ("Link", "BioSNG CC", "gas"): ("", ""),
-    ("Link", "Export Foreign", "gas"): ("", ""),
-    ("Link", "Import Foreign", "gas"): ("", ""),
-    ("Link", "OCGT", "gas"): ("", ""),
-    ("Link", "OCGT losses", "gas"): ("", ""),
-    ("Link", "SMR", "gas"): ("", ""),
-    ("Link", "SMR CC", "gas"): ("", ""),
-    ("Link", "SMR CC losses", "gas"): ("", ""),
-    ("Link", "SMR losses", "gas"): ("", ""),
-    ("Link", "Sabatier", "gas"): ("", ""),
-    ("Link", "gas for industry", "gas"): ("", ""),
-    ("Link", "gas for industry CC", "gas"): ("", ""),
-    ("Link", "rural gas boiler", "gas"): ("", ""),
-    ("Link", "rural gas boiler losses", "gas"): ("", ""),
-    ("Link", "urban decentral gas boiler", "gas"): ("", ""),
-    ("Link", "urban decentral gas boiler losses", "gas"): ("", ""),
-    ("Link", "CCGT", "gas"): ("", ""),
-    ("Link", "CCGT losses", "gas"): ("", ""),
-    ("Link", "biogas to gas", "gas"): ("", ""),
-    ("Link", "biogas to gas CC", "gas"): ("", ""),
-    ("Link", "urban central gas CHP", "gas"): ("", ""),
-    ("Link", "urban central gas CHP CC", "gas"): ("", ""),
-    ("Link", "urban central gas CHP CC losses", "gas"): ("", ""),
-    ("Link", "urban central gas CHP losses", "gas"): ("", ""),
-    ("Link", "urban central gas boiler", "gas"): ("", ""),
-    ("Link", "Export Domestic", "gas"): ("", ""),
-    ("Link", "Import Domestic", "gas"): ("", ""),
-    ("Link", "import gas", "gas"): ("", ""),
-    ("Store", "gas", "gas"): ("", ""),
-    ("Load", "gas for industry", "gas for industry"): ("", ""),
+    ("Generator", "import NH3", "NH3"): (
+        "Global Green Import",
+        "NH3 Primary",
+    ),  # todo: regionalize imports?
+    ("Link", "Haber-Bosch", "NH3"): ("Haber-Bosch", "NH3 Secondary Input"),
+    ("Link", "ammonia cracker", "NH3"): ("NH3 Secondary Output", "Ammonia Cracker"),
+    ("Link", "ammonia cracker losses", "NH3"): (
+        "Ammonia Cracker",
+        "Ammonia Cracker Losses",
+    ),
+    ("Load", "NH3", "NH3"): ("NH3 Secondary Output", "Agriculture"),
+    ("Store", "ammonia store", "NH3"): ("", ""),  # todo: drop
+    ("Link", "agriculture machinery oil", "agriculture machinery oil"): (
+        "",
+        "",
+    ),  # todo: drop
+    ("Load", "agriculture machinery oil", "agriculture machinery oil"): (
+        "Oil Secondary Output",
+        "Agriculture",
+    ),
+    ("Link", "rural air heat pump", "ambient heat"): ("Ambient Heat", "Decentral Heat"),
+    ("Link", "rural ground heat pump", "ambient heat"): (
+        "Ambient Heat",
+        "Decentral Heat",
+    ),
+    ("Link", "urban decentral air heat pump", "ambient heat"): (
+        "Ambient Heat",
+        "Decentral Heat",
+    ),
+    ("Link", "electricity distribution grid", "ambient heat"): (
+        "",
+        "",
+    ),  # fixme: should be losses
+    ("Link", "urban central air heat pump", "ambient heat"): (
+        "Ambient Heat Central",
+        "Central Heat",
+    ),  # todo: jumper from Central heat to HH & Services
+    ("Link", "urban central coal CHP", "ambient heat"): (
+        "Ambient Heat Central",
+        "Central Heat",
+    ),
+    ("Link", "urban central gas boiler", "ambient heat"): (
+        "Ambient Heat Central",
+        "Central Heat",
+    ),
+    ("Link", "urban central ptes heat pump", "ambient heat"): (
+        "Ambient Heat Central",
+        "Central Heat",
+    ),
+    ("Link", "urban central solid biomass CHP", "ambient heat"): (
+        "Ambient Heat Central",
+        "Central Heat",
+    ),
+    ("Link", "urban central solid biomass CHP CC", "ambient heat"): (
+        "Ambient Heat Central",
+        "Central Heat",
+    ),
+    ("Link", "urban central oil CHP", "ambient heat"): (
+        "Ambient Heat Central",
+        "Central Heat",
+    ),
+    ("Link", "urban central gas CHP", "ambient heat"): (
+        "Ambient Heat Central",
+        "Central Heat",
+    ),
+    ("Link", "urban central lignite CHP", "ambient heat"): (
+        "Ambient Heat Central",
+        "Central Heat",
+    ),
+    ("Link", "battery charger", "battery"): ("", ""),  # todo: already in supply. drop
+    ("Link", "battery discharger", "battery"): (
+        "",
+        "",
+    ),  # todo: already in supply. drop
+    ("Link", "battery discharger losses", "battery"): (
+        "",
+        "",
+    ),  # todo: already in supply. drop
+    ("Store", "battery", "battery"): ("", ""),  # todo: drop
+    ("Generator", "unsustainable biogas", "biogas"): ("Wet Biomass", "Biogas"),
+    ("Generator", "biogas", "biogas"): ("Wet Biomass", "Biogas"),
+    ("Link", "biogas to gas", "biogas"): ("", ""),  # todo: drop demand side
+    ("Link", "biogas to gas CC", "biogas"): ("", ""),  # todo: drop demand side
+    ("Generator", "coal", "coal"): ("", ""),  # todo: regionalize coal imports
+    ("Link", "coal for industry", "coal"): ("", ""),  # todo: drop
+    ("Link", "urban central coal CHP", "coal"): ("Coal Secondary Input", "CHP"),
+    ("Link", "urban central coal CHP losses", "coal"): ("CHP", "CHP Losses"),
+    ("Link", "coal", "coal"): ("Coal Secondary Input", "Power Plant"),
+    ("Link", "coal losses", "coal"): ("Power Plant", "Power Plant Losses"),
+    ("Store", "coal", "coal"): ("", ""),  # todo: drop
+    ("Load", "coal for industry", "coal for industry"): (
+        "Coal Secondary Output",
+        "Industry",
+    ),
+    ("Generator", "production gas", "gas"): (
+        "Domestic Fossil Production",
+        "Methane Primary",
+    ),
+    ("Generator", "lng gas", "gas"): ("LNG Global Fossil Import", "Methane Primary"),
+    ("Generator", "pipeline gas", "gas"): (
+        "Pipeline Global Fossil Import",
+        "Methane Primary",
+    ),
+    ("Link", "BioSNG", "gas"): ("Solid Biomass Primary", "Methane Secondary Input"),
+    ("Link", "BioSNG CC", "gas"): ("Solid Biomass Primary", "Methane Secondary Input"),
+    ("Link", "Export Foreign", "gas"): ("Methane Secondary Output", "Export"),
+    ("Link", "Import Foreign", "gas"): ("Import", "Methane Primary"),
+    ("Link", "OCGT", "gas"): ("Methane Secondary Output", "Power Plant"),
+    ("Link", "OCGT losses", "gas"): ("Power Plant", "Power Plant Losses"),
+    ("Link", "SMR", "gas"): ("Methane Secondary Output", "SMR"),
+    ("Link", "SMR CC", "gas"): ("Methane Secondary Output", "SMR"),
+    ("Link", "SMR CC losses", "gas"): ("SMR", "SMR Losses"),
+    ("Link", "SMR losses", "gas"): ("SMR", "SMR Losses"),
+    ("Link", "Sabatier", "gas"): ("Sabatier", "Methane Secondary Input"),
+    ("Link", "gas for industry", "gas"): ("", ""),  # todo: drop
+    ("Link", "gas for industry CC", "gas"): (
+        "Methane Secondary Output",
+        "Industry Losses",
+    ),
+    ("Link", "rural gas boiler", "gas"): ("Methane Secondary Output", "Decentral Heat"),
+    ("Link", "rural gas boiler losses", "gas"): (
+        "Decentral Heat",
+        "Methane Losses",
+    ),  # edge case
+    ("Link", "urban decentral gas boiler", "gas"): (
+        "Methane Secondary Output",
+        "Decentral Heat",
+    ),
+    ("Link", "urban decentral gas boiler losses", "gas"): (
+        "Decentral Heat",
+        "Methane Losses",
+    ),
+    ("Link", "CCGT", "gas"): ("Methane Secondary Output", "Power Plant"),
+    ("Link", "CCGT losses", "gas"): ("Power Plant", "Power Plant Losses"),
+    ("Link", "biogas to gas", "gas"): ("Biogas", "Methane Secondary Input"),
+    ("Link", "biogas to gas CC", "gas"): ("Biogas", "Methane Secondary Input"),
+    ("Link", "urban central gas CHP", "gas"): ("Methane Secondary Output", "CHP"),
+    ("Link", "urban central gas CHP CC", "gas"): ("Methane Secondary Output", "CHP"),
+    ("Link", "urban central gas CHP CC losses", "gas"): ("CHP", "CHP Losses"),
+    ("Link", "urban central gas CHP losses", "gas"): ("CHP", "CHP Losses"),
+    ("Link", "urban central gas boiler", "gas"): (
+        "Methane Secondary Output",
+        "CHP",
+    ),  # fixme: not a CHP
+    ("Link", "Export Domestic", "gas"): ("Methane Secondary Output", "Export"),
+    ("Link", "Import Domestic", "gas"): ("Import", "Methane Primary"),
+    ("Link", "import gas", "gas"): ("Green Global Import", "Methane Primary"),
+    ("Store", "gas", "gas"): ("", ""),  # todo: drop
+    ("Load", "gas for industry", "gas for industry"): (
+        "Methane Secondary Output",
+        "Industry",
+    ),
+    ("Link", "industry methanol", "industry methanol"): ("", ""),  # todo: drop
+    ("Load", "industry methanol", "industry methanol"): (
+        "Methanol Secondary Output",
+        "Industry",
+    ),
+    ("Link", "kerosene for aviation", "kerosene for aviation"): (
+        "Oil Secondary Output",
+        "Transport",
+    ),  # todo: drop
+    ("Link", "methanol-to-kerosene", "kerosene for aviation"): (
+        "Methanol Secondary Output",
+        "Transport",
+    ),
+    ("Load", "kerosene for aviation", "kerosene for aviation"): ("", ""),  # todo: drop
+    ("Link", "land transport oil", "land transport oil"): (
+        "Oil Secondary Output",
+        "Transport",
+    ),
+    ("Load", "land transport oil", "land transport oil"): ("", ""),  # todo: drop
+    ("Generator", "lignite", "lignite"): ("Coal Primary", "Coal Secondary Input"),
+    ("Link", "lignite", "lignite"): ("Coal Secondary Output", "Power Plant"),
+    ("Link", "lignite losses", "lignite"): ("Power Plant", "Power Plant Losses"),
+    ("Link", "urban central lignite CHP", "lignite"): ("Coal Secondary Output", "CHP"),
+    ("Link", "urban central lignite CHP losses", "lignite"): ("CHP", "CHP Losses"),
+    ("Store", "lignite", "lignite"): ("", ""),  # todo: drop
+    ("Generator", "solar rooftop", "low voltage"): ("Solar Power", "AC Primary"),
+    ("Link", "BEV charger", "low voltage"): ("AC Secondary Output", "Car Battery"),
+    ("Link", "BEV charger losses", "low voltage"): (
+        "Car Battery",
+        "Car Battery Losses",
+    ),
+    ("Link", "electricity distribution grid", "low voltage"): ("", ""),  # todo: drop
+    ("Link", "electricity distribution grid losses", "low voltage"): (
+        "",
+        "",
+    ),  # fixme: wrong sign
     ("Link", "home battery charger", "home battery"): ("", ""),
     ("Link", "home battery discharger", "home battery"): ("", ""),
-    ("Link", "home battery discharger losses", "home battery"): ("", ""),
-    ("Store", "home battery", "home battery"): ("", ""),
-    ("Link", "industry methanol", "industry methanol"): ("", ""),
-    ("Load", "industry methanol", "industry methanol"): ("", ""),
-    ("Link", "kerosene for aviation", "kerosene for aviation"): ("", ""),
-    ("Link", "methanol-to-kerosene", "kerosene for aviation"): ("", ""),
-    ("Load", "kerosene for aviation", "kerosene for aviation"): ("", ""),
-    ("Link", "land transport oil", "land transport oil"): ("", ""),
-    ("Load", "land transport oil", "land transport oil"): ("", ""),
-    ("Generator", "lignite", "lignite"): ("", ""),
-    ("Link", "lignite", "lignite"): ("", ""),
-    ("Link", "lignite losses", "lignite"): ("", ""),
-    ("Link", "urban central lignite CHP", "lignite"): ("", ""),
-    ("Link", "urban central lignite CHP losses", "lignite"): ("", ""),
-    ("Store", "lignite", "lignite"): ("", ""),
-    ("Generator", "solar rooftop", "low voltage"): ("", ""),
+    ("Link", "home battery discharger losses", "home battery"): (
+        "Battery",
+        "Battery Losses",
+    ),
+    ("Store", "home battery", "home battery"): ("", ""),  # todo: drop
+    ("Link", "home battery charger", "low voltage"): ("AC Secondary Output", "Battery"),
+    ("Link", "home battery charger losses", "low voltage"): ("Battery", "Losses"),
+    ("Link", "home battery discharger", "low voltage"): (
+        "Battery",
+        "AC Secondary Input",
+    ),
+    ("Link", "rural air heat pump", "low voltage"): (
+        "AC Secondary Output",
+        "Decentral Heat",
+    ),
+    ("Link", "rural ground heat pump", "low voltage"): (
+        "AC Secondary Output",
+        "Decentral Heat",
+    ),
+    ("Link", "rural resistive heater", "low voltage"): (
+        "AC Secondary Output",
+        "Decentral Heat",
+    ),
+    ("Link", "rural resistive heater losses", "low voltage"): (
+        "Decentral Heat",
+        "Decentral Heat Losses",
+    ),
+    ("Link", "urban decentral air heat pump", "low voltage"): (
+        "AC Secondary Output",
+        "Decentral Heat",
+    ),
+    ("Link", "urban decentral resistive heater", "low voltage"): (
+        "AC Secondary Output",
+        "Decentral Heat",
+    ),
+    ("Link", "urban decentral resistive heater losses", "low voltage"): (
+        "Decentral Heat",
+        "Decentral Heat Losses",
+    ),
+    ("Link", "urban central air heat pump", "low voltage"): (
+        "AC Secondary Output",
+        "Central Heat",
+    ),
+    ("Link", "urban central ptes heat pump", "low voltage"): (
+        "AC Secondary Output",
+        "Central Heat",
+    ),
+    ("Link", "urban central resistive heater", "low voltage"): (
+        "AC Secondary Output",
+        "Central Heat",
+    ),
+    ("Link", "urban central resistive heater losses", "low voltage"): (
+        "Central Heat",
+        "Losses",
+    ),
+    ("Link", "urban central ptes heat pump losses", "low voltage"): (
+        "Central Heat",
+        "Central Heat Losses",
+    ),
+    ("Link", "V2G", "low voltage"): ("", ""),  # todo: drop demand
+    ("Load", "agriculture electricity", "low voltage"): (
+        "AC Secondary Output",
+        "Agriculture",
+    ),
+    ("Load", "electricity", "low voltage"): ("AC Secondary Output", "AC Base Load"),
+    ("Load", "industry electricity", "low voltage"): (
+        "AC Secondary Output",
+        "Industry",
+    ),
+    ("Link", "CCGT methanol", "methanol"): ("Methanol Secondary Output", "Power Plant"),
+    ("Link", "CCGT methanol CC", "methanol"): (
+        "Methanol Secondary Output",
+        "Power Plant",
+    ),
+    ("Link", "CCGT methanol CC losses", "methanol"): (
+        "Power Plant",
+        "Power Plant Losses",
+    ),
+    ("Link", "CCGT methanol losses", "methanol"): ("Power Plant", "Power Plant Losses"),
+    ("Link", "Methanol steam reforming", "methanol"): (
+        "Methanol Secondary Output",
+        "Methanol Steam Reforming",
+    ),
+    ("Link", "Methanol steam reforming CC", "methanol"): (
+        "Methanol Secondary Output",
+        "Methanol Steam Reforming",
+    ),
+    ("Link", "Methanol steam reforming CC losses", "methanol"): (
+        "Methanol Steam Reforming",
+        "Methanol Steam Reforming Losses",
+    ),
+    ("Link", "Methanol steam reforming losses", "methanol"): (
+        "Methanol Steam Reforming",
+        "Methanol Steam Reforming Losses",
+    ),
+    ("Link", "OCGT methanol", "methanol"): ("Methanol Secondary Output", "Power Plant"),
+    ("Link", "OCGT methanol losses", "methanol"): ("Power Plant", "Power Plant Losses"),
+    ("Link", "allam methanol", "methanol"): (
+        "Methanol Secondary Output",
+        "Power Plant",
+    ),
+    ("Link", "allam methanol losses", "methanol"): (
+        "Power Plant",
+        "Power Plant Losses",
+    ),
+    ("Link", "biomass-to-methanol", "methanol"): (
+        "Methanol Secondary Input",
+        "Solid Biomass Secondary Output",
+    ),
+    ("Link", "biomass-to-methanol CC", "methanol"): (
+        "Methanol Secondary Input",
+        "Solid Biomass Secondary Output",
+    ),
+    ("Link", "methanol-to-kerosene", "methanol"): (
+        "Methanol Secondary Output",
+        "Transport",
+    ),
+    ("Link", "methanol-to-kerosene losses", "methanol"): (
+        "Methanol Secondary Output",
+        "Methanol Losses",
+    ),
+    ("Link", "methanolisation", "methanol"): (
+        "Methanol Secondary Input",
+        "Methanolisation",
+    ),
+    ("Link", "industry methanol", "methanol"): (
+        "Methanol Secondary Output",
+        "Industry",
+    ),
+    ("Link", "import methanol", "methanol"): (
+        "Methanol Green Global Import",
+        "Methanol Primary",
+    ),
+    ("Link", "shipping methanol", "methanol"): (
+        "Methanol Secondary Output",
+        "Transport",
+    ),
+    ("Store", "methanol", "methanol"): ("", ""),  # todo: drop
+    ("Generator", "municipal solid waste", "municipal solid waste"): (
+        "Solid Waste",
+        "Waste Primary",
+    ),
+    ("Link", "Export Foreign", "municipal solid waste"): (
+        "Waste Secondary Output",
+        "Export",
+    ),
+    ("Link", "Import Foreign", "municipal solid waste"): (
+        "Solid Waste Import",
+        "Waste Primary",
+    ),
+    ("Link", "municipal solid waste", "municipal solid waste"): ("", ""),  # todo: drop
+    ("Link", "Export Domestic", "municipal solid waste"): (
+        "Waste Secondary Output",
+        "Export",
+    ),
+    ("Link", "Import Domestic", "municipal solid waste"): (
+        "Solid Waste Import",
+        "Waste Primary",
+    ),
+    ("Load", "naphtha for industry", "naphtha for industry"): ("", ""),  # todo: drop
+    ("Link", "HVC to air", "non-sequestered HVC"): (
+        "Waste Secondary Output",
+        "HVC to Air",
+    ),
+    ("Link", "municipal solid waste", "non-sequestered HVC"): (
+        "Waste Primary",
+        "Waste Secondary Input",
+    ),  # todo: drop
+    ("Link", "waste CHP", "non-sequestered HVC"): ("Waste Secondary Output", "CHP"),
+    ("Link", "waste CHP CC", "non-sequestered HVC"): ("Waste Secondary Output", "CHP"),
+    ("Link", "waste CHP CC losses", "non-sequestered HVC"): ("CHP", "CHP Losses"),
+    ("Link", "waste CHP losses", "non-sequestered HVC"): ("CHP", "CHP Losses"),
+    ("Store", "non-sequestered HVC", "non-sequestered HVC"): (
+        "",
+        "",
+    ),  # todo: drop if zero
+    ("Link", "Fischer-Tropsch", "oil"): ("Fischer-Tropsch", "Oil Secondary Input"),
+    ("Link", "agriculture machinery oil", "oil"): (
+        "Oil Secondary Output",
+        "Agriculture",
+    ),
+    ("Link", "biomass to liquid", "oil"): ("Biomass2Liquid", "Oil Secondary Input"),
+    ("Link", "biomass to liquid CC", "oil"): ("Biomass2Liquid", "Oil Secondary Input"),
+    ("Link", "electrobiofuels", "oil"): ("Bio Fuels", "Oil Secondary Input"),
+    ("Link", "kerosene for aviation", "oil"): ("Oil Secondary Output", "Transport"),
+    ("Link", "land transport oil", "oil"): ("Oil Secondary Output", "Transport"),
+    ("Link", "naphtha for industry", "oil"): ("Oil Secondary Output", "Industry"),
+    ("Link", "oil", "oil"): ("Oil Secondary Output", "Power Plant"),
+    ("Link", "oil losses", "oil"): ("Power Plant", "Power Plant Losses"),
+    ("Link", "shipping oil", "oil"): ("Oil Secondary Output", "Transport"),
+    ("Link", "rural oil boiler", "oil"): ("Oil Secondary Output", "Decentral Heat"),
+    ("Link", "rural oil boiler losses", "oil"): (
+        "Decentral Heat",
+        "Decentral Heat Losses",
+    ),
+    ("Link", "unsustainable bioliquids", "oil"): (
+        "Unsustainable Bio Liquids",
+        "Oil Secondary Input",
+    ),
+    ("Link", "urban decentral oil boiler", "oil"): (
+        "Oil Secondary Output",
+        "Decentral Heat",
+    ),
+    ("Link", "urban decentral oil boiler losses", "oil"): (
+        "Decentral Heat",
+        "Decentral Heat Losses",
+    ),
+    ("Link", "urban central oil CHP", "oil"): ("Oil Secondary Output", "Central Heat"),
+    ("Link", "urban central oil CHP losses", "oil"): (
+        "Central Heat",
+        "Decentral Heat Losses",
+    ),
+    ("Link", "import oil", "oil"): ("Oil Green Global Import", "Oil Primary"),
+    ("Link", "oil refining", "oil"): ("Oil Refining", "Oil Secondary Input"),
+    ("Store", "oil", "oil"): ("", ""),  # todo: drop
+    ("Generator", "oil primary", "oil primary"): ("", ""),  # todo: drop
+    ("Link", "oil refining", "oil primary"): ("Raw Oil", "Oil Refining"),
+    ("Link", "oil refining losses", "oil primary"): (
+        "Oil Refining",
+        "Oil Refining Losses",
+    ),
+    ("Generator", "rural heat vent", "rural heat"): (
+        "Decentral Heat",
+        "Decentral Heat Losses",
+    ),
+    ("Generator", "rural solar thermal", "rural heat"): (
+        "Solar Thermal",
+        "Decentral Heat",
+    ),
+    ("Link", "rural air heat pump", "rural heat"): ("", ""),  # todo: drop
+    ("Link", "rural biomass boiler", "rural heat"): ("", ""),  # todo: drop
+    ("Link", "rural gas boiler", "rural heat"): ("", ""),  # todo: drop
+    ("Link", "rural ground heat pump", "rural heat"): ("", ""),  # todo: drop
+    ("Link", "rural resistive heater", "rural heat"): ("", ""),  # todo: drop
+    ("Link", "rural oil boiler", "rural heat"): ("", ""),  # todo: drop
+    ("Load", "agriculture heat", "rural heat"): ("Decentral Heat", "Agriculture"),
+    ("Load", "rural heat", "rural heat"): ("Decentral Heat", "HH & Services"),
+    ("Store", "rural water tanks", "rural water tanks"): ("", ""),  # todo: drop
+    ("Link", "shipping methanol", "shipping methanol"): (
+        "Methanol Secondary Output",
+        "Transport",
+    ),
+    ("Load", "shipping methanol", "shipping methanol"): ("", ""),  # todo: drop
+    ("Link", "shipping oil", "shipping oil"): ("Oil Secondary Output", "Transport"),
+    ("Load", "shipping oil", "shipping oil"): ("", ""),  # todo: drop
+    ("Generator", "unsustainable solid biomass", "solid biomass"): (
+        "Solid Biomass",
+        "Solid Biomass Primary",
+    ),
+    ("Generator", "solid biomass", "solid biomass"): (
+        "Solid Biomass",
+        "Solid Biomass Primary",
+    ),
+    ("Link", "BioSNG", "solid biomass"): ("", ""),  # todo: drop
+    ("Link", "BioSNG CC", "solid biomass"): ("", ""),  # todo: drop
+    ("Link", "BioSNG CC losses", "solid biomass"): (
+        "Solid Biomass Secondary Output",
+        "Solid Biomass Secondary Output Losses",
+    ),
+    ("Link", "BioSNG losses", "solid biomass"): (
+        "Solid Biomass Secondary Output",
+        "Solid Biomass Secondary Output Losses",
+    ),
+    ("Link", "Export Foreign", "solid biomass"): (
+        "Solid Biomass Secondary Output",
+        "Export",
+    ),
+    ("Link", "Import Foreign", "solid biomass"): (
+        "Import",
+        "Solid Biomass Secondary Input",
+    ),
+    ("Link", "biomass to liquid", "solid biomass"): (
+        "Solid Biomass Secondary Input",
+        "Biomass2Liquid",
+    ),
+    ("Link", "biomass to liquid CC", "solid biomass"): (
+        "Solid Biomass Secondary Input",
+        "Biomass2Liquid",
+    ),
+    ("Link", "biomass to liquid CC losses", "solid biomass"): (
+        "Biomass2Liquid",
+        "Biomass2Liquid Losses",
+    ),
+    ("Link", "biomass to liquid losses", "solid biomass"): (
+        "Biomass2Liquid",
+        "Biomass2Liquid Losses",
+    ),
+    ("Link", "biomass-to-methanol", "solid biomass"): (
+        "Solid Biomass Secondary Output",
+        "Methanol Secondary Input",
+    ),
+    ("Link", "biomass-to-methanol CC", "solid biomass"): (
+        "Solid Biomass Secondary Output",
+        "Methanol Secondary Input",
+    ),
+    ("Link", "biomass-to-methanol CC losses", "solid biomass"): (
+        "Solid Biomass Secondary Output",
+        "Solid Biomass Secondary Output Losses",
+    ),
+    ("Link", "biomass-to-methanol losses", "solid biomass"): (
+        "Solid Biomass Secondary Output",
+        "Solid Biomass Secondary Output Losses",
+    ),
+    ("Link", "electrobiofuels", "solid biomass"): (
+        "Solid Biomass Secondary Output",
+        "Bio Fuels",
+    ),
+    ("Link", "electrobiofuels losses", "solid biomass"): (
+        "Bio Fuels",
+        "Bio Fuels Losses",
+    ),
+    ("Link", "rural biomass boiler", "solid biomass"): (
+        "Solid Biomass Secondary Output",
+        "Decentral Heat",
+    ),
+    ("Link", "rural biomass boiler losses", "solid biomass"): (
+        "Decentral Heat",
+        "Decentral Heat Losses",
+    ),
+    ("Link", "solid biomass for industry", "solid biomass"): (
+        "Solid Biomass Secondary Output",
+        "Industry",
+    ),
+    ("Link", "solid biomass for industry CC", "solid biomass"): (
+        "Solid Biomass Secondary Output",
+        "Industry",
+    ),
+    ("Link", "solid biomass to hydrogen", "solid biomass"): (
+        "Solid Biomass Secondary Output",
+        "H2 Secondary Input",
+    ),
+    ("Link", "solid biomass to hydrogen losses", "solid biomass"): (
+        "Solid Biomass Secondary Output",
+        "Solid Biomass Secondary Output Losses",
+    ),
+    ("Link", "urban decentral biomass boiler", "solid biomass"): (
+        "Solid Biomass Secondary Output",
+        "Decentral Heat",
+    ),
+    ("Link", "urban decentral biomass boiler losses", "solid biomass"): (
+        "Decentral Heat",
+        "Decentral Heat Losses",
+    ),
+    ("Link", "urban central solid biomass CHP", "solid biomass"): (
+        "Solid Biomass Secondary Output",
+        "Central Heat",
+    ),
+    ("Link", "urban central solid biomass CHP CC", "solid biomass"): (
+        "Solid Biomass Secondary Output",
+        "Central Heat",
+    ),
+    ("Link", "Export Domestic", "solid biomass"): (
+        "Solid Biomass Secondary Output",
+        "Export",
+    ),
+    ("Link", "Import Domestic", "solid biomass"): (
+        "Import",
+        "Solid Biomass Secondary Input",
+    ),
+    ("Link", "solid biomass", "solid biomass"): (
+        "Solid Biomass Secondary Output",
+        "Power Plant",
+    ),
+    ("Link", "solid biomass losses", "solid biomass"): (
+        "Power Plant",
+        "Power Plant Losses",
+    ),
+    ("Link", "urban central solid biomass CHP losses", "solid biomass"): (
+        "CHP",
+        "CHP Losses",
+    ),
+    ("Load", "solid biomass for industry", "solid biomass for industry"): (
+        "",
+        "",
+    ),  # todo: drop
+    ("Generator", "unsustainable bioliquids", "unsustainable bioliquids"): (
+        "",
+        "",
+    ),  # todo: drop
+    ("Link", "unsustainable bioliquids", "unsustainable bioliquids"): (
+        "",
+        "",
+    ),  # todo: drop
+    ("Generator", "uranium", "uranium"): ("", ""),  # todo: drop
+    ("Link", "nuclear", "uranium"): ("Uranium", "Nuclear Power"),
+    ("Link", "nuclear losses", "uranium"): ("Nuclear Power", "Nuclear Power Losses"),
+    ("Store", "uranium", "uranium"): ("", ""),  # todo: drop
+    ("Generator", "urban central heat vent", "urban central heat"): (
+        "Central Heat",
+        "Central Heat Losses",
+    ),
+    ("Generator", "urban central solar thermal", "urban central heat"): (
+        "Solar Thermal",
+        "Central Heat",
+    ),
+    ("Link", "DAC", "urban central heat"): ("Central Heat", "DAC"),
+    ("Link", "Fischer-Tropsch", "urban central heat"): (
+        "Central Heat",
+        "Fischer-Tropsch",
+    ),
+    ("Link", "H2 Fuel Cell", "urban central heat"): ("CHP", "Central Heat"),
+    ("Link", "Haber-Bosch", "urban central heat"): ("Haber-Bosch", "Central Heat"),
+    ("Link", "Sabatier", "urban central heat"): ("Sabatier", "Central Heat"),
+    ("Link", "methanolisation", "urban central heat"): (
+        "Methanolisation",
+        "Central Heat",
+    ),
+    ("Link", "urban central air heat pump", "urban central heat"): (
+        "",
+        "",
+    ),  # todo: drop
+    ("Link", "urban central coal CHP", "urban central heat"): ("CHP", "Central Heat"),
+    ("Link", "urban central gas CHP", "urban central heat"): ("CHP", "Central Heat"),
+    ("Link", "urban central gas CHP CC", "urban central heat"): ("CHP", "Central Heat"),
+    ("Link", "urban central gas boiler", "urban central heat"): ("CHP", "Central Heat"),
+    ("Link", "urban central ptes heat pump", "urban central heat"): (
+        "",
+        "",
+    ),  # todo: drop
+    ("Link", "urban central resistive heater", "urban central heat"): ("", ""),
+    ("Link", "urban central solid biomass CHP", "urban central heat"): (
+        "CHP",
+        "Central Heat",
+    ),
+    ("Link", "urban central solid biomass CHP CC", "urban central heat"): (
+        "CHP",
+        "Central Heat",
+    ),
+    ("Link", "waste CHP", "urban central heat"): ("CHP", "Central Heat"),
+    ("Link", "waste CHP CC", "urban central heat"): ("CHP", "Central Heat"),
+    ("Link", "urban central oil CHP", "urban central heat"): ("CHP", "Central Heat"),
+    ("Link", "urban central lignite CHP", "urban central heat"): (
+        "CHP",
+        "Central Heat",
+    ),
+    ("Link", "H2 Electrolysis", "urban central heat"): ("Electrolysis", "Central Heat"),
+    ("Link", "urban central H2 CHP", "urban central heat"): ("CHP", "Central Heat"),
+    ("Load", "low-temperature heat for industry", "urban central heat"): (
+        "Central Heat",
+        "Industry",
+    ),
+    ("Load", "urban central heat", "urban central heat"): (
+        "Central Heat",
+        "HH & Services",
+    ),
+    ("Store", "urban central water pits", "urban central water pits"): (
+        "",
+        "",
+    ),  # todo: drop
+    ("Store", "urban central water tanks", "urban central water tanks"): (
+        "",
+        "",
+    ),  # todo: drop
+    ("Generator", "urban decentral heat vent", "urban decentral heat"): (
+        "Decentral Heat",
+        "Decentral Heat Losses",
+    ),
+    ("Generator", "urban decentral solar thermal", "urban decentral heat"): (
+        "Solar Thermal",
+        "Decentral Heat",
+    ),
+    ("Link", "DAC", "urban decentral heat"): ("Decentral Heat", "DAC"),
+    ("Link", "urban decentral air heat pump", "urban decentral heat"): (
+        "",
+        "",
+    ),  # todo: reverse
+    ("Link", "urban decentral biomass boiler", "urban decentral heat"): (
+        "",
+        "",
+    ),  # todo: reverse
+    ("Link", "urban decentral gas boiler", "urban decentral heat"): (
+        "",
+        "",
+    ),  # todo: reverse
+    ("Link", "urban decentral resistive heater", "urban decentral heat"): (
+        "AC Secondary Output",
+        "Decentral Heat",
+    ),  # this one is correct, others need updates
+    ("Link", "urban decentral oil boiler", "urban decentral heat"): (
+        "Oil Secondary Output",
+        "Decentral Heat",
+    ),
+    ("Load", "low-temperature heat for industry", "urban decentral heat"): (
+        "",
+        "",
+    ),  # todo: drop
+    ("Load", "urban decentral heat", "urban decentral heat"): (
+        "Decentral Heat",
+        "HH & Services",
+    ),
+    ("Store", "urban decentral water tanks", "urban decentral water tanks"): (
+        "",
+        "",
+    ),  # todo: drop
+}
+
+
+LINK_MAPPING = {
+    ("Link", "BEV charger", "EV battery"): ("", ""),
     ("Link", "BEV charger", "low voltage"): ("", ""),
-    ("Link", "BEV charger losses", "low voltage"): ("", ""),
-    ("Link", "electricity distribution grid", "low voltage"): ("", ""),
-    ("Link", "electricity distribution grid losses", "low voltage"): ("", ""),
-    ("Link", "home battery charger", "low voltage"): ("", ""),
-    ("Link", "home battery charger losses", "low voltage"): ("", ""),
-    ("Link", "home battery discharger", "low voltage"): ("", ""),
-    ("Link", "rural air heat pump", "low voltage"): ("", ""),
-    ("Link", "rural ground heat pump", "low voltage"): ("", ""),
-    ("Link", "rural resistive heater", "low voltage"): ("", ""),
-    ("Link", "rural resistive heater losses", "low voltage"): ("", ""),
-    ("Link", "urban decentral air heat pump", "low voltage"): ("", ""),
-    ("Link", "urban decentral resistive heater", "low voltage"): ("", ""),
-    ("Link", "urban decentral resistive heater losses", "low voltage"): ("", ""),
-    ("Link", "urban central air heat pump", "low voltage"): ("", ""),
-    ("Link", "urban central ptes heat pump", "low voltage"): ("", ""),
-    ("Link", "urban central resistive heater", "low voltage"): ("", ""),
-    ("Link", "urban central resistive heater losses", "low voltage"): ("", ""),
-    ("Link", "urban central ptes heat pump losses", "low voltage"): ("", ""),
+    ("Link", "BEV charger", "low voltage losses"): ("", ""),
+    ("Link", "BioSNG", "gas"): ("", ""),
+    ("Link", "BioSNG", "solid biomass"): ("", ""),
+    ("Link", "BioSNG", "solid biomass losses"): ("", ""),
+    ("Link", "BioSNG CC", "gas"): ("", ""),
+    ("Link", "BioSNG CC", "solid biomass"): ("", ""),
+    ("Link", "BioSNG CC", "solid biomass losses"): ("", ""),
+    ("Link", "CCGT", "AC"): ("", ""),
+    ("Link", "CCGT", "gas"): ("", ""),
+    ("Link", "CCGT", "gas losses"): ("", ""),
+    ("Link", "CCGT methanol", "AC"): ("", ""),
+    ("Link", "CCGT methanol", "methanol"): ("", ""),
+    ("Link", "CCGT methanol", "methanol losses"): ("", ""),
+    ("Link", "CCGT methanol CC", "AC"): ("", ""),
+    ("Link", "CCGT methanol CC", "methanol"): ("", ""),
+    ("Link", "CCGT methanol CC", "methanol losses"): ("", ""),
+    ("Link", "DAC", "AC"): ("", ""),
+    ("Link", "DAC", "urban central heat"): ("", ""),
+    ("Link", "DAC", "urban decentral heat"): ("", ""),
+    ("Store", "EV battery", "EV battery"): ("", ""),
+    ("Link", "Fischer-Tropsch", "H2"): ("", ""),
+    ("Link", "Fischer-Tropsch", "H2 losses"): ("", ""),
+    ("Link", "Fischer-Tropsch", "oil"): ("", ""),
+    ("Link", "Fischer-Tropsch", "urban central heat"): ("", ""),
+    ("Link", "H2 Electrolysis", "AC"): ("", ""),
+    ("Link", "H2 Electrolysis", "AC losses"): ("", ""),
+    ("Link", "H2 Electrolysis", "H2"): ("", ""),
+    ("Link", "H2 Electrolysis", "urban central heat"): ("", ""),
+    ("Link", "H2 Fuel Cell", "AC"): ("", ""),
+    ("Link", "H2 Fuel Cell", "H2"): ("", ""),
+    ("Link", "H2 Fuel Cell", "H2 losses"): ("", ""),
+    ("Link", "H2 Fuel Cell", "urban central heat"): ("", ""),
+    ("Link", "H2 OCGT", "AC"): ("", ""),
+    ("Link", "H2 OCGT", "H2"): ("", ""),
+    ("Link", "H2 OCGT", "H2 losses"): ("", ""),
+    ("Store", "H2 Store", "H2"): ("", ""),
+    ("Load", "H2 for industry", "H2"): ("", ""),
+    ("Link", "HVC to air", "non-sequestered HVC"): ("", ""),
+    ("Link", "Haber-Bosch", "AC"): ("", ""),
+    ("Link", "Haber-Bosch", "AC losses"): ("", ""),
+    ("Link", "Haber-Bosch", "H2"): ("", ""),
+    ("Link", "Haber-Bosch", "H2 losses"): ("", ""),
+    ("Link", "Haber-Bosch", "NH3"): ("", ""),
+    ("Link", "Haber-Bosch", "urban central heat"): ("", ""),
+    ("Link", "Methanol steam reforming", "H2"): ("", ""),
+    ("Link", "Methanol steam reforming", "methanol"): ("", ""),
+    ("Link", "Methanol steam reforming", "methanol losses"): ("", ""),
+    ("Link", "Methanol steam reforming CC", "H2"): ("", ""),
+    ("Link", "Methanol steam reforming CC", "methanol"): ("", ""),
+    ("Link", "Methanol steam reforming CC", "methanol losses"): ("", ""),
+    ("Load", "NH3", "NH3"): ("", ""),
+    ("Link", "OCGT", "AC"): ("", ""),
+    ("Link", "OCGT", "gas"): ("", ""),
+    ("Link", "OCGT", "gas losses"): ("", ""),
+    ("Link", "OCGT methanol", "AC"): ("", ""),
+    ("Link", "OCGT methanol", "methanol"): ("", ""),
+    ("Link", "OCGT methanol", "methanol losses"): ("", ""),
+    ("StorageUnit", "PHS demand", "AC"): ("", ""),
+    ("StorageUnit", "PHS supply", "AC"): ("", ""),
+    ("Link", "SMR", "H2"): ("", ""),
+    ("Link", "SMR", "gas"): ("", ""),
+    ("Link", "SMR", "gas losses"): ("", ""),
+    ("Link", "SMR CC", "H2"): ("", ""),
+    ("Link", "SMR CC", "gas"): ("", ""),
+    ("Link", "SMR CC", "gas losses"): ("", ""),
+    ("Link", "Sabatier", "H2"): ("", ""),
+    ("Link", "Sabatier", "H2 losses"): ("", ""),
+    ("Link", "Sabatier", "gas"): ("", ""),
+    ("Link", "Sabatier", "urban central heat"): ("", ""),
+    ("Link", "V2G", "EV battery"): ("", ""),
+    ("Link", "V2G", "EV battery losses"): ("", ""),
     ("Link", "V2G", "low voltage"): ("", ""),
     ("Load", "agriculture electricity", "low voltage"): ("", ""),
-    ("Load", "electricity", "low voltage"): ("", ""),
-    ("Load", "industry electricity", "low voltage"): ("", ""),
-    ("Link", "CCGT methanol", "methanol"): ("", ""),
-    ("Link", "CCGT methanol CC", "methanol"): ("", ""),
-    ("Link", "CCGT methanol CC losses", "methanol"): ("", ""),
-    ("Link", "CCGT methanol losses", "methanol"): ("", ""),
-    ("Link", "Methanol steam reforming", "methanol"): ("", ""),
-    ("Link", "Methanol steam reforming CC", "methanol"): ("", ""),
-    ("Link", "Methanol steam reforming CC losses", "methanol"): ("", ""),
-    ("Link", "Methanol steam reforming losses", "methanol"): ("", ""),
-    ("Link", "OCGT methanol", "methanol"): ("", ""),
-    ("Link", "OCGT methanol losses", "methanol"): ("", ""),
-    ("Link", "allam methanol", "methanol"): ("", ""),
-    ("Link", "allam methanol losses", "methanol"): ("", ""),
-    ("Link", "biomass-to-methanol", "methanol"): ("", ""),
-    ("Link", "biomass-to-methanol CC", "methanol"): ("", ""),
-    ("Link", "methanol-to-kerosene", "methanol"): ("", ""),
-    ("Link", "methanol-to-kerosene losses", "methanol"): ("", ""),
-    ("Link", "methanolisation", "methanol"): ("", ""),
-    ("Link", "industry methanol", "methanol"): ("", ""),
-    ("Link", "import methanol", "methanol"): ("", ""),
-    ("Link", "shipping methanol", "methanol"): ("", ""),
-    ("Store", "methanol", "methanol"): ("", ""),
-    ("Generator", "municipal solid waste", "municipal solid waste"): ("", ""),
-    ("Link", "Export Foreign", "municipal solid waste"): ("", ""),
-    ("Link", "Import Foreign", "municipal solid waste"): ("", ""),
-    ("Link", "municipal solid waste", "municipal solid waste"): ("", ""),
-    ("Link", "Export Domestic", "municipal solid waste"): ("", ""),
-    ("Link", "Import Domestic", "municipal solid waste"): ("", ""),
-    ("Load", "naphtha for industry", "naphtha for industry"): ("", ""),
-    ("Link", "HVC to air", "non-sequestered HVC"): ("", ""),
-    ("Link", "municipal solid waste", "non-sequestered HVC"): ("", ""),
-    ("Link", "waste CHP", "non-sequestered HVC"): ("", ""),
-    ("Link", "waste CHP CC", "non-sequestered HVC"): ("", ""),
-    ("Link", "waste CHP CC losses", "non-sequestered HVC"): ("", ""),
-    ("Link", "waste CHP losses", "non-sequestered HVC"): ("", ""),
-    ("Store", "non-sequestered HVC", "non-sequestered HVC"): ("", ""),
-    ("Link", "Fischer-Tropsch", "oil"): ("", ""),
+    ("Load", "agriculture heat", "rural heat"): ("", ""),
+    ("Link", "agriculture machinery oil", "agriculture machinery oil"): ("", ""),
     ("Link", "agriculture machinery oil", "oil"): ("", ""),
+    ("Load", "agriculture machinery oil", "agriculture machinery oil"): ("", ""),
+    ("Link", "allam methanol", "AC"): ("", ""),
+    ("Link", "allam methanol", "methanol"): ("", ""),
+    ("Link", "allam methanol", "methanol losses"): ("", ""),
+    ("Link", "ammonia cracker", "H2"): ("", ""),
+    ("Link", "ammonia cracker", "NH3"): ("", ""),
+    ("Link", "ammonia cracker", "NH3 losses"): ("", ""),
+    ("Store", "ammonia store", "NH3"): ("", ""),
+    ("Store", "battery", "battery"): ("", ""),
+    ("Link", "battery charger", "AC"): ("", ""),
+    ("Link", "battery charger", "AC losses"): ("", ""),
+    ("Link", "battery charger", "battery"): ("", ""),
+    ("Link", "battery discharger", "AC"): ("", ""),
+    ("Link", "battery discharger", "battery"): ("", ""),
+    ("Link", "battery discharger", "battery losses"): ("", ""),
+    ("Generator", "biogas", "biogas"): ("", ""),
+    ("Link", "biogas to gas", "biogas"): ("", ""),
+    ("Link", "biogas to gas", "gas"): ("", ""),
+    ("Link", "biogas to gas CC", "biogas"): ("", ""),
+    ("Link", "biogas to gas CC", "gas"): ("", ""),
     ("Link", "biomass to liquid", "oil"): ("", ""),
+    ("Link", "biomass to liquid", "solid biomass"): ("", ""),
+    ("Link", "biomass to liquid", "solid biomass losses"): ("", ""),
     ("Link", "biomass to liquid CC", "oil"): ("", ""),
+    ("Link", "biomass to liquid CC", "solid biomass"): ("", ""),
+    ("Link", "biomass to liquid CC", "solid biomass losses"): ("", ""),
+    ("Link", "biomass-to-methanol", "methanol"): ("", ""),
+    ("Link", "biomass-to-methanol", "solid biomass"): ("", ""),
+    ("Link", "biomass-to-methanol", "solid biomass losses"): ("", ""),
+    ("Link", "biomass-to-methanol CC", "methanol"): ("", ""),
+    ("Link", "biomass-to-methanol CC", "solid biomass"): ("", ""),
+    ("Link", "biomass-to-methanol CC", "solid biomass losses"): ("", ""),
+    ("Generator", "coal", "coal"): ("", ""),
+    ("Link", "coal", "AC"): ("", ""),
+    ("Link", "coal", "coal"): ("", ""),
+    ("Link", "coal", "coal losses"): ("", ""),
+    ("Store", "coal", "coal"): ("", ""),
+    ("Load", "electricity", "low voltage"): ("", ""),
+    ("Link", "electricity distribution grid", "losses"): ("", ""),
+    ("Link", "electrobiofuels", "H2"): ("", ""),
+    ("Link", "electrobiofuels", "H2 losses"): ("", ""),
     ("Link", "electrobiofuels", "oil"): ("", ""),
-    ("Link", "kerosene for aviation", "oil"): ("", ""),
-    ("Link", "land transport oil", "oil"): ("", ""),
-    ("Link", "naphtha for industry", "oil"): ("", ""),
-    ("Link", "oil", "oil"): ("", ""),
-    ("Link", "oil losses", "oil"): ("", ""),
-    ("Link", "shipping oil", "oil"): ("", ""),
-    ("Link", "rural oil boiler", "oil"): ("", ""),
-    ("Link", "rural oil boiler losses", "oil"): ("", ""),
-    ("Link", "unsustainable bioliquids", "oil"): ("", ""),
-    ("Link", "urban decentral oil boiler", "oil"): ("", ""),
-    ("Link", "urban decentral oil boiler losses", "oil"): ("", ""),
-    ("Link", "urban central oil CHP", "oil"): ("", ""),
-    ("Link", "urban central oil CHP losses", "oil"): ("", ""),
+    ("Link", "electrobiofuels", "solid biomass"): ("", ""),
+    ("Link", "electrobiofuels", "solid biomass losses"): ("", ""),
+    ("Store", "gas", "gas"): ("", ""),
+    ("Link", "gas for industry", "gas"): ("", ""),
+    ("Link", "gas for industry", "gas for industry"): ("", ""),
+    ("Load", "gas for industry", "gas for industry"): ("", ""),
+    ("Link", "gas for industry CC", "gas"): ("", ""),
+    ("Link", "gas for industry CC", "gas for industry"): ("", ""),
+    ("Link", "gas for industry CC", "gas losses"): ("", ""),
+    ("Store", "home battery", "home battery"): ("", ""),
+    ("Link", "home battery charger", "home battery"): ("", ""),
+    ("Link", "home battery charger", "low voltage"): ("", ""),
+    ("Link", "home battery charger", "low voltage losses"): ("", ""),
+    ("Link", "home battery discharger", "home battery"): ("", ""),
+    ("Link", "home battery discharger", "home battery losses"): ("", ""),
+    ("Link", "home battery discharger", "low voltage"): ("", ""),
+    ("StorageUnit", "hydro supply", "AC"): ("", ""),
+    ("Generator", "import H2", "H2"): ("", ""),
+    ("Generator", "import NH3", "NH3"): ("", ""),
+    ("Link", "import gas", "gas"): ("", ""),
+    ("Link", "import methanol", "methanol"): ("", ""),
     ("Link", "import oil", "oil"): ("", ""),
-    ("Link", "oil refining", "oil"): ("", ""),
+    ("Load", "industry electricity", "low voltage"): ("", ""),
+    ("Link", "industry methanol", "industry methanol"): ("", ""),
+    ("Link", "industry methanol", "methanol"): ("", ""),
+    ("Load", "industry methanol", "industry methanol"): ("", ""),
+    ("Link", "kerosene for aviation", "kerosene for aviation"): ("", ""),
+    ("Link", "kerosene for aviation", "oil"): ("", ""),
+    ("Load", "kerosene for aviation", "kerosene for aviation"): ("", ""),
+    ("Load", "land transport EV", "EV battery"): ("", ""),
+    ("Load", "land transport fuel cell", "H2"): ("", ""),
+    ("Generator", "lignite", "lignite"): ("", ""),
+    ("Link", "lignite", "AC"): ("", ""),
+    ("Link", "lignite", "lignite"): ("", ""),
+    ("Link", "lignite", "lignite losses"): ("", ""),
+    ("Store", "lignite", "lignite"): ("", ""),
+    ("Generator", "lng gas", "gas"): ("", ""),
+    ("Load", "low-temperature heat for industry", "urban central heat"): ("", ""),
+    ("Load", "low-temperature heat for industry", "urban decentral heat"): ("", ""),
+    ("Store", "methanol", "methanol"): ("", ""),
+    ("Link", "methanol-to-kerosene", "H2"): ("", ""),
+    ("Link", "methanol-to-kerosene", "H2 losses"): ("", ""),
+    ("Link", "methanol-to-kerosene", "kerosene for aviation"): ("", ""),
+    ("Link", "methanol-to-kerosene", "methanol"): ("", ""),
+    ("Link", "methanol-to-kerosene", "methanol losses"): ("", ""),
+    ("Link", "methanolisation", "AC"): ("", ""),
+    ("Link", "methanolisation", "AC losses"): ("", ""),
+    ("Link", "methanolisation", "H2"): ("", ""),
+    ("Link", "methanolisation", "H2 losses"): ("", ""),
+    ("Link", "methanolisation", "methanol"): ("", ""),
+    ("Link", "methanolisation", "urban central heat"): ("", ""),
+    ("Generator", "municipal solid waste", "municipal solid waste"): ("", ""),
+    ("Link", "municipal solid waste", "municipal solid waste"): ("", ""),
+    ("Link", "municipal solid waste", "non-sequestered HVC"): ("", ""),
+    ("Link", "naphtha for industry", "naphtha for industry"): ("", ""),
+    ("Link", "naphtha for industry", "oil"): ("", ""),
+    ("Load", "naphtha for industry", "naphtha for industry"): ("", ""),
+    ("Store", "non-sequestered HVC", "non-sequestered HVC"): ("", ""),
+    ("Link", "nuclear", "AC"): ("", ""),
+    ("Link", "nuclear", "uranium"): ("", ""),
+    ("Link", "nuclear", "uranium losses"): ("", ""),
+    ("Generator", "offwind-ac", "AC"): ("", ""),
+    ("Generator", "offwind-dc", "AC"): ("", ""),
+    ("Link", "oil", "AC"): ("", ""),
+    ("Link", "oil", "oil"): ("", ""),
+    ("Link", "oil", "oil losses"): ("", ""),
     ("Store", "oil", "oil"): ("", ""),
     ("Generator", "oil primary", "oil primary"): ("", ""),
+    ("Link", "oil refining", "oil"): ("", ""),
     ("Link", "oil refining", "oil primary"): ("", ""),
-    ("Link", "oil refining losses", "oil primary"): ("", ""),
-    ("Generator", "rural heat vent", "rural heat"): ("", ""),
-    ("Generator", "rural solar thermal", "rural heat"): ("", ""),
+    ("Link", "oil refining", "oil primary losses"): ("", ""),
+    ("Generator", "onwind", "AC"): ("", ""),
+    ("Generator", "pipeline gas", "gas"): ("", ""),
+    ("Generator", "production gas", "gas"): ("", ""),
+    ("Generator", "ror", "AC"): ("", ""),
+    ("Link", "rural air heat pump", "ambient heat"): ("", ""),
+    ("Link", "rural air heat pump", "low voltage"): ("", ""),
     ("Link", "rural air heat pump", "rural heat"): ("", ""),
     ("Link", "rural biomass boiler", "rural heat"): ("", ""),
+    ("Link", "rural biomass boiler", "solid biomass"): ("", ""),
+    ("Link", "rural biomass boiler", "solid biomass losses"): ("", ""),
+    ("Link", "rural gas boiler", "gas"): ("", ""),
+    ("Link", "rural gas boiler", "gas losses"): ("", ""),
     ("Link", "rural gas boiler", "rural heat"): ("", ""),
+    ("Link", "rural ground heat pump", "ambient heat"): ("", ""),
+    ("Link", "rural ground heat pump", "low voltage"): ("", ""),
     ("Link", "rural ground heat pump", "rural heat"): ("", ""),
-    ("Link", "rural resistive heater", "rural heat"): ("", ""),
-    ("Link", "rural oil boiler", "rural heat"): ("", ""),
-    ("Load", "agriculture heat", "rural heat"): ("", ""),
     ("Load", "rural heat", "rural heat"): ("", ""),
+    ("Generator", "rural heat vent", "rural heat"): ("", ""),
+    ("Link", "rural resistive heater", "low voltage"): ("", ""),
+    ("Link", "rural resistive heater", "low voltage losses"): ("", ""),
+    ("Link", "rural resistive heater", "rural heat"): ("", ""),
+    ("Generator", "rural solar thermal", "rural heat"): ("", ""),
     ("Store", "rural water tanks", "rural water tanks"): ("", ""),
+    ("Link", "rural water tanks charger", "rural heat"): ("", ""),
+    ("Link", "rural water tanks charger", "rural water tanks"): ("", ""),
+    ("Link", "rural water tanks discharger", "rural heat"): ("", ""),
+    ("Link", "rural water tanks discharger", "rural water tanks"): ("", ""),
+    ("Link", "shipping methanol", "methanol"): ("", ""),
     ("Link", "shipping methanol", "shipping methanol"): ("", ""),
     ("Load", "shipping methanol", "shipping methanol"): ("", ""),
-    ("Link", "shipping oil", "shipping oil"): ("", ""),
-    ("Load", "shipping oil", "shipping oil"): ("", ""),
-    ("Generator", "unsustainable solid biomass", "solid biomass"): ("", ""),
+    ("Generator", "solar", "AC"): ("", ""),
+    ("Generator", "solar rooftop", "low voltage"): ("", ""),
+    ("Generator", "solar-hsat", "AC"): ("", ""),
     ("Generator", "solid biomass", "solid biomass"): ("", ""),
-    ("Link", "BioSNG", "solid biomass"): ("", ""),
-    ("Link", "BioSNG CC", "solid biomass"): ("", ""),
-    ("Link", "BioSNG CC losses", "solid biomass"): ("", ""),
-    ("Link", "BioSNG losses", "solid biomass"): ("", ""),
-    ("Link", "Export Foreign", "solid biomass"): ("", ""),
-    ("Link", "Import Foreign", "solid biomass"): ("", ""),
-    ("Link", "biomass to liquid", "solid biomass"): ("", ""),
-    ("Link", "biomass to liquid CC", "solid biomass"): ("", ""),
-    ("Link", "biomass to liquid CC losses", "solid biomass"): ("", ""),
-    ("Link", "biomass to liquid losses", "solid biomass"): ("", ""),
-    ("Link", "biomass-to-methanol", "solid biomass"): ("", ""),
-    ("Link", "biomass-to-methanol CC", "solid biomass"): ("", ""),
-    ("Link", "biomass-to-methanol CC losses", "solid biomass"): ("", ""),
-    ("Link", "biomass-to-methanol losses", "solid biomass"): ("", ""),
-    ("Link", "electrobiofuels", "solid biomass"): ("", ""),
-    ("Link", "electrobiofuels losses", "solid biomass"): ("", ""),
-    ("Link", "rural biomass boiler", "solid biomass"): ("", ""),
-    ("Link", "rural biomass boiler losses", "solid biomass"): ("", ""),
     ("Link", "solid biomass for industry", "solid biomass"): ("", ""),
-    ("Link", "solid biomass for industry CC", "solid biomass"): ("", ""),
-    ("Link", "solid biomass to hydrogen", "solid biomass"): ("", ""),
-    ("Link", "solid biomass to hydrogen losses", "solid biomass"): ("", ""),
-    ("Link", "urban decentral biomass boiler", "solid biomass"): ("", ""),
-    ("Link", "urban decentral biomass boiler losses", "solid biomass"): ("", ""),
-    ("Link", "urban central solid biomass CHP", "solid biomass"): ("", ""),
-    ("Link", "urban central solid biomass CHP CC", "solid biomass"): ("", ""),
-    ("Link", "Export Domestic", "solid biomass"): ("", ""),
-    ("Link", "Import Domestic", "solid biomass"): ("", ""),
-    ("Link", "solid biomass", "solid biomass"): ("", ""),
-    ("Link", "solid biomass losses", "solid biomass"): ("", ""),
-    ("Link", "urban central solid biomass CHP losses", "solid biomass"): ("", ""),
+    ("Link", "solid biomass for industry", "solid biomass for industry"): ("", ""),
     ("Load", "solid biomass for industry", "solid biomass for industry"): ("", ""),
-    ("Generator", "unsustainable bioliquids", "unsustainable bioliquids"): ("", ""),
-    ("Link", "unsustainable bioliquids", "unsustainable bioliquids"): ("", ""),
+    ("Link", "solid biomass for industry CC", "solid biomass"): ("", ""),
+    ("Link", "solid biomass for industry CC", "solid biomass for industry"): ("", ""),
+    ("Link", "solid biomass for industry CC", "solid biomass losses"): ("", ""),
+    ("Link", "solid biomass to hydrogen", "H2"): ("", ""),
+    ("Link", "solid biomass to hydrogen", "solid biomass"): ("", ""),
+    ("Link", "solid biomass to hydrogen", "solid biomass losses"): ("", ""),
     ("Generator", "uranium", "uranium"): ("", ""),
-    ("Link", "nuclear", "uranium"): ("", ""),
-    ("Link", "nuclear losses", "uranium"): ("", ""),
     ("Store", "uranium", "uranium"): ("", ""),
-    ("Generator", "urban central heat vent", "urban central heat"): ("", ""),
-    ("Generator", "urban central solar thermal", "urban central heat"): ("", ""),
-    ("Link", "DAC", "urban central heat"): ("", ""),
-    ("Link", "Fischer-Tropsch", "urban central heat"): ("", ""),
-    ("Link", "H2 Fuel Cell", "urban central heat"): ("", ""),
-    ("Link", "Haber-Bosch", "urban central heat"): ("", ""),
-    ("Link", "Sabatier", "urban central heat"): ("", ""),
-    ("Link", "methanolisation", "urban central heat"): ("", ""),
-    ("Link", "urban central air heat pump", "urban central heat"): ("", ""),
-    ("Link", "urban central coal CHP", "urban central heat"): ("", ""),
-    ("Link", "urban central gas CHP", "urban central heat"): ("", ""),
-    ("Link", "urban central gas CHP CC", "urban central heat"): ("", ""),
-    ("Link", "urban central gas boiler", "urban central heat"): ("", ""),
-    ("Link", "urban central ptes heat pump", "urban central heat"): ("", ""),
-    ("Link", "urban central resistive heater", "urban central heat"): ("", ""),
-    ("Link", "urban central solid biomass CHP", "urban central heat"): ("", ""),
-    ("Link", "urban central solid biomass CHP CC", "urban central heat"): ("", ""),
-    ("Link", "waste CHP", "urban central heat"): ("", ""),
-    ("Link", "waste CHP CC", "urban central heat"): ("", ""),
-    ("Link", "urban central oil CHP", "urban central heat"): ("", ""),
-    ("Link", "urban central lignite CHP", "urban central heat"): ("", ""),
-    ("Link", "H2 Electrolysis", "urban central heat"): ("", ""),
+    ("Link", "urban central H2 CHP", "AC"): ("", ""),
+    ("Link", "urban central H2 CHP", "H2"): ("", ""),
+    ("Link", "urban central H2 CHP", "H2 losses"): ("", ""),
     ("Link", "urban central H2 CHP", "urban central heat"): ("", ""),
-    ("Load", "low-temperature heat for industry", "urban central heat"): ("", ""),
+    ("Link", "urban central air heat pump", "ambient heat"): ("", ""),
+    ("Link", "urban central air heat pump", "low voltage"): ("", ""),
+    ("Link", "urban central air heat pump", "urban central heat"): ("", ""),
+    ("Link", "urban central coal CHP", "AC"): ("", ""),
+    ("Link", "urban central coal CHP", "ambient heat"): ("", ""),
+    ("Link", "urban central coal CHP", "coal"): ("", ""),
+    ("Link", "urban central coal CHP", "urban central heat"): ("", ""),
+    ("Link", "urban central gas CHP", "AC"): ("", ""),
+    ("Link", "urban central gas CHP", "ambient heat"): ("", ""),
+    ("Link", "urban central gas CHP", "gas"): ("", ""),
+    ("Link", "urban central gas CHP", "gas losses"): ("", ""),
+    ("Link", "urban central gas CHP", "urban central heat"): ("", ""),
+    ("Link", "urban central gas CHP CC", "AC"): ("", ""),
+    ("Link", "urban central gas CHP CC", "gas"): ("", ""),
+    ("Link", "urban central gas CHP CC", "gas losses"): ("", ""),
+    ("Link", "urban central gas CHP CC", "urban central heat"): ("", ""),
+    ("Link", "urban central gas boiler", "ambient heat"): ("", ""),
+    ("Link", "urban central gas boiler", "gas"): ("", ""),
+    ("Link", "urban central gas boiler", "urban central heat"): ("", ""),
     ("Load", "urban central heat", "urban central heat"): ("", ""),
+    ("Generator", "urban central heat vent", "urban central heat"): ("", ""),
+    ("Link", "urban central ptes heat pump", "ambient heat"): ("", ""),
+    ("Link", "urban central ptes heat pump", "low voltage"): ("", ""),
+    ("Link", "urban central ptes heat pump", "urban central heat"): ("", ""),
+    ("Link", "urban central resistive heater", "low voltage"): ("", ""),
+    ("Link", "urban central resistive heater", "low voltage losses"): ("", ""),
+    ("Link", "urban central resistive heater", "urban central heat"): ("", ""),
+    ("Generator", "urban central solar thermal", "urban central heat"): ("", ""),
+    ("Link", "urban central solid biomass CHP", "AC"): ("", ""),
+    ("Link", "urban central solid biomass CHP", "ambient heat"): ("", ""),
+    ("Link", "urban central solid biomass CHP", "solid biomass"): ("", ""),
+    ("Link", "urban central solid biomass CHP", "urban central heat"): ("", ""),
+    ("Link", "urban central solid biomass CHP CC", "AC"): ("", ""),
+    ("Link", "urban central solid biomass CHP CC", "ambient heat"): ("", ""),
+    ("Link", "urban central solid biomass CHP CC", "solid biomass"): ("", ""),
+    ("Link", "urban central solid biomass CHP CC", "urban central heat"): ("", ""),
     ("Store", "urban central water pits", "urban central water pits"): ("", ""),
+    ("Link", "urban central water pits charger", "urban central heat"): ("", ""),
+    ("Link", "urban central water pits charger", "urban central water pits"): ("", ""),
+    ("Link", "urban central water pits discharger", "urban central heat"): ("", ""),
+    ("Link", "urban central water pits discharger", "urban central water pits"): (
+        "",
+        "",
+    ),
     ("Store", "urban central water tanks", "urban central water tanks"): ("", ""),
-    ("Generator", "urban decentral heat vent", "urban decentral heat"): ("", ""),
-    ("Generator", "urban decentral solar thermal", "urban decentral heat"): ("", ""),
-    ("Link", "DAC", "urban decentral heat"): ("", ""),
+    ("Link", "urban central water tanks charger", "urban central heat"): ("", ""),
+    ("Link", "urban central water tanks charger", "urban central water tanks"): (
+        "",
+        "",
+    ),
+    ("Link", "urban central water tanks discharger", "urban central heat"): ("", ""),
+    ("Link", "urban central water tanks discharger", "urban central water tanks"): (
+        "",
+        "",
+    ),
+    ("Link", "urban decentral air heat pump", "ambient heat"): ("", ""),
+    ("Link", "urban decentral air heat pump", "low voltage"): ("", ""),
     ("Link", "urban decentral air heat pump", "urban decentral heat"): ("", ""),
+    ("Link", "urban decentral biomass boiler", "solid biomass"): ("", ""),
+    ("Link", "urban decentral biomass boiler", "solid biomass losses"): ("", ""),
     ("Link", "urban decentral biomass boiler", "urban decentral heat"): ("", ""),
+    ("Link", "urban decentral gas boiler", "gas"): ("", ""),
+    ("Link", "urban decentral gas boiler", "gas losses"): ("", ""),
     ("Link", "urban decentral gas boiler", "urban decentral heat"): ("", ""),
-    ("Link", "urban decentral resistive heater", "urban decentral heat"): ("", ""),
-    ("Link", "urban decentral oil boiler", "urban decentral heat"): ("", ""),
-    ("Load", "low-temperature heat for industry", "urban decentral heat"): ("", ""),
     ("Load", "urban decentral heat", "urban decentral heat"): ("", ""),
+    ("Generator", "urban decentral heat vent", "urban decentral heat"): ("", ""),
+    ("Link", "urban decentral resistive heater", "low voltage"): ("", ""),
+    ("Link", "urban decentral resistive heater", "low voltage losses"): ("", ""),
+    ("Link", "urban decentral resistive heater", "urban decentral heat"): ("", ""),
+    ("Generator", "urban decentral solar thermal", "urban decentral heat"): ("", ""),
     ("Store", "urban decentral water tanks", "urban decentral water tanks"): ("", ""),
+    ("Link", "urban decentral water tanks charger", "urban decentral heat"): ("", ""),
+    ("Link", "urban decentral water tanks charger", "urban decentral water tanks"): (
+        "",
+        "",
+    ),
+    ("Link", "urban decentral water tanks discharger", "urban decentral heat"): (
+        "",
+        "",
+    ),
+    ("Link", "urban decentral water tanks discharger", "urban decentral water tanks"): (
+        "",
+        "",
+    ),
+    ("Link", "waste CHP", "AC"): ("", ""),
+    ("Link", "waste CHP", "non-sequestered HVC"): ("", ""),
+    ("Link", "waste CHP", "non-sequestered HVC losses"): ("", ""),
+    ("Link", "waste CHP", "urban central heat"): ("", ""),
+    ("Link", "waste CHP CC", "AC"): ("", ""),
+    ("Link", "waste CHP CC", "non-sequestered HVC"): ("", ""),
+    ("Link", "waste CHP CC", "non-sequestered HVC losses"): ("", ""),
+    ("Link", "waste CHP CC", "urban central heat"): ("", ""),
 }
 
 
@@ -409,10 +1205,11 @@ class SankeyChart(ESMChart):
         self.year = self._df.index.unique(DM.YEAR).item()
         self._df = self._df.droplevel(DM.YEAR).droplevel(DM.LOCATION)
         self._df.columns = ["value"]
+        self._df = self._df.abs()
 
     @staticmethod
     def _add_source_target_columns(idx: tuple) -> pd.Series:
-        return pd.Series(mapping.get(idx, ""))
+        return pd.Series(LINK_MAPPING.get(idx, ""))
 
     def plot(self):
         # Concatenate the data with source and target columns
@@ -429,7 +1226,7 @@ class SankeyChart(ESMChart):
         df_agg = _df
 
         # add jumpers:
-        for bus_carrier in ("AC", "H2"):
+        for bus_carrier in ("AC", "H2", "Solid Biomass"):
             primary_to_secondary = filter_by(df_agg, target=f"{bus_carrier} Primary")
             row_idx = ("Jumper", "primary to secondary", bus_carrier)
             df_agg.loc[row_idx, ["value", "source", "target"]] = [
@@ -500,42 +1297,7 @@ class SankeyChart(ESMChart):
         #     carrier = re.findall(r"\|AC", s)[0].strip("|")
         #     color_map = {"AC": COLOUR.red}
         #     return color_map[carrier]
-
-        BUS_CARRIER_COLORS = {
-            "biogas": COLOUR.green_sage,
-            "coal": COLOUR.grey_dark,
-            "H2": COLOUR.green_mint,
-            "NH3": COLOUR.yellow_canary,
-            "lignite": COLOUR.brown_dark,
-            "gas": COLOUR.brown_light,
-            "municipal solid waste": COLOUR.grey_light,
-            "AC": COLOUR.blue_celestial,
-            "oil primary": COLOUR.red_deep,
-            "rural heat": COLOUR.yellow_golden,
-            "low voltage": COLOUR.blue_celestial,
-            "solid biomass": COLOUR.green_sage,
-            "uranium": COLOUR.orange_mellow,
-            "urban central heat": COLOUR.yellow_golden,
-            "urban decentral heat": COLOUR.yellow_golden,
-            "EV battery": COLOUR.blue_celestial,
-            "methanol": COLOUR.salmon,
-            "oil": COLOUR.red_deep,
-            "non-sequestered HVC": COLOUR.grey_light,
-            "agriculture machinery oil": COLOUR.red_deep,
-            "battery": COLOUR.blue_celestial,
-            "ambient heat": COLOUR.yellow_golden,
-            "home battery": COLOUR.blue_celestial,
-            "industry methanol": COLOUR.salmon,
-            "kerosene for aviation": COLOUR.red_deep,
-            "shipping methanol": COLOUR.salmon,
-            "gas for industry": COLOUR.brown_light,
-            "naphtha for industry": COLOUR.red_deep,
-            "solid biomass for industry": COLOUR.green_sage,
-            "rural water tanks": COLOUR.yellow_golden,
-            "urban central water pits": COLOUR.yellow_golden,
-            "urban central water tanks": COLOUR.yellow_golden,
-            "urban decentral water tanks": COLOUR.yellow_golden,
-        }
+        df_agg = df_agg.query("source.str.contains('AC') | target.str.contains('AC') ")
 
         df_agg["color"] = df_agg["bus_carrier"].map(BUS_CARRIER_COLORS)
 
@@ -551,7 +1313,7 @@ class SankeyChart(ESMChart):
                         line=dict(color="black", width=0.5),
                         label=label,
                         hovertemplate="%{label}: %{value}<extra></extra>",
-                        color=df_agg.color,
+                        # color=df_agg.color,
                         # groups=[[1, 2], [3, 4]],
                     ),
                     link=dict(
@@ -597,12 +1359,17 @@ class SankeyChart(ESMChart):
         self.fig.update_layout(meta=[RUN_META_DATA])
 
 
+@dataclasses.dataclass
 class SankeyNode:
-    def __init__(self, bus_carrier, label, variables):
-        self.bus_carrier: str = bus_carrier
-        self.label = label
-        self.variables = variables
-        self.color = COLOUR_SCHEME[bus_carrier]
+    name: str
+    x: float
+    y: float
+    color: str
+    # def __init__(self, bus_carrier, label, variables):
+    #     self.bus_carrier: str = bus_carrier
+    #     self.label = label
+    #     self.variables = variables
+    #     self.color = COLOUR_SCHEME[bus_carrier]
 
 
 def sankey(df: pyam.IamDataFrame, mapping: dict) -> Figure:
