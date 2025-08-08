@@ -4,8 +4,6 @@
 # For license information, see the LICENSE.txt file in the project root.
 """Module for Sankey diagram."""
 
-from collections import defaultdict
-
 import pandas as pd
 from plotly.graph_objs import Figure, Sankey
 
@@ -451,94 +449,6 @@ class SankeyChart(ESMChart):
         self._df.columns = ["value"]
         # self._df = self._df.abs()
 
-    @staticmethod
-    def _add_source_target_columns(idx: tuple) -> pd.Series:
-        return pd.Series(LINK_MAPPING.get(idx, ""))
-
-    def add_source_target_columns(self):
-        _df = self._df.copy()
-        _df["index"] = _df.index  # convert to tuples
-        _df[["source", "target"]] = _df["index"].apply(self._add_source_target_columns)
-        _df = _df.drop(columns=["index"])
-        return _df.query("source != '' and target != ''")
-
-    @staticmethod
-    def get_label_mapping(df_agg):
-        return {
-            label: i
-            for i, label in enumerate(
-                set(pd.concat([df_agg["source"], df_agg["target"]]))
-            )
-        }
-
-    def add_customdata(self, df_agg):
-        to_concat = []
-        for _, data in df_agg.groupby(["source", "target"]):
-            data = data.reset_index()
-            carrier_values = [
-                f"{c}: {prettify_number(v)} {self.unit}"
-                for c, v in zip(data["carrier"], data["value"])
-            ]
-            data["link_customdata"] = "<br>".join(carrier_values)
-            to_concat.append(data)
-
-        return pd.concat(to_concat)
-
-    def add_id_source_target_columns(self, df_agg):
-        label_mapping = self.get_label_mapping(df_agg)
-        df_agg["source_id"] = df_agg["source"].map(label_mapping)
-        df_agg["target_id"] = df_agg["target"].map(label_mapping)
-        return df_agg
-
-    @staticmethod
-    def map_colors_from_bus_carrier(df_agg):
-        df_agg["color"] = (
-            df_agg["bus_carrier"].map(BUS_CARRIER_COLORS).fillna(COLOUR.grey_neutral)
-        )
-        return df_agg
-
-    @staticmethod
-    def combine_duplicates(df_agg):
-        return (
-            df_agg.groupby(["source", "target"])
-            .agg(
-                {
-                    "value": "sum",
-                    "source": "first",
-                    "target": "first",
-                    "source_id": "first",
-                    "target_id": "first",
-                    "link_customdata": "first",
-                    "bus_carrier": "first",
-                }
-            )
-            .reset_index(drop=True)
-        )
-
-    @staticmethod
-    def get_label_group(lbl: str) -> str:
-        if lbl in (
-            "Hydro Power",
-            "Solar Power",
-            "Wind Power",
-            "Solid Biomass",
-            "Solar Heat",
-            "Uranium",
-        ):
-            return "A10"
-        elif lbl in ("Nuclear Power Plant",):
-            return "A15"
-        elif lbl.startswith("Primary"):
-            return "A20"
-        elif lbl.startswith("Primary") and lbl.endswith("Losses"):
-            return "A25"
-        elif lbl.startswith("Secondary") and lbl.endswith("In"):
-            return "B10"
-        elif lbl.startswith("Secondary") and lbl.endswith(("Out", "Losses")):
-            return "B20"
-        else:
-            raise ValueError(f"Unknown label group: '{lbl}'")
-
     def plot(self):
         # Concatenate the data with source and target columns
         df_agg = self.add_source_target_columns()
@@ -643,138 +553,89 @@ class SankeyChart(ESMChart):
         self.fig.update_layout(meta=[RUN_META_DATA])
 
     @staticmethod
-    def sankey_positions_auto_order_optimized(
-        labels, groups, sources, targets, x_spacing=0.3, y_padding=0.05, iterations=10
-    ):
-        """
-        Generate x/y positions for Sankey nodes grouped vertically,
-        ordered left-to-right based on flows, and vertically arranged to reduce link crossings.
+    def _add_source_target_columns(idx: tuple) -> pd.Series:
+        return pd.Series(LINK_MAPPING.get(idx, ""))
 
-        Parameters
-        ----------
-        labels : list of str
-            Node labels
-        groups : list of str
-            Group name for each node
-        sources : list of int
-            Source node indices
-        targets : list of int
-            Target node indices
-        x_spacing : float
-            Horizontal distance between groups
-        y_padding : float
-            Vertical distance between nodes in the same group
-        iterations : int
-            Number of vertical reordering passes to reduce link crossings
+    def add_source_target_columns(self):
+        _df = self._df.copy()
+        _df["index"] = _df.index  # convert to tuples
+        _df[["source", "target"]] = _df["index"].apply(self._add_source_target_columns)
+        _df = _df.drop(columns=["index"])
+        return _df.query("source != '' and target != ''")
 
-        Returns
-        -------
-        x_positions, y_positions : lists of floats
-            Coordinates for Plotly Sankey `node.x` and `node.y`
-        """
-        # Map node index -> group
-        node_to_group = {i: groups[i] for i in range(len(labels))}
-
-        # Build group adjacency
-        group_graph = defaultdict(set)
-        for s, t in zip(sources, targets):
-            g_s = node_to_group[s]
-            g_t = node_to_group[t]
-            if g_s != g_t:
-                group_graph[g_s].add(g_t)
-
-        # Topological sort of groups
-        indegree = {g: 0 for g in set(groups)}
-        for g in group_graph:
-            for neigh in group_graph[g]:
-                indegree[neigh] += 1
-
-        queue = [g for g in indegree if indegree[g] == 0]
-        ordered_groups = []
-        while queue:
-            g = queue.pop(0)
-            ordered_groups.append(g)
-            for neigh in sorted(group_graph[g]):
-                indegree[neigh] -= 1
-                if indegree[neigh] == 0:
-                    queue.append(neigh)
-        for g in set(groups):
-            if g not in ordered_groups:
-                ordered_groups.append(g)
-
-        # Assign x positions
-        group_x_map = {g: i * x_spacing for i, g in enumerate(ordered_groups)}
-
-        # Start with alphabetical order within each group
-        group_nodes = {
-            g: sorted(
-                [i for i, grp in enumerate(groups) if grp == g], key=lambda i: labels[i]
+    @staticmethod
+    def get_label_mapping(df_agg):
+        return {
+            label: i
+            for i, label in enumerate(
+                set(pd.concat([df_agg["source"], df_agg["target"]]))
             )
-            for g in ordered_groups
         }
 
-        # Optimization iterations
-        for _ in range(iterations):
-            changed = False
-            for g_idx, g in enumerate(ordered_groups):
-                nodes = group_nodes[g]
-                if g_idx > 0:
-                    # Sort by avg y of connected nodes in the previous group
-                    prev_g = ordered_groups[g_idx - 1]
-                    neighbor_map = defaultdict(list)
-                    for s, t in zip(sources, targets):
-                        if node_to_group[t] == g and node_to_group[s] == prev_g:
-                            neighbor_map[t].append(s)
-                    if neighbor_map:
-                        order = sorted(
-                            nodes,
-                            key=lambda n: sum(
-                                group_nodes[prev_g].index(nb)
-                                for nb in neighbor_map.get(n, [])
-                            )
-                            / (len(neighbor_map.get(n, [])) or 1),
-                        )
-                        if order != nodes:
-                            group_nodes[g] = order
-                            changed = True
+    def add_customdata(self, df_agg):
+        to_concat = []
+        for _, data in df_agg.groupby(["source", "target"]):
+            data = data.reset_index()
+            carrier_values = [
+                f"{c}: {prettify_number(v)} {self.unit}"
+                for c, v in zip(data["carrier"], data["value"])
+            ]
+            data["link_customdata"] = "<br>".join(carrier_values)
+            to_concat.append(data)
 
-                if g_idx < len(ordered_groups) - 1:
-                    # Sort by avg y of connected nodes in next group
-                    next_g = ordered_groups[g_idx + 1]
-                    neighbor_map = defaultdict(list)
-                    for s, t in zip(sources, targets):
-                        if node_to_group[s] == g and node_to_group[t] == next_g:
-                            neighbor_map[s].append(t)
-                    if neighbor_map:
-                        order = sorted(
-                            group_nodes[g],
-                            key=lambda n: sum(
-                                group_nodes[next_g].index(nb)
-                                for nb in neighbor_map.get(n, [])
-                            )
-                            / (len(neighbor_map.get(n, [])) or 1),
-                        )
-                        if order != group_nodes[g]:
-                            group_nodes[g] = order
-                            changed = True
-            if not changed:
-                break
+        return pd.concat(to_concat)
 
-        # Assign final positions
-        x_positions = [None] * len(labels)
-        y_positions = [None] * len(labels)
+    def add_id_source_target_columns(self, df_agg):
+        label_mapping = self.get_label_mapping(df_agg)
+        df_agg["source_id"] = df_agg["source"].map(label_mapping)
+        df_agg["target_id"] = df_agg["target"].map(label_mapping)
+        return df_agg
 
-        for g in ordered_groups:
-            indices = group_nodes[g]
-            n = len(indices)
-            if n == 1:
-                y_coords = [0.5]
-            else:
-                total_height = (n - 1) * y_padding
-                start_y = 0.5 - total_height / 2
-                y_coords = [start_y + j * y_padding for j in range(n)]
-            for idx, y in zip(indices, y_coords):
-                x_positions[idx] = group_x_map[g]
-                y_positions[idx] = y
+    @staticmethod
+    def map_colors_from_bus_carrier(df_agg):
+        df_agg["color"] = (
+            df_agg["bus_carrier"].map(BUS_CARRIER_COLORS).fillna(COLOUR.grey_neutral)
+        )
+        return df_agg
 
-        return x_positions, y_positions
+    @staticmethod
+    def combine_duplicates(df_agg):
+        return (
+            df_agg.groupby(["source", "target"])
+            .agg(
+                {
+                    "value": "sum",
+                    "source": "first",
+                    "target": "first",
+                    "source_id": "first",
+                    "target_id": "first",
+                    "link_customdata": "first",
+                    "bus_carrier": "first",
+                }
+            )
+            .reset_index(drop=True)
+        )
+
+    @staticmethod
+    def get_label_group(lbl: str) -> str:
+        if lbl in (
+            "Hydro Power",
+            "Solar Power",
+            "Wind Power",
+            "Solid Biomass",
+            "Solar Heat",
+            "Uranium",
+        ):
+            return "A10"
+        elif lbl in ("Nuclear Power Plant",):
+            return "A15"
+        elif lbl.startswith("Primary"):
+            return "A20"
+        elif lbl.startswith("Primary") and lbl.endswith("Losses"):
+            return "A25"
+        elif lbl.startswith("Secondary") and lbl.endswith("In"):
+            return "B10"
+        elif lbl.startswith("Secondary") and lbl.endswith(("Out", "Losses")):
+            return "B20"
+        else:
+            raise ValueError(f"Unknown label group: '{lbl}'")
