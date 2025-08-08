@@ -67,14 +67,21 @@ LINK_MAPPING = {
     ("Link", "BEV charger", "EV battery"): ("Secondary AC Out", "Transport"),
     ("Link", "BEV charger", "low voltage losses"): (
         "Secondary AC In",
-        "Secondary AC Losses",
+        "Transformation Losses",
     ),
-    ("Link", "BioSNG", "gas"): ("", ""),
-    ("Link", "BioSNG", "solid biomass"): ("", ""),
-    ("Link", "BioSNG", "solid biomass losses"): ("", ""),
-    ("Link", "BioSNG CC", "gas"): ("", ""),
-    ("Link", "BioSNG CC", "solid biomass"): ("", ""),
-    ("Link", "BioSNG CC", "solid biomass losses"): ("", ""),
+    # Wood gasification treated as primary energy to simplify energy flows
+    ("Link", "BioSNG", "gas"): ("Solid Biomass", "Primary Gas"),
+    ("Link", "BioSNG CC", "gas"): ("Solid Biomass", "Primary Gas"),
+    # ("Link", "BioSNG", "solid biomass"): ("", ""),
+    ("Link", "BioSNG", "solid biomass losses"): (
+        "Solids Secondary In",
+        "Transformation Losses",
+    ),  # todo: need to subtract from Biomass primary?
+    # ("Link", "BioSNG CC", "solid biomass"): ("", ""),
+    ("Link", "BioSNG CC", "solid biomass losses"): (
+        "Solids Secondary In",
+        "Transformation Losses",
+    ),
     ("Link", "CCGT", "AC"): ("", ""),
     ("Link", "CCGT", "gas"): ("", ""),
     ("Link", "CCGT", "gas losses"): ("", ""),
@@ -94,7 +101,7 @@ LINK_MAPPING = {
     ("Link", "Fischer-Tropsch", "urban central heat"): ("", ""),
     ("Link", "H2 Electrolysis", "AC losses"): (
         "Secondary AC In",
-        "Secondary AC Losses",
+        "Transformation Losses",
     ),
     ("Link", "H2 Electrolysis", "H2"): ("Secondary AC In", "Secondary H2 Out"),
     ("Link", "H2 Electrolysis", "urban central heat"): (
@@ -142,6 +149,7 @@ LINK_MAPPING = {
     ("Link", "Sabatier", "H2 losses"): ("", ""),
     ("Link", "Sabatier", "gas"): ("", ""),
     ("Link", "Sabatier", "urban central heat"): ("", ""),
+    # todo: treat V2G as a storage technology same as battery
     ("Link", "V2G", "EV battery"): ("", ""),
     ("Link", "V2G", "EV battery losses"): ("Transport", "Losses"),
     ("Link", "V2G", "low voltage"): ("Transport", "Secondary AC In"),
@@ -164,11 +172,8 @@ LINK_MAPPING = {
     ("Link", "battery discharger", "AC"): ("", ""),
     ("Link", "battery discharger", "battery"): ("", ""),
     ("Link", "battery discharger", "battery losses"): ("", ""),
-    ("Generator", "biogas", "biogas"): ("", ""),
-    ("Link", "biogas to gas", "biogas"): ("", ""),
-    ("Link", "biogas to gas", "gas"): ("", ""),
-    ("Link", "biogas to gas CC", "biogas"): ("", ""),
-    ("Link", "biogas to gas CC", "gas"): ("", ""),
+    ("Link", "biogas to gas", "gas"): ("Biogas", "Primary gas"),
+    ("Link", "biogas to gas CC", "gas"): ("Biogas", "Primary gas"),
     ("Link", "biomass to liquid", "oil"): ("", ""),
     ("Link", "biomass to liquid", "solid biomass"): ("", ""),
     ("Link", "biomass to liquid", "solid biomass losses"): ("", ""),
@@ -181,7 +186,7 @@ LINK_MAPPING = {
     ("Link", "biomass-to-methanol CC", "methanol"): ("", ""),
     ("Link", "biomass-to-methanol CC", "solid biomass"): ("", ""),
     ("Link", "biomass-to-methanol CC", "solid biomass losses"): ("", ""),
-    ("Generator", "coal", "coal"): ("", ""),
+    ("Generator", "coal", "coal"): ("Coal", "Primary Solids"),
     ("Link", "coal", "AC"): ("", ""),
     ("Link", "coal", "coal"): ("", ""),
     ("Link", "coal", "coal losses"): ("", ""),
@@ -207,12 +212,12 @@ LINK_MAPPING = {
     ("Link", "home battery discharger", "home battery"): ("", ""),
     ("Link", "home battery discharger", "home battery losses"): ("", ""),
     ("Link", "home battery discharger", "low voltage"): ("", ""),
-    ("StorageUnit", "hydro supply", "AC"): ("", ""),  # is primary
-    ("Generator", "import H2", "H2"): ("", ""),
-    ("Generator", "import NH3", "NH3"): ("", ""),
-    ("Link", "import gas", "gas"): ("", ""),
-    ("Link", "import methanol", "methanol"): ("", ""),
-    ("Link", "import oil", "oil"): ("", ""),
+    ("StorageUnit", "hydro supply", "AC"): ("Hydro Power", "Primary AC"),  # is primary
+    ("Generator", "import H2", "H2"): ("Green Hydrogen", "Primary H2"),
+    ("Generator", "import NH3", "NH3"): ("Green Liquids", "Primary Liquids"),
+    ("Link", "import gas", "gas"): ("Green Gas", "Primary Gas"),
+    ("Link", "import methanol", "methanol"): ("Green Liquids", "Primary Liquids"),
+    ("Link", "import oil", "oil"): ("Green Liquids", "Primary Liquids"),
     ("Load", "industry electricity", "low voltage"): ("", ""),
     ("Link", "industry methanol", "industry methanol"): ("", ""),
     ("Link", "industry methanol", "methanol"): ("", ""),
@@ -222,7 +227,7 @@ LINK_MAPPING = {
     ("Load", "kerosene for aviation", "kerosene for aviation"): ("", ""),
     ("Load", "land transport EV", "EV battery"): ("", ""),
     ("Load", "land transport fuel cell", "H2"): ("", ""),
-    ("Generator", "lignite", "lignite"): ("", ""),
+    ("Generator", "lignite", "lignite"): ("Coal", "Primary Solids"),
     ("Link", "lignite", "AC"): ("", ""),
     ("Link", "lignite", "lignite"): ("", ""),
     ("Link", "lignite", "lignite losses"): ("", ""),
@@ -249,8 +254,7 @@ LINK_MAPPING = {
     ("Link", "naphtha for industry", "oil"): ("", ""),
     ("Load", "naphtha for industry", "naphtha for industry"): ("", ""),
     ("Store", "non-sequestered HVC", "non-sequestered HVC"): ("", ""),
-    ("Link", "nuclear", "AC"): ("Primary Uranium", "Secondary AC In"),
-    ("Link", "nuclear", "uranium losses"): ("Primary Uranium", "Secondary Losses"),
+    ("Link", "nuclear", "AC"): ("Nuclear Power", "Primary AC"),
     ("Generator", "offwind-ac", "AC"): ("Wind Power", "Primary AC"),
     ("Generator", "offwind-dc", "AC"): ("Wind Power", "Primary AC"),
     ("Link", "oil", "AC"): ("", ""),
@@ -310,12 +314,10 @@ LINK_MAPPING = {
     ("Link", "solid biomass to hydrogen", "H2"): ("", ""),
     ("Link", "solid biomass to hydrogen", "solid biomass"): ("", ""),
     ("Link", "solid biomass to hydrogen", "solid biomass losses"): ("", ""),
-    ("Generator", "uranium", "uranium"): ("Uranium", "Primary Uranium"),
-    ("Store", "uranium", "uranium"): ("", ""),
     ("Link", "urban central H2 CHP", "AC"): ("Secondary H2 In", "Secondary AC Out"),
     ("Link", "urban central H2 CHP", "H2 losses"): (
         "Secondary H2 In",
-        "Secondary H2 Losses",
+        "Transformation Losses",
     ),
     ("Link", "urban central H2 CHP", "urban central heat"): (
         "Secondary H2 In",
@@ -340,7 +342,7 @@ LINK_MAPPING = {
     ),
     ("Link", "urban central gas CHP", "gas losses"): (
         "Secondary gas In",
-        "Secondary gas Losses",
+        "Transformation Losses",
     ),
     ("Link", "urban central gas CHP", "urban central heat"): (
         "Secondary gas In",
@@ -352,7 +354,7 @@ LINK_MAPPING = {
     ),
     ("Link", "urban central gas CHP CC", "gas losses"): (
         "Secondary gas In",
-        "Secondary gas Losses",
+        "Transformation Losses",
     ),
     ("Link", "urban central gas CHP CC", "urban central heat"): (
         "Secondary gas In",
@@ -452,36 +454,14 @@ class SankeyChart(ESMChart):
     def plot(self):
         # Concatenate the data with source and target columns
         df_agg = self.add_source_target_columns()
-
-        # add jumpers:
-        for bus_carrier in ("AC",):
-            primary_to_secondary = filter_by(df_agg, target=f"Primary {bus_carrier}")
-            row_idx = ("Jumper", "primary to secondary", bus_carrier)
-            df_agg.loc[row_idx, ["value", "source", "target"]] = [
-                primary_to_secondary.value.sum(),
-                f"Primary {bus_carrier}",
-                f"Secondary {bus_carrier} In",
-            ]
-
-            secondary_demand = filter_by(df_agg, source=f"Secondary {bus_carrier} In")[
-                "value"
-            ].sum()
-            primary_supply = filter_by(df_agg, target=f"Secondary {bus_carrier} In")[
-                "value"
-            ].sum()
-            row_idx = ("Jumper", "secondary forwarding", bus_carrier)
-            df_agg.loc[row_idx, ["value", "source", "target"]] = [
-                primary_supply - secondary_demand,
-                f"Secondary {bus_carrier} In",
-                f"Secondary {bus_carrier} Out",
-            ]
-
-        df_agg = self.add_id_source_target_columns(df_agg)
-        df_agg = self.add_customdata(df_agg)
+        df_agg = self.add_jumpers(df_agg)
+        label_mapping = self.get_label_mapping(df_agg)
+        df_agg = self.add_id_source_target_columns(df_agg, label_mapping)
+        df_agg = self.add_customdata(df_agg, self.unit)
         df_agg = self.combine_duplicates(df_agg)
         df_agg = self.map_colors_from_bus_carrier(df_agg)
 
-        labels = pd.Series(list(self.get_label_mapping(df_agg)))
+        labels = list(label_mapping)
         # groups = [self.get_label_group(lbl) for lbl in labels.values]
 
         # # x pos is wrong
@@ -553,6 +533,31 @@ class SankeyChart(ESMChart):
         self.fig.update_layout(meta=[RUN_META_DATA])
 
     @staticmethod
+    def add_jumpers(df_agg):
+        for bus_carrier in ("AC", "H2", "Gas", "Liquids", "Solids", "Heat", "Biomass"):
+            primary_to_secondary = filter_by(df_agg, target=f"Primary {bus_carrier}")
+            row_idx = ("Jumper", "primary to secondary", bus_carrier)
+            df_agg.loc[row_idx, ["value", "source", "target"]] = [
+                primary_to_secondary.value.sum(),
+                f"Primary {bus_carrier}",
+                f"Secondary {bus_carrier} In",
+            ]
+
+            secondary_demand = filter_by(df_agg, source=f"Secondary {bus_carrier} In")[
+                "value"
+            ].sum()
+            primary_supply = filter_by(df_agg, target=f"Secondary {bus_carrier} In")[
+                "value"
+            ].sum()
+            row_idx = ("Jumper", "secondary forwarding", bus_carrier)
+            df_agg.loc[row_idx, ["value", "source", "target"]] = [
+                primary_supply - secondary_demand,
+                f"Secondary {bus_carrier} In",
+                f"Secondary {bus_carrier} Out",
+            ]
+        return df_agg
+
+    @staticmethod
     def _add_source_target_columns(idx: tuple) -> pd.Series:
         return pd.Series(LINK_MAPPING.get(idx, ""))
 
@@ -572,12 +577,13 @@ class SankeyChart(ESMChart):
             )
         }
 
-    def add_customdata(self, df_agg):
+    @staticmethod
+    def add_customdata(df_agg, unit):
         to_concat = []
         for _, data in df_agg.groupby(["source", "target"]):
             data = data.reset_index()
             carrier_values = [
-                f"{c}: {prettify_number(v)} {self.unit}"
+                f"{c}: {prettify_number(v)} {unit}"
                 for c, v in zip(data["carrier"], data["value"])
             ]
             data["link_customdata"] = "<br>".join(carrier_values)
@@ -585,8 +591,8 @@ class SankeyChart(ESMChart):
 
         return pd.concat(to_concat)
 
-    def add_id_source_target_columns(self, df_agg):
-        label_mapping = self.get_label_mapping(df_agg)
+    @staticmethod
+    def add_id_source_target_columns(df_agg, label_mapping):
         df_agg["source_id"] = df_agg["source"].map(label_mapping)
         df_agg["target_id"] = df_agg["target"].map(label_mapping)
         return df_agg
@@ -615,27 +621,3 @@ class SankeyChart(ESMChart):
             )
             .reset_index(drop=True)
         )
-
-    @staticmethod
-    def get_label_group(lbl: str) -> str:
-        if lbl in (
-            "Hydro Power",
-            "Solar Power",
-            "Wind Power",
-            "Solid Biomass",
-            "Solar Heat",
-            "Uranium",
-        ):
-            return "A10"
-        elif lbl in ("Nuclear Power Plant",):
-            return "A15"
-        elif lbl.startswith("Primary"):
-            return "A20"
-        elif lbl.startswith("Primary") and lbl.endswith("Losses"):
-            return "A25"
-        elif lbl.startswith("Secondary") and lbl.endswith("In"):
-            return "B10"
-        elif lbl.startswith("Secondary") and lbl.endswith(("Out", "Losses")):
-            return "B20"
-        else:
-            raise ValueError(f"Unknown label group: '{lbl}'")
