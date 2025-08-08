@@ -6,6 +6,7 @@
 
 import dataclasses
 import re
+from collections import defaultdict
 
 import pandas as pd
 import plotly
@@ -23,8 +24,14 @@ from evals.utils import (
 )
 
 # Transformationsblöcke je ENergieträger
-# Zusammenfassung Erngeiträger
-# Alle Losses in Grau und je Tranformationblock (Energieträger)
+# Zusammenfassung Energieträger:
+#  - AC (low voltage + AC) - uranium similar to primary but with additional step
+#  - H2
+#  - Gas
+#  - Liquids (oil, methanol, NH3, electrobiofuels, naptha)
+#  - Solids (waste, biomass, coal, lignite)
+#  - Heat (central), connect decentral heat directly to FED
+# Alle Losses in Grau und je Tranformationsblock (Energieträger)
 
 
 BUS_CARRIER_COLORS = {
@@ -889,10 +896,15 @@ LINK_MAPPING = {
     ("Link", "Fischer-Tropsch", "H2 losses"): ("", ""),
     ("Link", "Fischer-Tropsch", "oil"): ("", ""),
     ("Link", "Fischer-Tropsch", "urban central heat"): ("", ""),
-    ("Link", "H2 Electrolysis", "AC"): ("", ""),
-    ("Link", "H2 Electrolysis", "AC losses"): ("", ""),
-    ("Link", "H2 Electrolysis", "H2"): ("", ""),
-    ("Link", "H2 Electrolysis", "urban central heat"): ("", ""),
+    ("Link", "H2 Electrolysis", "AC losses"): (
+        "Secondary AC In",
+        "Secondary AC Losses",
+    ),
+    ("Link", "H2 Electrolysis", "H2"): ("Secondary AC In", "Secondary H2 Out"),
+    ("Link", "H2 Electrolysis", "urban central heat"): (
+        "Secondary AC In",
+        "Secondary Heat Out",
+    ),
     ("Link", "H2 Fuel Cell", "AC"): ("", ""),
     ("Link", "H2 Fuel Cell", "H2"): ("", ""),
     ("Link", "H2 Fuel Cell", "H2 losses"): ("", ""),
@@ -978,7 +990,7 @@ LINK_MAPPING = {
     ("Link", "coal", "coal"): ("", ""),
     ("Link", "coal", "coal losses"): ("", ""),
     ("Store", "coal", "coal"): ("", ""),
-    ("Load", "electricity", "low voltage"): ("", ""),
+    ("Load", "electricity", "low voltage"): ("Secondary AC Out", "Final AC"),
     ("Link", "electricity distribution grid", "losses"): ("", ""),
     ("Link", "electrobiofuels", "H2"): ("", ""),
     ("Link", "electrobiofuels", "H2 losses"): ("", ""),
@@ -999,7 +1011,7 @@ LINK_MAPPING = {
     ("Link", "home battery discharger", "home battery"): ("", ""),
     ("Link", "home battery discharger", "home battery losses"): ("", ""),
     ("Link", "home battery discharger", "low voltage"): ("", ""),
-    ("StorageUnit", "hydro supply", "AC"): ("", ""),
+    ("StorageUnit", "hydro supply", "AC"): ("", ""),  # is primary
     ("Generator", "import H2", "H2"): ("", ""),
     ("Generator", "import NH3", "NH3"): ("", ""),
     ("Link", "import gas", "gas"): ("", ""),
@@ -1041,11 +1053,10 @@ LINK_MAPPING = {
     ("Link", "naphtha for industry", "oil"): ("", ""),
     ("Load", "naphtha for industry", "naphtha for industry"): ("", ""),
     ("Store", "non-sequestered HVC", "non-sequestered HVC"): ("", ""),
-    ("Link", "nuclear", "AC"): ("", ""),
-    ("Link", "nuclear", "uranium"): ("", ""),
-    ("Link", "nuclear", "uranium losses"): ("", ""),
-    ("Generator", "offwind-ac", "AC"): ("", ""),
-    ("Generator", "offwind-dc", "AC"): ("", ""),
+    ("Link", "nuclear", "AC"): ("Primary Uranium", "Secondary AC In"),
+    ("Link", "nuclear", "uranium losses"): ("Primary Uranium", "Secondary Losses"),
+    ("Generator", "offwind-ac", "AC"): ("Wind Power", "Primary AC"),
+    ("Generator", "offwind-dc", "AC"): ("Wind Power", "Primary AC"),
     ("Link", "oil", "AC"): ("", ""),
     ("Link", "oil", "oil"): ("", ""),
     ("Link", "oil", "oil losses"): ("", ""),
@@ -1054,10 +1065,10 @@ LINK_MAPPING = {
     ("Link", "oil refining", "oil"): ("", ""),
     ("Link", "oil refining", "oil primary"): ("", ""),
     ("Link", "oil refining", "oil primary losses"): ("", ""),
-    ("Generator", "onwind", "AC"): ("", ""),
+    ("Generator", "onwind", "AC"): ("Wind Power", "Primary AC"),
     ("Generator", "pipeline gas", "gas"): ("", ""),
     ("Generator", "production gas", "gas"): ("", ""),
-    ("Generator", "ror", "AC"): ("", ""),
+    ("Generator", "ror", "AC"): ("Hydro Power", "Primary AC"),
     ("Link", "rural air heat pump", "ambient heat"): ("", ""),
     ("Link", "rural air heat pump", "low voltage"): ("", ""),
     ("Link", "rural air heat pump", "rural heat"): ("", ""),
@@ -1075,7 +1086,10 @@ LINK_MAPPING = {
     ("Link", "rural resistive heater", "low voltage"): ("", ""),
     ("Link", "rural resistive heater", "low voltage losses"): ("", ""),
     ("Link", "rural resistive heater", "rural heat"): ("", ""),
-    ("Generator", "rural solar thermal", "rural heat"): ("", ""),
+    ("Generator", "rural solar thermal", "rural heat"): (
+        "Solar Heat",
+        "HH & Services",
+    ),  # to FED
     ("Store", "rural water tanks", "rural water tanks"): ("", ""),
     ("Link", "rural water tanks charger", "rural heat"): ("", ""),
     ("Link", "rural water tanks charger", "rural water tanks"): ("", ""),
@@ -1084,10 +1098,13 @@ LINK_MAPPING = {
     ("Link", "shipping methanol", "methanol"): ("", ""),
     ("Link", "shipping methanol", "shipping methanol"): ("", ""),
     ("Load", "shipping methanol", "shipping methanol"): ("", ""),
-    ("Generator", "solar", "AC"): ("", ""),
-    ("Generator", "solar rooftop", "low voltage"): ("", ""),
-    ("Generator", "solar-hsat", "AC"): ("", ""),
-    ("Generator", "solid biomass", "solid biomass"): ("", ""),
+    ("Generator", "solar", "AC"): ("Solar Power", "Primary AC"),
+    ("Generator", "solar rooftop", "low voltage"): ("Solar Power", "Primary AC"),
+    ("Generator", "solar-hsat", "AC"): ("Solar Power", "Primary AC"),
+    ("Generator", "solid biomass", "solid biomass"): (
+        "Solid Biomass",
+        "Primary Solids",
+    ),
     ("Link", "solid biomass for industry", "solid biomass"): ("", ""),
     ("Link", "solid biomass for industry", "solid biomass for industry"): ("", ""),
     ("Load", "solid biomass for industry", "solid biomass for industry"): ("", ""),
@@ -1097,28 +1114,54 @@ LINK_MAPPING = {
     ("Link", "solid biomass to hydrogen", "H2"): ("", ""),
     ("Link", "solid biomass to hydrogen", "solid biomass"): ("", ""),
     ("Link", "solid biomass to hydrogen", "solid biomass losses"): ("", ""),
-    ("Generator", "uranium", "uranium"): ("", ""),
+    ("Generator", "uranium", "uranium"): ("Uranium", "Primary Uranium"),
     ("Store", "uranium", "uranium"): ("", ""),
-    ("Link", "urban central H2 CHP", "AC"): ("", ""),
-    ("Link", "urban central H2 CHP", "H2"): ("", ""),
-    ("Link", "urban central H2 CHP", "H2 losses"): ("", ""),
-    ("Link", "urban central H2 CHP", "urban central heat"): ("", ""),
+    ("Link", "urban central H2 CHP", "AC"): ("Secondary H2 In", "Secondary AC Out"),
+    ("Link", "urban central H2 CHP", "H2 losses"): (
+        "Secondary H2 In",
+        "Secondary H2 Losses",
+    ),
+    ("Link", "urban central H2 CHP", "urban central heat"): (
+        "Secondary H2 In",
+        "Secondary Heat Out",
+    ),
     ("Link", "urban central air heat pump", "ambient heat"): ("", ""),
     ("Link", "urban central air heat pump", "low voltage"): ("", ""),
     ("Link", "urban central air heat pump", "urban central heat"): ("", ""),
-    ("Link", "urban central coal CHP", "AC"): ("", ""),
-    ("Link", "urban central coal CHP", "ambient heat"): ("", ""),
-    ("Link", "urban central coal CHP", "coal"): ("", ""),
-    ("Link", "urban central coal CHP", "urban central heat"): ("", ""),
-    ("Link", "urban central gas CHP", "AC"): ("", ""),
-    ("Link", "urban central gas CHP", "ambient heat"): ("", ""),
-    ("Link", "urban central gas CHP", "gas"): ("", ""),
-    ("Link", "urban central gas CHP", "gas losses"): ("", ""),
-    ("Link", "urban central gas CHP", "urban central heat"): ("", ""),
-    ("Link", "urban central gas CHP CC", "AC"): ("", ""),
-    ("Link", "urban central gas CHP CC", "gas"): ("", ""),
-    ("Link", "urban central gas CHP CC", "gas losses"): ("", ""),
-    ("Link", "urban central gas CHP CC", "urban central heat"): ("", ""),
+    ("Link", "urban central coal CHP", "AC"): ("Secondary coal In", "Secondary AC Out"),
+    ("Link", "urban central coal CHP", "ambient heat"): (
+        "Secondary Ambient Heat",
+        "Secondary Heat Out",
+    ),
+    ("Link", "urban central coal CHP", "urban central heat"): (
+        "Secondary coal In",
+        "Secondary Heat Out",
+    ),
+    ("Link", "urban central gas CHP", "AC"): ("Secondary gas In", "Secondary AC Out"),
+    ("Link", "urban central gas CHP", "ambient heat"): (
+        "Secondary Ambient Heat",
+        "Secondary Heat Out",
+    ),
+    ("Link", "urban central gas CHP", "gas losses"): (
+        "Secondary gas In",
+        "Secondary gas Losses",
+    ),
+    ("Link", "urban central gas CHP", "urban central heat"): (
+        "Secondary gas In",
+        "Secondary Heat Out",
+    ),
+    ("Link", "urban central gas CHP CC", "AC"): (
+        "Secondary gas In",
+        "Secondary AC Out",
+    ),
+    ("Link", "urban central gas CHP CC", "gas losses"): (
+        "Secondary gas In",
+        "Secondary gas Losses",
+    ),
+    ("Link", "urban central gas CHP CC", "urban central heat"): (
+        "Secondary gas In",
+        "Secondary Heat Out",
+    ),
     ("Link", "urban central gas boiler", "ambient heat"): ("", ""),
     ("Link", "urban central gas boiler", "gas"): ("", ""),
     ("Link", "urban central gas boiler", "urban central heat"): ("", ""),
@@ -1130,7 +1173,10 @@ LINK_MAPPING = {
     ("Link", "urban central resistive heater", "low voltage"): ("", ""),
     ("Link", "urban central resistive heater", "low voltage losses"): ("", ""),
     ("Link", "urban central resistive heater", "urban central heat"): ("", ""),
-    ("Generator", "urban central solar thermal", "urban central heat"): ("", ""),
+    ("Generator", "urban central solar thermal", "urban central heat"): (
+        "Solar Heat",
+        "Primary Heat",
+    ),
     ("Link", "urban central solid biomass CHP", "AC"): ("", ""),
     ("Link", "urban central solid biomass CHP", "ambient heat"): ("", ""),
     ("Link", "urban central solid biomass CHP", "solid biomass"): ("", ""),
@@ -1205,79 +1251,57 @@ class SankeyChart(ESMChart):
         self.year = self._df.index.unique(DM.YEAR).item()
         self._df = self._df.droplevel(DM.YEAR).droplevel(DM.LOCATION)
         self._df.columns = ["value"]
-        self._df = self._df.abs()
+        # self._df = self._df.abs()
 
     @staticmethod
     def _add_source_target_columns(idx: tuple) -> pd.Series:
         return pd.Series(LINK_MAPPING.get(idx, ""))
 
-    def plot(self):
-        # Concatenate the data with source and target columns
-
-        _df = self._df.copy()  # preserve original
-
-        # [*_df.groupby(level=_df.index.names)][0]
-
-        # df_agg = _df.groupby(level=0).apply(self.custom_aggregate).reset_index()
-
+    def add_source_target_columns(self):
+        _df = self._df.copy()
         _df["index"] = _df.index  # convert to tuples
         _df[["source", "target"]] = _df["index"].apply(self._add_source_target_columns)
         _df = _df.drop(columns=["index"])
-        df_agg = _df
+        return _df.query("source != '' and target != ''")
 
-        # add jumpers:
-        for bus_carrier in ("AC", "H2", "Solid Biomass"):
-            primary_to_secondary = filter_by(df_agg, target=f"{bus_carrier} Primary")
-            row_idx = ("Jumper", "primary to secondary", bus_carrier)
-            df_agg.loc[row_idx, ["value", "source", "target"]] = [
-                primary_to_secondary.value.sum(),
-                f"{bus_carrier} Primary",
-                f"{bus_carrier} Secondary Input",
-            ]
-
-            secondary_forwarding = filter_by(
-                df_agg, target=f"{bus_carrier} Secondary Input"
-            )
-            row_idx = ("Jumper", "secondary forwaring", bus_carrier)
-            df_agg.loc[row_idx, ["value", "source", "target"]] = [
-                secondary_forwarding.value.sum(),
-                f"{bus_carrier} Secondary Input",
-                f"{bus_carrier} Secondary Output",
-            ]
-
-        label_mapping = {
+    @staticmethod
+    def get_label_mapping(df_agg):
+        return {
             label: i
-            for i, label in enumerate(set(pd.concat([_df["source"], _df["target"]])))
+            for i, label in enumerate(
+                set(pd.concat([df_agg["source"], df_agg["target"]]))
+            )
         }
-        df_agg["source_id"] = df_agg["source"].map(label_mapping)
-        df_agg["target_id"] = df_agg["target"].map(label_mapping)
 
-        # _df = df_mapping.merge(df._data, how="left", left_index=True, right_on="variable")
-        # _df = _df.replace(label_mapping)
-
-        # df_agg["customdata"] = df_agg.groupby(["source", "target"]).apply(self._map_customdata)  # , include_groups=False
+    def add_customdata(self, df_agg):
         to_concat = []
         for _, data in df_agg.groupby(["source", "target"]):
-            source, target = _
-
-            if source == "" and target == "":
-                continue
-
-            # assert data.index.unique("bus_carrier").item()
-            # assert data.index.unique("component").item()
             data = data.reset_index()
-
             carrier_values = [
                 f"{c}: {prettify_number(v)} {self.unit}"
                 for c, v in zip(data["carrier"], data["value"])
             ]
             data["link_customdata"] = "<br>".join(carrier_values)
-
             to_concat.append(data)
 
-        df_agg = pd.concat(to_concat)
+        return pd.concat(to_concat)
 
-        df_agg = (
+    def add_id_source_target_columns(self, df_agg):
+        label_mapping = self.get_label_mapping(df_agg)
+        df_agg["source_id"] = df_agg["source"].map(label_mapping)
+        df_agg["target_id"] = df_agg["target"].map(label_mapping)
+        return df_agg
+
+    @staticmethod
+    def map_colors_from_bus_carrier(df_agg):
+        df_agg["color"] = (
+            df_agg["bus_carrier"].map(BUS_CARRIER_COLORS).fillna(COLOUR.grey_neutral)
+        )
+        return df_agg
+
+    @staticmethod
+    def combine_duplicates(df_agg):
+        return (
             df_agg.groupby(["source", "target"])
             .agg(
                 {
@@ -1293,26 +1317,88 @@ class SankeyChart(ESMChart):
             .reset_index(drop=True)
         )
 
-        # def get_carrier_color(s) -> str:
-        #     carrier = re.findall(r"\|AC", s)[0].strip("|")
-        #     color_map = {"AC": COLOUR.red}
-        #     return color_map[carrier]
-        df_agg = df_agg.query("source.str.contains('AC') | target.str.contains('AC') ")
+    @staticmethod
+    def get_label_group(lbl: str) -> str:
+        if lbl in (
+            "Hydro Power",
+            "Solar Power",
+            "Wind Power",
+            "Solid Biomass",
+            "Solar Heat",
+            "Uranium",
+        ):
+            return "A10"
+        elif lbl in ("Nuclear Power Plant",):
+            return "A15"
+        elif lbl.startswith("Primary"):
+            return "A20"
+        elif lbl.startswith("Primary") and lbl.endswith("Losses"):
+            return "A25"
+        elif lbl.startswith("Secondary") and lbl.endswith("In"):
+            return "B10"
+        elif lbl.startswith("Secondary") and lbl.endswith(("Out", "Losses")):
+            return "B20"
+        else:
+            raise ValueError(f"Unknown label group: '{lbl}'")
 
-        df_agg["color"] = df_agg["bus_carrier"].map(BUS_CARRIER_COLORS)
+    def plot(self):
+        # Concatenate the data with source and target columns
+        df_agg = self.add_source_target_columns()
 
-        label = pd.Series(list(label_mapping))
+        # add jumpers:
+        for bus_carrier in ("AC",):
+            primary_to_secondary = filter_by(df_agg, target=f"Primary {bus_carrier}")
+            row_idx = ("Jumper", "primary to secondary", bus_carrier)
+            df_agg.loc[row_idx, ["value", "source", "target"]] = [
+                primary_to_secondary.value.sum(),
+                f"Primary {bus_carrier}",
+                f"Secondary {bus_carrier} In",
+            ]
+
+            secondary_demand = filter_by(df_agg, source=f"Secondary {bus_carrier} In")[
+                "value"
+            ].sum()
+            primary_supply = filter_by(df_agg, target=f"Secondary {bus_carrier} In")[
+                "value"
+            ].sum()
+            row_idx = ("Jumper", "secondary forwarding", bus_carrier)
+            df_agg.loc[row_idx, ["value", "source", "target"]] = [
+                primary_supply - secondary_demand,
+                f"Secondary {bus_carrier} In",
+                f"Secondary {bus_carrier} Out",
+            ]
+
+        df_agg = self.add_id_source_target_columns(df_agg)
+        df_agg = self.add_customdata(df_agg)
+        df_agg = self.combine_duplicates(df_agg)
+        df_agg = self.map_colors_from_bus_carrier(df_agg)
+
+        labels = pd.Series(list(self.get_label_mapping(df_agg)))
+        # groups = [self.get_label_group(lbl) for lbl in labels.values]
+
+        # # x pos is wrong
+        # x_pos, y_pos = self.sankey_positions_auto_order_optimized(
+        #     labels,
+        #     groups,
+        #     df_agg.source_id,
+        #     df_agg.target_id,
+        #     x_spacing=0.4,
+        #     y_padding=0.15,
+        # )
+        # x_pos = [x / max(x_pos) for x in x_pos]
 
         self.fig = Figure(
             data=[
                 Sankey(
                     valuesuffix=self.unit,
                     node=dict(
-                        # pad=15,
-                        # thickness=10,
                         line=dict(color="black", width=0.5),
-                        label=label,
+                        label=labels,
                         hovertemplate="%{label}: %{value}<extra></extra>",
+                        # x=x_pos,
+                        # y=y_pos,
+                        pad=20,
+                        thickness=20,
                         # color=df_agg.color,
                         # groups=[[1, 2], [3, 4]],
                     ),
@@ -1333,7 +1419,7 @@ class SankeyChart(ESMChart):
         # self._style_title_and_legend_and_xaxis_label()
         # self._append_footnotes()
 
-        plotly.io.show(self.fig)  # todo: remove debugging
+        # plotly.io.show(self.fig)  # todo: remove debugging
 
     def _set_base_layout(self):
         """Set various figure properties."""
@@ -1357,6 +1443,143 @@ class SankeyChart(ESMChart):
 
         # export the metadata directly in the Layout property for JSON
         self.fig.update_layout(meta=[RUN_META_DATA])
+
+    @staticmethod
+    def sankey_positions_auto_order_optimized(
+        labels, groups, sources, targets, x_spacing=0.3, y_padding=0.05, iterations=10
+    ):
+        """
+        Generate x/y positions for Sankey nodes grouped vertically,
+        ordered left-to-right based on flows, and vertically arranged to reduce link crossings.
+
+        Parameters
+        ----------
+        labels : list of str
+            Node labels
+        groups : list of str
+            Group name for each node
+        sources : list of int
+            Source node indices
+        targets : list of int
+            Target node indices
+        x_spacing : float
+            Horizontal distance between groups
+        y_padding : float
+            Vertical distance between nodes in the same group
+        iterations : int
+            Number of vertical reordering passes to reduce link crossings
+
+        Returns
+        -------
+        x_positions, y_positions : lists of floats
+            Coordinates for Plotly Sankey `node.x` and `node.y`
+        """
+        # Map node index -> group
+        node_to_group = {i: groups[i] for i in range(len(labels))}
+
+        # Build group adjacency
+        group_graph = defaultdict(set)
+        for s, t in zip(sources, targets):
+            g_s = node_to_group[s]
+            g_t = node_to_group[t]
+            if g_s != g_t:
+                group_graph[g_s].add(g_t)
+
+        # Topological sort of groups
+        indegree = {g: 0 for g in set(groups)}
+        for g in group_graph:
+            for neigh in group_graph[g]:
+                indegree[neigh] += 1
+
+        queue = [g for g in indegree if indegree[g] == 0]
+        ordered_groups = []
+        while queue:
+            g = queue.pop(0)
+            ordered_groups.append(g)
+            for neigh in sorted(group_graph[g]):
+                indegree[neigh] -= 1
+                if indegree[neigh] == 0:
+                    queue.append(neigh)
+        for g in set(groups):
+            if g not in ordered_groups:
+                ordered_groups.append(g)
+
+        # Assign x positions
+        group_x_map = {g: i * x_spacing for i, g in enumerate(ordered_groups)}
+
+        # Start with alphabetical order within each group
+        group_nodes = {
+            g: sorted(
+                [i for i, grp in enumerate(groups) if grp == g], key=lambda i: labels[i]
+            )
+            for g in ordered_groups
+        }
+
+        # Optimization iterations
+        for _ in range(iterations):
+            changed = False
+            for g_idx, g in enumerate(ordered_groups):
+                nodes = group_nodes[g]
+                if g_idx > 0:
+                    # Sort by avg y of connected nodes in the previous group
+                    prev_g = ordered_groups[g_idx - 1]
+                    neighbor_map = defaultdict(list)
+                    for s, t in zip(sources, targets):
+                        if node_to_group[t] == g and node_to_group[s] == prev_g:
+                            neighbor_map[t].append(s)
+                    if neighbor_map:
+                        order = sorted(
+                            nodes,
+                            key=lambda n: sum(
+                                group_nodes[prev_g].index(nb)
+                                for nb in neighbor_map.get(n, [])
+                            )
+                            / (len(neighbor_map.get(n, [])) or 1),
+                        )
+                        if order != nodes:
+                            group_nodes[g] = order
+                            changed = True
+
+                if g_idx < len(ordered_groups) - 1:
+                    # Sort by avg y of connected nodes in next group
+                    next_g = ordered_groups[g_idx + 1]
+                    neighbor_map = defaultdict(list)
+                    for s, t in zip(sources, targets):
+                        if node_to_group[s] == g and node_to_group[t] == next_g:
+                            neighbor_map[s].append(t)
+                    if neighbor_map:
+                        order = sorted(
+                            group_nodes[g],
+                            key=lambda n: sum(
+                                group_nodes[next_g].index(nb)
+                                for nb in neighbor_map.get(n, [])
+                            )
+                            / (len(neighbor_map.get(n, [])) or 1),
+                        )
+                        if order != group_nodes[g]:
+                            group_nodes[g] = order
+                            changed = True
+            if not changed:
+                break
+
+        # Assign final positions
+        x_positions = [None] * len(labels)
+        y_positions = [None] * len(labels)
+
+        for g in ordered_groups:
+            indices = group_nodes[g]
+            n = len(indices)
+            if n == 1:
+                y_coords = [0.5]
+            else:
+                total_height = (n - 1) * y_padding
+                start_y = 0.5 - total_height / 2
+                y_coords = [start_y + j * y_padding for j in range(n)]
+            for idx, y in zip(indices, y_coords):
+                x_positions[idx] = group_x_map[g]
+                y_positions[idx] = y
+
+        return x_positions, y_positions
 
 
 @dataclasses.dataclass
