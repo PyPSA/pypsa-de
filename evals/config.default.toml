@@ -830,7 +830,7 @@ exports = []
 [view_sankey]
 name = "Sankey Diagram"
 unit = "TWh"
-file_name = "sankey_{location}"
+file_name = "sankey_{location}_{year}"
 bus_carrier = ""  # all bus_carrier
 chart = "SankeyChart"
 cutoff = 0.00001  # 1 MWh
