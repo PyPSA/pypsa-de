@@ -1906,7 +1906,14 @@ def get_secondary_energy(n, region, _industry_demand):
 
 
 def get_final_energy(
-    n, region, _industry_demand, _energy_totals, _sector_ratios, _industry_production
+    n,
+    region,
+    _industry_demand,
+    _energy_totals,
+    _sector_ratios,
+    _industry_production,
+    config,
+    config_industry,
 ):
     var = pd.Series()
 
@@ -5199,6 +5206,8 @@ def get_ariadne_var(
     costs,
     region,
     year,
+    config,
+    config_industry,
 ):
     var = pd.concat(
         [
@@ -5218,6 +5227,8 @@ def get_ariadne_var(
                 energy_totals,
                 sector_ratios,
                 industry_production,
+                config,
+                config_industry,
             ),
             get_prices(n, region),
             get_emissions(n, region, energy_totals, industry_demand),
@@ -5241,6 +5252,8 @@ def get_data(
     costs,
     region,
     year,
+    config,
+    config_industry,
     version="0.10",
     scenario="test",
 ):
@@ -5253,6 +5266,8 @@ def get_data(
         costs,
         region,
         year,
+        config,
+        config_industry,
     )
 
     # Renaming variables
@@ -5443,6 +5458,8 @@ if __name__ == "__main__":
                 costs[i],
                 "DE",
                 year=year,
+                config=snakemake.config,
+                config_industry=snakemake.params.config_industry,
                 version=snakemake.config["version"],
                 scenario=snakemake.wildcards.run,
             )
