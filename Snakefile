@@ -82,6 +82,7 @@ if config["foresight"] == "perfect":
 rule all:
     input:
         expand(RESULTS + "graphs/costs.svg", run=config["run"]["name"]),
+        expand(resources("maps/power-network.pdf"), run=config["run"]["name"]),
         expand(
             resources("maps/power-network-s-{clusters}.pdf"),
             run=config["run"]["name"],
@@ -202,7 +203,7 @@ rule rulegraph:
         r"""
         # Generate DOT file using nested snakemake with the dumped final config
         echo "[Rule rulegraph] Using final config file: {input.config_file}"
-        snakemake --rulegraph all --configfile {input.config_file} --quiet | sed -n "/digraph/,\$p" > {output.dot}
+        snakemake --rulegraph --configfile {input.config_file} --quiet | sed -n "/digraph/,\$p" > {output.dot}
 
         # Generate visualizations from the DOT file
         if [ -s {output.dot} ]; then
@@ -446,7 +447,7 @@ rule prepare_district_heating_subnodes:
         cities="data/fernwaermeatlas/cities_geolocations.geojson",
         lau_regions="data/lau_regions.zip",
         census=storage(
-            "https://www.zensus2022.de/static/Zensus_Veroeffentlichung/Zensus2022_Heizungsart.zip",
+            "https://www.destatis.de/static/DE/zensus/gitterdaten/Zensus2022_Heizungsart.zip",
             keep_local=True,
         ),
         osm_land_cover=storage(

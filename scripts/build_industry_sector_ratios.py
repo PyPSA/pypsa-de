@@ -23,7 +23,7 @@ The following carriers are considered:
 - process emission from feedstock
 - (ammonia)
 
-If the `config["industry"]["ammonia"] <https://pypsa-eur.readthedocs.io/en/latest/configuration.html#industry>` is set to true the ammonia demand is not converted to hydrogen and electricity but is considered as a separate carrier.
+If the `config["ammonia"] <https://pypsa-eur.readthedocs.io/en/latest/configuration.html#industry>` is set to true the ammonia demand is not converted to hydrogen and electricity but is considered as a separate carrier.
 
 The unit of the specific energy consumption is MWh/t material and tCO2/t material for process emissions.
 """
