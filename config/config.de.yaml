@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20250514_dhsubnodes
+  prefix: 20250807_merge_july
   name:
   # - ExPol
   - KN2045_Mix
@@ -43,6 +43,8 @@ iiasa_database:
   - KN2045_NFhoch
   reference_scenario: KN2045_Mix
   region: Deutschland
+  ageb_for_mobility: true # In 2020 use AGEB data for final energy demand and KBA for vehicles
+  uba_for_mobility: false # For 2025–2035 use MWMS scenario from UBA Projektionsbericht 2025
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#foresight
 foresight: myopic
@@ -70,6 +72,7 @@ scenario:
 existing_capacities:
   grouping_years_power: [1920, 1950, 1955, 1960, 1965, 1970, 1975, 1980, 1985, 1990, 1995, 2000, 2005, 2010, 2015, 2020]
   grouping_years_heat: [1980, 1985, 1990, 1995, 2000, 2005, 2010, 2015, 2019] # heat grouping years >= baseyear will be ignored
+  fill_value_gas_chp_lifetime: 40 # if no explicit lifetime is given use 40 years. The number was chosen s.t. the existing capacities in 2020 match with statistics.
 
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#countries
@@ -275,8 +278,6 @@ costs:
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#sector
 sector:
-  chp:
-    enable: false # This should only deactivate the CHPs from prepare_sector_network, not those from add_existing_baseyear
   v2g: false
   solar_thermal: false
   district_heating:
@@ -312,6 +313,11 @@ sector:
     rural: true
   co2_spatial: true
   biomass_spatial: true
+  ammonia: false
+  methanol:
+    methanol_to_power:
+      ocgt: false
+    biomass_to_methanol: false
   #relax so no infeasibility in 2050 with no land transport demand
   min_part_load_fischer_tropsch: 0.
   regional_oil_demand: true  #set to true if regional CO2 constraints needed
@@ -322,6 +328,7 @@ sector:
   biogas_upgrading_cc: true
   biomass_to_liquid: true
   biomass_to_liquid_cc: true
+  electrobiofuels: false
   cluster_heat_buses: true
   # calculated based on ariadne "Stock|Space Heating"
   # and then 2% of buildings renovated per year to reduce their demand by 80%
@@ -333,34 +340,34 @@ sector:
     2040: 0.29
     2045: 0.36
     2050: 0.43
+  # For Germany these settings get overwritten in build_exogenous_mobility_data
   land_transport_fuel_cell_share:
-    2020: 0.05
-    2025: 0.05
-    2030: 0.05
-    2035: 0.05
-    2040: 0.05
-    2045: 0.05
-    2050: 0.05
+    2020: 0.01
+    2025: 0.01
+    2030: 0.02
+    2035: 0.03
+    2040: 0.03
+    2045: 0.03
+    2050: 0.03
   land_transport_electric_share:
     2020: 0.05
     2025: 0.15
     2030: 0.3
     2035: 0.45
-    2040: 0.7
-    2045: 0.85
-    2050: 0.95
+    2040: 0.72
+    2045: 0.87
+    2050: 0.97
   land_transport_ice_share:
-    2020: 0.9
-    2025: 0.8
-    2030: 0.65
-    2035: 0.5
+    2020: 0.94
+    2025: 0.84
+    2030: 0.68
+    2035: 0.52
     2040: 0.25
     2045: 0.1
     2050: 0.0
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#industry
 industry:
-  ammonia: false
   steam_biomass_fraction: 0.4
   steam_hydrogen_fraction: 0.3
   steam_electricity_fraction: 0.3

@@ -82,6 +82,7 @@ if config["foresight"] == "perfect":
 rule all:
     input:
         expand(RESULTS + "graphs/costs.svg", run=config["run"]["name"]),
+        expand(resources("maps/power-network.pdf"), run=config["run"]["name"]),
         expand(
             resources("maps/power-network-s-{clusters}.pdf"),
             run=config["run"]["name"],
@@ -130,21 +131,17 @@ rule all:
             run=config["run"]["name"],
             carrier=config_provider("plotting", "balance_map", "bus_carriers")(w),
         ),
-        directory(
-            expand(
-                RESULTS
-                + "graphics/balance_timeseries/s_{clusters}_{opts}_{sector_opts}_{planning_horizons}",
-                run=config["run"]["name"],
-                **config["scenario"],
-            ),
+        expand(
+            RESULTS
+            + "graphics/balance_timeseries/s_{clusters}_{opts}_{sector_opts}_{planning_horizons}",
+            run=config["run"]["name"],
+            **config["scenario"],
         ),
-        directory(
-            expand(
-                RESULTS
-                + "graphics/heatmap_timeseries/s_{clusters}_{opts}_{sector_opts}_{planning_horizons}",
-                run=config["run"]["name"],
-                **config["scenario"],
-            ),
+        expand(
+            RESULTS
+            + "graphics/heatmap_timeseries/s_{clusters}_{opts}_{sector_opts}_{planning_horizons}",
+            run=config["run"]["name"],
+            **config["scenario"],
         ),
     default_target: True
 
@@ -202,7 +199,7 @@ rule rulegraph:
         r"""
         # Generate DOT file using nested snakemake with the dumped final config
         echo "[Rule rulegraph] Using final config file: {input.config_file}"
-        snakemake --rulegraph all --configfile {input.config_file} --quiet | sed -n "/digraph/,\$p" > {output.dot}
+        snakemake --rulegraph --configfile {input.config_file} --quiet | sed -n "/digraph/,\$p" > {output.dot}
 
         # Generate visualizations from the DOT file
         if [ -s {output.dot} ]; then
@@ -362,24 +359,29 @@ if config["enable"]["retrieve"] and config["enable"].get("retrieve_cost_data", T
     ruleorder: modify_cost_data > retrieve_cost_data
 
 
-rule build_mobility_demand:
+rule build_exogenous_mobility_data:
     params:
         reference_scenario=config_provider("iiasa_database", "reference_scenario"),
         planning_horizons=config_provider("scenario", "planning_horizons"),
         leitmodelle=config_provider("iiasa_database", "leitmodelle"),
+        ageb_for_mobility=config_provider("iiasa_database", "ageb_for_mobility"),
+        uba_for_mobility=config_provider("iiasa_database", "uba_for_mobility"),
+        shipping_oil_share=config_provider("sector", "shipping_oil_share"),
+        aviation_demand_factor=config_provider("sector", "aviation_demand_factor"),
+        energy_totals_year=config_provider("energy", "energy_totals_year"),
     input:
         ariadne="resources/ariadne_database.csv",
-        clustered_pop_layout=resources("pop_layout_base_s_{clusters}.csv"),
+        energy_totals=resources("energy_totals.csv"),
     output:
-        mobility_demand=resources(
-            "mobility_demand_aladin_{clusters}_{planning_horizons}.csv"
+        mobility_data=resources(
+            "modified_mobility_data_{clusters}_{planning_horizons}.csv"
         ),
     resources:
         mem_mb=1000,
     log:
-        logs("build_mobility_demand_{clusters}_{planning_horizons}.log"),
+        logs("build_exogenous_mobility_data_{clusters}_{planning_horizons}.log"),
     script:
-        "scripts/pypsa-de/build_mobility_demand.py"
+        "scripts/pypsa-de/build_exogenous_mobility_data.py"
 
 
 rule build_egon_data:
@@ -410,7 +412,7 @@ rule prepare_district_heating_subnodes:
         cities="data/fernwaermeatlas/cities_geolocations.geojson",
         lau_regions="data/lau_regions.zip",
         census=storage(
-            "https://www.zensus2022.de/static/Zensus_Veroeffentlichung/Zensus2022_Heizungsart.zip",
+            "https://www.destatis.de/static/DE/zensus/gitterdaten/Zensus2022_Heizungsart.zip",
             keep_local=True,
         ),
         osm_land_cover=storage(
@@ -541,9 +543,6 @@ rule modify_prenetwork:
         must_run=config_provider("must_run"),
         clustering=config_provider("clustering", "temporal", "resolution_sector"),
         H2_plants=config_provider("electricity", "H2_plants_DE"),
-        land_transport_electric_share=config_provider(
-            "sector", "land_transport_electric_share"
-        ),
         onshore_nep_force=config_provider("onshore_nep_force"),
         offshore_nep_force=config_provider("offshore_nep_force"),
         shipping_methanol_efficiency=config_provider(
@@ -553,6 +552,9 @@ rule modify_prenetwork:
         shipping_methanol_share=config_provider("sector", "shipping_methanol_share"),
         mwh_meoh_per_tco2=config_provider("sector", "MWh_MeOH_per_tCO2"),
         scale_capacity=config_provider("scale_capacity"),
+        bev_charge_rate=config_provider("sector", "bev_charge_rate"),
+        bev_energy=config_provider("sector", "bev_energy"),
+        bev_dsm_availability=config_provider("sector", "bev_dsm_availability"),
     input:
         costs_modifications="ariadne-data/costs_{planning_horizons}-modifications.csv",
         network=resources(
@@ -564,10 +566,9 @@ rule modify_prenetwork:
             else []
         ),
         costs=resources("costs_{planning_horizons}.csv"),
-        aladin_demand=resources(
-            "mobility_demand_aladin_{clusters}_{planning_horizons}.csv"
+        modified_mobility_data=resources(
+            "modified_mobility_data_{clusters}_{planning_horizons}.csv"
         ),
-        transport_data=resources("transport_data_s_{clusters}.csv"),
         biomass_potentials=resources(
             "biomass_potentials_s_{clusters}_{planning_horizons}.csv"
         ),
