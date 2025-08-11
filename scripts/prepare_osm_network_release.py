@@ -8,10 +8,10 @@ import folium
 import geopandas as gpd
 import numpy as np
 import pypsa
-from base_network import _get_linetype_by_voltage
 from shapely.wkt import loads
 
 from scripts._helpers import configure_logging, set_scenario_config
+from scripts.base_network import _get_linetype_by_voltage
 
 logger = logging.getLogger(__name__)
 

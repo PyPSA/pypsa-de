@@ -1,0 +1,97 @@
+# SPDX-FileCopyrightText: : 2017-2024 The PyPSA-Eur Authors
+#
+# SPDX-License-Identifier: CC0-1.0
+
+run:
+  prefix: 20250514_dhsubnodes
+  name:
+  - Baseline
+  # - No_PTES
+  # - LowPTESCAPEX
+  # - HighPTESCAPEX
+  # - LowStandingLosses
+  # - HighStandingLosses
+  # - LowGroundWaterDepth
+  # - HighGroundWaterDepth
+  # - LowEtPRatio
+  # - HighEtPRatio
+  scenarios:
+    enable: true
+    manual_file: config/scenarios.sysgf.yaml
+    file: config/scenarios.automated.yaml
+  shared_resources:
+    policy: base #stops recalculating
+    exclude:
+    - existing_heating.csv   # specify files which should not be shared between scenarios
+    - costs
+    - retrieve_cost   # This is necessary to save retrieve_cost_data_{year}.log in the correct folder
+    - industry_sector_ratios
+    - build_industry_sector_ratios   # This is necessary to save build_industry_sector_ratios_data.log in the correct folder
+    - modify_existing_heating
+
+foresight: myopic
+
+scenario:
+  ll:
+  - vopt
+  clusters:
+  - 27 #current options: 27, 49
+  opts:
+  - ''
+  sector_opts:
+  - none
+  planning_horizons:
+  # - 2020
+  # - 2025
+  # - 2030
+  # - 2035
+  # - 2040
+  - 2045
+
+clustering:
+  temporal:
+    resolution_sector: 365H
+
+adjustments:
+  electricity: false
+  sector:
+    absolute:
+      StorageUnit:
+        urban central water pits:
+          standing_loss: 0.00012121
+        urban central water tanks:
+          standing_loss: 0.00015476
+
+wasserstoff_kernnetz:
+  enable: false
+
+sector:
+  district_heating:
+    potential: 0.5
+    subnodes:
+      enable: true
+    limited_heat_sources:
+      geothermal:
+        ignore_missing_regions: true
+  heat_pump_sources:
+    urban central:
+    - air
+    - geothermal
+    urban decentral:
+    - air
+    rural:
+    - air
+    - ground
+
+solving:
+  constraints:
+    CCL: false
+    EQ: false
+    BAU: false
+    SAFE: false
+    efuel_export_ban: false
+    limits_capacity_max: {}
+    limits_capacity_min: {}
+    limits_volume_max: {}
+    limits_volume_min: {}
+    limits_power_max: {}

@@ -1,0 +1,99 @@
+# -*- coding: utf-8 -*-
+# SPDX-FileCopyrightText: : 2017-2023 The PyPSA-Eur Authors
+#
+# SPDX-License-Identifier: MIT
+
+Baseline:
+  foresight: myopic
+  iiasa_database:
+    reference_scenario: KN2045_Mix
+  co2_budget_DE_source: UBA
+
+No_PTES:
+  adjustments:
+    electricity: false
+    sector:
+      absolute:
+        Store:
+          urban central water pits:
+            e_nom_max: 0
+
+LowPTESCAPEX:
+  adjustments:
+    electricity: false
+    sector:
+      factor:
+        Store:
+          urban central water pits:
+            capital_cost: 0.5
+      absolute:
+        Store:
+          urban central water pits:
+            standing_loss: 0.00012121
+          urban central water tanks:
+            standing_loss: 0.00015476
+
+HighPTESCAPEX:
+  adjustments:
+    electricity: false
+    sector:
+      factor:
+        Store:
+          urban central water pits:
+            capital_cost: 2
+      absolute:
+        Store:
+          urban central water pits:
+            standing_loss: 0.00012121
+          urban central water tanks:
+            standing_loss: 0.00015476
+
+LowStandingLosses:
+  adjustments:
+    electricity: false
+    sector:
+      absolute:
+        Store:
+          urban central water pits:
+            standing_loss: 0
+
+HighStandingLosses:
+  adjustments:
+    electricity: false
+    sector:
+      absolute:
+        Store:
+          urban central water pits:
+            standing_loss: 0.0012121
+
+LowGroundWaterDepth:
+  sector:
+    district_heating:
+      subnodes:
+        limit_ptes_potential:
+          max_groundwater_depth: -25
+
+HighGroundWaterDepth:
+  sector:
+    district_heating:
+      subnodes:
+        limit_ptes_potential:
+          max_groundwater_depth: 0
+
+LowEtPRatio:
+  adjustments:
+    electricity: false
+    sector:
+      factor:
+        Link:
+          urban central water pits charger:
+            energy to power ratio: 0.5
+
+HighEtPRatio:
+  adjustments:
+    electricity: false
+    sector:
+      factor:
+        Link:
+          urban central water pits charger:
+            energy to power ratio: 2
