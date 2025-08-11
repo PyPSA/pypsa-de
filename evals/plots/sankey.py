@@ -765,6 +765,11 @@ class SankeyChart(ESMChart):
         self._df.columns = ["value"]
         # self._df = self._df.abs()
 
+    def get_labels(self, label_mapping):
+        labels = pd.Series(list(label_mapping)).to_frame("id")
+        labels["x"] = [self.get_label_position(lbl) for lbl in labels["id"]]
+        # must map y values
+
     def plot(self):
         # Concatenate the data with source and target columns
         df_agg = self.add_source_target_columns()
@@ -776,29 +781,20 @@ class SankeyChart(ESMChart):
         df_agg = self.map_colors_from_bus_carrier(df_agg)
 
         labels = list(label_mapping)
-        # groups = [self.get_label_group(lbl) for lbl in labels.values]
-
-        # # x pos is wrong
-        # x_pos, y_pos = self.sankey_positions_auto_order_optimized(
-        #     labels,
-        #     groups,
-        #     df_agg.source_id,
-        #     df_agg.target_id,
-        #     x_spacing=0.4,
-        #     y_padding=0.15,
-        # )
-        # x_pos = [x / max(x_pos) for x in x_pos]
+        label_positions_x = [self.get_label_position(lbl) for lbl in labels]
+        # labels = self.get_labels(label_mapping)
 
         self.fig = Figure(
             data=[
                 Sankey(
+                    arrangement="snap",  # snap, perpendicular, freeform, fixed
                     valuesuffix=self.unit,
                     node=dict(
                         line=dict(color="black", width=0.5),
                         label=labels,
                         hovertemplate="%{label}: %{value}<extra></extra>",
-                        # x=x_pos,
-                        # y=y_pos,
+                        x=label_positions_x,
+                        y=[None] * len(labels),  # must include y, or x is ignored
                         pad=20,
                         thickness=20,
                         # color=df_agg.color,
@@ -821,7 +817,36 @@ class SankeyChart(ESMChart):
         # self._style_title_and_legend_and_xaxis_label()
         # self._append_footnotes()
 
-        # plotly.io.show(self.fig)  # todo: remove debugging
+        # pio.show(self.fig)  # todo: remove debugging
+
+    @staticmethod
+    def get_label_position(lbl: str) -> float:
+        if lbl.startswith("Primary"):
+            return 0.15
+        elif lbl.startswith("Secondary") and lbl.endswith("In"):
+            return 0.4
+        elif lbl == "AC Storage":
+            return 0.5
+        elif lbl == "Transformation Losses":
+            return 0.55
+        elif lbl.startswith("Secondary") and lbl.endswith("Out"):
+            return 0.6
+        elif lbl == "Ambient Heat Decentral":
+            return 0.75
+        elif lbl == "Decentral Heat":
+            return 0.8
+        elif lbl in (
+            "Industry",
+            "HH & Services",
+            "Transport",
+            "Agriculture",
+            "Final AC",
+        ):
+            return 0.85
+        elif lbl.startswith("Losses") or lbl.endswith("Losses"):
+            return 0.95
+        else:
+            return 0.0
 
     def _set_base_layout(self):
         """Set various figure properties."""

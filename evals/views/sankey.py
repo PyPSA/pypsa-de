@@ -301,8 +301,8 @@ def view_sankey(
         view_config=config["view"],
     )
 
-    # df = exporter.df
-    # print(df)
+    # todo: remove me
+    # exporter.df = filter_by(exporter.df, year="2050", location="Europe")
 
     chart_class = getattr(plots, config["view"]["chart"])
     exporter.defaults.plotly.chart = chart_class
