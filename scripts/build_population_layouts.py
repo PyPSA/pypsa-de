@@ -30,14 +30,7 @@ if __name__ == "__main__":
 
     configure_logging(snakemake)
     set_scenario_config(snakemake)
-
-    try:
-        coco.logging.getLogger().setLevel(coco.logging.CRITICAL)
-    except AttributeError as e:
-        logger.warning(
-            f"Did not set country_converter log level, because "
-            f"the logging attribute is not available: {e}"
-        )
+    logging.getLogger("country_converter").setLevel(logging.CRITICAL)
 
     cutout = load_cutout(snakemake.input.cutout)
 

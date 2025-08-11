@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20250717_improve_transport_demand
+  prefix: 20250807_merge_july
   name:
 #  - ExPol
 #  - AT10_KN2040
@@ -313,6 +313,11 @@ sector:
     rural: true
   co2_spatial: true
   biomass_spatial: true
+  ammonia: false
+  methanol:
+    methanol_to_power:
+      ocgt: false
+    biomass_to_methanol: false
   #relax so no infeasibility in 2050 with no land transport demand
   min_part_load_fischer_tropsch: 0.
   regional_oil_demand: true  #set to true if regional CO2 constraints needed
@@ -323,6 +328,7 @@ sector:
   biogas_upgrading_cc: true
   biomass_to_liquid: true
   biomass_to_liquid_cc: true
+  electrobiofuels: false
   cluster_heat_buses: true
   # calculated based on ariadne "Stock|Space Heating"
   # and then 2% of buildings renovated per year to reduce their demand by 80%
@@ -362,7 +368,6 @@ sector:
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#industry
 industry:
-  ammonia: false
   steam_biomass_fraction: 0.4
   steam_hydrogen_fraction: 0.3
   steam_electricity_fraction: 0.3

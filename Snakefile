@@ -85,6 +85,7 @@ rule all:
     input:
         expand(RESULTS + "validity_report.html", run=config["run"]["name"]),
         expand(RESULTS + "graphs/costs.svg", run=config["run"]["name"]),
+        expand(resources("maps/power-network.pdf"), run=config["run"]["name"]),
         expand(
             resources("maps/power-network-s-{clusters}.pdf"),
             run=config["run"]["name"],
@@ -133,21 +134,17 @@ rule all:
             run=config["run"]["name"],
             carrier=config_provider("plotting", "balance_map", "bus_carriers")(w),
         ),
-        directory(
-            expand(
-                RESULTS
-                + "graphics/balance_timeseries/s_{clusters}_{opts}_{sector_opts}_{planning_horizons}",
-                run=config["run"]["name"],
-                **config["scenario"],
-            ),
+        expand(
+            RESULTS
+            + "graphics/balance_timeseries/s_{clusters}_{opts}_{sector_opts}_{planning_horizons}",
+            run=config["run"]["name"],
+            **config["scenario"],
         ),
-        directory(
-            expand(
-                RESULTS
-                + "graphics/heatmap_timeseries/s_{clusters}_{opts}_{sector_opts}_{planning_horizons}",
-                run=config["run"]["name"],
-                **config["scenario"],
-            ),
+        expand(
+            RESULTS
+            + "graphics/heatmap_timeseries/s_{clusters}_{opts}_{sector_opts}_{planning_horizons}",
+            run=config["run"]["name"],
+            **config["scenario"],
         ),
         expand(
             RESULTS + "evaluation/HTML/sankey_diagram_EU_2050.html",
@@ -209,12 +206,12 @@ rule rulegraph:
         r"""
         # Generate DOT file using nested snakemake with the dumped final config
         echo "[Rule rulegraph] Using final config file: {input.config_file}"
-        snakemake all --rulegraph dot --configfile {input.config_file} --quiet | sed -n "/digraph/,\$p" > {output.dot}
+        snakemake --rulegraph --configfile {input.config_file} --quiet | sed -n "/digraph/,\$p" > {output.dot}
 
         # Generate visualizations from the DOT file
         if [ -s {output.dot} ]; then
             echo "[Rule rulegraph] Generating PDF from DOT"
-            dot -Tpdf -Gsize=16\!,23 -o {output.pdf} {output.dot} || {{ echo "Error: Failed to generate PDF. Is graphviz installed?" >&2; exit 1; }}
+            dot -Tpdf -o {output.pdf} {output.dot} || {{ echo "Error: Failed to generate PDF. Is graphviz installed?" >&2; exit 1; }}
             
             echo "[Rule rulegraph] Generating PNG from DOT"
             dot -Tpng -o {output.png} {output.dot} || {{ echo "Error: Failed to generate PNG. Is graphviz installed?" >&2; exit 1; }}
