@@ -493,6 +493,14 @@ def prepare_network(
             p_nom=1e9,  # kW
         )
 
+        n.generators.loc[
+            (n.generators.carrier == "load")
+            & (
+                n.generators.index.str.contains("non-sequestered HVC|process emissions")
+            ),
+            "sign",
+        ] *= -1
+
     if solve_opts.get("curtailment_mode"):
         n.add("Carrier", "curtailment", color="#fedfed", nice_name="Curtailment")
         n.generators_t.p_min_pu = n.generators_t.p_max_pu
