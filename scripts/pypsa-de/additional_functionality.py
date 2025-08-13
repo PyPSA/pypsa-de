@@ -814,6 +814,21 @@ def adapt_nuclear_output(n):
     )
 
 
+def add_empty_co2_atmosphere_store_constraint(n):
+    """
+    Ensures that the CO2 atmosphere store at the last snapshot is empty.
+    """
+    logger.info(
+        "Adding constraint for empty CO2 atmosphere store at the last snapshot."
+    )
+    cname = "empty_co2_atmosphere_store"
+
+    last_snapshot = n.snapshots.values[-1]
+    lhs = n.model["Store-e"].loc[last_snapshot, "co2 atmosphere"]
+
+    n.model.add_constraints(lhs == 0, name=cname)
+
+
 def additional_functionality(n, snapshots, snakemake):
     logger.info("Adding Ariadne-specific functionality")
 
@@ -867,3 +882,9 @@ def additional_functionality(n, snapshots, snakemake):
 
     if investment_year == 2020:
         adapt_nuclear_output(n)
+
+    if "co2 atmosphere" in n.generators.index:
+        logger.warning(
+            "CO2 atmosphere generator found. Adding constraint for empty CO2 atmosphere store at the last snapshot."
+        )
+        add_empty_co2_atmosphere_store_constraint(n)

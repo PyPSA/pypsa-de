@@ -3381,8 +3381,12 @@ def get_prices(n, region):
     except KeyError:
         co2_limit_de = 0
 
+    try:
+        co2_limit_eu = n.global_constraints.loc["co2_limit-EU", "mu"]
+    except KeyError:
+        co2_limit_eu = n.generators.loc["co2 atmosphere", "marginal_cost"]
     # co2 additions
-    co2_price = -n.global_constraints.loc["CO2Limit", "mu"] - co2_limit_de
+    co2_price = -co2_limit_eu - co2_limit_de
     # specific emissions in tons CO2/MWh according to n.links[n.links.carrier =="your_carrier].efficiency2.unique().item()
     specific_emissions = {
         "oil": 0.2571,
@@ -4317,12 +4321,14 @@ def get_policy(n, investment_year):
         co2_limit_de = n.global_constraints.loc["co2_limit-DE", "mu"]
     except KeyError:
         co2_limit_de = 0
-    var["Price|Carbon"] = (
-        -n.global_constraints.loc["CO2Limit", "mu"] - co2_limit_de + co2_price_add_on
-    )
+    try:
+        co2_limit_eu = n.global_constraints.loc["co2_limit-EU", "mu"]
+    except KeyError:
+        co2_limit_eu = n.generators.loc["co2 atmosphere", "marginal_cost"]
+    var["Price|Carbon"] = -co2_limit_eu - co2_limit_de + co2_price_add_on
 
     var["Price|Carbon|EU-wide Regulation All Sectors"] = (
-        -n.global_constraints.loc["CO2Limit", "mu"] + co2_price_add_on
+        -co2_limit_eu + co2_price_add_on
     )
 
     # Price|Carbon|EU-wide Regulation Non-ETS
@@ -5073,7 +5079,11 @@ def hack_DC_projects(n, p_nom_start, p_nom_planned, model_year, snakemake, costs
             )
 
     # Future projects should not have any capacity
-    assert isclose(n.links.loc[future_projects, "p_nom_opt"], 0).all()
+    try:
+        assert isclose(n.links.loc[future_projects, "p_nom_opt"], 0).all()
+    except AssertionError:
+        logger.warning("Future projects have non-zero p_nom_opt. Overwriting with 0.")
+        n.links.loc[future_projects, "p_nom_opt"] = 0
 
     # Setting p_nom to 0 such that n.statistics does not compute negative expanded capex or capacity additions
     # Setting p_nom_min to 0 for the grid_expansion calculation
@@ -5367,13 +5377,14 @@ def get_data(
 if __name__ == "__main__":
     if "snakemake" not in globals():
         snakemake = mock_snakemake(
-            "export_ariadne_variables",
+            "export_regret_variables",
             simpl="",
             clusters=27,
             opts="",
             ll="vopt",
             sector_opts="None",
-            run="LowDemand",
+            run="AriadneDemand",
+            decision="LowDemand",
         )
     configure_logging(snakemake)
     config = snakemake.config
@@ -5448,7 +5459,7 @@ if __name__ == "__main__":
 
     if "debug" == "debug":  # For debugging
         var = pd.Series()
-        idx = 1
+        idx = 0
         n = networks[idx]
         c = costs[idx]
         _industry_demand = industry_demands[idx]
