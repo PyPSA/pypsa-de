@@ -5,7 +5,7 @@
 
 Baseline:
   foresight: myopic
-  iiasa_database:
+  pypsa-de:
     reference_scenario: KN2045_Mix
   co2_budget_DE_source: UBA
 
