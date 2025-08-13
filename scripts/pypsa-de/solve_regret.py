@@ -48,7 +48,7 @@ def _unfix_bottlenecks(new, deci, name, extendable_i):
             "shipping oil",
             "kerosene for aviation",
             "agriculture machinery oil",
-            # "co2 sequestered",
+            "co2 sequestered",
         ]
 
         _idx = new.loc[new.carrier.isin(virtual_links)].index.intersection(extendable_i)
@@ -114,19 +114,6 @@ def _unfix_bottlenecks(new, deci, name, extendable_i):
         _idx = new.loc[new.carrier.isin(fuels + vents)].index.intersection(extendable_i)
         new.loc[_idx, "p_nom_extendable"] = True
 
-    # if name == "stores":
-    # For co2 sequestered no limits are needed since the global constraints is active
-    # _idx = new.query("carrier == 'co2 sequestered'").index.intersection(
-    #     extendable_i
-    # )
-    # new.loc[_idx, "e_nom_extendable"] = True
-    # new.loc[_idx, "e_nom_max"] = deci.loc[_idx, "e_nom_opt"] + 1
-
-    # _idx = new.query("carrier == 'co2 stored'").index.intersection(
-    #     extendable_i
-    # )
-    # new.loc[_idx, "e_nom_extendable"] = True
-
     return
 
 
@@ -185,6 +172,10 @@ def fix_capacities(realization, decision, scope="", strict=False):
             _idx = new.query("carrier == 'co2'").index
             new.loc[_idx, "e_nom_extendable"] = True
 
+            _idx = new.query("carrier == 'co2 sequestered'").index.intersection(
+                extendable_i
+            )
+            new.loc[_idx, "e_nom_extendable"] = True
         # Above several assets are switched to extendable again, for these the p_nom value is restored, i.e. set to the value from the decision network
         _idx = new.query(f"{attr}_extendable").index.intersection(extendable_i)
         new.loc[_idx, attr] = deci.loc[_idx, attr]
