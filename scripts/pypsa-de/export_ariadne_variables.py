@@ -3382,7 +3382,7 @@ def get_prices(n, region):
         co2_limit_de = 0
 
     try:
-        co2_limit_eu = n.global_constraints.loc["co2_limit-EU", "mu"]
+        co2_limit_eu = n.global_constraints.loc["CO2Limit", "mu"]
     except KeyError:
         co2_limit_eu = n.generators.loc["co2 atmosphere", "marginal_cost"]
     # co2 additions
@@ -4322,7 +4322,7 @@ def get_policy(n, investment_year):
     except KeyError:
         co2_limit_de = 0
     try:
-        co2_limit_eu = n.global_constraints.loc["co2_limit-EU", "mu"]
+        co2_limit_eu = n.global_constraints.loc["CO2Limit", "mu"]
     except KeyError:
         co2_limit_eu = n.generators.loc["co2 atmosphere", "marginal_cost"]
     var["Price|Carbon"] = -co2_limit_eu - co2_limit_de + co2_price_add_on
