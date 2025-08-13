@@ -1192,9 +1192,34 @@ def drop_duplicate_transmission_projects(n):
         f"Dropping transmission projects with build year <= {year}. They are likely already in the OSM base network."
     )  # Maybe one 2024 line is missing in the OSM base network
 
-    to_drop = n.lines.query("0 < build_year <= @year").index
+    to_drop = n.lines.query(f"0 < build_year <= {year}").index
 
     n.remove("Line", to_drop)
+
+    to_deactivate = n.links.query(
+        f"carrier == 'DC' and (0 < build_year <= {year})"
+    ).index
+    n.links.loc[to_deactivate, "active"] = False
+
+
+def deactivate_late_transmission_projects(n):
+    year = snakemake.params.onshore_nep_force["cutout_year"]
+
+    to_deactivate = n.links.query(f"carrier == 'DC' and build_year > {year}").index
+    n.links.loc[to_deactivate, "active"] = False
+
+    to_deactivate = n.lines.query(f"build_year > {year}").index
+    n.lines.loc[to_deactivate, "active"] = False
+
+
+def fix_transmission_DE(n):
+    to_fix = n.lines.query("bus0.str.contains('DE') or bus1.str.contains('DE')").index
+    n.lines.loc[to_fix, "s_nom_extendable"] = False
+
+    to_fix = n.links.query(
+        "(bus0.str.contains('DE') or bus1.str.contains('DE')) and carrier=='DC'"
+    ).index
+    n.links.loc[to_fix, "p_nom_extendable"] = False
 
 
 def scale_capacity(n, scaling):
@@ -1464,5 +1489,10 @@ if __name__ == "__main__":
             snakemake.input.industry_sector_ratios,
             scale_non_energy=snakemake.params.scale_industry_non_energy,
         )
+
+    # For regret runs
+    deactivate_late_transmission_projects(n)
+
+    fix_transmission_DE(n)
 
     n.export_to_netcdf(snakemake.output.network)

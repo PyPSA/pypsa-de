@@ -4362,8 +4362,12 @@ def get_economy(n, region):
         )
         #
         transmission_carriers = get_transmission_carriers(n).get_level_values("carrier")
-        transmission_lines = n.lines.carrier.isin(transmission_carriers)
-        transmission_links = n.links.carrier.isin(transmission_carriers)
+        transmission_lines = (
+            n.lines.carrier.isin(transmission_carriers) & n.lines.active
+        )
+        transmission_links = (
+            n.links.carrier.isin(transmission_carriers) & n.links.active
+        )
         #
         country_transmission_lines = (
             (n.lines.bus0.str.contains(country)) & ~(n.lines.bus1.str.contains(country))
