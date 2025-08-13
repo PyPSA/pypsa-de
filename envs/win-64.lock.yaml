@@ -229,6 +229,7 @@ dependencies:
   - libevent=2.1.12=h3671451_1
   - libexpat=2.7.1=hac47afa_0
   - libffi=3.4.6=h537db12_1
+  - libflang=5.0.0=h6538335_20180525
   - libfreetype=2.13.3=h57928b3_1
   - libfreetype6=2.13.3=h0b5ce68_1
   - libgcc=15.1.0=h1383e82_4
