@@ -923,7 +923,7 @@ def add_hydrogen_turbines(n):
         h2_plants.bus2 = ""
         h2_plants.efficiency2 = 1
         # add the new links
-        n.import_components_from_dataframe(h2_plants, "Link")
+        n.add("Link", h2_plants.index, **h2_plants)
 
     # special handling of CHPs
     gas_plants = n.links[
@@ -937,7 +937,7 @@ def add_hydrogen_turbines(n):
     h2_plants.bus0 = h2_plants.bus1 + " H2"
     h2_plants.bus3 = ""
     h2_plants.efficiency3 = 1
-    n.import_components_from_dataframe(h2_plants, "Link")
+    n.add("Link", h2_plants.index, **h2_plants)
 
 
 def force_retrofit(n, params):
@@ -980,7 +980,7 @@ def force_retrofit(n, params):
         h2_plants.capital_cost *= 1 + params["cost_factor"]
         h2_plants.overnight_cost *= 1 + params["cost_factor"]
         # add the new links
-        n.import_components_from_dataframe(h2_plants, "Link")
+        n.add("Link", h2_plants.index, **h2_plants)
         n.links.drop(gas_plants, inplace=True)
 
     # special handling of CHPs
@@ -1001,7 +1001,7 @@ def force_retrofit(n, params):
     h2_plants.efficiency3 = 1  # default value
     h2_plants.capital_cost *= 1 + params["cost_factor"]
     h2_plants.overnight_cost *= 1 + params["cost_factor"]
-    n.import_components_from_dataframe(h2_plants, "Link")
+    n.add("Link", h2_plants.index, **h2_plants)
     n.links.drop(gas_plants, inplace=True)
 
 
