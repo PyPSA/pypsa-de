@@ -138,12 +138,7 @@ def fix_capacities(realization, decision, scope="DE", strict=False):
 
         # Above several assets are switched to extendable again, for these the p_nom value is restored to the value from the decision network
 
-        _idx = new.query(f"{attr}_extendable")
-
-        if not _idx.difference(extendable_i).empty:
-            raise ValueError(
-                "Assets that are not extendable in the decision network have been set to extendable. This should not happen. Aborting."
-            )
+        _idx = new.query(f"{attr}_extendable").index
 
         new.loc[_idx, attr] = deci.loc[_idx, attr]
 
