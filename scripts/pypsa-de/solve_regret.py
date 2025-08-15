@@ -16,24 +16,9 @@ from scripts.solve_network import prepare_network, solve_network
 logger = logging.getLogger(__name__)
 
 
-def check_matching_components(new, deci, name, attr):
-    if not new.index.symmetric_difference(deci.index).empty:
-        logger.error(
-            f"Indices of {name} in realization and decision networks do not match. "
-            "This may lead to unexpected results."
-            f"Offending indices are: {new.index.symmetric_difference(deci.index).tolist()}"
-        )
-        assert (
-            new.query(f"{attr}_extendable")
-            .index.symmetric_difference(deci.query(f"{attr}_extendable").index)
-            .empty
-        ), (
-            f"Indices of {name} with {attr}_extendable in realization and decision networks do not match."
-        )
-
-
 def _unfix_bottlenecks(new, deci, name, extendable_i):
     if name == "links":
+        # Links that have 0-cost and are extendable
         virtual_links = [
             "land transport oil",
             "land transport fuel cell",
@@ -52,51 +37,32 @@ def _unfix_bottlenecks(new, deci, name, extendable_i):
         ]
 
         _idx = new.loc[new.carrier.isin(virtual_links)].index.intersection(extendable_i)
-        # Virtual links are free
         new.loc[_idx, "p_nom_extendable"] = True
 
+        # Bottleneck links can be extended, but not reduced to fix infeasibilities due to numerical inconsistencies
         bottleneck_links = [
+            "electricity distribution grid",
+            "waste CHP",
             "SMR",
+            # Boilers create bottlenecks AND should be extendable for fixed_profile_scaling constraints to be applied correctly
             "rural gas boiler",
             "urban decentral gas boiler",
-            # For 2035
-            # "rural biomass boiler",
-            # "urban decentral biomass boiler",
+            # Biomass for 2035 when gas is banned
+            "rural biomass boiler",
+            "urban decentral biomass boiler",
         ]
-        # Bottleneck links can be extended, but not reduced
         _idx = new.loc[new.carrier.isin(bottleneck_links)].index.intersection(
             extendable_i
         )
         new.loc[_idx, "p_nom_extendable"] = True
         new.loc[_idx, "p_nom_min"] = deci.loc[_idx, "p_nom_opt"]
 
-        # No limits for waste burning outside DE
+        # Waste outside DE can also be burned directly
         _idx = new.query(
             "carrier == 'HVC to air' and not index.str.startswith('DE')"
         ).index.intersection(extendable_i)
         new.loc[_idx, "p_nom_extendable"] = True
         new.loc[_idx, "p_nom_min"] = deci.loc[_idx, "p_nom_opt"]
-        # Tight limits inside DE
-        _idx = new.query(
-            "carrier == 'waste CHP' and index.str.startswith('DE')"
-        ).index.intersection(extendable_i)
-        new.loc[_idx, "p_nom_extendable"] = True
-        new.loc[_idx, "p_nom_min"] = deci.loc[_idx, "p_nom_opt"]
-        # new.loc[_idx, "p_nom_max"] = deci.loc[_idx, "p_nom_opt"] + 0.1
-
-        _idx = new.query(
-            "carrier == 'electricity distribution grid'"
-        ).index.intersection(extendable_i)
-        new.loc[_idx, "p_nom_extendable"] = True
-        new.loc[_idx, "p_nom_min"] = deci.loc[_idx, "p_nom_opt"]
-        # new.loc[_idx, "p_nom_max"] = deci.loc[_idx, "p_nom_opt"] + 0.1
-
-    # if name == "lines":
-    #     # For lines allow only a minimal extension, to avoid powerflow constraint issues
-    #     new.loc[extendable_i, "s_nom_extendable"] = True
-
-    #     new.loc[extendable_i, "s_nom_min"] = deci.loc[extendable_i, "s_nom_opt"]
-    #     new.loc[extendable_i, "s_nom_max"] = deci.loc[extendable_i, "s_nom_opt"] + 10
 
     if name == "generators":
         fuels = [
@@ -117,8 +83,19 @@ def _unfix_bottlenecks(new, deci, name, extendable_i):
     return
 
 
-def fix_capacities(realization, decision, scope="", strict=False):
-    n = realization.copy()
+def fix_capacities(realization, decision, scope="DE", strict=False):
+    logger.info(f"Fixing all capacities for scope: {scope}")
+    if scope == "EU":
+        scope = ""
+    if not strict:
+        logger.info("Freeing virtual links, bottlenecks and fossil generators.")
+
+    # Copy all existing assets from the decision network
+    n = decision.copy()
+
+    # The constraints and loads are taken from the realization network
+    n.global_constraints = realization.global_constraints.copy()
+    n.loads = realization.loads.copy()
 
     nominal_attrs = {
         "generators": "p_nom",
@@ -130,54 +107,44 @@ def fix_capacities(realization, decision, scope="", strict=False):
     for name, attr in nominal_attrs.items():
         new = getattr(n, name)
         deci = getattr(decision, name)
+        real = getattr(realization, name)
 
-        greater = deci.query(f"{attr}_opt > {attr}_max")
-        if not greater.empty:
-            logger.error(
-                f"Decision network have {name} with {attr}_opt > {attr}_max. "
-                f"These assets are: {greater.index.tolist()}"
-            )
-        smaller = deci.query(f"{attr}_min > {attr}_opt")
-        if not smaller.empty:
-            logger.error(
-                f"Decision network have {name} with {attr}_min > {attr}_opt. "
-                "This may lead to unexpected results."
-                f"These assets are: {smaller.index.tolist()}"
-            )
+        # Scenario specific assets are taken from the realization network
+        _idx = real.query("carrier in ['BEV charger', 'V2G', 'EV battery']").index
+        new.loc[_idx, attr] = real.loc[_idx, attr]
 
-        check_matching_components(new, deci, name, attr)
-
-        common_i = new.query("carrier != 'BEV charger'").index.intersection(
-            deci.query("carrier != 'BEV charger'").index
-        )  # Exclude BEV chargers from modification because the p_nom are taken from UBA
+        # Start with fixing everything...
         extendable_i = new.query(
             f"{attr}_extendable and index.str.startswith('{scope}')"
         ).index
-
-        # Copy all assets (maybe this should only be done for current planning horizon)
-        new.loc[common_i, attr] = deci.loc[common_i, attr]
-        new.loc[common_i, attr + "_opt"] = deci.loc[common_i, attr + "_opt"]
-        new.loc[common_i, attr + "_min"] = deci.loc[common_i, attr + "_min"]
-        new.loc[common_i, attr + "_max"] = deci.loc[common_i, attr + "_max"]
-
-        # Fix everything...
         new.loc[extendable_i, attr + "_extendable"] = False
         new.loc[extendable_i, attr] = new.loc[extendable_i, attr + "_opt"]
 
+        # Some links should be extendable to avoid infeasibilities or allow burning more fossil fuels
         if not strict:
             _unfix_bottlenecks(new, deci, name, extendable_i)
 
+        # The CO2 constraints on atmosphere and sequestration need extendable stores to work correctly
         if name == "stores":
+            logger.info("Freeing co2 atmosphere and sequestered stores.")
             # there is only one co2 atmosphere store which should always be extendable, hence no intersection with extendable_i needed
             _idx = new.query("carrier == 'co2'").index
             new.loc[_idx, "e_nom_extendable"] = True
-
+            # co2 sequestered stores from previous planning horizons should not be extendable
             _idx = new.query("carrier == 'co2 sequestered'").index.intersection(
                 extendable_i
             )
             new.loc[_idx, "e_nom_extendable"] = True
-        # Above several assets are switched to extendable again, for these the p_nom value is restored, i.e. set to the value from the decision network
-        _idx = new.query(f"{attr}_extendable").index.intersection(extendable_i)
+
+        # Above several assets are switched to extendable again, for these the p_nom value is restored to the value from the decision network
+
+        _idx = new.query(f"{attr}_extendable")
+
+        if not _idx.difference(extendable_i).empty:
+            raise ValueError(
+                "Assets that are not extendable in the decision network have been set to extendable. This should not happen. Aborting."
+            )
+
         new.loc[_idx, attr] = deci.loc[_idx, attr]
 
     return n
@@ -191,19 +158,13 @@ if __name__ == "__main__":
             opts="",
             sector_opts="none",
             planning_horizons="2035",
-            decision="LowDemand",
+            decision="AriadneDemand",
             run="AriadneDemand",
         )
 
     configure_logging(snakemake)
     set_scenario_config(snakemake)
     update_config_from_wildcards(snakemake.config, snakemake.wildcards)
-
-    solve_opts = snakemake.params.solving["options"]
-
-    np.random.seed(solve_opts.get("seed", 123))
-
-    logger.info("Loading realization and decision networks")
 
     # Touch output file to ensure it exists
     pathlib.Path(snakemake.output.regret_network).touch()
@@ -215,15 +176,30 @@ if __name__ == "__main__":
     logging_frequency = snakemake.config.get("solving", {}).get(
         "mem_logging_frequency", 30
     )
+    solve_opts = snakemake.params.solving["options"]
+    assert solve_opts["noisy_costs"] == False, (
+        "Noisy costs should not be used in regret runs."
+    )
+    np.random.seed(solve_opts.get("seed", 123))
 
-    n = fix_capacities(realization, decision, scope="DE", strict=False)
+    n = fix_capacities(
+        realization, decision, scope=snakemake.params.scope_to_fix, strict=False
+    )
 
-    n_pre = n.copy()
+    if solve_opts["post_discretization"].get("enable") and not solve_opts.get(
+        "skip_iterations"
+    ):
+        # Undo the last lines of optimize transmission expansion iteratively
+        n.lines.s_nom_extendable = False
+        n.lines.s_nom = n.lines.s_nom_opt
 
-    snakemake.params.solving["options"]["noisy_costs"] = False
-
-    # TODO remove this again
-    # snakemake.params.solving["options"]["load_shedding"] = 100
+        discretized_links = n.links.query(
+            f"carrier in {list(solve_opts['post_discretization'].get('link_unit_size').keys())}"
+        ).index
+        n.links.loc[discretized_links, "p_nom_extendable"] = False
+        n.links.loc[discretized_links, "p_nom"] = n.links.loc[
+            discretized_links, "p_nom_opt"
+        ]
 
     prepare_network(
         n,
@@ -232,20 +208,24 @@ if __name__ == "__main__":
         planning_horizons=planning_horizons,
         co2_sequestration_potential=snakemake.params["co2_sequestration_potential"],
         limit_max_growth=snakemake.params.get("sector", {}).get("limit_max_growth"),
-        regret_run=True,  # snakemake.params.get("regret_run", False),
+        regret_run=True,
     )
 
-    # n.add(
-    #     "Generator",
-    #     "co2 atmosphere",
-    #     bus="co2 atmosphere",
-    #     p_min_pu=-1,
-    #     p_max_pu=0,
-    #     p_nom_extendable=True,
-    #     marginal_cost=realization.global_constraints.loc["CO2Limit", "mu"],
-    # )
-
-    # n.global_constraints.drop("CO2Limit", inplace=True)
+    if snakemake.params.scope_to_fix == "EU":
+        logger.info(
+            f"Fixing Scope EU chosen. Setting the CO2 price to the price from the realization network to avoid infeasibilities: {realization.global_constraints.loc['CO2Limit', 'mu']} €/t_CO2"
+        )
+        n.add(
+            "Generator",
+            "co2 atmosphere",
+            bus="co2 atmosphere",
+            p_min_pu=-1,
+            p_max_pu=0,
+            p_nom_extendable=True,
+            carrier="co2",
+            marginal_cost=realization.global_constraints.loc["CO2Limit", "mu"],
+        )
+        n.global_constraints.drop("CO2Limit", inplace=True)
 
     with memory_logger(
         filename=getattr(snakemake.log, "memory", None), interval=logging_frequency
@@ -265,17 +245,9 @@ if __name__ == "__main__":
     n.meta = dict(snakemake.config, **dict(wildcards=dict(snakemake.wildcards)))
     n.export_to_netcdf(snakemake.output.regret_network)
 
-    # logger.info((n.lines.s_nom_opt - decision.lines.s_nom_opt).sort_values())
-
     logger.info(
-        (
-            n.links.query("carrier == 'electricity distribution grid'").p_nom_opt
-            - decision.links.query(
-                "carrier == 'electricity distribution grid'"
-            ).p_nom_opt
-        ).sort_values()
-    )
-
-    logger.info(
-        (decision.global_constraints.mu - n.global_constraints.mu).round().sort_values()
+        "Difference in global constraints (decision - regret_network): %s",
+        (decision.global_constraints.mu - n.global_constraints.mu)
+        .round(2)
+        .sort_values(),
     )
