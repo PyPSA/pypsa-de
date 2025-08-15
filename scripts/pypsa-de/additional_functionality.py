@@ -68,6 +68,7 @@ def add_capacity_limits(
                         )
                         n.global_constraints.drop(cname, inplace=True)
                     continue
+
                 if cname in n.global_constraints.index:
                     logger.warning(
                         f"Global constraint {cname} already exists. Dropping and adding it again."
