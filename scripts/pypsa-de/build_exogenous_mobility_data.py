@@ -49,12 +49,12 @@ def get_mobility_data(
             # AGEB 2020, https://ag-energiebilanzen.de/daten-und-fakten/bilanzen-1990-bis-2030/?_jahresbereich-bilanz=2011-2020
             mobility_data = pd.Series(
                 {
-                    "Electricity": 39129 + 2394,  # Schiene + Straße
-                    "Hydrogen": 0,
-                    "Liquids": 140718
-                    + 1261942
-                    + 10782
-                    + 638820,  # Bio Strasse + Diesel Strasse + Diesel Schiene + Otto Strasse
+                    "Electricity": 39129.0 + 2394.0,  # Schiene + Straße
+                    "Hydrogen": 0.0,
+                    "Liquids": 140718.0
+                    + 1261942.0
+                    + 10782.0
+                    + 638820.0,  # Bio Strasse + Diesel Strasse + Diesel Schiene + Otto Strasse
                 }
             )
             mobility_data = mobility_data.div(3.6e-3)  # convert PJ to MWH
@@ -66,9 +66,9 @@ def get_mobility_data(
         # https://www.umweltbundesamt.de/sites/default/files/medien/11850/publikationen/projektionsbericht_2025.pdf, Abbildung 64 & 59,
         mobility_data = pd.Series(
             {
-                "Electricity": 21,
+                "Electricity": 21.0,
                 "Hydrogen": 0.0,
-                "Liquids": 524 + 51,
+                "Liquids": 524.0 + 51.0,
             }
         )
         mobility_data["Liquids"] -= non_land_liquids[
@@ -80,9 +80,9 @@ def get_mobility_data(
     elif year == "2030" and uba_for_mobility:
         mobility_data = pd.Series(
             {
-                "Electricity": 57,
-                "Hydrogen": 14,
-                "Liquids": 418 + 34 + 1,
+                "Electricity": 57.0,
+                "Hydrogen": 14.0,
+                "Liquids": 418.0 + 34.0 + 1.0,
             }
         )
         mobility_data["Liquids"] -= non_land_liquids[int(year)]
@@ -92,9 +92,9 @@ def get_mobility_data(
     elif year == "2035" and uba_for_mobility:
         mobility_data = pd.Series(
             {
-                "Electricity": 117,
-                "Hydrogen": 36,
-                "Liquids": 237 + 26 + 1,
+                "Electricity": 117.0,
+                "Hydrogen": 36.0,
+                "Liquids": 237.0 + 26.0 + 1.0,
             }
         )
         mobility_data["Liquids"] -= non_land_liquids[int(year)]

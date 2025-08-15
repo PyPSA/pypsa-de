@@ -1923,7 +1923,7 @@ def get_final_energy(
     h2_fossil_fraction = _get_h2_fossil_fraction(n)
     oil_fractions = _get_fuel_fractions(n, region, "oil")
 
-    if config_industry["ammonia"]:
+    if config["sector"]["ammonia"]:
         # MWh/a
         Haber_Bosch_NH3 = (
             n.statistics.supply(bus_carrier="NH3", **kwargs)
@@ -4344,7 +4344,7 @@ def get_economy(n, region):
     var = pd.Series()
 
     def get_tsc(n, country):
-        n.statistics.set_parameters(drop_zero=False)
+        pypsa.options.params.statistics.drop_zero = False
         capex = n.statistics.capex(
             groupby=pypsa.statistics.groupers["name", "carrier"], nice_names=False
         )

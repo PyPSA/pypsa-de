@@ -56,7 +56,12 @@ from scripts._helpers import (
 )
 
 logger = logging.getLogger(__name__)
-pypsa.pf.logger.setLevel(logging.WARNING)
+
+# Allow for PyPSA versions <0.35
+if PYPSA_V1:
+    pypsa.network.power_flow.logger.setLevel(logging.WARNING)
+else:
+    pypsa.pf.logger.setLevel(logging.WARNING)
 
 
 class ObjectiveValueError(Exception):
@@ -597,6 +602,7 @@ def add_CCL_constraints(
         rename_offwind = {
             "offwind-ac": "offwind-all",
             "offwind-dc": "offwind-all",
+            "offwind-float": "offwind-all",
             "offwind": "offwind-all",
         }
         gens = gens.replace(rename_offwind)
@@ -896,7 +902,7 @@ def add_TES_energy_to_power_ratio_constraints(n: pypsa.Network) -> None:
 
     if indices_charger_p_nom_extendable.empty or indices_stores_e_nom_extendable.empty:
         logger.warning(
-            "No valid extendable charger links or stores found for TES energy to power constraints."
+            "No valid extendable charger links or stores found for TES energy-to-power constraints. Not enforcing TES energy-to-power ratio constraints!"
         )
         return
 
@@ -967,7 +973,7 @@ def add_TES_charger_ratio_constraints(n: pypsa.Network) -> None:
         or indices_discharger_p_nom_extendable.empty
     ):
         logger.warning(
-            "No valid extendable TES discharger or charger links found for TES charger ratio constraints."
+            "No valid extendable TES discharger or charger links found for TES charger ratio constraints. Not enforcing TES charger_ratio constraints."
         )
         return
 
