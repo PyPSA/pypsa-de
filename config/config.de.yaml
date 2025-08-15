@@ -51,6 +51,7 @@ iiasa_database:
   uba_for_mobility: false # For 2025–2035 use MWMS scenario from UBA Projektionsbericht 2025
   uba_for_industry: false # For 2025–2035 use MWMS scenario from UBA Projektionsbericht 2025
   scale_industry_non_energy: false # Scale non-energy industry demand directly proportional to energy demand
+
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#foresight
 foresight: myopic
 
@@ -316,6 +317,11 @@ sector:
     rural: true
   co2_spatial: true
   biomass_spatial: true
+  ammonia: false
+  methanol:
+    methanol_to_power:
+      ocgt: false
+    biomass_to_methanol: false
   #relax so no infeasibility in 2050 with no land transport demand
   min_part_load_fischer_tropsch: 0.
   regional_oil_demand: true  #set to true if regional CO2 constraints needed
@@ -326,6 +332,7 @@ sector:
   biogas_upgrading_cc: true
   biomass_to_liquid: true
   biomass_to_liquid_cc: true
+  electrobiofuels: false
   cluster_heat_buses: true
   # calculated based on ariadne "Stock|Space Heating"
   # and then 2% of buildings renovated per year to reduce their demand by 80%
@@ -365,7 +372,6 @@ sector:
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#industry
 industry:
-  ammonia: false
   steam_biomass_fraction: 0.4
   steam_hydrogen_fraction: 0.3
   steam_electricity_fraction: 0.3
