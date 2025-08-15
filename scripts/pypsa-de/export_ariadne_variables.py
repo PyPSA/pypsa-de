@@ -4437,7 +4437,7 @@ def get_economy(n, region):
 
         return tsc
 
-    def get_link_opex(n, carriers, region, sw):
+    def get_link_opex(n, carriers, region, sw, add_congestion_rent=False):
         # get flow of electricity/hydrogen...
         # multiply it with the marginal costs
         supplying = n.links[
@@ -4456,6 +4456,10 @@ def get_economy(n, region):
         for index in supplying:
             # price of energy in trade country
             marg_price = n.buses_t.marginal_price[n.links.loc[index].bus0]
+            if add_congestion_rent:
+                marg_price = (
+                    marg_price + n.buses_t.marginal_price[n.links.loc[index].bus1]
+                ) / 2
             trade = n.links_t.p1[index].mul(sw)
             trade_out += marg_price.mul(trade).sum()
 
@@ -4463,13 +4467,17 @@ def get_economy(n, region):
         for index in receiving:
             # price of energy in Germany
             marg_price = n.buses_t.marginal_price[n.links.loc[index].bus0]
+            if add_congestion_rent:
+                marg_price = (
+                    marg_price + n.buses_t.marginal_price[n.links.loc[index].bus1]
+                ) / 2
             trade = n.links_t.p1[index].mul(sw)
             trade_in += marg_price.mul(trade).sum()
         return abs(trade_in) - abs(trade_out)
         # > 0: costs for Germany
         # < 0: profit for Germany
 
-    def get_line_opex(n, region, sw):
+    def get_line_opex(n, region, sw, add_congestion_rent=False):
         supplying = n.lines[
             (n.lines.carrier.isin(["AC"]))
             & (n.lines.bus0.str.startswith(region))
@@ -4489,9 +4497,11 @@ def get_economy(n, region):
             trade_in = trade.clip(upper=0)  # negative
             marg_price_DE = n.buses_t.marginal_price[n.lines.loc[index].bus0]
             marg_price_EU = n.buses_t.marginal_price[n.lines.loc[index].bus1]
-            net_out += (
-                trade_out.mul(marg_price_DE).sum() + trade_in.mul(marg_price_EU).sum()
-            )
+            price_out = marg_price_DE
+            price_in = marg_price_EU
+            if add_congestion_rent:
+                price_out = price_in = (marg_price_DE + marg_price_EU) / 2
+            net_out += trade_out.mul(price_out).sum() + trade_in.mul(price_in).sum()
             # net_out > 0: Germany is exporting more electricity
             # net_out < 0: Germany is importing more electricity
 
@@ -4503,9 +4513,11 @@ def get_economy(n, region):
             trade_out = trade_out.clip(upper=0)
             marg_price_EU = n.buses_t.marginal_price[n.lines.loc[index].bus0]
             marg_price_DE = n.buses_t.marginal_price[n.lines.loc[index].bus1]
-            net_in += (
-                trade_in.mul(marg_price_EU).sum() + trade_out.mul(marg_price_DE).sum()
-            )
+            price_out = marg_price_DE
+            price_in = marg_price_EU
+            if add_congestion_rent:
+                price_out = price_in = (marg_price_DE + marg_price_EU) / 2
+            net_in += trade_in.mul(price_in).sum() + trade_out.mul(price_out).sum()
             # net_in > 0: Germany is importing more electricity
             # net_in < 0: Germany is exporting more electricity
 
@@ -4515,7 +4527,8 @@ def get_economy(n, region):
         "DC",
         "H2 pipeline",
         "H2 pipeline (Kernnetz)",
-        "H2 pipeline retrofittedrenewable oil",
+        "H2 pipeline retrofitted",
+        "renewable oil",
         "renewable gas",
         "methanol",
     ]
