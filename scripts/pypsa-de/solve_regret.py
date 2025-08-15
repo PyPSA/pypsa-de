@@ -213,7 +213,10 @@ if __name__ == "__main__":
 
     if snakemake.params.scope_to_fix == "EU":
         logger.info(
-            f"Fixing Scope EU chosen. Setting the CO2 price to the price from the realization network to avoid infeasibilities: {realization.global_constraints.loc['CO2Limit', 'mu']} €/t_CO2"
+            f"Fixing Scope 'EU' chosen. Setting the CO2 price to the price from the realization network to avoid infeasibilities: {realization.global_constraints.loc['CO2Limit', 'mu']} €/t_CO2"
+        )
+        logger.warning(
+            "Please make sure that the long-term run with unchanged demand is consistent with the short-term run."
         )
         n.add(
             "Generator",
@@ -243,11 +246,23 @@ if __name__ == "__main__":
     logger.info(f"Maximum memory usage: {mem.mem_usage}")
 
     n.meta = dict(snakemake.config, **dict(wildcards=dict(snakemake.wildcards)))
-    n.export_to_netcdf(snakemake.output.regret_network)
+
+    constraint_diff = (
+        (decision.global_constraints.mu - n.global_constraints.mu)
+        .round(2)
+        .sort_values()
+    )
 
     logger.info(
         "Difference in global constraints (decision - regret_network): %s",
-        (decision.global_constraints.mu - n.global_constraints.mu)
-        .round(2)
-        .sort_values(),
+        constraint_diff,
     )
+
+    if snakemake.input.realization == snakemake.input.decision:
+        if abs(constraint_diff["CO2Limit"]) > 1:
+            logger.error(
+                "Difference in CO2 price between long-term and short-term model is too high: %s",
+                constraint_diff["CO2Limit"],
+            )
+
+    n.export_to_netcdf(snakemake.output.regret_network)

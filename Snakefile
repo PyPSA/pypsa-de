@@ -985,7 +985,7 @@ rule solve_regret:
         ),
         custom_extra_functionality=input_custom_extra_functionality,
         energy_year=config_provider("energy", "energy_totals_year"),
-        #regret_run=True,
+        scope_to_fix=config_provider("iiasa_database", "regret_run", "scope_to_fix"),
     input:
         decision=RESULTS.replace("{run}", "{decision}")
         + "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
