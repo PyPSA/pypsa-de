@@ -4538,6 +4538,32 @@ def get_economy(n, region):
     trade_costs = get_link_opex(n, trade_carriers, region, sw) + get_line_opex(
         n, region, sw
     )
+    var["Cost|Total Energy System Cost|Trade"] = trade_costs / 1e9
+    var["Cost|Total Energy System Cost|Trade|Electricity"] = (
+        get_line_opex(n, region, sw) / 1e9 + get_link_opex(n, ["DC"], region, sw) / 1e9
+    )
+    var["Cost|Total Energy System Cost|Trade|Efuels"] = (
+        get_link_opex(n, ["renewable oil", "renewable gas", "methanol"], region, sw)
+        / 1e9
+    )
+    var["Cost|Total Energy System Cost|Trade|Hydrogen"] = (
+        get_link_opex(
+            n,
+            ["H2 pipeline", "H2 pipeline (Kernnetz)", "H2 pipeline retrofitted"],
+            region,
+            sw,
+        )
+        / 1e9
+    )
+    if not isclose(
+        var["Cost|Total Energy System Cost|Trade"],
+        var["Cost|Total Energy System Cost|Trade|Electricity"]
+        + var["Cost|Total Energy System Cost|Trade|Efuels"]
+        + var["Cost|Total Energy System Cost|Trade|Hydrogen"],
+    ):
+        logger.error(
+            "Total Energy System Cost|Trade does not equal the sum of its components. This should be fixed!"
+        )
 
     # Cost|Total Energy System Cost in billion EUR2020/yr
     var["Cost|Total Energy System Cost"] = round((tsc + trade_costs) / 1e9, 4)
