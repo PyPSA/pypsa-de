@@ -9,7 +9,9 @@ from scripts.prepare_sector_network import determine_emission_sectors
 logger = logging.getLogger(__name__)
 
 
-def add_capacity_limits(n, investment_year, limits_capacity, sense="maximum"):
+def add_capacity_limits(
+    n, investment_year, limits_capacity, snakemake, sense="maximum"
+):
     for c in n.iterate_components(limits_capacity):
         logger.info(f"Adding {sense} constraints for {c.list_name}")
 
@@ -45,12 +47,27 @@ def add_capacity_limits(n, investment_year, limits_capacity, sense="maximum"):
                 logger.info(
                     f"Existing {c.name} {carrier} capacity in {ct}: {existing_capacity} {units}"
                 )
-
+                if extendable_index.empty:
+                    logger.warning(
+                        f"No extendable {c.name} {carrier} capacities found in {ct}. Skipping."
+                    )
+                    continue
                 nom = n.model[c.name + "-" + attr + "_nom"].loc[extendable_index]
 
                 lhs = nom.sum()
 
                 cname = f"capacity_{sense}-{ct}-{c.name}-{carrier.replace(' ', '-')}"
+
+                if snakemake.params.get("regret_run"):
+                    logger.info(
+                        f"Skipping capacity limit adjustment for {c.name} {carrier} with planning horizons {investment_year}, because of regret run."
+                    )
+                    if cname in n.global_constraints.index:
+                        logger.warning(
+                            f"Global constraint {cname} already exists. Dropping it."
+                        )
+                        n.global_constraints.drop(cname, inplace=True)
+                    continue
 
                 if cname in n.global_constraints.index:
                     logger.warning(
@@ -535,6 +552,75 @@ def add_national_co2_budgets(n, snakemake, national_co2_budgets, investment_year
         )
 
 
+def add_decentral_heat_pump_budgets(n, decentral_heat_pump_budgets, investment_year):
+    carriers = [
+        "rural air heat pump",
+        "rural ground heat pump",
+        "urban decentral air heat pump",
+        "rural resistive heater",
+        "urban decentral resistive heater",
+    ]
+
+    heat_pumps = n.links.index[n.links.carrier.isin(carriers)]
+
+    if heat_pumps.empty:
+        logger.warning(
+            "No heat pumps found in the network. Skipping decentral heat pump budgets."
+        )
+        return
+
+    if investment_year not in decentral_heat_pump_budgets["DE"].keys():
+        logger.warning(
+            f"No decentral heat pump budget for {investment_year} found in the config file. Skipping."
+        )
+        return
+
+    logger.info("Adding decentral heat pump budgets")
+
+    for ct in decentral_heat_pump_budgets:
+        if ct != "DE":
+            logger.error(
+                f"Heat pump budget for countries other than `DE` is not yet supported. Found country {ct}. Please check the config file."
+            )
+
+        limit = decentral_heat_pump_budgets[ct][investment_year] * 1e6
+
+        logger.info(
+            f"Limiting decentral heat pump electricity consumption in country {ct} to {decentral_heat_pump_budgets[ct][investment_year]:.1%} MWh.",
+        )
+        heat_pumps = heat_pumps[heat_pumps.str.startswith(ct)]
+
+        lhs = []
+
+        lhs.append(
+            (
+                n.model["Link-p"].loc[:, heat_pumps] * n.snapshot_weightings.generators
+            ).sum()
+        )
+
+        lhs = sum(lhs)
+
+        cname = f"decentral_heat_pump_limit-{ct}"
+        if cname in n.global_constraints.index:
+            logger.warning(
+                f"Global constraint {cname} already exists. Dropping and adding it again."
+            )
+            n.global_constraints.drop(cname, inplace=True)
+
+        n.model.add_constraints(
+            lhs <= limit,
+            name=f"GlobalConstraint-{cname}",
+        )
+        n.add(
+            "GlobalConstraint",
+            cname,
+            constant=limit,
+            sense="<=",
+            type="",
+            carrier_attribute="",
+        )
+
+
 def force_boiler_profiles_existing_per_load(n):
     """
     This scales the boiler dispatch to the load profile with a factor common to
@@ -729,6 +815,21 @@ def adapt_nuclear_output(n):
     )
 
 
+def add_empty_co2_atmosphere_store_constraint(n):
+    """
+    Ensures that the CO2 atmosphere store at the last snapshot is empty.
+    """
+    logger.info(
+        "Adding constraint for empty CO2 atmosphere store at the last snapshot."
+    )
+    cname = "empty_co2_atmosphere_store"
+
+    last_snapshot = n.snapshots.values[-1]
+    lhs = n.model["Store-e"].loc[last_snapshot, "co2 atmosphere"]
+
+    n.model.add_constraints(lhs == 0, name=cname)
+
+
 def additional_functionality(n, snapshots, snakemake):
     logger.info("Adding Ariadne-specific functionality")
 
@@ -736,11 +837,11 @@ def additional_functionality(n, snapshots, snakemake):
     constraints = snakemake.params.solving["constraints"]
 
     add_capacity_limits(
-        n, investment_year, constraints["limits_capacity_min"], "minimum"
+        n, investment_year, constraints["limits_capacity_min"], snakemake, "minimum"
     )
 
     add_capacity_limits(
-        n, investment_year, constraints["limits_capacity_max"], "maximum"
+        n, investment_year, constraints["limits_capacity_max"], snakemake, "maximum"
     )
 
     add_power_limits(n, investment_year, constraints["limits_power_max"])
@@ -773,5 +874,18 @@ def additional_functionality(n, snapshots, snakemake):
     else:
         logger.warning("No national CO2 budget specified!")
 
+    if isinstance(constraints.get("decentral_heat_pump_budgets"), dict):
+        add_decentral_heat_pump_budgets(
+            n,
+            constraints["decentral_heat_pump_budgets"],
+            investment_year,
+        )
+
     if investment_year == 2020:
         adapt_nuclear_output(n)
+
+    if "co2 atmosphere" in n.generators.index:
+        logger.warning(
+            "CO2 atmosphere generator found. Adding constraint for empty CO2 atmosphere store at the last snapshot."
+        )
+        add_empty_co2_atmosphere_store_constraint(n)

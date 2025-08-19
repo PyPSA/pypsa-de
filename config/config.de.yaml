@@ -4,10 +4,12 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20250807_merge_july
+  prefix: 20250725_regrets
   name:
   # - ExPol
-  - KN2045_Mix
+  # - KN2045_Mix
+  - AriadneDemand
+  - LowDemand
   # - KN2045_Elek
   # - KN2045_H2
   # - KN2045_NFniedrig
@@ -43,8 +45,12 @@ iiasa_database:
   - KN2045_NFhoch
   reference_scenario: KN2045_Mix
   region: Deutschland
+  regret_run:
+    scope_to_fix: DE # Supported values are DE and EU
   ageb_for_mobility: true # In 2020 use AGEB data for final energy demand and KBA for vehicles
   uba_for_mobility: false # For 2025–2035 use MWMS scenario from UBA Projektionsbericht 2025
+  uba_for_industry: false # For 2025–2035 use MWMS scenario from UBA Projektionsbericht 2025
+  scale_industry_non_energy: false # Scale non-energy industry demand directly proportional to energy demand
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#foresight
 foresight: myopic
@@ -52,8 +58,6 @@ foresight: myopic
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#scenario
 # Wildcard docs in https://pypsa-eur.readthedocs.io/en/latest/wildcards.html
 scenario:
-  ll:
-  - vopt
   clusters:
   - 27 #current options: 27, 49
   opts:
@@ -61,17 +65,17 @@ scenario:
   sector_opts:
   - none
   planning_horizons:
-  - 2020
+  #- 2020
   - 2025
   - 2030
   - 2035
-  - 2040
-  - 2045
-  - 2050
+  # - 2040
+  # - 2045
+  # - 2050
 
 existing_capacities:
-  grouping_years_power: [1920, 1950, 1955, 1960, 1965, 1970, 1975, 1980, 1985, 1990, 1995, 2000, 2005, 2010, 2015, 2020]
-  grouping_years_heat: [1980, 1985, 1990, 1995, 2000, 2005, 2010, 2015, 2019] # heat grouping years >= baseyear will be ignored
+  grouping_years_power: [1920, 1950, 1955, 1960, 1965, 1970, 1975, 1980, 1985, 1990, 1995, 2000, 2005, 2010, 2015, 2020, 2025]
+  grouping_years_heat: [1980, 1985, 1990, 1995, 2000, 2005, 2010, 2015, 2020, 2024] # heat grouping years >= baseyear will be ignored
   fill_value_gas_chp_lifetime: 40 # if no explicit lifetime is given use 40 years. The number was chosen s.t. the existing capacities in 2020 match with statistics.
 
 
@@ -436,11 +440,11 @@ solving:
   options:
     assign_all_duals: true
     load_shedding: false
-    skip_iterations: true # settings for post-discretization: false
+    skip_iterations: false # settings for post-discretization: false
     min_iterations: 1 # settings for post-discretization: 1
     max_iterations: 1 # settings for post-discretization: 1
     post_discretization:
-      enable: false
+      enable: true
       line_unit_size: 1698
       line_threshold: 0.3
       link_unit_size:
@@ -482,7 +486,7 @@ solving:
         offwind:
           DE:
             2020: 7.8
-            2025: 11.3
+            2025: 12
             2030: 29.3 # uba Projektionsbericht and NEP without delayed BalWin 3
             2035: 50 # Planned projects until 2035 (offshore_connection_points.csv) -1.3 GW for potential delays
             2040: 65   # Planned projects until 2040 -1.5 GW for potential retirments
