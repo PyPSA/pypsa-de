@@ -43,8 +43,8 @@ CDIR = Path(cutout_dir).joinpath("" if run["shared_cutouts"] else RDIR)
 RESULTS = "results/" + RDIR
 
 run_prefix = config["run"]["prefix"]
-regret_scenarios   = ["AriadneDemand", "LowDemand"]
-horizons    = [2025, 2030, 2035]
+regret_scenarios = ["AriadneDemand", "LowDemand"]
+horizons = [2025, 2030, 2035]
 
 
 localrules:
@@ -1081,9 +1081,8 @@ rule regret_all:
             decision=config_provider("run", "name"),
             **config["scenario"],
         ),
-        elec_capa_comp_de_2025 = f"results/{run_prefix}/regret_plots/Ariadne_vs_LowDemand_LT/elec_capa_comp_de_2025.png",
-        elec_price_comp_de = f"results/{run_prefix}/regret_plots/Ariadne_vs_LowDemand/elec_price_comp_de.png",
-
+        elec_capa_comp_de_2025=f"results/{run_prefix}/regret_plots/Ariadne_vs_LowDemand_LT/elec_capa_comp_de_2025.png",
+        elec_price_comp_de=f"results/{run_prefix}/regret_plots/Ariadne_vs_LowDemand/elec_price_comp_de.png",
 
 
 rule regret_all_variables:
@@ -1103,11 +1102,11 @@ rule regret_plots_lt:
         planning_horizons=config_provider("scenario", "planning_horizons"),
         plotting=config_provider("plotting"),
     input:
-        networks = expand(
+        networks=expand(
             "results/{run}/{scenario}/networks/base_s_27__none_{year}.nc",
             run=run_prefix,
             scenario=regret_scenarios,
-            year=horizons
+            year=horizons,
         ),
         regret_variables=expand(
             "results/{run}/{scenario}/regret_variables/regret_variables_{scenario}_full.xlsx",
@@ -1115,10 +1114,11 @@ rule regret_plots_lt:
             scenario=regret_scenarios,
         ),
     output:
-        elec_capa_comp_de_2025 = f"results/{run_prefix}/regret_plots/Ariadne_vs_LowDemand_LT/elec_capa_comp_de_2025.png",
+        elec_capa_comp_de_2025=f"results/{run_prefix}/regret_plots/Ariadne_vs_LowDemand_LT/elec_capa_comp_de_2025.png",
         dir=directory(f"results/{run_prefix}/regret_plots/Ariadne_vs_LowDemand_LT"),
     script:
         "scripts/pypsa-de/regret_plots_lt.py"
+
 
 rule regret_plots:
     params:
@@ -1134,7 +1134,7 @@ rule regret_plots:
             **config["scenario"],
         ),
     output:
-        elec_price_comp_de = f"results/{run_prefix}/regret_plots/Ariadne_vs_LowDemand/elec_price_comp_de.png",
+        elec_price_comp_de=f"results/{run_prefix}/regret_plots/Ariadne_vs_LowDemand/elec_price_comp_de.png",
         dir=directory(f"results/{run_prefix}/regret_plots/Ariadne_vs_LowDemand"),
     script:
         "scripts/pypsa-de/regret_plots.py"
