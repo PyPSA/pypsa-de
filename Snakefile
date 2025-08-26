@@ -42,6 +42,10 @@ cutout_dir = config["atlite"]["cutout_directory"]
 CDIR = Path(cutout_dir).joinpath("" if run["shared_cutouts"] else RDIR)
 RESULTS = "results/" + RDIR
 
+run_prefix = config["run"]["prefix"]
+regret_scenarios   = ["AriadneDemand", "LowDemand"]
+horizons    = [2025, 2030, 2035]
+
 
 localrules:
     purge,
@@ -1077,6 +1081,9 @@ rule regret_all:
             decision=config_provider("run", "name"),
             **config["scenario"],
         ),
+        elec_capa_comp_de_2025 = f"results/{run_prefix}/regret_plots/Ariadne_vs_LowDemand_LT/elec_capa_comp_de_2025.png",
+        elec_price_comp_de = f"results/{run_prefix}/regret_plots/Ariadne_vs_LowDemand/elec_price_comp_de.png",
+
 
 
 rule regret_all_variables:
@@ -1088,3 +1095,46 @@ rule regret_all_variables:
         ),
     script:
         "scripts/pypsa-de/plot_scenario_comparison.py"
+
+
+rule regret_plots_lt:
+    params:
+        scenarios=get_scenarios(run),
+        planning_horizons=config_provider("scenario", "planning_horizons"),
+        plotting=config_provider("plotting"),
+    input:
+        networks = expand(
+            "results/{run}/{scenario}/networks/base_s_27__none_{year}.nc",
+            run=run_prefix,
+            scenario=regret_scenarios,
+            year=horizons
+        ),
+        regret_variables=expand(
+            "results/{run}/{scenario}/regret_variables/regret_variables_{scenario}_full.xlsx",
+            run=run_prefix,
+            scenario=regret_scenarios,
+        ),
+    output:
+        elec_capa_comp_de_2025 = f"results/{run_prefix}/regret_plots/Ariadne_vs_LowDemand_LT/elec_capa_comp_de_2025.png",
+        dir=directory(f"results/{run_prefix}/regret_plots/Ariadne_vs_LowDemand_LT"),
+    script:
+        "scripts/pypsa-de/regret_plots_lt.py"
+
+rule regret_plots:
+    params:
+        scenarios=get_scenarios(run),
+        planning_horizons=config_provider("scenario", "planning_horizons"),
+        plotting=config_provider("plotting"),
+    input:
+        regret_networks=expand(
+            "results/{run}/{scenario}/regret_networks/decision_{decision}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
+            run=run_prefix,
+            scenario=regret_scenarios,
+            decision=config_provider("run", "name"),
+            **config["scenario"],
+        ),
+    output:
+        elec_price_comp_de = f"results/{run_prefix}/regret_plots/Ariadne_vs_LowDemand/elec_price_comp_de.png",
+        dir=directory(f"results/{run_prefix}/regret_plots/Ariadne_vs_LowDemand"),
+    script:
+        "scripts/pypsa-de/regret_plots.py"
