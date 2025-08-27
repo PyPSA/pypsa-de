@@ -105,9 +105,8 @@ if __name__ == "__main__":
         networks[year][scenario][decision] = pypsa.Network(fn)
 
     # ensure output directory exist
-    for dir in snakemake.output[-1]:
-        if not os.path.exists(dir):
-            os.makedirs(dir)
+    if not os.path.exists(snakemake.output[-1]):
+        os.makedirs(snakemake.output[-1])
 
     # Plot electricity price duration curves
 
