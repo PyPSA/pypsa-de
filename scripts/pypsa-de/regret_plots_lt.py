@@ -93,8 +93,8 @@ def plot_capacity_comparison(
 
     # Build plotting table
     if plot_diff:
-        # signed difference (compare - base)
-        diff = (df[cmp_name] - df[base_name]).rename("Diff").to_frame()
+        # signed difference (base - compare)
+        diff = (df[base_name].abs() - df[cmp_name].abs()).rename("Diff").to_frame()
         df_plot_supply = diff.loc[supply_order.intersection(diff.index)]
         df_plot_demand = diff.loc[demand_order.intersection(diff.index)]
         plot_columns = ["Diff"]
@@ -189,7 +189,7 @@ def plot_capacity_comparison(
             mpatches.Patch(
                 facecolor="white",
                 edgecolor="black",
-                label=f"{cmp_name} – {base_name}",
+                label=f"{base_name} - {cmp_name}",
             )
         ]
         ax.legend(handles=handles, title="Difference")
