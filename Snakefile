@@ -1116,6 +1116,8 @@ rule regret_plots_lt:
     output:
         elec_capa_comp_de_2025=f"results/{run_prefix}/regret_plots/Ariadne_vs_LowDemand_LT/elec_capa_comp_de_2025.png",
         dir=directory(f"results/{run_prefix}/regret_plots/Ariadne_vs_LowDemand_LT"),
+    resources:
+        mem_mb=32000,
     script:
         "scripts/pypsa-de/regret_plots_lt.py"
 
@@ -1136,5 +1138,7 @@ rule regret_plots:
     output:
         elec_price_comp_de=f"results/{run_prefix}/regret_plots/Ariadne_vs_LowDemand/elec_price_comp_de.png",
         dir=directory(f"results/{run_prefix}/regret_plots/Ariadne_vs_LowDemand"),
+    resources:
+        mem_mb=32000,
     script:
         "scripts/pypsa-de/regret_plots.py"
