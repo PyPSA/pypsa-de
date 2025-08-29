@@ -397,7 +397,7 @@ def unravel_carbonaceous_fuels(n):
         carrier="renewable oil",
         p_nom=1e6,
         p_min_pu=0,
-        marginal_cost=0.01,
+        marginal_cost=1,
     )
 
     if snakemake.params.efuel_export_ban:
@@ -479,7 +479,7 @@ def unravel_carbonaceous_fuels(n):
         carrier="methanol",
         p_nom=1e6,
         p_min_pu=0,
-        marginal_cost=0.01,
+        marginal_cost=1,
     )
 
     if snakemake.params.efuel_export_ban:
@@ -702,7 +702,7 @@ def unravel_gasbus(n, costs):
         carrier="renewable gas",
         p_nom=1e6,
         p_min_pu=0,
-        marginal_cost=0.01,
+        marginal_cost=1,
     )
 
     if snakemake.params.efuel_export_ban:
