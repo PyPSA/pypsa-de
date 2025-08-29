@@ -4331,11 +4331,56 @@ def get_policy(n, investment_year):
         -co2_limit_eu + co2_price_add_on
     )
 
-    # Price|Carbon|EU-wide Regulation Non-ETS
-
     var["Price|Carbon|National Climate Target"] = -co2_limit_de
 
-    # Price|Carbon|National Climate Target Non-ETS
+    try:
+        var["Price|Policy|Electricity Import Independence"] = n.global_constraints.loc[
+            "Electricity_import_limit-DE", "mu"
+        ]
+    except KeyError:
+        var["Price|Policy|Electricity Import Independence"] = 0
+
+    try:
+        var["Price|Policy|Hydrogen Import Independence"] = n.global_constraints.loc[
+            "H2_import_limit-DE", "mu"
+        ]
+    except KeyError:
+        var["Price|Policy|Hydrogen Import Independence"] = 0
+
+    try:
+        var["Price|Policy|Methanol Import Independence"] = n.global_constraints.loc[
+            "methanol_import_limit-DE", "mu"
+        ]
+    except KeyError:
+        var["Price|Policy|Methanol Import Independence"] = 0
+
+    try:
+        var["Price|Policy|Hydrogen Export Ban"] = n.global_constraints.loc[
+            "H2_export_ban-DE", "mu"
+        ]
+    except KeyError:
+        var["Price|Policy|Hydrogen Export Ban"] = 0
+
+    try:
+        var["Price|Policy|Renewable Oil Import Independence"] = (
+            n.global_constraints.loc["renewable_oil_import_limit-DE", "mu"]
+        )
+    except KeyError:
+        var["Price|Policy|Renewable Oil Import Independence"] = 0
+
+    try:
+        var["Price|Policy|Renewable Gas Import Independence"] = (
+            n.global_constraints.loc["renewable_gas_import_limit-DE", "mu"]
+        )
+    except KeyError:
+        var["Price|Policy|Renewable Gas Import Independence"] = 0
+
+    try:
+        var["Price|Policy|Hydrogen Derivate Import Independence"] = (
+            n.global_constraints.loc["H2_derivate_import_limit-DE", "mu"]
+        )
+    except KeyError:
+        var["Price|Policy|Hydrogen Derivate Import Independence"] = 0
 
     return var
 
