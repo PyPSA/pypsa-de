@@ -19,7 +19,12 @@ from shapely import wkt
 from shapely.geometry import LineString, Point, Polygon
 from shapely.ops import nearest_points
 
-from scripts._helpers import configure_logging, mock_snakemake
+from scripts._helpers import (
+    configure_logging,
+    mock_snakemake,
+    set_scenario_config,
+    update_config_from_wildcards,
+)
 from scripts.build_gas_network import diameter_to_capacity
 
 logger = logging.getLogger(__name__)
@@ -563,6 +568,9 @@ if __name__ == "__main__":
         snakemake = mock_snakemake("build_wasserstoff_kernnetz")
 
     configure_logging(snakemake)
+    set_scenario_config(snakemake)
+    update_config_from_wildcards(snakemake.config, snakemake.wildcards)
+
     kernnetz_cf = snakemake.params.kernnetz
 
     logger.info("Collecting raw data from FNB Gas")
