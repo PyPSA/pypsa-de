@@ -34,7 +34,11 @@ if __name__ == "__main__":
         )
 
     dfs = []
-    for file in snakemake.input.exported_variables:
+    fns = snakemake.input.exported_variables
+    if "regret_variables" in fns[0]:
+        # reorder indices of fns as 0312
+        fns = [fns[i] for i in [0, 3, 2, 1] if i < len(fns)]
+    for file in fns:
         _df = pd.read_excel(
             file, index_col=list(range(5)), sheet_name="data"
         ).droplevel(["Model", "Region"])
