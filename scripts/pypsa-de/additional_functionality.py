@@ -58,17 +58,6 @@ def add_capacity_limits(
 
                 cname = f"capacity_{sense}-{ct}-{c.name}-{carrier.replace(' ', '-')}"
 
-                if snakemake.params.get("regret_run"):
-                    logger.info(
-                        f"Skipping capacity limit adjustment for {c.name} {carrier} with planning horizons {investment_year}, because of regret run."
-                    )
-                    if cname in n.global_constraints.index:
-                        logger.warning(
-                            f"Global constraint {cname} already exists. Dropping it."
-                        )
-                        n.global_constraints.drop(cname, inplace=True)
-                    continue
-
                 if cname in n.global_constraints.index:
                     logger.warning(
                         f"Global constraint {cname} already exists. Dropping and adding it again."
@@ -842,43 +831,45 @@ def additional_functionality(n, snapshots, snakemake):
     investment_year = int(snakemake.wildcards.planning_horizons[-4:])
     constraints = snakemake.params.solving["constraints"]
 
-    add_capacity_limits(
-        n, investment_year, constraints["limits_capacity_min"], snakemake, "minimum"
-    )
-
-    add_capacity_limits(
-        n, investment_year, constraints["limits_capacity_max"], snakemake, "maximum"
-    )
-
-    add_power_limits(n, investment_year, constraints["limits_power_max"])
-
-    if snakemake.wildcards.clusters != "1":
-        h2_import_limits(n, investment_year, constraints["limits_volume_max"])
-
-        electricity_import_limits(n, investment_year, constraints["limits_volume_max"])
-
-    if investment_year >= 2025:
-        h2_production_limits(
-            n,
-            investment_year,
-            constraints["limits_volume_min"],
-            constraints["limits_volume_max"],
+    if not snakemake.config.get("regret_run"):
+        add_capacity_limits(
+            n, investment_year, constraints["limits_capacity_min"], snakemake, "minimum"
         )
 
-    add_h2_derivate_limit(n, investment_year, constraints["limits_volume_max"])
+        add_capacity_limits(
+            n, investment_year, constraints["limits_capacity_max"], snakemake, "maximum"
+        )
+
+        add_power_limits(n, investment_year, constraints["limits_power_max"])
+
+        if snakemake.wildcards.clusters != "1":
+            h2_import_limits(n, investment_year, constraints["limits_volume_max"])
+
+            electricity_import_limits(
+                n, investment_year, constraints["limits_volume_max"]
+            )
+
+        if investment_year >= 2025:
+            h2_production_limits(
+                n,
+                investment_year,
+                constraints["limits_volume_min"],
+                constraints["limits_volume_max"],
+            )
+        add_h2_derivate_limit(n, investment_year, constraints["limits_volume_max"])
+
+        if isinstance(constraints["co2_budget_national"], dict):
+            add_national_co2_budgets(
+                n,
+                snakemake,
+                constraints["co2_budget_national"],
+                investment_year,
+            )
+        else:
+            logger.warning("No national CO2 budget specified!")
 
     # force_boiler_profiles_existing_per_load(n)
     force_boiler_profiles_existing_per_boiler(n)
-
-    if isinstance(constraints["co2_budget_national"], dict):
-        add_national_co2_budgets(
-            n,
-            snakemake,
-            constraints["co2_budget_national"],
-            investment_year,
-        )
-    else:
-        logger.warning("No national CO2 budget specified!")
 
     if isinstance(constraints.get("decentral_heat_pump_budgets"), dict):
         add_decentral_heat_pump_budgets(

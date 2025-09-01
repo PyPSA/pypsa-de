@@ -177,9 +177,55 @@ if __name__ == "__main__":
     )
     np.random.seed(solve_opts.get("seed", 123))
 
+    strict = False
+
     n = fix_capacities(
-        realization, decision, scope=snakemake.params.scope_to_fix, strict=False
+        realization, decision, scope=snakemake.params.scope_to_fix, strict=strict
     )
+    if strict:
+        snakemake.params.solving["options"]["load_shedding"] = True
+
+    n.add("Carrier", "H2 vent", color="#dd2e23", nice_name="H2 vent")
+
+    n.add(
+        "Generator",
+        n.buses.query("carrier=='H2'").index,
+        " H2 vent",
+        bus=n.buses.query("carrier=='H2'").index,
+        carrier="H2 vent",
+        sign=-1e-3,  # Adjust sign to measure p and p_nom in kW instead of MW
+        marginal_cost=100,  # Eur/kWh
+        p_nom=1e9,  # kW
+    )
+
+    snakemake.config["regret_run"] = True
+
+    if snakemake.config["regret_run"]:
+        constraint_names = [  # TODO assert really everything gets dropped
+            "H2_production_limit_upper-DE",
+            "H2_production_limit_lower-DE",
+            "capacity_minimum-DE-Generator-solar",
+            "capacity_maximum-DE-Generator-onwind",
+            "capacity_maximum-DE-Generator-offwind",
+            "capacity_maximum-DE-Generator-solar",
+            "capacity_maximum-DE-Store-co2-sequestered",
+            "capacity_maximum-DE-Link-HVC-to-air",
+            "H2_import_limit-DE",
+            "H2_export_ban-DE",
+            "Electricity_import_limit-DE",
+            "renewable_oil_import_limit-DE",
+            "methanol_import_limit-DE",
+            "renewable_gas_import_limit-DE",
+            "H2_derivate_import_limit-DE",
+            "H2_derivate_meoh_gas_import_limit-DE",
+            "H2_derivate_oil_meoh_import_limit-DE",
+            "H2_derivate_oil_meoh_gas_import_limit-DE",
+            "H2_derivate_oil_gas_import_limit-DE",
+        ]
+        logger.info("Regret run detected. Dropping the following constraints:")
+        logger.info(constraint_names)
+
+        n.global_constraints.drop(constraint_names, errors="ignore", inplace=True)
 
     if solve_opts["post_discretization"].get("enable") and not solve_opts.get(
         "skip_iterations"
@@ -221,9 +267,13 @@ if __name__ == "__main__":
             p_max_pu=0,
             p_nom_extendable=True,
             carrier="co2",
-            marginal_cost=realization.global_constraints.loc["CO2Limit", "mu"],
+            marginal_cost=(
+                realization.global_constraints.loc["CO2Limit", "mu"]
+                + realization.global_constraints.loc["co2_limit-DE", "mu"]
+            ),
         )
         n.global_constraints.drop("CO2Limit", inplace=True)
+        n.global_constraints.drop("co2_limit-DE", inplace=True)
 
     with memory_logger(
         filename=getattr(snakemake.log, "memory", None), interval=logging_frequency
