@@ -71,9 +71,6 @@ dependencies:
 - ruff
 - pylint
 
-# Temporary pins
-- ixmp4<0.10.0
-
 - pip:
   - gurobipy
   - highspy
