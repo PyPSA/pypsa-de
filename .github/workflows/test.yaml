@@ -70,7 +70,7 @@ jobs:
         path: |
           data
           cutouts
-          resources/ariadne_database.csv
+          data/ariadne_database.csv
         key: data-cutouts-${{ env.WEEK }}
 
     - uses: conda-incubator/setup-miniconda@v3
