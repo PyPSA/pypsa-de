@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20250807_merge_july
+  prefix: 20250901_h2_deriv_fix
   name:
   # - ExPol
   - KN2045_Mix
