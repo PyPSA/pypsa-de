@@ -152,8 +152,8 @@ if __name__ == "__main__":
             clusters=27,
             opts="",
             sector_opts="none",
-            planning_horizons="2035",
-            decision="AriadneDemand",
+            planning_horizons="2025",
+            decision="LowDemand",
             run="AriadneDemand",
         )
 
@@ -190,13 +190,14 @@ if __name__ == "__main__":
     n.add(
         "Generator",
         n.buses.query("carrier=='H2'").index,
-        " H2 vent",
+        " vent",
         bus=n.buses.query("carrier=='H2'").index,
         carrier="H2 vent",
-        sign=-1e-3,  # Adjust sign to measure p and p_nom in kW instead of MW
-        marginal_cost=100,  # Eur/kWh
-        p_nom=1e9,  # kW
+        sign=-1,
+        marginal_cost=1,
+        p_nom=1e6,
     )
+    # n.generators_t.p[n.generators.query("carrier == 'H2 vent'").index].T.mul(n.snapshot_weightings.generators).T.sum()
 
     snakemake.config["regret_run"] = True
 
@@ -280,23 +281,5 @@ if __name__ == "__main__":
     logger.info(f"Maximum memory usage: {mem.mem_usage}")
 
     n.meta = dict(snakemake.config, **dict(wildcards=dict(snakemake.wildcards)))
-
-    constraint_diff = (
-        (decision.global_constraints.mu - n.global_constraints.mu)
-        .round(2)
-        .sort_values()
-    )
-
-    logger.info(
-        "Difference in global constraints (decision - regret_network): %s",
-        constraint_diff,
-    )
-
-    if snakemake.input.realization == snakemake.input.decision:
-        if abs(constraint_diff["CO2Limit"]) > 1:
-            logger.error(
-                "Difference in CO2 price between long-term and short-term model is too high: %s",
-                constraint_diff["CO2Limit"],
-            )
 
     n.export_to_netcdf(snakemake.output.regret_network)
