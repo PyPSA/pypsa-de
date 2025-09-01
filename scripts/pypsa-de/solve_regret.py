@@ -201,31 +201,20 @@ if __name__ == "__main__":
     snakemake.config["regret_run"] = True
 
     if snakemake.config["regret_run"]:
-        constraint_names = [  # TODO assert really everything gets dropped
-            "H2_production_limit_upper-DE",
-            "H2_production_limit_lower-DE",
-            "capacity_minimum-DE-Generator-solar",
-            "capacity_maximum-DE-Generator-onwind",
-            "capacity_maximum-DE-Generator-offwind",
-            "capacity_maximum-DE-Generator-solar",
-            "capacity_maximum-DE-Store-co2-sequestered",
-            "capacity_maximum-DE-Link-HVC-to-air",
-            "H2_import_limit-DE",
-            "H2_export_ban-DE",
-            "Electricity_import_limit-DE",
-            "renewable_oil_import_limit-DE",
-            "methanol_import_limit-DE",
-            "renewable_gas_import_limit-DE",
-            "H2_derivate_import_limit-DE",
-            "H2_derivate_meoh_gas_import_limit-DE",
-            "H2_derivate_oil_meoh_import_limit-DE",
-            "H2_derivate_oil_meoh_gas_import_limit-DE",
-            "H2_derivate_oil_gas_import_limit-DE",
+        to_keep = [
+            "biomass limit",
+            "unsustainable biomass limit",
+            "co2_sequestration_limit",
+            "CO2Limit",
+            "co2_limit-DE",
         ]
-        logger.info("Regret run detected. Dropping the following constraints:")
-        logger.info(constraint_names)
 
-        n.global_constraints.drop(constraint_names, errors="ignore", inplace=True)
+        to_drop = n.global_constraints.index.difference(to_keep)
+
+        logger.info("Regret run detected. Dropping the following constraints:")
+        logger.info(to_drop)
+
+        n.global_constraints.drop(to_drop, inplace=True)
 
     if solve_opts["post_discretization"].get("enable") and not solve_opts.get(
         "skip_iterations"
