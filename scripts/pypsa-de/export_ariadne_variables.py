@@ -4619,7 +4619,7 @@ def get_trade(n, region):
         )
 
     exports_oil_renew, imports_oil_renew = get_export_import_links(
-        n, region, ["renewable oil", "methanol"]
+        n, region, ["renewable oil"]
     )
 
     var["Trade|Secondary Energy|Liquids|Biomass|Volume"] = (
