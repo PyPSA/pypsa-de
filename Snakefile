@@ -977,21 +977,40 @@ rule ariadne_report_only:
         ),
 
 
-rule solve_regret:
+rule prepare_regret_network:
     params:
         solving=config_provider("solving"),
         foresight=config_provider("foresight"),
         co2_sequestration_potential=config_provider(
             "sector", "co2_sequestration_potential", default=200
         ),
-        custom_extra_functionality=input_custom_extra_functionality,
-        energy_year=config_provider("energy", "energy_totals_year"),
         scope_to_fix=config_provider("iiasa_database", "regret_run", "scope_to_fix"),
+        h2_vent=config_provider("iiasa_database", "regret_run", "h2_vent"),
+        strict=config_provider("iiasa_database", "regret_run", "strict"),
     input:
         decision=RESULTS.replace("{run}", "{decision}")
         + "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
         realization=RESULTS
         + "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
+    output:
+        regret_prenetwork=RESULTS
+        + "regret_prenetworks/decision_{decision}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
+    log:
+        RESULTS
+        + "logs/regret_prenetwork_{decision}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.log",
+    script:
+        "scripts/pypsa-de/prepare_regret_network.py"
+
+
+rule solve_regret:
+    params:
+        solving=config_provider("solving"),
+        regret_run=True,
+        energy_year=config_provider("energy", "energy_totals_year"),
+        custom_extra_functionality=input_custom_extra_functionality,
+    input:
+        regret_prenetwork=RESULTS
+        + "regret_prenetworks/decision_{decision}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
         co2_totals_name=resources("co2_totals.csv"),
         energy_totals=resources("energy_totals.csv"),
     output:
@@ -1011,7 +1030,7 @@ rule solve_regret:
         mem_mb=config_provider("solving", "mem_mb"),
         runtime=config_provider("solving", "runtime", default="6h"),
     script:
-        "scripts/pypsa-de/solve_regret.py"
+        "scripts/pypsa-de/solve_regret_network.py"
 
 
 rule export_regret_variables:

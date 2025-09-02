@@ -4,14 +4,13 @@ import pathlib
 import numpy as np
 import pypsa
 
-from scripts._benchmark import memory_logger
 from scripts._helpers import (
     configure_logging,
     mock_snakemake,
     set_scenario_config,
     update_config_from_wildcards,
 )
-from scripts.solve_network import prepare_network, solve_network
+from scripts.solve_network import prepare_network
 
 logger = logging.getLogger(__name__)
 
@@ -162,7 +161,7 @@ if __name__ == "__main__":
     update_config_from_wildcards(snakemake.config, snakemake.wildcards)
 
     # Touch output file to ensure it exists
-    pathlib.Path(snakemake.output.regret_network).touch()
+    pathlib.Path(snakemake.output.regret_prenetwork).touch()
 
     realization = pypsa.Network(snakemake.input.realization)
     decision = pypsa.Network(snakemake.input.decision)
@@ -177,50 +176,53 @@ if __name__ == "__main__":
     )
     np.random.seed(solve_opts.get("seed", 123))
 
-    strict = False
+    strict = snakemake.params["strict"]
+    scope_to_fix = snakemake.params["scope_to_fix"]
+    h2_vent = snakemake.params["h2_vent"]
 
-    n = fix_capacities(
-        realization, decision, scope=snakemake.params.scope_to_fix, strict=strict
-    )
+    n = fix_capacities(realization, decision, scope=scope_to_fix, strict=strict)
     if strict:
+        logger.info(
+            "Strict regret run chosen. No capacities are extendable. Activating load shedding to prevent infeasibilites."
+        )
         snakemake.params.solving["options"]["load_shedding"] = True
 
-    n.add("Carrier", "H2 vent", color="#dd2e23", nice_name="H2 vent")
+    if h2_vent:
+        logger.info("H2 venting activated for regret run.")
+        n.add("Carrier", "H2 vent", color="#dd2e23", nice_name="H2 vent")
 
-    n.add(
-        "Generator",
-        n.buses.query("carrier=='H2'").index,
-        " vent",
-        bus=n.buses.query("carrier=='H2'").index,
-        carrier="H2 vent",
-        sign=-1,
-        marginal_cost=1,
-        p_nom=1e6,
-    )
-    # n.generators_t.p[n.generators.query("carrier == 'H2 vent'").index].T.mul(n.snapshot_weightings.generators).T.sum()
+        n.add(
+            "Generator",
+            n.buses.query("carrier=='H2'").index,
+            " vent",
+            bus=n.buses.query("carrier=='H2'").index,
+            carrier="H2 vent",
+            sign=-1,
+            marginal_cost=1,
+            p_nom=1e6,
+        )
+        # n.generators_t.p[n.generators.query("carrier == 'H2 vent'").index].T.mul(n.snapshot_weightings.generators).T.sum()
 
-    snakemake.config["regret_run"] = True
+    # Manipulating the global constraints
+    to_keep = [
+        "biomass limit",
+        "unsustainable biomass limit",
+        "co2_sequestration_limit",
+        "CO2Limit",
+        "co2_limit-DE",
+    ]
 
-    if snakemake.config["regret_run"]:
-        to_keep = [
-            "biomass limit",
-            "unsustainable biomass limit",
-            "co2_sequestration_limit",
-            "CO2Limit",
-            "co2_limit-DE",
-        ]
+    to_drop = n.global_constraints.index.difference(to_keep)
 
-        to_drop = n.global_constraints.index.difference(to_keep)
+    logger.info("Regret run detected. Dropping the following constraints:")
+    logger.info(to_drop)
 
-        logger.info("Regret run detected. Dropping the following constraints:")
-        logger.info(to_drop)
+    n.global_constraints.drop(to_drop, inplace=True)
 
-        n.global_constraints.drop(to_drop, inplace=True)
-
+    # If running with post-discretization the last lines of optimize_transmission_expansion_iteratively have to be undone for the operational run
     if solve_opts["post_discretization"].get("enable") and not solve_opts.get(
         "skip_iterations"
     ):
-        # Undo the last lines of optimize transmission expansion iteratively
         n.lines.s_nom_extendable = False
         n.lines.s_nom = n.lines.s_nom_opt
 
@@ -242,12 +244,11 @@ if __name__ == "__main__":
         regret_run=True,
     )
 
-    if snakemake.params.scope_to_fix == "EU":
+    # These constraints have to be changed AFTER prepare_network
+
+    if scope_to_fix == "EU":
         logger.info(
-            f"Fixing Scope 'EU' chosen. Setting the CO2 price to the price from the realization network to avoid infeasibilities: {realization.global_constraints.loc['CO2Limit', 'mu']} €/t_CO2"
-        )
-        logger.warning(
-            "Please make sure that the long-term run with unchanged demand is consistent with the short-term run."
+            f"Fixing Scope 'EU' chosen. Setting the EU CO2 price to the sum of the EU and DE CO2 prices from the realization network: {realization.global_constraints.loc['CO2Limit', 'mu'] + realization.global_constraints.loc['co2_limit-DE', 'mu']} €/t_CO2"
         )
         n.add(
             "Generator",
@@ -262,24 +263,8 @@ if __name__ == "__main__":
                 + realization.global_constraints.loc["co2_limit-DE", "mu"]
             ),
         )
+        logger.info("Adding negative CO2 generator and dropping co2 limits.")
         n.global_constraints.drop("CO2Limit", inplace=True)
         n.global_constraints.drop("co2_limit-DE", inplace=True)
 
-    with memory_logger(
-        filename=getattr(snakemake.log, "memory", None), interval=logging_frequency
-    ) as mem:
-        solve_network(
-            n,
-            config=snakemake.config,
-            params=snakemake.params,
-            solving=snakemake.params.solving,
-            planning_horizons=planning_horizons,
-            rule_name=snakemake.rule,
-            log_fn=snakemake.log.solver,
-            snakemake=snakemake,
-        )
-    logger.info(f"Maximum memory usage: {mem.mem_usage}")
-
-    n.meta = dict(snakemake.config, **dict(wildcards=dict(snakemake.wildcards)))
-
-    n.export_to_netcdf(snakemake.output.regret_network)
+    n.export_to_netcdf(snakemake.output.regret_prenetwork)

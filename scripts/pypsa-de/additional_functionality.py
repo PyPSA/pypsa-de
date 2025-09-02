@@ -831,7 +831,7 @@ def additional_functionality(n, snapshots, snakemake):
     investment_year = int(snakemake.wildcards.planning_horizons[-4:])
     constraints = snakemake.params.solving["constraints"]
 
-    if not snakemake.config.get("regret_run"):
+    if not snakemake.params.get("regret_run"):
         add_capacity_limits(
             n, investment_year, constraints["limits_capacity_min"], snakemake, "minimum"
         )
