@@ -840,8 +840,6 @@ def additional_functionality(n, snapshots, snakemake):
             n, investment_year, constraints["limits_capacity_max"], snakemake, "maximum"
         )
 
-        add_power_limits(n, investment_year, constraints["limits_power_max"])
-
         if snakemake.wildcards.clusters != "1":
             h2_import_limits(n, investment_year, constraints["limits_volume_max"])
 
@@ -867,6 +865,8 @@ def additional_functionality(n, snapshots, snakemake):
             )
         else:
             logger.warning("No national CO2 budget specified!")
+
+    add_power_limits(n, investment_year, constraints["limits_power_max"])
 
     # force_boiler_profiles_existing_per_load(n)
     force_boiler_profiles_existing_per_boiler(n)
