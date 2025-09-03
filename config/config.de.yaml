@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20250826_regrets
+  prefix: 20250903_regret_less_offwind
   name:
   # - ExPol
   # - KN2045_Mix
