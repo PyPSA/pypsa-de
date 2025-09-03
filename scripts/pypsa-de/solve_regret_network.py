@@ -18,11 +18,11 @@ logger = logging.getLogger(__name__)
 if __name__ == "__main__":
     if "snakemake" not in globals():
         snakemake = mock_snakemake(
-            "solve_regret",
+            "solve_regret_no_flex",
             clusters=27,
             opts="",
             sector_opts="none",
-            planning_horizons="2025",
+            planning_horizons="2035",
             decision="LowDemand",
             run="AriadneDemand",
         )
@@ -41,6 +41,26 @@ if __name__ == "__main__":
         "mem_logging_frequency", 30
     )
     np.random.seed(snakemake.params.solving["options"].get("seed", 123))
+
+    if snakemake.params.get("no_flex_sensitivity"):
+        carriers_to_drop = [
+            "urban decentral water tanks charger",
+            "urban decentral water tanks discharger",
+            "urban decentral water tanks",
+            "rural water tanks charger",
+            "rural water tanks discharger",
+            "rural water tanks",
+            "battery charger",
+            "battery discharger",
+            "home battery charger",
+            "home battery discharger",
+            "battery",
+            "home battery",
+            "EV battery",
+        ]
+        n.remove("Link", n.links.query("carrier in @carriers_to_drop").index)
+        n.remove("Store", n.stores.query("carrier in @carriers_to_drop").index)
+        # n.remove("Bus", n.buses.query("carrier in @carriers_to_drop").index)
 
     with memory_logger(
         filename=getattr(snakemake.log, "memory", None), interval=logging_frequency

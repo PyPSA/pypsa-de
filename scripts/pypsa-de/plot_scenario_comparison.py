@@ -49,7 +49,9 @@ if __name__ == "__main__":
     prefix = snakemake.config["run"]["prefix"]
     root_dir = snakemake.input[0][: snakemake.input[0].find(prefix)]
     comparison_dir = (
-        "regret_comparison/"
+        "no_flex_regret_comparison/"
+        if "no_flex_regret_variables" in snakemake.input[0]
+        else "regret_comparison/"
         if "regret_variables" in snakemake.input[0]
         else "scenario_comparison/"
     )
