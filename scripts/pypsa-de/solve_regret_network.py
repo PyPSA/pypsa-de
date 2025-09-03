@@ -18,13 +18,14 @@ logger = logging.getLogger(__name__)
 if __name__ == "__main__":
     if "snakemake" not in globals():
         snakemake = mock_snakemake(
-            "solve_regret_no_flex",
+            "solve_regret_network",
             clusters=27,
             opts="",
             sector_opts="none",
             planning_horizons="2035",
             decision="LowDemand",
             run="AriadneDemand",
+            regret_dir="no_flex_regret_networks",
         )
 
     configure_logging(snakemake)
@@ -63,7 +64,9 @@ if __name__ == "__main__":
         ]
         n.remove("Link", n.links.query("carrier in @carriers_to_drop").index)
         n.remove("Store", n.stores.query("carrier in @carriers_to_drop").index)
-        # n.remove("Bus", n.buses.query("carrier in @carriers_to_drop").index)
+        # Need to keep the EV battery bus
+        carriers_to_drop.remove("EV battery")
+        n.remove("Bus", n.buses.query("carrier in @carriers_to_drop").index)
 
     with memory_logger(
         filename=getattr(snakemake.log, "memory", None), interval=logging_frequency

@@ -849,8 +849,17 @@ rule plot_ariadne_variables:
 
 
 rule ariadne_all:
+    input:
+        price_carbon="results/"
+        + config["run"]["prefix"]
+        + "/scenario_comparison/Price-Carbon.png",
+
+
+rule plot_ariadne_scenario_comparison:
     params:
-        output_dir="results/" + config["run"]["prefix"] + "/scenario_comparison/",
+        output_dir=directory(
+            "results/" + config["run"]["prefix"] + "/scenario_comparison/"
+        ),
     input:
         expand(RESULTS + "graphs/costs.svg", run=config_provider("run", "name")),
         # expand(
@@ -868,6 +877,10 @@ rule ariadne_all:
             RESULTS + "ariadne/exported_variables_full.xlsx",
             run=config_provider("run", "name"),
         ),
+    output:
+        price_carbon="results/"
+        + config["run"]["prefix"]
+        + "/scenario_comparison/Price-Carbon.png",
     script:
         "scripts/pypsa-de/plot_scenario_comparison.py"
 
@@ -1001,7 +1014,7 @@ rule prepare_regret_network:
 rule solve_regret_network:
     params:
         no_flex_sensitivity=lambda w: (
-            True if w.regret_network == "no_flex_regret_networks" else False
+            True if w.regret_dir == "no_flex_regret_networks" else False
         ),
         solving=config_provider("solving"),
         regret_run=True,
@@ -1014,16 +1027,16 @@ rule solve_regret_network:
         energy_totals=resources("energy_totals.csv"),
     output:
         regret_network=RESULTS
-        + "{regret_network}/decision_{decision}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
+        + "{regret_dir}/decision_{decision}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
     shadow:
         shadow_config
     log:
         solver=RESULTS
-        + "logs/{regret_network}/decision_{decision}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_solver.log",
+        + "logs/{regret_dir}/decision_{decision}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_solver.log",
         memory=RESULTS
-        + "logs/{regret_network}/decision_{decision}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_memory.log",
+        + "logs/{regret_dir}/decision_{decision}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_memory.log",
         python=RESULTS
-        + "logs/{regret_network}/decision_{decision}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_python.log",
+        + "logs/{regret_dir}/decision_{decision}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_python.log",
     threads: solver_threads
     resources:
         mem_mb=config_provider("solving", "mem_mb"),
@@ -1090,40 +1103,49 @@ rule export_regret_variables:
         "scripts/pypsa-de/export_ariadne_variables.py"
 
 
-rule regret_all_variables_no_flex:
+rule regret_no_flex:
     input:
-        exported_variables=expand(
-            RESULTS + "{regret_dir}/regret_variables_{decision}_full.xlsx",
-            run=config_provider("run", "name"),
-            decision=config_provider("run", "name"),
-            regret_dir="no_flex_regret_networks",
-        ),
-    script:
-        "scripts/pypsa-de/plot_scenario_comparison.py"
+        "results/"
+        + config["run"]["prefix"]
+        + "/scenario_comparison/no_flex_regret_networks/Price-Carbon.png",
+
+
+rule regret_base:
+    input:
+        "results/"
+        + config["run"]["prefix"]
+        + "/scenario_comparison/regret_networks/Price-Carbon.png",
 
 
 rule regret_all:
     input:
-        regret_networks=expand(
-            RESULTS
-            + "{regret_dir}/decision_{decision}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
-            run=config_provider("run", "name"),
-            decision=config_provider("run", "name"),
-            regret_dir="regret_networks",
-            **config["scenario"],
+        expand(
+            "results/"
+            + config["run"]["prefix"]
+            + "/scenario_comparison/{regret_dir}/Price-Carbon.png",
+            regret_dir=["no_flex_regret_networks", "regret_networks"],
         ),
-        elec_capa_comp_de_2025=f"results/{config["run"]["prefix"]}/regret_plots/Ariadne_vs_LowDemand_LT/elec_capa_comp_de_2025.png",
-        elec_price_comp_de=f"results/{config["run"]["prefix"]}/regret_plots/Ariadne_vs_LowDemand/elec_price_comp_de.png",
+        f"results/{config['run']['prefix']}/regret_plots/LT_comparison/elec_capa_comp_de_2025.png",
+        # expand("results/" + config["run"]["prefix"] + "/regret_plots/{regret_dir}/ST_comparison/elec_price_comp_de.png",
+        # regret_dir=["no_flex_regret_networks", "regret_networks"]),
 
 
-rule regret_all_variables:
+rule plot_scenario_comparison_regrets:
+    params:
+        output_dir=directory(
+            "results/" + config["run"]["prefix"] + "/scenario_comparison/{regret_dir}"
+        ),
     input:
         exported_variables=expand(
             RESULTS + "{regret_dir}/regret_variables_{decision}_full.xlsx",
             run=config_provider("run", "name"),
             decision=config_provider("run", "name"),
-            regret_dir="regret_networks",
+            allow_missing=True,
         ),
+    output:
+        price_carbon="results/"
+        + config["run"]["prefix"]
+        + "/scenario_comparison/{regret_dir}/Price-Carbon.png",
     script:
         "scripts/pypsa-de/plot_scenario_comparison.py"
 
@@ -1133,12 +1155,14 @@ rule regret_plots_lt:
         scenarios=get_scenarios(run),
         planning_horizons=config_provider("scenario", "planning_horizons"),
         plotting=config_provider("plotting"),
+        output_dir=directory(
+            f"results/{config['run']['prefix']}/regret_plots/LT_comparison"
+        ),
     input:
         networks=expand(
             RESULTS
             + "regret_networks/decision_{run}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
             **config["scenario"],
-            allow_missing=True,
             run=config["run"]["name"],
         ),
         regret_variables=expand(
@@ -1146,10 +1170,7 @@ rule regret_plots_lt:
             run=config["run"]["name"],
         ),
     output:
-        elec_capa_comp_de_2025=f"results/{config["run"]["prefix"]}/regret_plots/Ariadne_vs_LowDemand_LT/elec_capa_comp_de_2025.png",
-        dir=directory(
-            f"results/{config["run"]["prefix"]}/regret_plots/Ariadne_vs_LowDemand_LT"
-        ),
+        elec_capa_comp_de_2025=f"results/{config['run']['prefix']}/regret_plots/LT_comparison/elec_capa_comp_de_2025.png",
     resources:
         mem_mb=32000,
     script:
@@ -1164,16 +1185,20 @@ rule regret_plots:
     input:
         regret_networks=expand(
             RESULTS
-            + "regret_networks/decision_{decision}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
+            + "{regret_dir}/decision_{decision}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
             **config["scenario"],
             allow_missing=True,
             run=config["run"]["name"],
             decision=config["run"]["name"],
         ),
     output:
-        elec_price_comp_de=f"results/{config["run"]["prefix"]}/regret_plots/Ariadne_vs_LowDemand/elec_price_comp_de.png",
+        elec_price_comp_de="results/"
+        + config["run"]["prefix"]
+        + "/regret_plots/{regret_dir}/ST_comparison/elec_price_comp_de.png",
         dir=directory(
-            f"results/{config["run"]["prefix"]}/regret_plots/Ariadne_vs_LowDemand"
+            f"results/"
+            + config["run"]["prefix"]
+            + "/regret_plots/{regret_dir}/ST_comparison"
         ),
     resources:
         mem_mb=32000,

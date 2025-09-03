@@ -256,8 +256,8 @@ if __name__ == "__main__":
             vars_dict["LowDemand"] = df
 
     # ensure output directory exist
-    if not os.path.exists(snakemake.output[-1]):
-        os.makedirs(snakemake.output[-1])
+    if not os.path.exists(snakemake.params.output_dir):
+        os.makedirs(snakemake.params.output_dir)
 
     # Capacity plot DE
 
@@ -308,7 +308,7 @@ if __name__ == "__main__":
             title=f"Electricity capacities in DE: {year}",
             save_path=snakemake.output.elec_capa_comp_de_2025
             if year == 2025
-            else snakemake.output[-1] + f"/elec_capa_comp_de_{year}.png",
+            else snakemake.params.output_dir + f"/elec_capa_comp_de_{year}.png",
         )
 
         plot_capacity_comparison(
@@ -317,7 +317,7 @@ if __name__ == "__main__":
             tech_colors=tech_colors,
             plot_diff=True,
             title=f"Difference of electricity capacities in DE: {year}",
-            save_path=snakemake.output[-1] + f"/elec_capa_diff_de_{year}.png",
+            save_path=snakemake.params.output_dir + f"/elec_capa_diff_de_{year}.png",
         )
 
     # Capacity plot outside DE
@@ -353,7 +353,7 @@ if __name__ == "__main__":
             tech_colors=tech_colors,
             plot_diff=False,
             title=f"Electricity capacities in EU (outside DE): {year}",
-            save_path=snakemake.output[-1] + f"/elec_capa_comp_eu_{year}.png",
+            save_path=snakemake.params.output_dir + f"/elec_capa_comp_eu_{year}.png",
         )
 
         plot_capacity_comparison(
@@ -362,7 +362,7 @@ if __name__ == "__main__":
             tech_colors=tech_colors,
             plot_diff=True,
             title=f"Difference of electricity capacities in EU (outside DE): {year}",
-            save_path=snakemake.output[-1] + f"/elec_capa_diff_eu_{year}.png",
+            save_path=snakemake.params.output_dir + f"/elec_capa_diff_eu_{year}.png",
         )
 
     # Electricity demand as bar plot
@@ -394,7 +394,7 @@ if __name__ == "__main__":
             plot_diff=False,
             title=f"Electricity demand in DE: {year}",
             ylabel="TWh",
-            save_path=snakemake.output[-1] + f"/elec_demand_comp_de_{year}.png",
+            save_path=snakemake.params.output_dir + f"/elec_demand_comp_de_{year}.png",
         )
 
         plot_capacity_comparison(
@@ -404,7 +404,7 @@ if __name__ == "__main__":
             plot_diff=True,
             title=f"Difference of electricity demand in DE: {year}",
             ylabel="TWh",
-            save_path=snakemake.output[-1] + f"/elec_demand_diff_de_{year}.png",
+            save_path=snakemake.params.output_dir + f"/elec_demand_diff_de_{year}.png",
         )
 
         # ToDo
@@ -609,5 +609,5 @@ if __name__ == "__main__":
         # Adjust y-axis limits to accommodate top labels
         y_max = max(max(bottom_low), max(bottom_ariadne))
         ax.set_ylim(0, y_max * 1.1)
-        plt.savefig(snakemake.output[-1] + "/capex_de.png", bbox_inches="tight")
+        plt.savefig(snakemake.params.output_dir + "/capex_de.png", bbox_inches="tight")
         plt.close()

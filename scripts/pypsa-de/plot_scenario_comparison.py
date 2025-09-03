@@ -46,16 +46,7 @@ if __name__ == "__main__":
 
     df = pd.concat(dfs, axis=0)
 
-    prefix = snakemake.config["run"]["prefix"]
-    root_dir = snakemake.input[0][: snakemake.input[0].find(prefix)]
-    comparison_dir = (
-        "no_flex_regret_comparison/"
-        if "no_flex_regret_variables" in snakemake.input[0]
-        else "regret_comparison/"
-        if "regret_variables" in snakemake.input[0]
-        else "scenario_comparison/"
-    )
-    output_dir = root_dir + prefix + "/" + comparison_dir
+    output_dir = snakemake.params.output_dir
 
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
