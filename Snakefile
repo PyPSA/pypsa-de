@@ -42,10 +42,6 @@ cutout_dir = config["atlite"]["cutout_directory"]
 CDIR = Path(cutout_dir).joinpath("" if run["shared_cutouts"] else RDIR)
 RESULTS = "results/" + RDIR
 
-run_prefix = config["run"]["prefix"]
-regret_scenarios = ["AriadneDemand", "LowDemand"]
-horizons = [2025, 2030, 2035]
-
 
 localrules:
     purge,
@@ -1110,13 +1106,14 @@ rule regret_all:
     input:
         regret_networks=expand(
             RESULTS
-            + "regret_networks/decision_{decision}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
+            + "{regret_dir}/decision_{decision}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
             run=config_provider("run", "name"),
             decision=config_provider("run", "name"),
+            regret_dir="regret_networks",
             **config["scenario"],
         ),
-        elec_capa_comp_de_2025=f"results/{run_prefix}/regret_plots/Ariadne_vs_LowDemand_LT/elec_capa_comp_de_2025.png",
-        elec_price_comp_de=f"results/{run_prefix}/regret_plots/Ariadne_vs_LowDemand/elec_price_comp_de.png",
+        elec_capa_comp_de_2025=f"results/{config["run"]["prefix"]}/regret_plots/Ariadne_vs_LowDemand_LT/elec_capa_comp_de_2025.png",
+        elec_price_comp_de=f"results/{config["run"]["prefix"]}/regret_plots/Ariadne_vs_LowDemand/elec_price_comp_de.png",
 
 
 rule regret_all_variables:
@@ -1138,19 +1135,21 @@ rule regret_plots_lt:
         plotting=config_provider("plotting"),
     input:
         networks=expand(
-            "results/{run}/{scenario}/networks/base_s_27__none_{year}.nc",
-            run=run_prefix,
-            scenario=regret_scenarios,
-            year=horizons,
+            RESULTS
+            + "regret_networks/decision_{run}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
+            **config["scenario"],
+            allow_missing=True,
+            run=config["run"]["name"],
         ),
         regret_variables=expand(
-            "results/{run}/{scenario}/regret_variables/regret_variables_{scenario}_full.xlsx",
-            run=run_prefix,
-            scenario=regret_scenarios,
+            RESULTS + "regret_networks/regret_variables_{run}_full.xlsx",
+            run=config["run"]["name"],
         ),
     output:
-        elec_capa_comp_de_2025=f"results/{run_prefix}/regret_plots/Ariadne_vs_LowDemand_LT/elec_capa_comp_de_2025.png",
-        dir=directory(f"results/{run_prefix}/regret_plots/Ariadne_vs_LowDemand_LT"),
+        elec_capa_comp_de_2025=f"results/{config["run"]["prefix"]}/regret_plots/Ariadne_vs_LowDemand_LT/elec_capa_comp_de_2025.png",
+        dir=directory(
+            f"results/{config["run"]["prefix"]}/regret_plots/Ariadne_vs_LowDemand_LT"
+        ),
     resources:
         mem_mb=32000,
     script:
@@ -1164,15 +1163,18 @@ rule regret_plots:
         plotting=config_provider("plotting"),
     input:
         regret_networks=expand(
-            "results/{run}/{scenario}/regret_networks/decision_{decision}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
-            run=run_prefix,
-            scenario=regret_scenarios,
-            decision=config_provider("run", "name"),
+            RESULTS
+            + "regret_networks/decision_{decision}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
             **config["scenario"],
+            allow_missing=True,
+            run=config["run"]["name"],
+            decision=config["run"]["name"],
         ),
     output:
-        elec_price_comp_de=f"results/{run_prefix}/regret_plots/Ariadne_vs_LowDemand/elec_price_comp_de.png",
-        dir=directory(f"results/{run_prefix}/regret_plots/Ariadne_vs_LowDemand"),
+        elec_price_comp_de=f"results/{config["run"]["prefix"]}/regret_plots/Ariadne_vs_LowDemand/elec_price_comp_de.png",
+        dir=directory(
+            f"results/{config["run"]["prefix"]}/regret_plots/Ariadne_vs_LowDemand"
+        ),
     resources:
         mem_mb=32000,
     script:
