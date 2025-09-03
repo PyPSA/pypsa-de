@@ -42,7 +42,10 @@ if __name__ == "__main__":
     )
     np.random.seed(snakemake.params.solving["options"].get("seed", 123))
 
-    if snakemake.params.get("no_flex_sensitivity"):
+    if snakemake.params.get("no_flex_sensitivity") == True:
+        logger.info(
+            "No flexibility sensitivity analysis activated. Removing decentral TES, batteries, and BEV DSM from the network."
+        )
         carriers_to_drop = [
             "urban decentral water tanks charger",
             "urban decentral water tanks discharger",

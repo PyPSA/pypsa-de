@@ -1002,8 +1002,11 @@ rule prepare_regret_network:
         "scripts/pypsa-de/prepare_regret_network.py"
 
 
-rule solve_regret:
+rule solve_regret_network:
     params:
+        no_flex_sensitivity=lambda w: (
+            True if w.regret_network == "no_flex_regret_networks" else False
+        ),
         solving=config_provider("solving"),
         regret_run=True,
         energy_year=config_provider("energy", "energy_totals_year"),
@@ -1015,137 +1018,22 @@ rule solve_regret:
         energy_totals=resources("energy_totals.csv"),
     output:
         regret_network=RESULTS
-        + "regret_networks/decision_{decision}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
+        + "{regret_network}/decision_{decision}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
     shadow:
         shadow_config
     log:
         solver=RESULTS
-        + "logs/decision_{decision}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_solver.log",
+        + "logs/{regret_network}/decision_{decision}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_solver.log",
         memory=RESULTS
-        + "logs/decision_{decision}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_memory.log",
+        + "logs/{regret_network}/decision_{decision}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_memory.log",
         python=RESULTS
-        + "logs/decision_{decision}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_python.log",
+        + "logs/{regret_network}/decision_{decision}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_python.log",
     threads: solver_threads
     resources:
         mem_mb=config_provider("solving", "mem_mb"),
         runtime=config_provider("solving", "runtime", default="6h"),
     script:
         "scripts/pypsa-de/solve_regret_network.py"
-
-
-rule solve_regret_no_flex:
-    params:
-        no_flex_sensitivity=True,
-        solving=config_provider("solving"),
-        regret_run=True,
-        energy_year=config_provider("energy", "energy_totals_year"),
-        custom_extra_functionality=input_custom_extra_functionality,
-    input:
-        regret_prenetwork=RESULTS
-        + "regret_prenetworks/decision_{decision}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
-        co2_totals_name=resources("co2_totals.csv"),
-        energy_totals=resources("energy_totals.csv"),
-    output:
-        regret_network=RESULTS
-        + "no_flex_regret_networks/decision_{decision}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
-    shadow:
-        shadow_config
-    log:
-        solver=RESULTS
-        + "logs/no_flex_decision_{decision}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_solver.log",
-        memory=RESULTS
-        + "logs/no_flex_decision_{decision}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_memory.log",
-        python=RESULTS
-        + "logs/no_flex_decision_{decision}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_python.log",
-    threads: solver_threads
-    resources:
-        mem_mb=config_provider("solving", "mem_mb"),
-        runtime=config_provider("solving", "runtime", default="6h"),
-    script:
-        "scripts/pypsa-de/solve_regret_network.py"
-
-
-rule export_regret_variables_no_flex:
-    params:
-        planning_horizons=config_provider("scenario", "planning_horizons"),
-        max_hours=config_provider("electricity", "max_hours"),
-        costs=config_provider("costs"),
-        config_industry=config_provider("industry"),
-        energy_totals_year=config_provider("energy", "energy_totals_year"),
-        co2_price_add_on_fossils=config_provider("co2_price_add_on_fossils"),
-        co2_sequestration_cost=config_provider("sector", "co2_sequestration_cost"),
-        post_discretization=config_provider("solving", "options", "post_discretization"),
-        NEP_year=config_provider("costs", "NEP"),
-        NEP_transmission=config_provider("costs", "transmission"),
-    input:
-        template="data/template_ariadne_database.xlsx",
-        industry_demands=expand(
-            resources(
-                "industrial_energy_demand_base_s_{clusters}_{planning_horizons}.csv"
-            ),
-            **config["scenario"],
-            allow_missing=True,
-        ),
-        networks=expand(
-            RESULTS
-            + "no_flex_regret_networks/decision_{decision}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
-            **config["scenario"],
-            allow_missing=True,
-        ),
-        costs=expand(
-            resources("costs_{planning_horizons}.csv"),
-            **config["scenario"],
-            allow_missing=True,
-        ),
-        industrial_production_per_country_tomorrow=expand(
-            resources(
-                "industrial_production_per_country_tomorrow_{planning_horizons}-modified.csv"
-            ),
-            **config["scenario"],
-            allow_missing=True,
-        ),
-        industry_sector_ratios=expand(
-            resources("industry_sector_ratios_{planning_horizons}.csv"),
-            **config["scenario"],
-            allow_missing=True,
-        ),
-        industrial_production=resources("industrial_production_per_country.csv"),
-        energy_totals=resources("energy_totals.csv"),
-    output:
-        exported_variables=RESULTS
-        + "no_flex_regret_variables/regret_variables_{decision}.xlsx",
-        exported_variables_full=RESULTS
-        + "no_flex_regret_variables/regret_variables_{decision}_full.xlsx",
-    resources:
-        mem_mb=16000,
-    log:
-        RESULTS + "logs/no_flex_export_regret_variables_{decision}.log",
-    script:
-        "scripts/pypsa-de/export_ariadne_variables.py"
-
-
-rule regret_all_no_flex:
-    input:
-        regret_networks=expand(
-            RESULTS
-            + "no_flex_regret_networks/decision_{decision}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
-            run=config_provider("run", "name"),
-            decision=config_provider("run", "name"),
-            **config["scenario"],
-        ),
-        elec_capa_comp_de_2025=f"results/{run_prefix}/no_flex_regret_plots/Ariadne_vs_LowDemand_LT/elec_capa_comp_de_2025.png",
-        elec_price_comp_de=f"results/{run_prefix}/no_flex_regret_plots/Ariadne_vs_LowDemand/elec_price_comp_de.png",
-
-
-rule regret_all_variables_no_flex:
-    input:
-        exported_variables=expand(
-            RESULTS + "no_flex_regret_variables/regret_variables_{decision}_full.xlsx",
-            run=config_provider("run", "name"),
-            decision=config_provider("run", "name"),
-        ),
-    script:
-        "scripts/pypsa-de/plot_scenario_comparison.py"
 
 
 rule export_regret_variables:
@@ -1171,7 +1059,7 @@ rule export_regret_variables:
         ),
         networks=expand(
             RESULTS
-            + "regret_networks/decision_{decision}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
+            + "{regret_dir}/decision_{decision}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
             **config["scenario"],
             allow_missing=True,
         ),
@@ -1195,15 +1083,27 @@ rule export_regret_variables:
         industrial_production=resources("industrial_production_per_country.csv"),
         energy_totals=resources("energy_totals.csv"),
     output:
-        exported_variables=RESULTS + "regret_variables/regret_variables_{decision}.xlsx",
+        exported_variables=RESULTS + "{regret_dir}/regret_variables_{decision}.xlsx",
         exported_variables_full=RESULTS
-        + "regret_variables/regret_variables_{decision}_full.xlsx",
+        + "{regret_dir}/regret_variables_{decision}_full.xlsx",
     resources:
         mem_mb=16000,
     log:
-        RESULTS + "logs/export_regret_variables_{decision}.log",
+        RESULTS + "{regret_dir}/logs/export_regret_variables_{decision}.log",
     script:
         "scripts/pypsa-de/export_ariadne_variables.py"
+
+
+rule regret_all_variables_no_flex:
+    input:
+        exported_variables=expand(
+            RESULTS + "{regret_dir}/regret_variables_{decision}_full.xlsx",
+            run=config_provider("run", "name"),
+            decision=config_provider("run", "name"),
+            regret_dir="no_flex_regret_networks",
+        ),
+    script:
+        "scripts/pypsa-de/plot_scenario_comparison.py"
 
 
 rule regret_all:
@@ -1222,9 +1122,10 @@ rule regret_all:
 rule regret_all_variables:
     input:
         exported_variables=expand(
-            RESULTS + "regret_variables/regret_variables_{decision}_full.xlsx",
+            RESULTS + "{regret_dir}/regret_variables_{decision}_full.xlsx",
             run=config_provider("run", "name"),
             decision=config_provider("run", "name"),
+            regret_dir="regret_networks",
         ),
     script:
         "scripts/pypsa-de/plot_scenario_comparison.py"
