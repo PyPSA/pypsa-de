@@ -78,6 +78,8 @@ AriadneDemand:
     options:
       transmission_losses: 0
       noisy_costs: false
+  offshore_nep_force:
+    delay_years: 2
   # electricity:
   #   transmission_limit: v1
 
@@ -86,6 +88,8 @@ LowDemand:
     reference_scenario: ExPol # e.g., CO2 emissions from REMIND will follow ExPol
     uba_for_industry: true
     uba_for_mobility: true
+  offshore_nep_force:
+    delay_years: 2
   # electricity:
   #   transmission_limit: v1
   solving:
