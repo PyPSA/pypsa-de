@@ -596,12 +596,12 @@ solving:
       electricity_import:
         DE:
           2020: -20
-          2025: 25
-          2030: 50
-          2035: 75
-          2040: 100
+          2025: 0
+          2030: 0
+          2035: 40
+          2040: 80
           2045: 125
-          2050: 150
+          2050: 125
       electrolysis:
       # boundary condition lower?
         DE:
