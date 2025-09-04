@@ -21,8 +21,7 @@ HighDemand:
               2040: 50   # assuming 1/3 of buildout reached in 2040
               2045: 70   # 70 Wind-auf-See Law
           solar:
-            DE:
-                # EEG2023; Ziel for 2024: 88 GW and for 2026: 128 GW,        
+            DE: # EEG2023; Ziel for 2024: 88 GW and for 2026: 128 GW,        
               2025: 101   # assuming at least 1/3 of buildout reached in 2025
               2030: 215   # PV strategy
               2035: 309
