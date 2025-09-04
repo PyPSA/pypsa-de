@@ -24,7 +24,7 @@ if __name__ == "__main__":
             sector_opts="none",
             planning_horizons="2035",
             decision="LowDemand",
-            run="AriadneDemand",
+            run="HighDemand",
             regret_dir="no_flex_regret_networks",
         )
 

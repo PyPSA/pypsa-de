@@ -153,7 +153,7 @@ if __name__ == "__main__":
             sector_opts="none",
             planning_horizons="2025",
             decision="LowDemand",
-            run="AriadneDemand",
+            run="HighDemand",
         )
 
     configure_logging(snakemake)

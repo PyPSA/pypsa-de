@@ -58,7 +58,7 @@ def aggregate_by_keywords(df, groups):
 
 def plot_capacity_comparison(
     df,
-    scenarios=("AriadneDemand", "LowDemand"),
+    scenarios=("HighDemand", "LowDemand"),
     tech_colors=None,
     plot_diff=False,
     title="Electricity capacities",
@@ -224,7 +224,7 @@ if __name__ == "__main__":
     configure_logging(snakemake)
     config = snakemake.config
     planning_horizons = snakemake.params.planning_horizons
-    scenarios = ["AriadneDemand", "LowDemand"]
+    scenarios = ["HighDemand", "LowDemand"]
     tech_colors = snakemake.params.plotting["tech_colors"]
 
     # Load networks
@@ -250,8 +250,8 @@ if __name__ == "__main__":
             .sum()
         ).round(5)
 
-        if "AriadneDemand" in fn:
-            vars_dict["AriadneDemand"] = df
+        if "HighDemand" in fn:
+            vars_dict["HighDemand"] = df
         elif "LowDemand" in fn:
             vars_dict["LowDemand"] = df
 
@@ -302,7 +302,7 @@ if __name__ == "__main__":
 
         plot_capacity_comparison(
             df=capa_comp_agg,
-            scenarios=["AriadneDemand", "LowDemand"],
+            scenarios=["HighDemand", "LowDemand"],
             tech_colors=tech_colors,
             plot_diff=False,
             title=f"Electricity capacities in DE: {year}",
@@ -313,7 +313,7 @@ if __name__ == "__main__":
 
         plot_capacity_comparison(
             df=capa_comp_agg,
-            scenarios=["AriadneDemand", "LowDemand"],
+            scenarios=["HighDemand", "LowDemand"],
             tech_colors=tech_colors,
             plot_diff=True,
             title=f"Difference of electricity capacities in DE: {year}",
@@ -349,7 +349,7 @@ if __name__ == "__main__":
 
         plot_capacity_comparison(
             df=capa_comp_agg,
-            scenarios=["AriadneDemand", "LowDemand"],
+            scenarios=["HighDemand", "LowDemand"],
             tech_colors=tech_colors,
             plot_diff=False,
             title=f"Electricity capacities in EU (outside DE): {year}",
@@ -358,7 +358,7 @@ if __name__ == "__main__":
 
         plot_capacity_comparison(
             df=capa_comp_agg,
-            scenarios=["AriadneDemand", "LowDemand"],
+            scenarios=["HighDemand", "LowDemand"],
             tech_colors=tech_colors,
             plot_diff=True,
             title=f"Difference of electricity capacities in EU (outside DE): {year}",
@@ -389,7 +389,7 @@ if __name__ == "__main__":
 
         plot_capacity_comparison(
             df=demand_comp_agg,
-            scenarios=["AriadneDemand", "LowDemand"],
+            scenarios=["HighDemand", "LowDemand"],
             tech_colors=tech_colors,
             plot_diff=False,
             title=f"Electricity demand in DE: {year}",
@@ -399,7 +399,7 @@ if __name__ == "__main__":
 
         plot_capacity_comparison(
             df=demand_comp_agg,
-            scenarios=["AriadneDemand", "LowDemand"],
+            scenarios=["HighDemand", "LowDemand"],
             tech_colors=tech_colors,
             plot_diff=True,
             title=f"Difference of electricity demand in DE: {year}",
@@ -446,7 +446,7 @@ if __name__ == "__main__":
 
         # Extract for easier access
         capex_low_plot = capex_data["LowDemand"]
-        capex_ariadne_plot = capex_data["AriadneDemand"]
+        capex_ariadne_plot = capex_data["HighDemand"]
 
         # Set up the plot
         fig, ax = plt.subplots(figsize=(12, 8))
@@ -483,7 +483,7 @@ if __name__ == "__main__":
                 capex_ariadne_plot.loc[category, col] for col in year_cols
             ]
 
-            # Plot bars - LowDemand with hatching, AriadneDemand without
+            # Plot bars - LowDemand with hatching, HighDemand without
             ax.bar(
                 x - width / 2,
                 low_values,
@@ -518,7 +518,7 @@ if __name__ == "__main__":
                         color="white",
                     )
 
-                # AriadneDemand category values
+                # HighDemand category values
                 if ariadne_values[j] > 0.5:  # Only show if value is significant
                     ax.text(
                         j + width / 2,
@@ -539,7 +539,7 @@ if __name__ == "__main__":
         ax.set_xlabel("Year", fontsize=12)
         ax.set_ylabel("billion €", fontsize=12)
         ax.set_title(
-            "System Cost CAPEX Comparison: LowDemand vs AriadneDemand",
+            "System Cost CAPEX Comparison: LowDemand vs HighDemand",
             fontsize=14,
             fontweight="bold",
         )
@@ -563,7 +563,7 @@ if __name__ == "__main__":
                 hatch="///",
                 label="LowDemand",
             ),
-            Rectangle((0, 0), 1, 1, facecolor="gray", alpha=0.8, label="AriadneDemand"),
+            Rectangle((0, 0), 1, 1, facecolor="gray", alpha=0.8, label="HighDemand"),
         ]
 
         # Create separate legends

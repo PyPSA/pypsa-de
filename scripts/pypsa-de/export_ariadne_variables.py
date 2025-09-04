@@ -5471,8 +5471,9 @@ if __name__ == "__main__":
             opts="",
             ll="vopt",
             sector_opts="None",
-            run="AriadneDemand",
+            run="HighDemand",
             decision="LowDemand",
+            regret_dir="regret_networks",
         )
     configure_logging(snakemake)
     config = snakemake.config

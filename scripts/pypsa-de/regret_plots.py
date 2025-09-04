@@ -71,7 +71,7 @@ if __name__ == "__main__":
     configure_logging(snakemake)
     config = snakemake.config
     planning_horizons = snakemake.params.planning_horizons
-    scenarios = ["AriadneDemand", "LowDemand"]
+    scenarios = ["HighDemand", "LowDemand"]
     tech_colors = snakemake.params.plotting["tech_colors"]
 
     # Nested dict: networks[year][scenario][decision] = Network
@@ -114,8 +114,8 @@ if __name__ == "__main__":
     ax = ax.flatten()
 
     years = [2025, 2030, 2035]
-    scenarios = ["AriadneDemand", "LowDemand"]
-    decisions = ["decision_AriadneDemand", "decision_LowDemand"]
+    scenarios = ["HighDemand", "LowDemand"]
+    decisions = ["decision_HighDemand", "decision_LowDemand"]
 
     for i, year in enumerate(years):
         for scenario, decision in itertools.product(scenarios, decisions):

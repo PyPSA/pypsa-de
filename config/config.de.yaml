@@ -8,7 +8,7 @@ run:
   name:
   # - ExPol
   # - KN2045_Mix
-  - AriadneDemand
+  - HighDemand
   - LowDemand
   # - KN2045_Elek
   # - KN2045_H2
