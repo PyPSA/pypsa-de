@@ -1394,6 +1394,30 @@ def modify_industry_demand(
         )
 
 
+def remove_flexibility_options(n):
+    logger.info("Removing decentral TES, batteries, and BEV DSM from the network.")
+    carriers_to_drop = [
+        "urban decentral water tanks charger",
+        "urban decentral water tanks discharger",
+        "urban decentral water tanks",
+        "rural water tanks charger",
+        "rural water tanks discharger",
+        "rural water tanks",
+        "battery charger",
+        "battery discharger",
+        "home battery charger",
+        "home battery discharger",
+        "battery",
+        "home battery",
+        "EV battery",
+    ]
+    n.remove("Link", n.links.query("carrier in @carriers_to_drop").index)
+    n.remove("Store", n.stores.query("carrier in @carriers_to_drop").index)
+    # Need to keep the EV battery bus
+    carriers_to_drop.remove("EV battery")
+    n.remove("Bus", n.buses.query("carrier in @carriers_to_drop").index)
+
+
 if __name__ == "__main__":
     if "snakemake" not in globals():
         snakemake = mock_snakemake(
@@ -1492,6 +1516,10 @@ if __name__ == "__main__":
 
     # For regret runs
     deactivate_late_transmission_projects(n)
+
+    if snakemake.params.no_flex_lt_run:
+        logger.info("Run without flexibility options detected.")
+        remove_flexibility_options(n)
 
     fix_transmission_DE(n)
 

@@ -1,3 +1,5 @@
+# Import the function dynamically since the folder name contains a hyphen which is invalid in a module name.
+import importlib.util
 import logging
 import pathlib
 
@@ -11,6 +13,14 @@ from scripts._helpers import (
     update_config_from_wildcards,
 )
 from scripts.solve_network import prepare_network
+
+_spec_path = pathlib.Path(__file__).resolve().parent / "modify_prenetwork.py"
+_spec = importlib.util.spec_from_file_location(
+    "scripts.pypsa_de.modify_prenetwork", _spec_path
+)
+_modify_prenetwork = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_modify_prenetwork)
+remove_flexibility_options = _modify_prenetwork.remove_flexibility_options
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +92,7 @@ def _unfix_bottlenecks(new, deci, name, extendable_i):
     return
 
 
-def fix_capacities(realization, decision, scope="DE", strict=False):
+def fix_capacities(realization, decision, scope="DE", strict=False, no_flex=False):
     logger.info(f"Fixing all capacities for scope: {scope}")
     if scope == "EU":
         scope = ""
@@ -141,17 +151,20 @@ def fix_capacities(realization, decision, scope="DE", strict=False):
 
         new.loc[_idx, attr] = deci.loc[_idx, attr]
 
+    if no_flex:
+        logger.info("Realization network is from a run without flexibility.")
+        remove_flexibility_options(n)
     return n
 
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
         snakemake = mock_snakemake(
-            "solve_regret",
+            "prepare_regret_network",
             clusters=27,
             opts="",
             sector_opts="none",
-            planning_horizons="2025",
+            planning_horizons="2030",
             decision="LowDemand",
             run="HighDemand",
         )
@@ -180,7 +193,15 @@ if __name__ == "__main__":
     scope_to_fix = snakemake.params["scope_to_fix"]
     h2_vent = snakemake.params["h2_vent"]
 
-    n = fix_capacities(realization, decision, scope=scope_to_fix, strict=strict)
+    # CAVEAT The 'NoFlex' string in the scenario actually controls the behavior of this function
+    n = fix_capacities(
+        realization,
+        decision,
+        scope=scope_to_fix,
+        strict=strict,
+        no_flex="NoFlex" in snakemake.input.decision,
+    )
+
     if strict:
         logger.info(
             "Strict regret run chosen. No capacities are extendable. Activating load shedding to prevent infeasibilites."

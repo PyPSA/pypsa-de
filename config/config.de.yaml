@@ -4,15 +4,13 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20250903_regret_less_offwind
+  prefix: 20250908_regret_no_flex_lt_run
   name:
   # - ExPol
   # - KN2045_Mix
   - HighDemand
   - LowDemand
-  # - KN2045_Elek
-  # - KN2045_H2
-  # - KN2045_NFniedrig
+  - HighDemandNoFlex # !!! CAVEAT The 'NoFlex' substring in the scenario name determines how the regrets are computed!!!
   # - KN2045_NFhoch
   scenarios:
     enable: true
@@ -55,6 +53,7 @@ iiasa_database:
   - 2025
   uba_for_industry: # For 2025–2035 use MWMS scenario from UBA Projektionsbericht 2025
   - 2025
+  no_flex_lt_run: false # If true, removes all flexibility options
   scale_industry_non_energy: false # Scale non-energy industry demand directly proportional to energy demand
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#foresight

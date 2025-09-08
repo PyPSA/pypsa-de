@@ -23,7 +23,8 @@ def scenario_plot(df, output_dir, var):
 if __name__ == "__main__":
     if "snakemake" not in globals():
         snakemake = mock_snakemake(
-            "ariadne_all",
+            "plot_scenario_comparison_regrets",
+            regret_dir="regret_networks",
             # simpl="",
             # clusters=22,
             # opts="",
@@ -35,9 +36,13 @@ if __name__ == "__main__":
 
     dfs = []
     fns = snakemake.input.exported_variables
-    if "regret_variables" in fns[0]:
+    if "regret_variables" in fns[0] and len(fns) == 4:
         # reorder indices of fns as 0312
         fns = [fns[i] for i in [0, 3, 2, 1] if i < len(fns)]
+    if "regret_variables" in fns[0] and len(fns) == 8:
+        fns = [
+            fn for fn in fns if not fn.contains("NoFlex/")
+        ]  # !!! CAVEAT AGAIN DISPATCHING ON FILENAME
     for file in fns:
         _df = pd.read_excel(
             file, index_col=list(range(5)), sheet_name="data"
