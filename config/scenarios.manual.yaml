@@ -8,6 +8,9 @@ HighDemand:
       transmission_losses: 0
       noisy_costs: false
     constraints:
+      decentral_heat_pump_budgets:
+        DE: # UBA MWMS, Projektionsbericht 2025, Abbildung 48
+          2025: 12.0
       limits_capacity_min:
         Generator:
           onwind:
@@ -31,8 +34,14 @@ HighDemand:
 LowDemand:
   iiasa_database:
     reference_scenario: ExPol # e.g., CO2 emissions from REMIND will follow ExPol
-    uba_for_industry: true
-    uba_for_mobility: true
+    uba_for_industry:
+    - 2025
+    - 2030
+    - 2035
+    uba_for_mobility:
+    - 2025
+    - 2030
+    - 2035
   offshore_nep_force:
     delay_years: 2
   solving:
@@ -64,7 +73,7 @@ LowDemand:
 
 ExPol:
 # UBA CO2 pathway instead of KSG targets
-# Europen CO2 pathway fixed at 2030 for 2035-2050
+# European CO2 pathway fixed at 2030 for 2035-2050
 # Kernnetz is not assumed to be built
 # Not forcing renewables after 2030
 

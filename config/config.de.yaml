@@ -51,8 +51,10 @@ iiasa_database:
     h2_vent: true
     no_flex_sensitivity: false # CAVEAT: This behaves like a wildcard
   ageb_for_mobility: true # In 2020 use AGEB data for final energy demand and KBA for vehicles
-  uba_for_mobility: false # For 2025–2035 use MWMS scenario from UBA Projektionsbericht 2025
-  uba_for_industry: false # For 2025–2035 use MWMS scenario from UBA Projektionsbericht 2025
+  uba_for_mobility: # For 2025–2035 use MWMS scenario from UBA Projektionsbericht 2025
+  - 2025
+  uba_for_industry: # For 2025–2035 use MWMS scenario from UBA Projektionsbericht 2025
+  - 2025
   scale_industry_non_energy: false # Scale non-energy industry demand directly proportional to energy demand
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#foresight
