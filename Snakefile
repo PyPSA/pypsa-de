@@ -1119,11 +1119,17 @@ rule regret_base:
 
 rule regret_all:
     input:
-        expand(
+        lambda w: expand(
             "results/"
             + config["run"]["prefix"]
             + "/scenario_comparison/{regret_dir}/Price-Carbon.png",
-            regret_dir=["no_flex_regret_networks", "regret_networks"],
+            regret_dir=(
+                ["regret_networks", "no_flex_regret_networks"]
+                if config_provider(
+                    "iiasa_database", "regret_run", "no_flex_sensitivity"
+                )(w)
+                else ["regret_networks"]
+            ),
         ),
         f"results/{config['run']['prefix']}/regret_plots/LT_comparison/elec_capa_comp_de_2025.png",
         # expand("results/" + config["run"]["prefix"] + "/regret_plots/{regret_dir}/ST_comparison/elec_price_comp_de.png",
