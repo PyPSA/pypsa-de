@@ -105,19 +105,17 @@ if __name__ == "__main__":
         networks[year][scenario][decision] = pypsa.Network(fn)
 
     # ensure output directory exist
-    if not os.path.exists(snakemake.output[-1]):
-        os.makedirs(snakemake.output[-1])
+    if not os.path.exists(snakemake.params.output_dir):
+        os.makedirs(snakemake.params.output_dir)
 
     # Plot electricity price duration curves
 
-    fig, ax = plt.subplots(figsize=(10, 15), nrows=3, ncols=1)
+    fig, ax = plt.subplots(figsize=(10, 5 * len(planning_horizons)), nrows=len(planning_horizons), ncols=1)
     ax = ax.flatten()
 
-    years = [2025, 2030, 2035]
-    scenarios = ["HighDemand", "LowDemand"]
     decisions = ["decision_HighDemand", "decision_LowDemand"]
 
-    for i, year in enumerate(years):
+    for i, year in enumerate(planning_horizons):
         for scenario, decision in itertools.product(scenarios, decisions):
             n = networks[year][scenario][decision]
             lmps = n.buses_t.marginal_price.loc[
@@ -136,6 +134,7 @@ if __name__ == "__main__":
                 label=f"{scenario}_{decision} (avg: {lmps_sorted['lmp'].mean():.2f})",
             )
 
+        ax[i].set_ylim(-50, 300)
         ax[i].legend()
         ax[i].set_xlabel("Percentage of time")
         ax[i].set_ylabel("€/MWh")
@@ -162,10 +161,10 @@ if __name__ == "__main__":
         "nice_names": False,
     }
 
-    fig, axes = plt.subplots(nrows=3, ncols=1, figsize=(12, 18))
+    fig, axes = plt.subplots(nrows=len(planning_horizons), ncols=1, figsize=(12, 6 * len(planning_horizons)))
     axes = axes.flatten()
 
-    for i, year in enumerate(years):
+    for i, year in enumerate(planning_horizons):
         opex_comp = pd.DataFrame(
             columns=["_".join(tup) for tup in itertools.product(scenarios, decisions)]
         )
@@ -242,5 +241,5 @@ if __name__ == "__main__":
 
     # Legend outside
     axes[-1].legend(loc="upper left", bbox_to_anchor=(1, 1))
-    plt.savefig(snakemake.output[-1] + "/opex_comp_de.png", bbox_inches="tight")
+    plt.savefig(snakemake.params.output_dir + "/opex_comp_de.png", bbox_inches="tight")
     plt.close()
