@@ -39,7 +39,7 @@ if __name__ == "__main__":
     if "regret_variables" in fns[0] and len(fns) == 4:
         # reorder indices of fns as 0312
         fns = [fns[i] for i in [0, 3, 2, 1] if i < len(fns)]
-    if "regret_variables" in fns[0] and len(fns) == 8:
+    if "regret_variables" in fns[0] and len(fns) in [9, 16]:
         fns = [
             fn for fn in fns if not fn.contains("NoFlex/")
         ]  # !!! CAVEAT AGAIN DISPATCHING ON FILENAME

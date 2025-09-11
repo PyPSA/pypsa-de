@@ -98,6 +98,45 @@ LowDemand:
             DE:
               2030: 0
 
+LowDemandNoFlex:
+  iiasa_database:
+    no_flex_lt_run: true
+    reference_scenario: ExPol # e.g., CO2 emissions from REMIND will follow ExPol
+    uba_for_industry:
+    - 2025
+    - 2030
+    - 2035
+    uba_for_mobility:
+    - 2025
+    - 2030
+    - 2035
+  offshore_nep_force:
+    delay_years: 2
+  solving:
+    options:
+      transmission_losses: 0
+      noisy_costs: false
+    constraints:
+      decentral_heat_pump_budgets:
+        DE: # UBA MWMS, Projektionsbericht 2025, Abbildung 48
+          2025: 12.0
+          2030: 26.0
+          2035: 38.0
+      limits_capacity_min:
+        Generator:
+          onwind:
+            DE:
+              2030: 0
+              2035: 0
+          offwind:
+            DE:
+              2030: 0
+              2035: 0
+        Link:
+          H2 electrolysis:
+            DE:
+              2030: 0
+
 ExPol:
 # UBA CO2 pathway instead of KSG targets
 # European CO2 pathway fixed at 2030 for 2035-2050
