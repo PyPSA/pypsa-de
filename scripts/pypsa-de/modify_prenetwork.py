@@ -22,8 +22,11 @@ def first_technology_occurrence(n):
     for c, carriers in snakemake.params.technology_occurrence.items():
         for carrier, first_year in carriers.items():
             if int(snakemake.wildcards.planning_horizons) < first_year:
-                logger.info(f"{carrier} not extendable before {first_year}.")
-                n.df(c).loc[n.df(c).carrier == carrier, "p_nom_extendable"] = False
+                attr = "e_nom" if c == "Store" else "p_nom"
+                logger.info(
+                    f"{carrier} is configured to be not extendable before {first_year}."
+                )
+                n.df(c).loc[n.df(c).carrier == carrier, f"{attr}_extendable"] = False
 
 
 def fix_new_boiler_profiles(n):
