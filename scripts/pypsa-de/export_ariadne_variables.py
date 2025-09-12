@@ -3192,7 +3192,7 @@ def get_nodal_supply(n, bus_carrier, query="index == index or index != index"):
     return result
 
 
-def price_load(n, load_carrier, region):
+def price_load(n, load_carrier, region, clip=None):
     """
     Calculate the average price of a specific load carrier in a given region.
 
@@ -3213,7 +3213,8 @@ def price_load(n, load_carrier, region):
     if n.loads_t.p[load.index].values.sum() < 1:
         return np.nan, 0
     result = (
-        n.loads_t.p[load.index] * n.buses_t.marginal_price[load.bus].values
+        n.loads_t.p[load.index]
+        * n.buses_t.marginal_price[load.bus].clip(upper=clip).values
     ).values.sum()
     result /= n.loads_t.p[load.index].values.sum()
     return result, n.loads_t.p[load.index].values.sum()
@@ -3473,10 +3474,13 @@ def get_prices(n, region):
     # reported: 8/14
 
     # Price|Secondary Energy|Electricity
+    max_elec_price = 4000  # to clip extreme prices during scarcity
     nodal_flows_ac = get_nodal_flows(
         n, "AC", region, query="not carrier.str.contains('gas')"
     )
-    nodal_prices_ac = n.buses_t.marginal_price[nodal_flows_ac.columns]
+    nodal_prices_ac = n.buses_t.marginal_price[nodal_flows_ac.columns].clip(
+        upper=max_elec_price
+    )
 
     var["Price|Secondary Energy|Electricity"] = (
         nodal_flows_ac.mul(nodal_prices_ac).values.sum() / nodal_flows_ac.values.sum()
@@ -3596,7 +3600,7 @@ def get_prices(n, region):
 
     # Price|Final Energy|Transportation|Passenger|Electricity
     var["Price|Final Energy|Transportation|Passenger|Electricity"] = price_load(
-        n, "land transport EV", region
+        n, "land transport EV", region, clip=max_elec_price
     )[0]
     # Price|Final Energy|Transportation|Passenger|Gases
     # Price|Final Energy|Transportation|Passenger|Hydrogen
@@ -3656,14 +3660,14 @@ def get_prices(n, region):
 
     # Price|Final Energy|Transportation|Electricity
     var["Price|Final Energy|Transportation|Electricity"] = price_load(
-        n, "land transport EV", region
+        n, "land transport EV", region, clip=max_elec_price
     )[0]
     # Price|Final Energy|Transportation|Electricity|Sales Margin
     # Price|Final Energy|Transportation|Electricity|Transport and Distribution
     # Price|Final Energy|Transportation|Electricity|Other Taxes
 
     # Price|Final Energy|Transportation|Liquids|Kerosene
-    var["Price|Final Energy|Transportation|Electricity"] = price_load(
+    var["Price|Final Energy|Transportation|Liquids|Kerosene"] = price_load(
         n, "kerosene for aviation", region
     )[0]
     # Price|Final Energy|Transportation|Liquids|Kerosene|Sales Margin
@@ -3784,7 +3788,9 @@ def get_prices(n, region):
         "& not carrier.str.contains('industry')"
         "& not carrier.str.contains('urban central')",
     )
-    nodal_prices_lv = n.buses_t.marginal_price[nodal_flows_lv.columns]
+    nodal_prices_lv = n.buses_t.marginal_price[nodal_flows_lv.columns].clip(
+        upper=max_elec_price
+    )
     var["Price|Final Energy|Residential and Commercial|Electricity"] = (
         nodal_flows_lv.mul(nodal_prices_lv).values.sum() / nodal_flows_lv.values.sum()
     )
@@ -3883,7 +3889,7 @@ def get_prices(n, region):
 
     # Price|Final Energy|Industry|Electricity
     var["Price|Final Energy|Industry|Electricity"] = price_load(
-        n, "industry electricity", region
+        n, "industry electricity", region, clip=max_elec_price
     )[0]
     # Price|Final Energy|Industry|Electricity|Sales Margin
     # Price|Final Energy|Industry|Electricity|Transport and Distribution
