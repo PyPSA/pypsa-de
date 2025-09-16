@@ -1,3 +1,4 @@
+import importlib.util
 import logging
 import pathlib
 
@@ -12,6 +13,15 @@ from scripts._helpers import (
     update_config_from_wildcards,
 )
 from scripts.solve_network import solve_network
+
+_spec_path = pathlib.Path(__file__).resolve().parent / "modify_prenetwork.py"
+_spec = importlib.util.spec_from_file_location(
+    "scripts.pypsa_de.modify_prenetwork", _spec_path
+)
+_modify_prenetwork = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_modify_prenetwork)
+remove_flexibility_options = _modify_prenetwork.remove_flexibility_options
+
 
 logger = logging.getLogger(__name__)
 
@@ -44,29 +54,8 @@ if __name__ == "__main__":
     np.random.seed(snakemake.params.solving["options"].get("seed", 123))
 
     if snakemake.params.get("no_flex_st_run") == True:
-        logger.info(
-            "No flexibility sensitivity analysis activated. Removing decentral TES, batteries, and BEV DSM from the network."
-        )
-        carriers_to_drop = [
-            "urban decentral water tanks charger",
-            "urban decentral water tanks discharger",
-            "urban decentral water tanks",
-            "rural water tanks charger",
-            "rural water tanks discharger",
-            "rural water tanks",
-            "battery charger",
-            "battery discharger",
-            "home battery charger",
-            "home battery discharger",
-            "battery",
-            "home battery",
-            "EV battery",
-        ]
-        n.remove("Link", n.links.query("carrier in @carriers_to_drop").index)
-        n.remove("Store", n.stores.query("carrier in @carriers_to_drop").index)
-        # Need to keep the EV battery bus
-        carriers_to_drop.remove("EV battery")
-        n.remove("Bus", n.buses.query("carrier in @carriers_to_drop").index)
+        logger.info("No flexibility short term analysis activated.")
+        remove_flexibility_options(n)
 
     with memory_logger(
         filename=getattr(snakemake.log, "memory", None), interval=logging_frequency
