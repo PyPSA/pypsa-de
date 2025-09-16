@@ -1014,8 +1014,8 @@ rule prepare_regret_network:
 
 rule solve_regret_network:
     params:
-        no_flex_sensitivity=lambda w: (
-            True if w.regret_dir == "no_flex_regret_networks" else False
+        no_flex_st_run=lambda w: (
+            True if w.regret_dir == "no_flex_st_regret_networks" else False
         ),
         solving=config_provider("solving"),
         regret_run=True,
@@ -1108,7 +1108,7 @@ rule regret_no_flex:
     input:
         "results/"
         + config["run"]["prefix"]
-        + "/scenario_comparison/no_flex_regret_networks/Price-Carbon.png",
+        + "/scenario_comparison/no_flex_st_regret_networks/Price-Carbon.png",
 
 
 rule regret_base:
@@ -1125,16 +1125,14 @@ rule regret_all:
             + config["run"]["prefix"]
             + "/scenario_comparison/{regret_dir}/Price-Carbon.png",
             regret_dir=(
-                ["regret_networks", "no_flex_regret_networks"]
-                if config_provider(
-                    "iiasa_database", "regret_run", "no_flex_sensitivity"
-                )(w)
+                ["regret_networks", "no_flex_st_regret_networks"]
+                if config_provider("iiasa_database", "regret_run", "no_flex_st_run")(w)
                 else ["regret_networks"]
             ),
         ),
         f"results/{config['run']['prefix']}/regret_plots/LT_comparison/elec_capa_comp_de_2025.png",
         # expand("results/" + config["run"]["prefix"] + "/regret_plots/{regret_dir}/ST_comparison/elec_price_comp_de.png",
-        # regret_dir=["no_flex_regret_networks", "regret_networks"]),
+        # regret_dir=["no_flex_st_regret_networks", "regret_networks"]),
 
 
 rule plot_scenario_comparison_regrets:
@@ -1163,7 +1161,7 @@ rule regret_plots_lt:
         planning_horizons=config_provider("scenario", "planning_horizons"),
         plotting=config_provider("plotting"),
         output_dir=directory(
-            "results/" + config['run']['prefix'] + "/regret_plots/LT_comparison"
+            "results/" + config["run"]["prefix"] + "/regret_plots/LT_comparison"
         ),
     input:
         networks=expand(

@@ -47,7 +47,7 @@ iiasa_database:
     scope_to_fix: EU # Supported values are DE and EU
     strict: false # If false, the model allows capacity expansion for virtual links and bottlenecks
     h2_vent: true
-    no_flex_sensitivity: false # CAVEAT: This behaves like a wildcard
+    no_flex_st_run: false # CAVEAT: This behaves like a wildcard. Activates a run without flexibility for all combinations of long term scenarios.
   ageb_for_mobility: true # In 2020 use AGEB data for final energy demand and KBA for vehicles
   uba_for_mobility: # For 2025–2035 use MWMS scenario from UBA Projektionsbericht 2025
   - 2025

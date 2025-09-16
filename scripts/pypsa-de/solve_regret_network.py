@@ -25,7 +25,7 @@ if __name__ == "__main__":
             planning_horizons="2035",
             decision="LowDemand",
             run="HighDemand",
-            regret_dir="no_flex_regret_networks",
+            regret_dir="no_flex_st_regret_networks",
         )
 
     configure_logging(snakemake)
@@ -43,7 +43,7 @@ if __name__ == "__main__":
     )
     np.random.seed(snakemake.params.solving["options"].get("seed", 123))
 
-    if snakemake.params.get("no_flex_sensitivity") == True:
+    if snakemake.params.get("no_flex_st_run") == True:
         logger.info(
             "No flexibility sensitivity analysis activated. Removing decentral TES, batteries, and BEV DSM from the network."
         )
