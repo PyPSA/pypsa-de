@@ -42,7 +42,7 @@ if __name__ == "__main__":
     if "regret_variables" in fns[0] and len(fns) in [9, 16]:
         fns = [
             fn for fn in fns if "NoFlex/" not in fn
-        ]  # !!! CAVEAT AGAIN DISPATCHING ON FILENAME
+        ]  # !!! CAVEAT DISPATCHING ON FILENAME
     for file in fns:
         _df = pd.read_excel(
             file, index_col=list(range(5)), sheet_name="data"

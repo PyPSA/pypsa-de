@@ -193,13 +193,12 @@ if __name__ == "__main__":
     scope_to_fix = snakemake.params["scope_to_fix"]
     h2_vent = snakemake.params["h2_vent"]
 
-    # CAVEAT The 'NoFlex' string in the scenario actually controls the behavior of this function
     n = fix_capacities(
         realization,
         decision,
         scope=scope_to_fix,
         strict=strict,
-        no_flex="NoFlex" in snakemake.input.decision,
+        no_flex=decision.meta.get("iiasa_database").get("no_flex_lt_run", False),
     )
 
     if strict:
