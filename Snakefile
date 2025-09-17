@@ -1121,7 +1121,7 @@ rule regret_base:
 def get_st_sensitivities(w):
     dirs = ["base"]
     for sens in config_provider("iiasa_database", "regret_run", "st_sensitivities")(w):
-        dirs.append(f"st_sensitivities/{sens}")
+        dirs.append(f"{sens}")
     return dirs
 
 
