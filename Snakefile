@@ -997,6 +997,7 @@ rule prepare_regret_network:
         scope_to_fix=config_provider("iiasa_database", "regret_run", "scope_to_fix"),
         h2_vent=config_provider("iiasa_database", "regret_run", "h2_vent"),
         strict=config_provider("iiasa_database", "regret_run", "strict"),
+        unit_commitment=config_provider("iiasa_database", "regret_run", "unit_commitment"),
     input:
         decision=RESULTS.replace("{run}", "{decision}")
         + "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",

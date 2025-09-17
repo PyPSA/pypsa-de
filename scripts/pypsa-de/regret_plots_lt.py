@@ -224,14 +224,14 @@ if __name__ == "__main__":
     configure_logging(snakemake)
     config = snakemake.config
     planning_horizons = snakemake.params.planning_horizons
-    scenarios = ["HighDemand", "LowDemand"]
+    scenarios = ["HighDemand", "LowDemand"] #config["run"]["name"]
     tech_colors = snakemake.params.plotting["tech_colors"]
 
     # Load networks
     networks = defaultdict(dict)
 
     for fn in snakemake.input.networks:
-        scenario = fn.split(os.sep)[-3]
+        scenario = fn.split(os.sep)[-4]
         year = int(re.search(r"_(\d{4})\.nc$", fn).group(1))
         networks[scenario][year] = pypsa.Network(fn)
 

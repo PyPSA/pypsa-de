@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20250908_regret_no_flex_lt_run
+  prefix: 20250917_regret_uc
   name:
   # - ExPol
   # - KN2045_Mix
@@ -51,6 +51,7 @@ iiasa_database:
     #- no_flex
     - gas_price_60
     #- gas_price_80
+    unit_commitment: true
   ageb_for_mobility: true # In 2020 use AGEB data for final energy demand and KBA for vehicles
   uba_for_mobility: # For 2025–2035 use MWMS scenario from UBA Projektionsbericht 2025
   - 2025

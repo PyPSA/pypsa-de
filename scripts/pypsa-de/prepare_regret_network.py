@@ -25,6 +25,124 @@ remove_flexibility_options = _modify_prenetwork.remove_flexibility_options
 logger = logging.getLogger(__name__)
 
 
+def add_unit_commitment(n, carriers=["OCGT", "CCGT", "coal", "lignite", "nuclear", "oil","urban central solid biomass CHP"], regions=["DE"]):
+    """
+    Add unit commitment for conventionals
+    based on
+    https://discord.com/channels/914472852571426846/1042037164088766494/1042395972438868030
+    from DIW
+    [1] https://www.diw.de/documents/publikationen/73/diw_01.c.424566.de/diw_datadoc_2013-068.pdf
+    
+    [2] update with p.48 https://www.agora-energiewende.de/fileadmin/Projekte/2017/Flexibility_in_thermal_plants/115_flexibility-report-WEB.pdf
+    
+    [3] SI Schill et al. p.26 https://static-content.springer.com/esm/art%3A10.1038%2Fnenergy.2017.50/MediaObjects/41560_2017_BFnenergy201750_MOESM196_ESM.pdf
+    [4] MA https://zenodo.org/record/6421682
+    """
+    
+    # Helper function to filter links by carrier and region
+    def get_filtered_links(carrier_list):
+        # Filter by carrier
+        carrier_mask = n.links.carrier.isin(carrier_list)
+        
+        # Filter by region - check if bus0 or bus1 is in the specified regions
+        region_mask = (
+            n.links.bus0.str.contains('|'.join(regions), na=False) | 
+            n.links.bus1.str.contains('|'.join(regions), na=False)
+        )
+        
+        return n.links[carrier_mask & region_mask].index
+    
+    # Only process carriers that are both requested and available
+    available_carriers = set(carriers) & set(n.links.carrier.unique())
+    
+    # OCGT
+    if "OCGT" in available_carriers:
+        links_i = get_filtered_links(["OCGT"])
+        if len(links_i) > 0:
+            n.links.loc[links_i, "p_min_pu"] = 0.2  # [3]   # removed since otherwise NL is not solving
+            n.links.loc[links_i, "start_up_cost"] = 24 * 0.4 # [3] start-up depreciation costs Eur/MW
+            n.links.loc[links_i, "ramp_limit_up"] = 1  # [2] 8-12% per min
+            n.links.loc[links_i, "ramp_limit_start_up"] = 0.2  # [4] p.41
+            n.links.loc[links_i, "ramp_limit_shut_down"] = 0.2  # [4] p.41
+            # cold/warm start up time within minutes, complete ramp up within one hour
+    
+    # CCGT
+    if "CCGT" in available_carriers:
+        links_i = get_filtered_links(["CCGT"])
+        if len(links_i) > 0:
+            n.links.loc[links_i, "p_min_pu"] = 0.45  # [2] mean of Minimum load Most commonly used power plants
+            n.links.loc[links_i, "start_up_cost"] = 144 * 0.57 # [3] start-up depreciation costs Eur/MW, in [4] 144
+            n.links.loc[links_i, "min_up_time"] = 3  # mean of "Cold start-up time" [2] Most commonly used power plants
+            n.links.loc[links_i, "min_down_time"] = 2   # [3] Minimum offtime [hours]
+            n.links.loc[links_i, "ramp_limit_up"] = 1  # [2] 2-4% per min
+            n.links.loc[links_i, "ramp_limit_start_up"] = 0.45  # [4] p.41
+            n.links.loc[links_i, "ramp_limit_shut_down"] = 0.45 # [4] p.41
+ 
+    # coal
+    if "coal" in available_carriers:
+        links_i = get_filtered_links(["coal"])
+        if len(links_i) > 0:
+            n.links.loc[links_i, "p_min_pu"] = 0.325  # [2] mean of Minimum load Most commonly used power plants
+            n.links.loc[links_i, "start_up_cost"] =  108 * 0.33 # [4] p.41
+            n.links.loc[links_i, "min_up_time"] = 5  # mean of "Cold start-up time" [2] Most commonly used power plants
+            n.links.loc[links_i, "min_down_time"] = 6   # [3] Minimum offtime [hours], large plant
+            n.links.loc[links_i, "ramp_limit_up"] = 1  # [2] 1.5-4% per minute
+            n.links.loc[links_i, "ramp_limit_start_up"] = 0.38 # [4] p.41
+            n.links.loc[links_i, "ramp_limit_shut_down"] = 0.38 # [4] p.41
+    
+    # lignite
+    if "lignite" in available_carriers:
+        links_i = get_filtered_links(["lignite"])
+        if len(links_i) > 0:
+            n.links.loc[links_i, "p_min_pu"] = 0.325 # 0.4  # [3]
+            n.links.loc[links_i, "start_up_cost"] = 58 * 0.33 # [4] p.41
+            n.links.loc[links_i, "min_up_time"] = 7  # mean of "Cold start-up time" [2] Most commonly used power plants
+            n.links.loc[links_i, "min_down_time"] = 6   # [3] Minimum offtime [hours], large plant
+            n.links.loc[links_i, "ramp_limit_up"] = 1  # [2] 1-2% per minute
+            n.links.loc[links_i, "ramp_limit_start_up"] = 0.4 # [4] p.41
+            n.links.loc[links_i, "ramp_limit_shut_down"] = 0.4 # [4] p.41
+    
+    # nuclear
+    if "nuclear" in available_carriers:
+        links_i = get_filtered_links(["nuclear"])
+        if len(links_i) > 0:
+            n.links.loc[links_i, "p_min_pu"] = 0.5 # [3]
+            n.links.loc[links_i, "start_up_cost"] = 50 * 0.33 # [3]    start-up depreciation costs Eur/MW
+            n.links.loc[links_i, "min_up_time"] = 6   # [1]
+            n.links.loc[links_i, "ramp_limit_up"] = 0.3  # [4]
+            n.links.loc[links_i, "min_down_time"] = 10  # [3] Minimum offtime [hours]
+            n.links.loc[links_i, "ramp_limit_start_up"] = 0.5  # [4] p.41
+            n.links.loc[links_i, "ramp_limit_shut_down"] = 0.5 # [4] p.41
+    
+    # oil
+    if "oil" in available_carriers:
+        links_i = get_filtered_links(["oil"])
+        if len(links_i) > 0:
+            n.links.loc[links_i, "p_min_pu"] = 0.2 # [4]
+            n.links.loc[links_i, "start_up_cost"] = 1 * 0.35 # [4]    start-up depreciation costs Eur/MW
+            n.links.loc[links_i, "ramp_limit_start_up"] = 0.2  # [4] p.41
+            n.links.loc[links_i, "ramp_limit_shut_down"] = 0.2 # [4] p.41
+
+    # biomass
+    if "urban central solid biomass CHP" in available_carriers:
+        links_i = get_filtered_links(["urban central solid biomass CHP"])
+        if len(links_i) > 0:
+            n.links.loc[links_i, "p_min_pu"] = 0.38 # [4]
+            n.links.loc[links_i, "start_up_cost"] = 78 * 0.27 # [4]
+            n.links.loc[links_i, "min_up_time"] = 2   # [4]
+            n.links.loc[links_i, "min_down_time"] = 2  # [4]
+            n.links.loc[links_i, "ramp_limit_start_up"] = 0.38  # [4] p.41
+            n.links.loc[links_i, "ramp_limit_shut_down"] = 0.38 # [4] p.41
+    
+    # Set committable flag for all processed carriers in specified regions
+    processed_carriers = [c for c in carriers if c in available_carriers]
+    if processed_carriers:
+        links_i = get_filtered_links(processed_carriers)
+        if len(links_i) > 0:
+            n.links.loc[links_i, "committable"] = True
+
+
+
 def _unfix_bottlenecks(new, deci, name, extendable_i):
     if name == "links":
         # Links that have 0-cost and are extendable
@@ -200,6 +318,12 @@ if __name__ == "__main__":
         strict=strict,
         no_flex=decision.meta.get("iiasa_database").get("no_flex_lt_run", False),
     )
+
+    unit_commitment = snakemake.params.get("unit_commitment", False)
+
+    if unit_commitment:
+        logger.info("Add unit commitment to the network.")
+        add_unit_commitment(n, carriers=["coal", "lignite"], regions=["DE"])
 
     if strict:
         logger.info(
