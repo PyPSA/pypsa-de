@@ -24,7 +24,7 @@ if __name__ == "__main__":
     if "snakemake" not in globals():
         snakemake = mock_snakemake(
             "plot_scenario_comparison_regrets",
-            regret_dir="regret_networks",
+            sensitivity="base",
             # simpl="",
             # clusters=22,
             # opts="",

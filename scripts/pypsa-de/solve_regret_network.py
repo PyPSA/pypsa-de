@@ -1,6 +1,7 @@
 import importlib.util
 import logging
 import pathlib
+import re
 
 import numpy as np
 import pypsa
@@ -32,10 +33,10 @@ if __name__ == "__main__":
             clusters=27,
             opts="",
             sector_opts="none",
-            planning_horizons="2035",
+            planning_horizons="2025",
             decision="LowDemand",
             run="HighDemand",
-            regret_dir="no_flex_st_regret_networks",
+            sensitivity="gas_price_50",
         )
 
     configure_logging(snakemake)
@@ -53,9 +54,21 @@ if __name__ == "__main__":
     )
     np.random.seed(snakemake.params.solving["options"].get("seed", 123))
 
-    if snakemake.params.get("no_flex_st_run") == True:
-        logger.info("No flexibility short term analysis activated.")
+    if "no_flex" in snakemake.params.st_sensitivity:
+        logger.info(
+            "Running sensitivity of the short term model with less flexibility options."
+        )
         remove_flexibility_options(n)
+
+    gas_price = re.findall(r"gas_price_(\d{2,3})", snakemake.params.st_sensitivity)
+    if gas_price:
+        gas_price = int(gas_price[0])
+        logger.info(
+            f"Running sensitivity of the short term model with gas price set to {gas_price} €/MWh."
+        )
+        n.generators.loc[n.generators.carrier == "gas primary", "marginal_cost"] = (
+            gas_price
+        )
 
     with memory_logger(
         filename=getattr(snakemake.log, "memory", None), interval=logging_frequency

@@ -5479,7 +5479,7 @@ if __name__ == "__main__":
             sector_opts="None",
             run="HighDemand",
             decision="LowDemand",
-            regret_dir="regret_networks",
+            sensitivity="base",
         )
     configure_logging(snakemake)
     config = snakemake.config
