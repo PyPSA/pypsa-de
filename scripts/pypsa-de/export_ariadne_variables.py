@@ -3408,6 +3408,14 @@ def get_vre_market_values(n, region):
     var["Market Value|Electricity|Solar|Rooftop"] = get_vre_market_value(
         n, region, ["solar rooftop"]
     )
+    var["Market Value|Electricity|Solar"] = get_vre_market_value(
+        n, region, ["solar", "solar-hsat", "solar rooftop"]
+    )
+    var["Market Value|Electricity|VRE"] = get_vre_market_value(
+        n,
+        region,
+        ["onwind", "offwind-ac", "offwind-dc", "solar", "solar-hsat", "solar rooftop"],
+    )
     return var
 
 
