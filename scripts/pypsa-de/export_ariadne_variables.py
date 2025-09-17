@@ -3353,6 +3353,64 @@ def get_weighted_costs(costs, flows):
     return result
 
 
+def get_vre_market_values(n, region):
+    def get_einheitspreis(n, region):
+        ac_buses = n.buses.query(
+            f"index.str.startswith('{region}') and carrier == 'AC'"
+        ).index
+        nodal_prices = n.buses_t.marginal_price[ac_buses]
+
+        nodal_flows = (
+            n.statistics.withdrawal(
+                bus_carrier="AC",
+                groupby=["name", "bus", "carrier"],
+                aggregate_time=False,
+            )
+            .groupby("bus")
+            .sum()
+            .T.filter(
+                like="DE",
+                axis=1,
+            )
+        )
+
+        weighted_mean_nodal_price = (
+            nodal_flows.mul(nodal_prices).sum(axis=1).div(nodal_flows.sum(axis=1))
+        )
+
+        return weighted_mean_nodal_price
+
+    def get_vre_market_value(n, region, carriers):
+        idx = n.generators.query(
+            f"carrier in {carriers} and bus.str.contains('{region}')"
+        ).index
+        gen = n.generators_t.p[idx].sum(axis=1)
+        einheitspreis = get_einheitspreis(n, region)
+
+        return einheitspreis.mul(gen).sum() / gen.sum()
+
+    var = pd.Series()
+    var["Market Value|Electricity|Wind|Onshore"] = get_vre_market_value(
+        n, region, ["onwind"]
+    )
+    var["Market Value|Electricity|Wind|Offshore|AC"] = get_vre_market_value(
+        n, region, ["offwind-ac"]
+    )
+    var["Market Value|Electricity|Wind|Offshore|DC"] = get_vre_market_value(
+        n, region, ["offwind-dc"]
+    )
+    var["Market Value|Electricity|Wind|Offshore"] = get_vre_market_value(
+        n, region, ["offwind-ac", "offwind-dc"]
+    )
+    var["Market Value|Electricity|Solar|PV"] = get_vre_market_value(
+        n, region, ["solar", "solar-hsat"]
+    )
+    var["Market Value|Electricity|Solar|Rooftop"] = get_vre_market_value(
+        n, region, ["solar rooftop"]
+    )
+    return var
+
+
 def get_prices(n, region):
     """
     Calculate the prices of various energy sources in the Ariadne model.
@@ -5360,6 +5418,7 @@ def get_ariadne_var(
                 industry_production,
             ),
             get_prices(n, region),
+            get_vre_market_values(n, region),
             get_emissions(n, region, energy_totals, industry_demand),
             get_policy(n, year),
             get_trade(n, region),
