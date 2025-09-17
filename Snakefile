@@ -1170,12 +1170,12 @@ rule regret_plots_lt:
     input:
         networks=expand(
             RESULTS
-            + "regret_networks/decision_{run}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
+            + "regret_networks/base/decision_{run}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
             **config["scenario"],
             run=config["run"]["name"],
         ),
         regret_variables=expand(
-            RESULTS + "regret_networks/regret_variables_{run}_full.xlsx",
+            RESULTS + "regret_variables/base/regret_variables_{run}_full.xlsx",
             run=config["run"]["name"],
         ),
     output:
