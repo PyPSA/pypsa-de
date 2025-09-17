@@ -43,6 +43,9 @@ if __name__ == "__main__":
         fns = [
             fn for fn in fns if "NoFlex/" not in fn
         ]  # !!! CAVEAT DISPATCHING ON FILENAME
+    if len(fns) > 16:
+        raise ValueError("Too many files to plot together.")
+
     for file in fns:
         _df = pd.read_excel(
             file, index_col=list(range(5)), sheet_name="data"
