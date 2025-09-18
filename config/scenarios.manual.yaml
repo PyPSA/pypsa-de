@@ -62,7 +62,6 @@ HighDemandNoFlex:
 
 LowDemand:
   iiasa_database:
-    reference_scenario: ExPol # e.g., CO2 emissions from REMIND will follow ExPol
     uba_for_industry:
     - 2025
     - 2030
@@ -101,7 +100,6 @@ LowDemand:
 LowDemandNoFlex:
   iiasa_database:
     no_flex_lt_run: true
-    reference_scenario: ExPol # e.g., CO2 emissions from REMIND will follow ExPol
     uba_for_industry:
     - 2025
     - 2030

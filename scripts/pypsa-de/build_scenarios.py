@@ -66,7 +66,11 @@ def get_co2_budget(df, source):
         ## GHG targets according to KSG
         initial_years_co2 = pd.Series(
             index=[2020, 2025, 2030],
-            data=[813, 643, 438],
+            data=[
+                813,
+                629,  # From UBA Projektionsbericht 2025
+                438,
+            ],
         )
 
         later_years_co2 = pd.Series(
@@ -85,18 +89,8 @@ def get_co2_budget(df, source):
         )
     else:
         raise ValueError("Invalid source for CO2 budget.")
-    ## Compute nonco2 from Ariadne-Leitmodell (REMIND)
 
-    # co2 = (
-    #     df.loc["Emissions|CO2 incl Bunkers","Mt CO2/yr"]
-    #     - df.loc["Emissions|CO2|Land-Use Change","Mt CO2-equiv/yr"]
-    #     - df.loc["Emissions|CO2|Energy|Demand|Bunkers","Mt CO2/yr"]
-    # )
-    # ghg = (
-    #     df.loc["Emissions|Kyoto Gases","Mt CO2-equiv/yr"]
-    #     - df.loc["Emissions|Kyoto Gases|Land-Use Change","Mt CO2-equiv/yr"]
-    #     # No Kyoto Gas emissions for Bunkers recorded in Ariadne DB
-    # )
+    ## Compute nonco2 from Ariadne-Leitmodell (REMIND)
 
     try:
         co2_land_use_change = df.loc["Emissions|CO2|Land-Use Change", "Mt CO2-equiv/yr"]
@@ -120,6 +114,10 @@ def get_co2_budget(df, source):
     ## PyPSA disregards nonco2 GHG emissions, but includes bunkers
 
     targets_pypsa = targets_co2 - nonco2
+
+    logger.info("Non-CO2 GHG emissions assumed (in Mt CO2-equiv/yr):")
+    for year in nonco2.index:
+        logger.info(f"{year}: {nonco2.loc[year]:.1f}")
 
     target_fractions_pypsa = targets_pypsa.loc[targets_co2.index] / baseline_pypsa
     target_fractions_pypsa[2020] = (
