@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20250917_regret_uc
+  prefix: 20250918_regret_same_nonco2
   name:
   # - ExPol
   # - KN2045_Mix
