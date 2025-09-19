@@ -5,7 +5,6 @@
 HighDemand:
   solving:
     options:
-      transmission_losses: 0
       noisy_costs: false
     constraints:
       decentral_heat_pump_budgets:
@@ -41,7 +40,6 @@ HighDemandNoFlex:
     no_flex_lt_run: true
   solving:
     options:
-      transmission_losses: 0
       noisy_costs: false
     constraints:
       decentral_heat_pump_budgets:
@@ -86,7 +84,6 @@ LowDemand:
     delay_years: 2
   solving:
     options:
-      transmission_losses: 0
       noisy_costs: false
     constraints:
       decentral_heat_pump_budgets:
@@ -135,7 +132,6 @@ LowDemandNoFlex:
     delay_years: 2
   solving:
     options:
-      transmission_losses: 0
       noisy_costs: false
     constraints:
       decentral_heat_pump_budgets:
