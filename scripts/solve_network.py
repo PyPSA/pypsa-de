@@ -26,7 +26,9 @@ Additionally, some extra constraints specified in :mod:`solve_network` are added
     based on the rule :mod:`solve_network`.
 """
 
+import contextlib
 import importlib
+import io
 import logging
 import os
 import pathlib
@@ -43,6 +45,7 @@ import xarray as xr
 import yaml
 from pypsa.descriptors import get_activity_mask
 from pypsa.descriptors import get_switchable_as_dense as get_as_dense
+from snakemake.script import Snakemake
 
 from scripts._benchmark import memory_logger
 from scripts._helpers import (
@@ -137,7 +140,9 @@ def add_land_use_constraint_perfect(n: pypsa.Network) -> None:
         n.buses.loc[bus, name] = df_carrier.p_nom_max.values
 
 
-def add_land_use_constraint(n: pypsa.Network, planning_horizons: str) -> None:
+def add_land_use_constraint(
+    n: pypsa.Network, planning_horizons: str, regret_run=False
+) -> None:
     """
     Add land use constraints for renewable energy potential.
 
@@ -164,6 +169,11 @@ def add_land_use_constraint(n: pypsa.Network, planning_horizons: str) -> None:
         "offwind-dc",
         "offwind-float",
     ]:
+        if regret_run:
+            logger.info(
+                f"Skipping land use constraint adjustment for {carrier} with planning horizons {planning_horizons}, because of regret run."
+            )
+            continue
         ext_i = (n.generators.carrier == carrier) & ~n.generators.p_nom_extendable
         grouper = n.generators.loc[ext_i].index.str.replace(
             f" {carrier}.*$", "", regex=True
@@ -188,7 +198,9 @@ def add_land_use_constraint(n: pypsa.Network, planning_horizons: str) -> None:
     n.generators["p_nom_max"] = n.generators["p_nom_max"].clip(lower=0)
 
 
-def add_solar_potential_constraints(n: pypsa.Network, config: dict) -> None:
+def add_solar_potential_constraints(
+    n: pypsa.Network, config: dict, regret_run=False
+) -> None:
     """
     Add constraint to make sure the sum capacity of all solar technologies (fixed, tracking, ets. ) is below the region potential.
 
@@ -206,6 +218,12 @@ def add_solar_potential_constraints(n: pypsa.Network, config: dict) -> None:
     rename = {} if PYPSA_V1 else {"Generator-ext": "Generator"}
 
     solar_carriers = ["solar", "solar-hsat"]
+
+    if regret_run:
+        logger.info(
+            "Skipping solar potential constraint adjustment, because of regret run."
+        )
+        return
     solar = n.generators[
         n.generators.carrier.isin(solar_carriers) & n.generators.p_nom_extendable
     ].index
@@ -427,6 +445,7 @@ def prepare_network(
     planning_horizons: str | None,
     co2_sequestration_potential: dict[str, float],
     limit_max_growth: dict[str, Any] | None = None,
+    regret_run: bool = False,
 ) -> None:
     """
     Prepare network with various constraints and modifications.
@@ -480,6 +499,14 @@ def prepare_network(
             p_nom=1e9,  # kW
         )
 
+        n.generators.loc[
+            (n.generators.carrier == "load")
+            & (
+                n.generators.index.str.contains("non-sequestered HVC|process emissions")
+            ),
+            "sign",
+        ] *= -1
+
     if solve_opts.get("curtailment_mode"):
         n.add("Carrier", "curtailment", color="#fedfed", nice_name="Curtailment")
         n.generators_t.p_min_pu = n.generators_t.p_max_pu
@@ -516,7 +543,7 @@ def prepare_network(
         n.snapshot_weightings[:] = 8760.0 / nhours
 
     if foresight == "myopic":
-        add_land_use_constraint(n, planning_horizons)
+        add_land_use_constraint(n, planning_horizons, regret_run)
 
     if foresight == "perfect":
         add_land_use_constraint_perfect(n)
@@ -876,7 +903,7 @@ def add_TES_energy_to_power_ratio_constraints(n: pypsa.Network) -> None:
 
     if indices_charger_p_nom_extendable.empty or indices_stores_e_nom_extendable.empty:
         logger.warning(
-            "No valid extendable charger links or stores found for TES energy-to-power constraints.Not enforcing TES energy-to-power ratio constraints!"
+            "No valid extendable charger links or stores found for TES energy-to-power constraints. Not enforcing TES energy-to-power ratio constraints!"
         )
         return
 
@@ -1166,7 +1193,10 @@ def add_co2_atmosphere_constraint(n, snapshots):
 
 
 def extra_functionality(
-    n: pypsa.Network, snapshots: pd.DatetimeIndex, planning_horizons: str | None = None
+    n: pypsa.Network,
+    snapshots: pd.DatetimeIndex,
+    snakemake: Snakemake,
+    planning_horizons: str | None = None,
 ) -> None:
     """
     Add custom constraints and functionality.
@@ -1177,6 +1207,8 @@ def extra_functionality(
         The PyPSA network instance with config and params attributes
     snapshots : pd.DatetimeIndex
         Simulation timesteps
+    snakemake : snakemake.script.Snakemake
+            Snakemake instance for accessing workflow parameters
     planning_horizons : str, optional
         The current planning horizon year or None in perfect foresight
 
@@ -1208,7 +1240,9 @@ def extra_functionality(
     ) and {"solar-hsat", "solar"}.issubset(
         config["electricity"]["extendable_carriers"]["Generator"]
     ):
-        add_solar_potential_constraints(n, config)
+        add_solar_potential_constraints(
+            n, config, snakemake.params.get("regret_run", False)
+        )
 
     if n.config.get("sector", {}).get("tes", False):
         if n.buses.index.str.contains(
@@ -1278,6 +1312,7 @@ def solve_network(
     config: dict,
     params: dict,
     solving: dict,
+    snakemake: Snakemake,
     rule_name: str | None = None,
     planning_horizons: str | None = None,
     **kwargs,
@@ -1295,6 +1330,8 @@ def solve_network(
         Dictionary of solving parameters
     solving : Dict
         Dictionary of solving options and configuration
+    snakemake : snakemake.script.Snakemake
+            Snakemake instance for accessing workflow parameters
     rule_name : str, optional
         Name of the snakemake rule being executed
     planning_horizons : str, optional
@@ -1318,6 +1355,7 @@ def solve_network(
     ObjectiveValueError
         If objective value differs from expected value
     """
+
     set_of_options = solving["solver"]["options"]
     cf_solving = solving["options"]
 
@@ -1327,7 +1365,7 @@ def solve_network(
     )
     kwargs["solver_name"] = solving["solver"]["name"]
     kwargs["extra_functionality"] = partial(
-        extra_functionality, planning_horizons=planning_horizons
+        extra_functionality, snakemake=snakemake, planning_horizons=planning_horizons
     )
     kwargs["transmission_losses"] = cf_solving.get("transmission_losses", False)
     kwargs["linearized_unit_commitment"] = cf_solving.get(
@@ -1381,9 +1419,12 @@ def solve_network(
         raise RuntimeError("Solving status 'warning'. Discarding solution.")
 
     if "infeasible" in condition:
-        labels = n.model.compute_infeasibilities()
-        logger.info(f"Labels:\n{labels}")
-        n.model.print_infeasibilities()
+        # labels = n.model.compute_infeasibilities()
+        # logger.info(f"Labels:\n{labels}")
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            n.model.print_infeasibilities()
+        logger.info(buf.getvalue())
         raise RuntimeError("Solving status 'infeasible'. Infeasibilities computed.")
 
     if status == "warning":
@@ -1399,11 +1440,12 @@ if __name__ == "__main__":
         from scripts._helpers import mock_snakemake
 
         snakemake = mock_snakemake(
-            "solve_sector_network",
+            "solve_sector_network_myopic",
+            simpl="",
+            clusters=27,
             opts="",
-            clusters="5",
-            configfiles="config/test/config.overnight.yaml",
-            sector_opts="",
+            sector_opts="none",
+            run="LowDemand",
             planning_horizons="2030",
         )
     configure_logging(snakemake)
@@ -1437,6 +1479,7 @@ if __name__ == "__main__":
             config=snakemake.config,
             params=snakemake.params,
             solving=snakemake.params.solving,
+            snakemake=snakemake,
             planning_horizons=planning_horizons,
             rule_name=snakemake.rule,
             log_fn=snakemake.log.solver,

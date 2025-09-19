@@ -996,6 +996,10 @@ def _get_capacities(n, region, cap_func, cap_string="Capacity|"):
         like="solar thermal"
     ).sum()
 
+    var[cap_string + "Decentral Heat|Heat Pump"] = capacities_decentral_heat.filter(
+        like="heat pump"
+    ).sum()
+
     capacities_h2 = (
         cap_func(
             bus_carrier="H2",
@@ -1818,9 +1822,17 @@ def get_secondary_energy(n, region, _industry_demand):
         axis=0,
     ).sum()
     mwh_coal_per_mwh_coke = 1.366
+    coke_fraction = (
+        industry_demand.get("coke")
+        * mwh_coal_per_mwh_coke
+        / (
+            industry_demand.get("coke") * mwh_coal_per_mwh_coke
+            + industry_demand.get("coal")
+        )
+    )
     # Coke is added as a coal demand, so we need to convert back to units of coke for secondary energy
     var["Secondary Energy|Solids|Coal"] = var["Secondary Energy|Solids"] = (
-        industry_demand.get("coke", 0) / mwh_coal_per_mwh_coke
+        sum_load(n, "coal for industry", region) * coke_fraction / mwh_coal_per_mwh_coke
     )
 
     biomass_usage = (
@@ -1990,14 +2002,17 @@ def get_final_energy(
     # !: Pypsa-eur does not strictly distinguish between energy and
     # non-energy use
 
-    var["Final Energy|Industry|Electricity"] = industry_demand.get("electricity")
-    # or use: sum_load(n, "industry electricity", region)
+    var["Final Energy|Industry|Electricity"] = sum_load(
+        n, "industry electricity", region
+    )
     # electricity is not used for non-energy purposes
     var["Final Energy|Industry excl Non-Energy Use|Electricity"] = var[
         "Final Energy|Industry|Electricity"
     ]
 
-    var["Final Energy|Industry|Heat"] = industry_demand.get("low-temperature heat")
+    var["Final Energy|Industry|Heat"] = sum_load(
+        n, "low-temperature heat for industry", region
+    )
     # heat is not used for non-energy purposes
     var["Final Energy|Industry excl Non-Energy Use|Heat"] = var[
         "Final Energy|Industry|Heat"
@@ -2009,7 +2024,7 @@ def get_final_energy(
     # var["Final Energy|Industry|Geothermal"] = \
     # Not implemented
 
-    var["Final Energy|Industry|Gases"] = industry_demand.get("methane")
+    var["Final Energy|Industry|Gases"] = sum_load(n, "gas for industry", region)
 
     for gas_type in gas_fractions.index:
         var[f"Final Energy|Industry|Gases|{gas_type}"] = (
@@ -2031,7 +2046,7 @@ def get_final_energy(
     # var["Final Energy|Industry|Power2Heat"] = \
     # Q: misleading description
 
-    var["Final Energy|Industry|Hydrogen"] = industry_demand.get("hydrogen")
+    var["Final Energy|Industry|Hydrogen"] = sum_load(n, "H2 for industry", region)
     # subtract non-energy used hydrogen from total hydrogen demand
     var["Final Energy|Industry excl Non-Energy Use|Hydrogen"] = (
         var["Final Energy|Industry|Hydrogen"]
@@ -2075,16 +2090,29 @@ def get_final_energy(
 
     # var["Final Energy|Industry|Other"] = \
 
-    var["Final Energy|Industry|Solids|Biomass"] = industry_demand.get("solid biomass")
+    var["Final Energy|Industry|Solids|Biomass"] = sum_load(
+        n, "solid biomass for industry", region
+    )
     var["Final Energy|Industry excl Non-Energy Use|Solids|Biomass"] = var[
         "Final Energy|Industry|Solids|Biomass"
     ]
 
     mwh_coal_per_mwh_coke = 1.366
-    # Coke is added as a coal demand, so we need to convert back to units of coke for final energy
+    coke_fraction = (
+        industry_demand.get("coke")
+        * mwh_coal_per_mwh_coke
+        / (
+            industry_demand.get("coke") * mwh_coal_per_mwh_coke
+            + industry_demand.get("coal")
+        )
+    )
+    # Contains coke demand, which is a coal product
+    # Here coke is considered a secondary energy source
     var["Final Energy|Industry|Solids|Coal"] = (
-        industry_demand.get("coal")
-        + industry_demand.get("coke") / mwh_coal_per_mwh_coke
+        sum_load(n, "coal for industry", region) * (1 - coke_fraction)
+        + sum_load(n, "coal for industry", region)
+        * coke_fraction
+        / mwh_coal_per_mwh_coke
     )
     var["Final Energy|Industry excl Non-Energy Use|Solids|Coal"] = var[
         "Final Energy|Industry|Solids|Coal"
@@ -2572,10 +2600,10 @@ def get_final_energy(
     return var * MWh2TWh
 
 
-def get_emissions(n, region, _energy_totals, industry_demand):
+def get_emissions(n, region, _energy_totals, _industry_demand):
     energy_totals = _energy_totals.loc[region[0:2]]
 
-    industry_DE = industry_demand.filter(
+    industry_demand = _industry_demand.filter(
         like=region,
         axis=0,
     ).sum()
@@ -2881,8 +2909,22 @@ def get_emissions(n, region, _energy_totals, industry_demand):
     )  # considered 0 anyways
 
     mwh_coal_per_mwh_coke = 1.366  # from eurostat energy balance
-    # 0.3361 t/MWh, 1e-6 to convert to Mt
-    coking_emissions = industry_DE.coke * (mwh_coal_per_mwh_coke - 1) * 0.3361 * t2Mt
+    coke_fraction = (
+        industry_demand.get("coke")
+        * mwh_coal_per_mwh_coke
+        / (
+            industry_demand.get("coke") * mwh_coal_per_mwh_coke
+            + industry_demand.get("coal")
+        )
+    )
+    # 0.3361 t_CO2/MWh
+    coking_emissions = (
+        sum_load(n, "coal for industry", region)
+        * coke_fraction
+        * (mwh_coal_per_mwh_coke - 1)
+        * 0.3361
+        * t2Mt
+    )
     var["Emissions|Gross Fossil CO2|Energy|Demand|Industry"] = (
         co2_emissions.reindex(
             [
@@ -3150,7 +3192,7 @@ def get_nodal_supply(n, bus_carrier, query="index == index or index != index"):
     return result
 
 
-def price_load(n, load_carrier, region):
+def price_load(n, load_carrier, region, clip=None):
     """
     Calculate the average price of a specific load carrier in a given region.
 
@@ -3171,7 +3213,8 @@ def price_load(n, load_carrier, region):
     if n.loads_t.p[load.index].values.sum() < 1:
         return np.nan, 0
     result = (
-        n.loads_t.p[load.index] * n.buses_t.marginal_price[load.bus].values
+        n.loads_t.p[load.index]
+        * n.buses_t.marginal_price[load.bus].clip(upper=clip).values
     ).values.sum()
     result /= n.loads_t.p[load.index].values.sum()
     return result, n.loads_t.p[load.index].values.sum()
@@ -3310,6 +3353,72 @@ def get_weighted_costs(costs, flows):
     return result
 
 
+def get_vre_market_values(n, region):
+    def get_einheitspreis(n, region):
+        ac_buses = n.buses.query(
+            f"index.str.startswith('{region}') and carrier == 'AC'"
+        ).index
+        nodal_prices = n.buses_t.marginal_price[ac_buses]
+
+        nodal_flows = (
+            n.statistics.withdrawal(
+                bus_carrier="AC",
+                groupby=["name", "bus", "carrier"],
+                aggregate_time=False,
+            )
+            .groupby("bus")
+            .sum()
+            .T.filter(
+                like="DE",
+                axis=1,
+            )
+        )
+
+        weighted_mean_nodal_price = (
+            nodal_flows.mul(nodal_prices).sum(axis=1).div(nodal_flows.sum(axis=1))
+        )
+
+        return weighted_mean_nodal_price
+
+    def get_vre_market_value(n, region, carriers):
+        idx = n.generators.query(
+            f"carrier in {carriers} and bus.str.contains('{region}')"
+        ).index
+        gen = n.generators_t.p[idx].sum(axis=1)
+        einheitspreis = get_einheitspreis(n, region)
+
+        return einheitspreis.mul(gen).sum() / gen.sum()
+
+    var = pd.Series()
+    var["Market Value|Electricity|Wind|Onshore"] = get_vre_market_value(
+        n, region, ["onwind"]
+    )
+    var["Market Value|Electricity|Wind|Offshore|AC"] = get_vre_market_value(
+        n, region, ["offwind-ac"]
+    )
+    var["Market Value|Electricity|Wind|Offshore|DC"] = get_vre_market_value(
+        n, region, ["offwind-dc"]
+    )
+    var["Market Value|Electricity|Wind|Offshore"] = get_vre_market_value(
+        n, region, ["offwind-ac", "offwind-dc"]
+    )
+    var["Market Value|Electricity|Solar|PV"] = get_vre_market_value(
+        n, region, ["solar", "solar-hsat"]
+    )
+    var["Market Value|Electricity|Solar|Rooftop"] = get_vre_market_value(
+        n, region, ["solar rooftop"]
+    )
+    var["Market Value|Electricity|Solar"] = get_vre_market_value(
+        n, region, ["solar", "solar-hsat", "solar rooftop"]
+    )
+    var["Market Value|Electricity|VRE"] = get_vre_market_value(
+        n,
+        region,
+        ["onwind", "offwind-ac", "offwind-dc", "solar", "solar-hsat", "solar rooftop"],
+    )
+    return var
+
+
 def get_prices(n, region):
     """
     Calculate the prices of various energy sources in the Ariadne model.
@@ -3339,8 +3448,12 @@ def get_prices(n, region):
     except KeyError:
         co2_limit_de = 0
 
+    try:
+        co2_limit_eu = n.global_constraints.loc["CO2Limit", "mu"]
+    except KeyError:
+        co2_limit_eu = n.generators.loc["co2 atmosphere", "marginal_cost"]
     # co2 additions
-    co2_price = -n.global_constraints.loc["CO2Limit", "mu"] - co2_limit_de
+    co2_price = -co2_limit_eu - co2_limit_de
     # specific emissions in tons CO2/MWh according to n.links[n.links.carrier =="your_carrier].efficiency2.unique().item()
     specific_emissions = {
         "oil": 0.2571,
@@ -3427,10 +3540,13 @@ def get_prices(n, region):
     # reported: 8/14
 
     # Price|Secondary Energy|Electricity
+    max_elec_price = 4000  # to clip extreme prices during scarcity
     nodal_flows_ac = get_nodal_flows(
         n, "AC", region, query="not carrier.str.contains('gas')"
     )
-    nodal_prices_ac = n.buses_t.marginal_price[nodal_flows_ac.columns]
+    nodal_prices_ac = n.buses_t.marginal_price[nodal_flows_ac.columns].clip(
+        upper=max_elec_price
+    )
 
     var["Price|Secondary Energy|Electricity"] = (
         nodal_flows_ac.mul(nodal_prices_ac).values.sum() / nodal_flows_ac.values.sum()
@@ -3550,7 +3666,7 @@ def get_prices(n, region):
 
     # Price|Final Energy|Transportation|Passenger|Electricity
     var["Price|Final Energy|Transportation|Passenger|Electricity"] = price_load(
-        n, "land transport EV", region
+        n, "land transport EV", region, clip=max_elec_price
     )[0]
     # Price|Final Energy|Transportation|Passenger|Gases
     # Price|Final Energy|Transportation|Passenger|Hydrogen
@@ -3610,14 +3726,14 @@ def get_prices(n, region):
 
     # Price|Final Energy|Transportation|Electricity
     var["Price|Final Energy|Transportation|Electricity"] = price_load(
-        n, "land transport EV", region
+        n, "land transport EV", region, clip=max_elec_price
     )[0]
     # Price|Final Energy|Transportation|Electricity|Sales Margin
     # Price|Final Energy|Transportation|Electricity|Transport and Distribution
     # Price|Final Energy|Transportation|Electricity|Other Taxes
 
     # Price|Final Energy|Transportation|Liquids|Kerosene
-    var["Price|Final Energy|Transportation|Electricity"] = price_load(
+    var["Price|Final Energy|Transportation|Liquids|Kerosene"] = price_load(
         n, "kerosene for aviation", region
     )[0]
     # Price|Final Energy|Transportation|Liquids|Kerosene|Sales Margin
@@ -3738,7 +3854,9 @@ def get_prices(n, region):
         "& not carrier.str.contains('industry')"
         "& not carrier.str.contains('urban central')",
     )
-    nodal_prices_lv = n.buses_t.marginal_price[nodal_flows_lv.columns]
+    nodal_prices_lv = n.buses_t.marginal_price[nodal_flows_lv.columns].clip(
+        upper=max_elec_price
+    )
     var["Price|Final Energy|Residential and Commercial|Electricity"] = (
         nodal_flows_lv.mul(nodal_prices_lv).values.sum() / nodal_flows_lv.values.sum()
     )
@@ -3837,7 +3955,7 @@ def get_prices(n, region):
 
     # Price|Final Energy|Industry|Electricity
     var["Price|Final Energy|Industry|Electricity"] = price_load(
-        n, "industry electricity", region
+        n, "industry electricity", region, clip=max_elec_price
     )[0]
     # Price|Final Energy|Industry|Electricity|Sales Margin
     # Price|Final Energy|Industry|Electricity|Transport and Distribution
@@ -4275,19 +4393,66 @@ def get_policy(n, investment_year):
         co2_limit_de = n.global_constraints.loc["co2_limit-DE", "mu"]
     except KeyError:
         co2_limit_de = 0
-    var["Price|Carbon"] = (
-        -n.global_constraints.loc["CO2Limit", "mu"] - co2_limit_de + co2_price_add_on
-    )
+    try:
+        co2_limit_eu = n.global_constraints.loc["CO2Limit", "mu"]
+    except KeyError:
+        co2_limit_eu = n.generators.loc["co2 atmosphere", "marginal_cost"]
+    var["Price|Carbon"] = -co2_limit_eu - co2_limit_de + co2_price_add_on
 
     var["Price|Carbon|EU-wide Regulation All Sectors"] = (
-        -n.global_constraints.loc["CO2Limit", "mu"] + co2_price_add_on
+        -co2_limit_eu + co2_price_add_on
     )
-
-    # Price|Carbon|EU-wide Regulation Non-ETS
 
     var["Price|Carbon|National Climate Target"] = -co2_limit_de
 
-    # Price|Carbon|National Climate Target Non-ETS
+    try:
+        var["Price|Policy|Electricity Import Independence"] = n.global_constraints.loc[
+            "Electricity_import_limit-DE", "mu"
+        ]
+    except KeyError:
+        var["Price|Policy|Electricity Import Independence"] = 0
+
+    try:
+        var["Price|Policy|Hydrogen Import Independence"] = n.global_constraints.loc[
+            "H2_import_limit-DE", "mu"
+        ]
+    except KeyError:
+        var["Price|Policy|Hydrogen Import Independence"] = 0
+
+    try:
+        var["Price|Policy|Methanol Import Independence"] = n.global_constraints.loc[
+            "methanol_import_limit-DE", "mu"
+        ]
+    except KeyError:
+        var["Price|Policy|Methanol Import Independence"] = 0
+
+    try:
+        var["Price|Policy|Hydrogen Export Ban"] = n.global_constraints.loc[
+            "H2_export_ban-DE", "mu"
+        ]
+    except KeyError:
+        var["Price|Policy|Hydrogen Export Ban"] = 0
+
+    try:
+        var["Price|Policy|Renewable Oil Import Independence"] = (
+            n.global_constraints.loc["renewable_oil_import_limit-DE", "mu"]
+        )
+    except KeyError:
+        var["Price|Policy|Renewable Oil Import Independence"] = 0
+
+    try:
+        var["Price|Policy|Renewable Gas Import Independence"] = (
+            n.global_constraints.loc["renewable_gas_import_limit-DE", "mu"]
+        )
+    except KeyError:
+        var["Price|Policy|Renewable Gas Import Independence"] = 0
+
+    try:
+        var["Price|Policy|Hydrogen Derivate Import Independence"] = (
+            n.global_constraints.loc["H2_derivate_import_limit-DE", "mu"]
+        )
+    except KeyError:
+        var["Price|Policy|Hydrogen Derivate Import Independence"] = 0
 
     return var
 
@@ -4314,8 +4479,12 @@ def get_economy(n, region):
         )
         #
         transmission_carriers = get_transmission_carriers(n).get_level_values("carrier")
-        transmission_lines = n.lines.carrier.isin(transmission_carriers)
-        transmission_links = n.links.carrier.isin(transmission_carriers)
+        transmission_lines = (
+            n.lines.carrier.isin(transmission_carriers) & n.lines.active
+        )
+        transmission_links = (
+            n.links.carrier.isin(transmission_carriers) & n.links.active
+        )
         #
         country_transmission_lines = (
             (n.lines.bus0.str.contains(country)) & ~(n.lines.bus1.str.contains(country))
@@ -4385,7 +4554,7 @@ def get_economy(n, region):
 
         return tsc
 
-    def get_link_opex(n, carriers, region, sw):
+    def get_link_opex(n, carriers, region, sw, add_congestion_rent=False):
         # get flow of electricity/hydrogen...
         # multiply it with the marginal costs
         supplying = n.links[
@@ -4404,6 +4573,10 @@ def get_economy(n, region):
         for index in supplying:
             # price of energy in trade country
             marg_price = n.buses_t.marginal_price[n.links.loc[index].bus0]
+            if add_congestion_rent:
+                marg_price = (
+                    marg_price + n.buses_t.marginal_price[n.links.loc[index].bus1]
+                ) / 2
             trade = n.links_t.p1[index].mul(sw)
             trade_out += marg_price.mul(trade).sum()
 
@@ -4411,13 +4584,17 @@ def get_economy(n, region):
         for index in receiving:
             # price of energy in Germany
             marg_price = n.buses_t.marginal_price[n.links.loc[index].bus0]
+            if add_congestion_rent:
+                marg_price = (
+                    marg_price + n.buses_t.marginal_price[n.links.loc[index].bus1]
+                ) / 2
             trade = n.links_t.p1[index].mul(sw)
             trade_in += marg_price.mul(trade).sum()
         return abs(trade_in) - abs(trade_out)
         # > 0: costs for Germany
         # < 0: profit for Germany
 
-    def get_line_opex(n, region, sw):
+    def get_line_opex(n, region, sw, add_congestion_rent=False):
         supplying = n.lines[
             (n.lines.carrier.isin(["AC"]))
             & (n.lines.bus0.str.startswith(region))
@@ -4437,9 +4614,11 @@ def get_economy(n, region):
             trade_in = trade.clip(upper=0)  # negative
             marg_price_DE = n.buses_t.marginal_price[n.lines.loc[index].bus0]
             marg_price_EU = n.buses_t.marginal_price[n.lines.loc[index].bus1]
-            net_out += (
-                trade_out.mul(marg_price_DE).sum() + trade_in.mul(marg_price_EU).sum()
-            )
+            price_out = marg_price_DE
+            price_in = marg_price_EU
+            if add_congestion_rent:
+                price_out = price_in = (marg_price_DE + marg_price_EU) / 2
+            net_out += trade_out.mul(price_out).sum() + trade_in.mul(price_in).sum()
             # net_out > 0: Germany is exporting more electricity
             # net_out < 0: Germany is importing more electricity
 
@@ -4451,9 +4630,11 @@ def get_economy(n, region):
             trade_out = trade_out.clip(upper=0)
             marg_price_EU = n.buses_t.marginal_price[n.lines.loc[index].bus0]
             marg_price_DE = n.buses_t.marginal_price[n.lines.loc[index].bus1]
-            net_in += (
-                trade_in.mul(marg_price_EU).sum() + trade_out.mul(marg_price_DE).sum()
-            )
+            price_out = marg_price_DE
+            price_in = marg_price_EU
+            if add_congestion_rent:
+                price_out = price_in = (marg_price_DE + marg_price_EU) / 2
+            net_in += trade_in.mul(price_in).sum() + trade_out.mul(price_out).sum()
             # net_in > 0: Germany is importing more electricity
             # net_in < 0: Germany is exporting more electricity
 
@@ -4463,7 +4644,8 @@ def get_economy(n, region):
         "DC",
         "H2 pipeline",
         "H2 pipeline (Kernnetz)",
-        "H2 pipeline retrofittedrenewable oil",
+        "H2 pipeline retrofitted",
+        "renewable oil",
         "renewable gas",
         "methanol",
     ]
@@ -4473,6 +4655,32 @@ def get_economy(n, region):
     trade_costs = get_link_opex(n, trade_carriers, region, sw) + get_line_opex(
         n, region, sw
     )
+    var["Cost|Total Energy System Cost|Trade"] = trade_costs / 1e9
+    var["Cost|Total Energy System Cost|Trade|Electricity"] = (
+        get_line_opex(n, region, sw) / 1e9 + get_link_opex(n, ["DC"], region, sw) / 1e9
+    )
+    var["Cost|Total Energy System Cost|Trade|Efuels"] = (
+        get_link_opex(n, ["renewable oil", "renewable gas", "methanol"], region, sw)
+        / 1e9
+    )
+    var["Cost|Total Energy System Cost|Trade|Hydrogen"] = (
+        get_link_opex(
+            n,
+            ["H2 pipeline", "H2 pipeline (Kernnetz)", "H2 pipeline retrofitted"],
+            region,
+            sw,
+        )
+        / 1e9
+    )
+    if not isclose(
+        var["Cost|Total Energy System Cost|Trade"],
+        var["Cost|Total Energy System Cost|Trade|Electricity"]
+        + var["Cost|Total Energy System Cost|Trade|Efuels"]
+        + var["Cost|Total Energy System Cost|Trade|Hydrogen"],
+    ):
+        logger.error(
+            "Total Energy System Cost|Trade does not equal the sum of its components. This should be fixed!"
+        )
 
     # Cost|Total Energy System Cost in billion EUR2020/yr
     var["Cost|Total Energy System Cost"] = round((tsc + trade_costs) / 1e9, 4)
@@ -4714,44 +4922,33 @@ def get_trade(n, region):
 
     # Biomass Trade
 
-    biomass_potential_DE = (
-        n.stores.query("carrier.str.contains('solid biomass')")
-        .filter(like=region, axis=0)
-        .e_nom.sum()
+    biomass_primary_gens = n.generators.query(
+        f"index.str.startswith('{region}') and index.str.endswith('solid biomass')"
+    )  # use endswith to avoid the biomass transport generators
+    biomass_transport_gens = n.generators.query(
+        f"index.str.startswith('{region}') and index.str.endswith('solid biomass transported')"
     )
 
-    biomass_usage_local = (
-        n.stores_t.p[
-            n.stores.query("carrier.str.contains('solid biomass')")
-            .filter(like=region, axis=0)
-            .index
-        ]
-        .sum()
-        .multiply(n.snapshot_weightings["stores"].unique().item())
-        .sum()
-    )
+    local_biomass_potential = biomass_primary_gens.e_sum_max.sum()
 
-    biomass_usage_transported = (
-        n.generators_t.p[
-            n.generators.query("carrier.str.contains('solid biomass')")
-            .filter(like=region, axis=0)
-            .index
-        ]
-        .sum()
-        .multiply(n.snapshot_weightings["generators"].unique().item())
+    local_biomass_usage = (
+        (
+            n.generators_t.p[
+                biomass_primary_gens.index.union(biomass_transport_gens.index)
+            ]
+        )
+        .sum(axis=1)
+        .multiply(n.snapshot_weightings.generators)
         .sum()
     )
 
-    biomass_net_exports = (
-        biomass_potential_DE - biomass_usage_local - biomass_usage_transported
-    )
-    var["Trade|Primary Energy|Biomass|Volume"] = biomass_net_exports
+    biomass_imports = local_biomass_usage - local_biomass_potential
+
+    var["Trade|Primary Energy|Biomass|Net Imports"] = biomass_imports
 
     logger.info(
         f"""Share of imported biomass: {
-            round(
-                -biomass_net_exports / (biomass_potential_DE + biomass_net_exports), 3
-            )
+            round(biomass_imports / local_biomass_usage, 3)
         }"""
     )
 
@@ -5031,7 +5228,11 @@ def hack_DC_projects(n, p_nom_start, p_nom_planned, model_year, snakemake, costs
             )
 
     # Future projects should not have any capacity
-    assert isclose(n.links.loc[future_projects, "p_nom_opt"], 0).all()
+    try:
+        assert isclose(n.links.loc[future_projects, "p_nom_opt"], 0).all()
+    except AssertionError:
+        logger.warning("Future projects have non-zero p_nom_opt. Overwriting with 0.")
+        n.links.loc[future_projects, "p_nom_opt"] = 0
 
     # Setting p_nom to 0 such that n.statistics does not compute negative expanded capex or capacity additions
     # Setting p_nom_min to 0 for the grid_expansion calculation
@@ -5214,6 +5415,7 @@ def get_ariadne_var(
                 industry_production,
             ),
             get_prices(n, region),
+            get_vre_market_values(n, region),
             get_emissions(n, region, energy_totals, industry_demand),
             get_policy(n, year),
             get_trade(n, region),
@@ -5325,13 +5527,15 @@ def get_data(
 if __name__ == "__main__":
     if "snakemake" not in globals():
         snakemake = mock_snakemake(
-            "export_ariadne_variables",
+            "export_regret_variables",
             simpl="",
             clusters=27,
             opts="",
             ll="vopt",
             sector_opts="None",
-            run="KN2045_Mix",
+            run="HighDemand",
+            decision="LowDemand",
+            sensitivity="base",
         )
     configure_logging(snakemake)
     config = snakemake.config
@@ -5406,7 +5610,7 @@ if __name__ == "__main__":
 
     if "debug" == "debug":  # For debugging
         var = pd.Series()
-        idx = 6
+        idx = 0
         n = networks[idx]
         c = costs[idx]
         _industry_demand = industry_demands[idx]
@@ -5426,6 +5630,9 @@ if __name__ == "__main__":
     yearly_dfs = []
     for i, year in enumerate(planning_horizons):
         print(f"Getting data for year {year}...")
+        decision = ""
+        if snakemake.wildcards.get("decision"):
+            decision = "_decision_" + snakemake.wildcards.decision
         yearly_dfs.append(
             get_data(
                 networks[i],
@@ -5437,7 +5644,7 @@ if __name__ == "__main__":
                 "DE",
                 year=year,
                 version=config["version"],
-                scenario=snakemake.wildcards.run,
+                scenario=snakemake.wildcards.run + decision,
             )
         )
 
@@ -5456,12 +5663,14 @@ if __name__ == "__main__":
     ac_projects_invest = df.query(
         "Variable == 'Investment|Energy Supply|Electricity|Transmission|AC|NEP|Onshore'"
     )[planning_horizons].values.sum()
-
+    active_years = [
+        int(year) for year in modelyears if int(year) in [2025, 2030, 2035, 2040]
+    ]
     df.loc[
         df.query(
             "Variable == 'Investment|Energy Supply|Electricity|Transmission|AC|Übernahme|Startnetz Delta'"
         ).index,
-        [2025, 2030, 2035, 2040],
+        active_years,
     ] += (ac_startnetz - ac_projects_invest) / 4
 
     for suffix in ["|AC|NEP", "|AC", "", " and Distribution"]:
@@ -5469,7 +5678,7 @@ if __name__ == "__main__":
             df.query(
                 f"Variable == 'Investment|Energy Supply|Electricity|Transmission{suffix}'"
             ).index,
-            [2025, 2030, 2035, 2040],
+            active_years,
         ] += (ac_startnetz - ac_projects_invest) / 4
 
     print("Assigning mean investments of year and year + 5 to year.")
