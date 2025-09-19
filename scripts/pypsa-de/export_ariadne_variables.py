@@ -4922,44 +4922,33 @@ def get_trade(n, region):
 
     # Biomass Trade
 
-    biomass_potential_DE = (
-        n.stores.query("carrier.str.contains('solid biomass')")
-        .filter(like=region, axis=0)
-        .e_nom.sum()
+    biomass_primary_gens = n.generators.query(
+        f"index.str.startswith('{region}') and index.str.endswith('solid biomass')"
+    )  # use endswith to avoid the biomass transport generators
+    biomass_transport_gens = n.generators.query(
+        f"index.str.startswith('{region}') and index.str.endswith('solid biomass transported')"
     )
 
-    biomass_usage_local = (
-        n.stores_t.p[
-            n.stores.query("carrier.str.contains('solid biomass')")
-            .filter(like=region, axis=0)
-            .index
-        ]
-        .sum()
-        .multiply(n.snapshot_weightings["stores"].unique().item())
-        .sum()
-    )
+    local_biomass_potential = biomass_primary_gens.e_sum_max.sum()
 
-    biomass_usage_transported = (
-        n.generators_t.p[
-            n.generators.query("carrier.str.contains('solid biomass')")
-            .filter(like=region, axis=0)
-            .index
-        ]
-        .sum()
-        .multiply(n.snapshot_weightings["generators"].unique().item())
+    local_biomass_usage = (
+        (
+            n.generators_t.p[
+                biomass_primary_gens.index.union(biomass_transport_gens.index)
+            ]
+        )
+        .sum(axis=1)
+        .multiply(n.snapshot_weightings.generators)
         .sum()
     )
 
-    biomass_net_exports = (
-        biomass_potential_DE - biomass_usage_local - biomass_usage_transported
-    )
-    var["Trade|Primary Energy|Biomass|Volume"] = biomass_net_exports
+    biomass_imports = local_biomass_usage - local_biomass_potential
+
+    var["Trade|Primary Energy|Biomass|Net Imports"] = biomass_imports
 
     logger.info(
         f"""Share of imported biomass: {
-            round(
-                -biomass_net_exports / (biomass_potential_DE + biomass_net_exports), 3
-            )
+            round(biomass_imports / local_biomass_usage, 3)
         }"""
     )
 
