@@ -33,10 +33,10 @@ if __name__ == "__main__":
             clusters=27,
             opts="",
             sector_opts="none",
-            planning_horizons="2025",
+            planning_horizons="2030",
             decision="LowDemand",
             run="HighDemand",
-            sensitivity="gas_price_50",
+            sensitivity="base",
         )
 
     configure_logging(snakemake)

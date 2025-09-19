@@ -281,10 +281,10 @@ first_technology_occurrence:
     H2 pipeline: 2025
     H2 Electrolysis: 2025
     H2 pipeline retrofitted: 2025
-    urban central water pits charger: 2030
-    urban central water pits discharger: 2030
+    urban central water pits charger: 2035
+    urban central water pits discharger: 2035
   Store:
-    urban central water pits: 2030
+    urban central water pits: 2035
 
 costs:
   horizon: "mean" # "optimist", "pessimist" or "mean"

@@ -29,6 +29,12 @@ HighDemand:
               2030: 215   # PV strategy
               2035: 309
               2040: 400   # PV strategy
+  first_technology_occurrence:
+    Link:
+      urban central water pits charger: 2040 # essentially moving pits out of the optimization horizon to forbid them
+      urban central water pits discharger: 2040
+    Store:
+      urban central water pits: 2040
 
 HighDemandNoFlex:
   iiasa_database:
@@ -59,6 +65,12 @@ HighDemandNoFlex:
               2030: 215   # PV strategy
               2035: 309
               2040: 400   # PV strategy
+  first_technology_occurrence:
+    Link:
+      urban central water pits charger: 2040 # essentially moving pits out of the optimization horizon to forbid them
+      urban central water pits discharger: 2040
+    Store:
+      urban central water pits: 2040
 
 LowDemand:
   iiasa_database:
@@ -82,6 +94,11 @@ LowDemand:
           2025: 12.0
           2030: 26.0
           2035: 38.0
+      # central_heat_pump_budgets:
+      #   DE: # UBA MWMS, Projektionsbericht 2025, Abbildung 22
+      #     2025: 7.0
+      #     2030: 26.0
+      #     2035: 52.0
       limits_capacity_min:
         Generator:
           onwind:
@@ -96,6 +113,12 @@ LowDemand:
           H2 electrolysis:
             DE:
               2030: 0
+  first_technology_occurrence:
+    Link:
+      urban central water pits charger: 2040 # essentially moving pits out of the optimization horizon to forbid them
+      urban central water pits discharger: 2040
+    Store:
+      urban central water pits: 2040
 
 LowDemandNoFlex:
   iiasa_database:
@@ -134,6 +157,12 @@ LowDemandNoFlex:
           H2 electrolysis:
             DE:
               2030: 0
+  first_technology_occurrence:
+    Link:
+      urban central water pits charger: 2040 # essentially moving pits out of the optimization horizon to forbid them
+      urban central water pits discharger: 2040
+    Store:
+      urban central water pits: 2040
 
 ExPol:
 # UBA CO2 pathway instead of KSG targets
