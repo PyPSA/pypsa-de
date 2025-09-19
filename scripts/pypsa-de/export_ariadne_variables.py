@@ -4309,7 +4309,7 @@ def get_economy(n, region):
     var = pd.Series()
 
     def get_tsc(n, country):
-        n.statistics.set_parameters(drop_zero=False)
+        pypsa.options.set_option("params.statistics.drop_zero", False)
         capex = n.statistics.capex(
             groupby=pypsa.statistics.groupers["name", "carrier"], nice_names=False
         )
@@ -4632,7 +4632,7 @@ def get_trade(n, region):
         )
 
     exports_oil_renew, imports_oil_renew = get_export_import_links(
-        n, region, ["renewable oil", "methanol"]
+        n, region, ["renewable oil"]
     )
 
     var["Trade|Secondary Energy|Liquids|Biomass|Volume"] = (

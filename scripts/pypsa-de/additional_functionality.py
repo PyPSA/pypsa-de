@@ -655,10 +655,16 @@ def add_h2_derivate_limit(n, investment_year, limits_volume_max):
         ].index
 
         carrier_idx_dict = {
+            # Every carrier should respect the limit individually
             "renewable_oil": 0,
             "methanol": 1,
             "renewable_gas": 2,
-            "H2_derivate": [0, 1, 2],
+            # Exports of one carrier should not compensate for imports of another carrier
+            "H2_derivate_oil_meoh": [0, 1],
+            "H2_derivate_oil_gas": [0, 2],
+            "H2_derivate_meoh_gas": [1, 2],
+            # The sum of all carriers should respect the limit
+            "H2_derivate_oil_meoh_gas": [0, 1, 2],
         }
         for carrier, idx in carrier_idx_dict.items():
             cname = f"{carrier}_import_limit-{ct}"
