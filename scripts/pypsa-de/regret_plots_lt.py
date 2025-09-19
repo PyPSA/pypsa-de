@@ -224,7 +224,7 @@ if __name__ == "__main__":
     configure_logging(snakemake)
     config = snakemake.config
     planning_horizons = snakemake.params.planning_horizons
-    scenarios = ["HighDemand", "LowDemand"] #config["run"]["name"]
+    scenarios = ["HighDemand", "LowDemand"]  # config["run"]["name"]
     tech_colors = snakemake.params.plotting["tech_colors"]
 
     # Load networks

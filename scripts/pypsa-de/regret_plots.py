@@ -110,7 +110,9 @@ if __name__ == "__main__":
 
     # Plot electricity price duration curves
 
-    fig, ax = plt.subplots(figsize=(10, 5 * len(planning_horizons)), nrows=len(planning_horizons), ncols=1)
+    fig, ax = plt.subplots(
+        figsize=(10, 5 * len(planning_horizons)), nrows=len(planning_horizons), ncols=1
+    )
     ax = ax.flatten()
 
     decisions = ["decision_HighDemand", "decision_LowDemand"]
@@ -161,7 +163,9 @@ if __name__ == "__main__":
         "nice_names": False,
     }
 
-    fig, axes = plt.subplots(nrows=len(planning_horizons), ncols=1, figsize=(12, 6 * len(planning_horizons)))
+    fig, axes = plt.subplots(
+        nrows=len(planning_horizons), ncols=1, figsize=(12, 6 * len(planning_horizons))
+    )
     axes = axes.flatten()
 
     for i, year in enumerate(planning_horizons):
