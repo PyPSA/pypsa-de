@@ -610,55 +610,6 @@ def add_decentral_heat_pump_budgets(n, decentral_heat_pump_budgets, investment_y
         )
 
 
-def force_boiler_profiles_existing_per_load(n):
-    """
-    This scales the boiler dispatch to the load profile with a factor common to
-    all boilers at load.
-    """
-
-    logger.info("Forcing boiler profiles for existing ones")
-
-    decentral_boilers = n.links.index[
-        n.links.carrier.str.contains("boiler")
-        & ~n.links.carrier.str.contains("urban central")
-        & ~n.links.p_nom_extendable
-    ]
-
-    if decentral_boilers.empty:
-        return
-
-    boiler_loads = n.links.loc[decentral_boilers, "bus1"]
-    boiler_loads = boiler_loads[boiler_loads.isin(n.loads_t.p_set.columns)]
-    decentral_boilers = boiler_loads.index
-    boiler_profiles_pu = n.loads_t.p_set[boiler_loads].div(
-        n.loads_t.p_set[boiler_loads].max(), axis=1
-    )
-    boiler_profiles_pu.columns = decentral_boilers
-    boiler_profiles = DataArray(
-        boiler_profiles_pu.multiply(n.links.loc[decentral_boilers, "p_nom"], axis=1)
-    )
-
-    boiler_load_index = pd.Index(boiler_loads.unique())
-    boiler_load_index.name = "Load"
-
-    # per load scaling factor
-    n.model.add_variables(coords=[boiler_load_index], name="Load-profile_factor")
-
-    # clumsy indicator matrix to map boilers to loads
-    df = pd.DataFrame(index=boiler_load_index, columns=decentral_boilers, data=0.0)
-    for k, v in boiler_loads.items():
-        df.loc[v, k] = 1.0
-
-    lhs = n.model["Link-p"].loc[:, decentral_boilers] - (
-        boiler_profiles * DataArray(df) * n.model["Load-profile_factor"]
-    ).sum("Load")
-
-    n.model.add_constraints(lhs, "=", 0, "Link-fixed_profile")
-
-    # hack so that PyPSA doesn't complain there is nowhere to store the variable
-    n.loads["profile_factor_opt"] = 0.0
-
-
 def force_boiler_profiles_existing_per_boiler(n):
     """
     This scales each boiler dispatch to be proportional to the load profile.
@@ -868,7 +819,6 @@ def additional_functionality(n, snapshots, snakemake):
 
     add_power_limits(n, investment_year, constraints["limits_power_max"])
 
-    # force_boiler_profiles_existing_per_load(n)
     force_boiler_profiles_existing_per_boiler(n)
 
     if isinstance(constraints.get("decentral_heat_pump_budgets"), dict):

@@ -416,7 +416,8 @@ def fix_capacities(realization, decision, scope="DE", strict=False, no_flex=Fals
     # The constraints and loads are taken from the realization network
     n.global_constraints = realization.global_constraints.copy()
     n.loads = realization.loads.copy()
-    n.loads_t = realization.loads_t.copy()
+    # Copy the whole realization network, because copying loads_t directly is not type stable
+    n.loads_t = realization.copy().loads_t
 
     nominal_attrs = {
         "generators": "p_nom",
