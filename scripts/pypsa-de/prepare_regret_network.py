@@ -4,8 +4,8 @@ import logging
 import pathlib
 
 import numpy as np
-import pypsa
 import pandas as pd
+import pypsa
 
 from scripts._helpers import (
     configure_logging,
