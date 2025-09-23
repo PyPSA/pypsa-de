@@ -3,8 +3,11 @@
 #
 # SPDX-License-Identifier: MIT
 HighDemand:
+  electricity:
+    transmission_limit: v1
   solving:
     options:
+      transmission_losses: 0
       noisy_costs: false
     constraints:
       decentral_heat_pump_budgets:
@@ -36,10 +39,13 @@ HighDemand:
       urban central water pits: 2040
 
 HighDemandNoFlex:
+  electricity:
+    transmission_limit: v1
   iiasa_database:
     no_flex_lt_run: true
   solving:
     options:
+      transmission_losses: 0
       noisy_costs: false
     constraints:
       decentral_heat_pump_budgets:
@@ -71,6 +77,8 @@ HighDemandNoFlex:
       urban central water pits: 2040
 
 LowDemand:
+  electricity:
+    transmission_limit: v1
   iiasa_database:
     uba_for_industry:
     - 2025
@@ -84,6 +92,7 @@ LowDemand:
     delay_years: 2
   solving:
     options:
+      transmission_losses: 0
       noisy_costs: false
     constraints:
       decentral_heat_pump_budgets:
@@ -118,6 +127,8 @@ LowDemand:
       urban central water pits: 2040
 
 LowDemandNoFlex:
+  electricity:
+    transmission_limit: v1
   iiasa_database:
     no_flex_lt_run: true
     uba_for_industry:
@@ -132,6 +143,7 @@ LowDemandNoFlex:
     delay_years: 2
   solving:
     options:
+      transmission_losses: 0
       noisy_costs: false
     constraints:
       decentral_heat_pump_budgets:

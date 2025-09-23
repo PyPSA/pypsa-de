@@ -1203,13 +1203,17 @@ def drop_duplicate_transmission_projects(n):
     n.links.loc[to_deactivate, "active"] = False
 
 
-def deactivate_late_transmission_projects(n):
-    year = snakemake.params.onshore_nep_force["cutout_year"]
+def deactivate_late_transmission_projects(n, current_year):
+    nep_year = snakemake.params.onshore_nep_force["cutout_year"]
 
-    to_deactivate = n.links.query(f"carrier == 'DC' and build_year > {year}").index
+    cutout_year = min(nep_year, current_year)
+
+    to_deactivate = n.links.query(
+        f"carrier == 'DC' and build_year > {cutout_year}"
+    ).index
     n.links.loc[to_deactivate, "active"] = False
 
-    to_deactivate = n.lines.query(f"build_year > {year}").index
+    to_deactivate = n.lines.query(f"build_year > {cutout_year}").index
     n.lines.loc[to_deactivate, "active"] = False
 
 
@@ -1516,7 +1520,7 @@ if __name__ == "__main__":
         )
 
     # For regret runs
-    deactivate_late_transmission_projects(n)
+    deactivate_late_transmission_projects(n, current_year)
 
     if snakemake.params.no_flex_lt_run:
         logger.info("Run without flexibility options detected.")

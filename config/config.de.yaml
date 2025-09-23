@@ -4,13 +4,14 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20250919_regret_uc
+  prefix: 20250919_regret_less_interconnectors
   name:
   # - ExPol
   # - KN2045_Mix
   - HighDemand
   - LowDemand
-  - HighDemandNoFlex # !!! CAVEAT The 'NoFlex' substring in the scenario name determines how the regrets are computed!!!
+  #- HighDemandNoFlex # !!! CAVEAT The 'NoFlex' substring in the scenario name determines how the regrets are computed!!!
+  - LowDemandNoFlex
   # - KN2045_NFhoch
   scenarios:
     enable: true
@@ -460,7 +461,7 @@ solving:
   options:
     assign_all_duals: true
     load_shedding: false
-    skip_iterations: false # settings for post-discretization: false
+    skip_iterations: true # settings for post-discretization: false
     min_iterations: 1 # settings for post-discretization: 1
     max_iterations: 1 # settings for post-discretization: 1
     post_discretization:
