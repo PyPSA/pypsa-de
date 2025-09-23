@@ -3547,10 +3547,15 @@ def get_prices(n, region):
     nodal_prices_ac = n.buses_t.marginal_price[nodal_flows_ac.columns].clip(
         upper=max_elec_price
     )
+    nodal_subsidies_ac = (
+        n.buses_t.marginal_price[nodal_flows_ac.columns] - nodal_prices_ac
+    )
 
     var["Price|Secondary Energy|Electricity"] = (
         nodal_flows_ac.mul(nodal_prices_ac).values.sum() / nodal_flows_ac.values.sum()
     )
+
+    var["Subsidy|Electricity"] = nodal_flows_ac.mul(nodal_subsidies_ac).values.sum()
 
     # Price|Secondary Energy|Gases|Natural Gas
     var["Price|Secondary Energy|Gases|Natural Gas"] = (
