@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20250923_regret_uc_scaleCBF
+  prefix: 20250923_split_power_limit
   name:
   # - ExPol
   # - KN2045_Mix

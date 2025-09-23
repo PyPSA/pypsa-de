@@ -64,14 +64,16 @@ if __name__ == "__main__":
 
         from _helpers import mock_snakemake
 
-        snakemake = mock_snakemake(
-            "regret_plots",
-        )
+    snakemake = mock_snakemake(
+        "regret_plots",
+        sensitivity="gas_price_60", 
+    )
 
     configure_logging(snakemake)
     config = snakemake.config
     planning_horizons = snakemake.params.planning_horizons
-    scenarios = ["HighDemand", "LowDemand"]
+    scenarios = snakemake.params.scenarios
+    decisions = ["decision_" + d for d in scenarios]
     tech_colors = snakemake.params.plotting["tech_colors"]
 
     # Nested dict: networks[year][scenario][decision] = Network
@@ -81,7 +83,7 @@ if __name__ == "__main__":
         parts = fn.split(os.sep)
 
         # scenario is the folder name 2 levels up
-        scenario = parts[-3]
+        scenario = parts[-4]
         if scenario not in scenarios:
             raise ValueError(
                 f"Unexpected scenario '{scenario}' in {fn}. Allowed: {scenarios}"
@@ -111,11 +113,9 @@ if __name__ == "__main__":
     # Plot electricity price duration curves
 
     fig, ax = plt.subplots(
-        figsize=(10, 5 * len(planning_horizons)), nrows=len(planning_horizons), ncols=1
+        figsize=(4*len(scenarios), 5 * len(planning_horizons)), nrows=len(planning_horizons), ncols=1
     )
     ax = ax.flatten()
-
-    decisions = ["decision_HighDemand", "decision_LowDemand"]
 
     for i, year in enumerate(planning_horizons):
         for scenario, decision in itertools.product(scenarios, decisions):
@@ -164,7 +164,7 @@ if __name__ == "__main__":
     }
 
     fig, axes = plt.subplots(
-        nrows=len(planning_horizons), ncols=1, figsize=(12, 6 * len(planning_horizons))
+        nrows=len(planning_horizons), ncols=1, figsize=(6*len(scenarios), 6 * len(planning_horizons))
     )
     axes = axes.flatten()
 
