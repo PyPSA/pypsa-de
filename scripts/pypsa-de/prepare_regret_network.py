@@ -4,6 +4,7 @@ import logging
 import pathlib
 
 import numpy as np
+import pandas as pd
 import pypsa
 
 from scripts._helpers import (
@@ -28,6 +29,7 @@ uc_params_custom = {
     "OCGT": {
         "p_min_pu": 0.2,
         "start_up_cost": 20,
+        "shut_down_cost": 20,
         "min_up_time": 1,
         "min_down_time": 1,
         "ramp_limit_up": 1,
@@ -35,42 +37,48 @@ uc_params_custom = {
     "CCGT": {
         "p_min_pu": 0.45,
         "start_up_cost": 80,
+        "shut_down_cost": 80,
         "min_up_time": 3,
         "min_down_time": 2,
         "ramp_limit_up": 1,
     },
     "coal": {
-        "p_min_pu": 0.325,
-        "start_up_cost": 60,
-        "min_up_time": 6,
-        "min_down_time": 6,
+        "p_min_pu": 0.5,
+        "start_up_cost": 200,
+        "shut_down_cost": 200,
+        "min_up_time": 24,
+        "min_down_time": 24,
         "ramp_limit_up": 1,
     },
     "lignite": {
-        "p_min_pu": 0.325,
-        "start_up_cost": 80,
-        "min_up_time": 10,
-        "min_down_time": 10,
+        "p_min_pu": 0.5,
+        "start_up_cost": 200,
+        "shut_down_cost": 200,
+        "min_up_time": 24,
+        "min_down_time": 24,
         "ramp_limit_up": 1,
     },
     "nuclear": {
         "p_min_pu": 0.5,
         "start_up_cost": 100,
+        "shut_down_cost": 100,
         "min_up_time": 8,
         "min_down_time": 10,
     },
     "oil": {
         "p_min_pu": 0.2,
         "start_up_cost": 30,
+        "shut_down_cost": 30,
         "min_up_time": 1,
         "min_down_time": 1,
         "ramp_limit_up": 1,
     },
     "urban central solid biomass CHP": {
-        "p_min_pu": 0.38,
-        "start_up_cost": 50,
-        "min_up_time": 2,
-        "min_down_time": 2,
+        "p_min_pu": 0.5,
+        "start_up_cost": 150,
+        "shut_down_cost": 150,
+        "min_up_time": 5,
+        "min_down_time": 5,
     },
 }
 
@@ -336,6 +344,140 @@ def add_unit_commitment(
         n.links.loc[links_i, "committable"] = True
 
 
+target_caps = {
+    "GB": 0,
+    "CH": 8000,
+    "CZ": 5500,
+    "NL": 8000,
+    "FR": 9500,
+    "PL": 4500,
+    "NO": 2500,
+    "BE": 0,
+    "DK": 6000,
+    "AT": 6000,
+    "LU": 1500,
+    "SE": 1000,
+}
+
+
+def scale_transmission_capacity(n, target_capacities):
+    """
+    Scale transmission capacities in PyPSA network to match target values.
+
+    Parameters
+    ----------
+    n : pypsa.Network
+        PyPSA network object
+    target_capacities : pd.Series or dict
+        Target transmission capacities by country in MW (already rounded)
+    """
+
+    if isinstance(target_capacities, dict):
+        target_capacities = pd.Series(target_capacities)
+
+    # Calculate current capacities (without reversed links)
+    countries_ac = ["AT", "CH", "CZ", "DK", "FR", "LU", "NL", "PL"]
+    countries_dc = ["BE", "FR", "GB", "DK", "SE", "NO", "CH"]
+
+    current_capa = pd.DataFrame(
+        data=0,
+        index=list(set(countries_ac + countries_dc)),
+        columns=["AC_MW", "DC_MW", "Total_MW"],
+    )
+
+    # AC lines
+    for ct in countries_ac:
+        ac_lines = n.lines  # No need to filter out reversed for AC lines
+        ind = ac_lines[
+            (ac_lines.bus0.str.startswith("DE") & ac_lines.bus1.str.startswith(ct))
+            | (ac_lines.bus0.str.startswith(ct) & ac_lines.bus1.str.startswith("DE"))
+        ].index
+        current_capa.loc[ct, "AC_MW"] = n.lines.loc[ind, "s_nom_opt"].sum()
+
+    # DC links
+    for ct in countries_dc:
+        dc_links = n.links[
+            n.links.carrier.isin(["DC"]) & ~n.links.index.str.contains("reversed")
+        ]
+        ind = dc_links[
+            (dc_links.bus0.str.startswith("DE") & dc_links.bus1.str.startswith(ct))
+            | (dc_links.bus0.str.startswith(ct) & dc_links.bus1.str.startswith("DE"))
+        ].index
+        current_capa.loc[ct, "DC_MW"] = n.links.loc[ind, "p_nom_opt"].sum()
+
+    current_capa["Total_MW"] = current_capa["AC_MW"] + current_capa["DC_MW"]
+
+    # Calculate scaling factors
+    for country in target_capacities.index:
+        if country in current_capa.index:
+            current_total = current_capa.loc[country, "Total_MW"]
+            target_total = target_capacities[country]
+
+            if current_total > 0:
+                scaling_factor = target_total / current_total
+
+                print(
+                    f"{country}: {current_total:.0f} MW -> {target_total:.0f} MW (factor: {scaling_factor:.3f})"
+                )
+
+                # Scale AC lines (no reversed links for AC)
+                if current_capa.loc[country, "AC_MW"] > 0:
+                    ac_lines = n.lines  # No need to filter out reversed for AC lines
+                    ac_ind = ac_lines[
+                        (
+                            ac_lines.bus0.str.startswith("DE")
+                            & ac_lines.bus1.str.startswith(country)
+                        )
+                        | (
+                            ac_lines.bus0.str.startswith(country)
+                            & ac_lines.bus1.str.startswith("DE")
+                        )
+                    ].index
+
+                    # Scale AC lines
+                    n.lines.loc[ac_ind, "s_nom_opt"] *= scaling_factor
+                    n.lines.loc[ac_ind, "s_nom"] *= scaling_factor
+
+                # Scale DC links
+                if current_capa.loc[country, "DC_MW"] > 0:
+                    dc_links = n.links[
+                        n.links.carrier.isin(["DC"])
+                        & ~n.links.index.str.contains("reversed")
+                    ]
+                    dc_ind = dc_links[
+                        (
+                            dc_links.bus0.str.startswith("DE")
+                            & dc_links.bus1.str.startswith(country)
+                        )
+                        | (
+                            dc_links.bus0.str.startswith(country)
+                            & dc_links.bus1.str.startswith("DE")
+                        )
+                    ].index
+
+                    # Scale main DC links
+                    n.links.loc[dc_ind, "p_nom_opt"] *= scaling_factor
+                    n.links.loc[dc_ind, "p_nom"] *= scaling_factor
+
+                    # Scale reversed DC links to match
+                    for link_id in dc_ind:
+                        reversed_id = link_id + "-reversed"
+                        if reversed_id in n.links.index:
+                            n.links.loc[reversed_id, "p_nom_opt"] = n.links.loc[
+                                link_id, "p_nom_opt"
+                            ]
+                            n.links.loc[reversed_id, "p_nom"] = n.links.loc[
+                                link_id, "p_nom"
+                            ]
+
+            elif target_total > 0:
+                logger.info(
+                    f"WARNING: {country} has target capacity {target_total:.0f} MW but no current capacity to scale"
+                )
+            else:
+                logger.info(f"{country}: Target is 0 MW - no scaling needed")
+
+
 def _unfix_bottlenecks(new, deci, name, extendable_i):
     if name == "links":
         # Links that have 0-cost and are extendable
@@ -537,6 +679,14 @@ if __name__ == "__main__":
             carriers=unit_commitment["carriers"],
             regions=unit_commitment["regions"],
         )
+
+    scale_cross_border_elec_capa = snakemake.params.get(
+        "scale_cross_border_elec_capa", False
+    )
+
+    if scale_cross_border_elec_capa:
+        logger.info("Scaling cross-border electricity capacities to target values.")
+        scale_transmission_capacity(n, target_caps)
 
     if strict:
         logger.info(

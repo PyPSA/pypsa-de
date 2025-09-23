@@ -1000,6 +1000,9 @@ rule prepare_regret_network:
         unit_commitment=config_provider(
             "iiasa_database", "regret_run", "unit_commitment"
         ),
+        scale_cross_border_elec_capa=config_provider(
+            "iiasa_database", "regret_run", "scale_cross_border_elec_capa"
+        ),
     input:
         decision=RESULTS.replace("{run}", "{decision}")
         + "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",

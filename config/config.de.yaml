@@ -55,8 +55,9 @@ iiasa_database:
     unit_commitment:
       enable: false
       params: custom # options: conservative, average, optimistic, custom
-      carriers: ["OCGT", "coal", "lignite", "urban central solid biomass CHP"] # subset of ["OCGT", "CCGT", "coal", "lignite", "nuclear", "oil","urban central solid biomass CHP"]
-      regions: ["DE"]
+      carriers: ["OCGT", "CCGT", "coal", "lignite", "nuclear", "oil", "urban central solid biomass CHP"] # subset of ["OCGT", "CCGT", "coal", "lignite", "nuclear", "oil","urban central solid biomass CHP"]
+      regions: ['DE'] # subset of ['AT', 'BE', 'CH', 'CZ', 'DE', 'DK', 'FR', 'GB', 'LU', 'NL', 'NO', 'PL', 'SE', 'ES', 'IT']
+    scale_cross_border_elec_capa: false # If true, scales cross-border electricity capacities to target values given in prepare_regret_network.py
   ageb_for_mobility: true # In 2020 use AGEB data for final energy demand and KBA for vehicles
   uba_for_mobility: # For 2025–2035 use MWMS scenario from UBA Projektionsbericht 2025
   - 2025
