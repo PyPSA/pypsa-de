@@ -1204,7 +1204,6 @@ rule regret_plots:
         output_dir=directory(
             f"results/{config['run']['prefix']}/regret_plots/{{sensitivity}}/ST_comparison"
         ),
-
     input:
         regret_networks=lambda wildcards: expand(
             f"results/{config['run']['prefix']}/{{run}}/regret_networks/{wildcards.sensitivity}/decision_{{decision}}_s_{{clusters}}_{{opts}}_{{sector_opts}}_{{planning_horizons}}.nc",

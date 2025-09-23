@@ -66,7 +66,7 @@ if __name__ == "__main__":
 
     snakemake = mock_snakemake(
         "regret_plots",
-        sensitivity="gas_price_60", 
+        sensitivity="gas_price_60",
     )
 
     configure_logging(snakemake)
@@ -113,7 +113,9 @@ if __name__ == "__main__":
     # Plot electricity price duration curves
 
     fig, ax = plt.subplots(
-        figsize=(4*len(scenarios), 5 * len(planning_horizons)), nrows=len(planning_horizons), ncols=1
+        figsize=(4 * len(scenarios), 5 * len(planning_horizons)),
+        nrows=len(planning_horizons),
+        ncols=1,
     )
     ax = ax.flatten()
 
@@ -164,7 +166,9 @@ if __name__ == "__main__":
     }
 
     fig, axes = plt.subplots(
-        nrows=len(planning_horizons), ncols=1, figsize=(6*len(scenarios), 6 * len(planning_horizons))
+        nrows=len(planning_horizons),
+        ncols=1,
+        figsize=(6 * len(scenarios), 6 * len(planning_horizons)),
     )
     axes = axes.flatten()
 
