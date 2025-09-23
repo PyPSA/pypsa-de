@@ -1423,6 +1423,15 @@ def remove_flexibility_options(n):
     n.remove("Bus", n.buses.query("carrier in @carriers_to_drop").index)
 
 
+def restrict_cross_border_flows(n, s_max_pu):
+    logger.info(f"Restricting cross-border flows to {s_max_pu}.")
+    ind = n.lines[
+        (n.lines.bus0.str.startswith("DE") & ~n.lines.bus1.str.startswith("DE"))
+        | (~n.lines.bus0.str.startswith("DE") & n.lines.bus1.str.startswith("DE"))
+    ].index
+    n.lines.loc[ind, "s_max_pu"] = s_max_pu
+
+
 if __name__ == "__main__":
     if "snakemake" not in globals():
         snakemake = mock_snakemake(
@@ -1433,7 +1442,7 @@ if __name__ == "__main__":
             ll="vopt",
             sector_opts="none",
             planning_horizons="2025",
-            run="KN2045_Mix",
+            run="HighDemand",
         )
 
     configure_logging(snakemake)
@@ -1527,5 +1536,10 @@ if __name__ == "__main__":
         remove_flexibility_options(n)
 
     fix_transmission_DE(n)
+
+    if current_year in snakemake.params.restrict_cross_border_flows:
+        restrict_cross_border_flows(
+            n, snakemake.params.restrict_cross_border_flows[current_year]
+        )
 
     n.export_to_netcdf(snakemake.output.network)

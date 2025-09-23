@@ -560,6 +560,9 @@ rule modify_prenetwork:
         scale_industry_non_energy=config_provider(
             "iiasa_database", "scale_industry_non_energy"
         ),
+        restrict_cross_border_flows=config_provider(
+            "iiasa_database", "restrict_cross_border_flows"
+        ),
     input:
         costs_modifications="ariadne-data/costs_{planning_horizons}-modifications.csv",
         network=resources(
