@@ -1202,23 +1202,26 @@ rule regret_plots_lt:
 
 rule regret_plots:
     params:
-        scenarios=get_scenarios(run),
+        scenarios=config["run"]["name"],
+        scenarios_config=get_scenarios(run),
         planning_horizons=config_provider("scenario", "planning_horizons"),
         plotting=config_provider("plotting"),
         output_dir=directory(
-            f"results/{config['run']['prefix']}/regret_plots/ST_comparison"
+            f"results/{config['run']['prefix']}/regret_plots/{{sensitivity}}/ST_comparison"
         ),
     input:
-        regret_networks=expand(
-            RESULTS
-            + "regret_networks/decision_{decision}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
-            **config["scenario"],
-            allow_missing=True,
+        regret_networks=lambda wildcards: expand(
+            f"results/{config['run']['prefix']}/{{run}}/regret_networks/{wildcards.sensitivity}/decision_{{decision}}_s_{{clusters}}_{{opts}}_{{sector_opts}}_{{planning_horizons}}.nc",
             run=config["run"]["name"],
             decision=config["run"]["name"],
+            clusters=config["scenario"]["clusters"],
+            opts=config["scenario"]["opts"],
+            sector_opts=config["scenario"]["sector_opts"],
+            planning_horizons=config["scenario"]["planning_horizons"],
+            allow_missing=True,
         ),
     output:
-        elec_price_comp_de=f"results/{config['run']['prefix']}/regret_plots/ST_comparison/elec_price_comp_de.png",
+        elec_price_comp_de=f"results/{config['run']['prefix']}/regret_plots/{{sensitivity}}/ST_comparison/elec_price_comp_de.png",
     resources:
         mem_mb=32000,
     script:

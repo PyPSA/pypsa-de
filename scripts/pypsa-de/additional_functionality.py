@@ -106,16 +106,14 @@ def add_capacity_limits(
 
 def add_power_limits(n, investment_year, limits_power_max):
     """
-    " Restricts the maximum inflow/outflow of electricity from/to a country.
+    Restricts the maximum inflow and outflow of electricity from/to a country separately.
     """
     for ct in limits_power_max:
         if investment_year not in limits_power_max[ct].keys():
             continue
-
         limit = 1e3 * limits_power_max[ct][investment_year] / 10
-
         logger.info(
-            f"Adding constraint on electricity import/export from/to {ct} to be < {limit} MW"
+            f"Adding constraints on electricity import and export from/to {ct} to be < {limit * 10} MW each"
         )
         incoming_line = n.lines.index[
             (n.lines.carrier == "AC")
@@ -127,7 +125,6 @@ def add_power_limits(n, investment_year, limits_power_max):
             & (n.lines.bus0.str[:2] == ct)
             & (n.lines.bus1.str[:2] != ct)
         ]
-
         incoming_link = n.links.index[
             (n.links.carrier == "DC")
             & (n.links.bus0.str[:2] != ct)
@@ -139,29 +136,25 @@ def add_power_limits(n, investment_year, limits_power_max):
             & (n.links.bus1.str[:2] != ct)
         ]
 
-        # iterate over snapshots - otherwise exporting of postnetwork fails since
-        # the constraints are time dependent
+        # iterate over snapshots
         for t in n.snapshots:
             incoming_line_p = n.model["Line-s"].loc[t, incoming_line]
             outgoing_line_p = n.model["Line-s"].loc[t, outgoing_line]
             incoming_link_p = n.model["Link-p"].loc[t, incoming_link]
             outgoing_link_p = n.model["Link-p"].loc[t, outgoing_link]
 
-            lhs = (
-                incoming_link_p.sum()
-                - outgoing_link_p.sum()
-                + incoming_line_p.sum()
-                - outgoing_line_p.sum()
-            ) / 10
-            # divide by 10 to avoid numerical issues
+            # Total inflow (imports) - only positive flows into the country
+            inflow_lhs = (incoming_link_p.sum() + incoming_line_p.sum()) / 10
 
-            cname_upper = f"Power-import-limit-{ct}-{t}"
-            cname_lower = f"Power-export-limit-{ct}-{t}"
+            # Total outflow (exports) - only positive flows out of the country
+            outflow_lhs = (outgoing_link_p.sum() + outgoing_line_p.sum()) / 10
 
-            n.model.add_constraints(lhs <= limit, name=cname_upper)
-            n.model.add_constraints(lhs >= -limit, name=cname_lower)
+            # Separate constraints for inflow and outflow
+            cname_inflow = f"Power-inflow-limit-{ct}-{t}"
+            cname_outflow = f"Power-outflow-limit-{ct}-{t}"
 
-            # not adding to network as the shadow prices are not needed
+            n.model.add_constraints(inflow_lhs <= limit, name=cname_inflow)
+            n.model.add_constraints(outflow_lhs <= limit, name=cname_outflow)
 
 
 def h2_import_limits(n, investment_year, limits_volume_max):
