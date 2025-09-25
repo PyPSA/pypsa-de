@@ -1424,12 +1424,15 @@ def remove_flexibility_options(n):
 
 
 def restrict_cross_border_flows(n, s_max_pu):
-    logger.info(f"Restricting cross-border flows to {s_max_pu}.")
-    ind = n.lines[
-        (n.lines.bus0.str.startswith("DE") & ~n.lines.bus1.str.startswith("DE"))
-        | (~n.lines.bus0.str.startswith("DE") & n.lines.bus1.str.startswith("DE"))
-    ].index
-    n.lines.loc[ind, "s_max_pu"] = s_max_pu
+    logger.info(
+        f"Restricting cross-border flows between all countries (AC) to {s_max_pu}."
+    )
+    cross_border_lines = n.lines.index[
+        (n.lines.active)
+        & (n.lines.carrier == "AC")
+        & (n.lines.bus0.str[:2] != n.lines.bus1.str[:2])
+    ]
+    n.lines.loc[cross_border_lines, "s_max_pu"] = s_max_pu
 
 
 if __name__ == "__main__":
