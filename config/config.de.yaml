@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20250923_regret_uc_scaleCBF
+  prefix: 20250925_line_expansion
   name:
   # - ExPol
   # - KN2045_Mix
@@ -50,7 +50,7 @@ iiasa_database:
     h2_vent: true
     st_sensitivities: # CAVEAT: These behave like wildcards
     #- no_flex
-    - gas_price_60
+    #- gas_price_60
     #- gas_price_80
     unit_commitment:
       enable: false
