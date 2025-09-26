@@ -1161,7 +1161,11 @@ rule plot_scenario_comparison_regrets:
         exported_variables=expand(
             RESULTS
             + "regret_variables/{sensitivity}/regret_variables_{decision}_full.xlsx",
-            run=config_provider("run", "name"),
+            run=lambda w: [
+                r
+                for r in config_provider("run", "name")(w)
+                if r in ["LowDemand", "HighDemand"]
+            ],
             decision=config_provider("run", "name"),
             allow_missing=True,
         ),
