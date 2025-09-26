@@ -135,6 +135,17 @@ rule add_brownfield:
 ruleorder: add_existing_baseyear > add_brownfield
 
 
+def final_prenetwork(w):
+    network = resources(
+        "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_final.nc"
+    )
+    year = int(w.planning_horizons)
+    root_scenario = config_provider("root_scenario", year)(w)
+    if root_scenario is not None:
+        network = network.replace("{run}", root_scenario)
+    return network
+
+
 rule solve_sector_network_myopic:
     params:
         solving=config_provider("solving"),
@@ -145,9 +156,7 @@ rule solve_sector_network_myopic:
         custom_extra_functionality=input_custom_extra_functionality,
         energy_year=config_provider("energy", "energy_totals_year"),
     input:
-        network=resources(
-            "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_final.nc"
-        ),
+        network=final_prenetwork,
         co2_totals_name=resources("co2_totals.csv"),
         energy_totals=resources("energy_totals.csv"),
     output:

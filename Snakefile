@@ -990,6 +990,14 @@ rule ariadne_report_only:
         ),
 
 
+def with_root_scenario(network, w):
+    year = int(w.planning_horizons)
+    root_scenario = config_provider("root_scenario", year)(w)
+    if root_scenario is not None:
+        network = network.replace("{run}", root_scenario)
+    return network
+
+
 rule prepare_regret_network:
     params:
         solving=config_provider("solving"),
@@ -1007,10 +1015,16 @@ rule prepare_regret_network:
             "iiasa_database", "regret_run", "scale_cross_border_elec_capa"
         ),
     input:
-        decision=RESULTS.replace("{run}", "{decision}")
-        + "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
-        realization=RESULTS
-        + "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
+        realization=lambda w: with_root_scenario(
+            RESULTS
+            + "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
+            w,
+        ),
+        decision=lambda w: with_root_scenario(
+            RESULTS
+            + "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
+            w,
+        ).replace("{run}", "{decision}"),
     output:
         regret_prenetwork=RESULTS
         + "regret_prenetworks/decision_{decision}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
