@@ -1427,11 +1427,7 @@ def restrict_cross_border_flows(n, s_max_pu):
     logger.info(
         f"Restricting cross-border flows between all countries (AC) to {s_max_pu}."
     )
-    cross_border_lines = n.lines.index[
-        (n.lines.active)
-        & (n.lines.carrier == "AC")
-        & (n.lines.bus0.str[:2] != n.lines.bus1.str[:2])
-    ]
+    cross_border_lines = n.lines.index[n.lines.bus0.str[:2] != n.lines.bus1.str[:2]]
     n.lines.loc[cross_border_lines, "s_max_pu"] = s_max_pu
 
 
