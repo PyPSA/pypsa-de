@@ -10,8 +10,9 @@ run:
   # - KN2045_Mix
   - HighDemand
   - LowDemand
+  - LowDemandLowRES
   #- HighDemandNoFlex # !!! CAVEAT The 'NoFlex' substring in the scenario name determines how the regrets are computed!!!
-  - LowDemandNoFlex
+  #- LowDemandNoFlex
   # - KN2045_NFhoch
   scenarios:
     enable: true

@@ -126,6 +126,67 @@ LowDemand:
     Store:
       urban central water pits: 2040
 
+LowDemandLowRES:
+  electricity:
+    transmission_limit: v1
+  iiasa_database:
+    uba_for_industry:
+    - 2025
+    - 2030
+    - 2035
+    uba_for_mobility:
+    - 2025
+    - 2030
+    - 2035
+  offshore_nep_force:
+    delay_years: 2
+  solving:
+    options:
+      transmission_losses: 0
+      noisy_costs: false
+    constraints:
+      decentral_heat_pump_budgets:
+        DE: # UBA MWMS, Projektionsbericht 2025, Abbildung 48
+          2025: 12.0
+          2030: 26.0
+          2035: 38.0
+      # central_heat_pump_budgets:
+      #   DE: # UBA MWMS, Projektionsbericht 2025, Abbildung 22
+      #     2025: 7.0
+      #     2030: 26.0
+      #     2035: 52.0
+      limits_capacity_min:
+        Generator:
+          onwind:
+            DE:
+              2030: 0
+              2035: 0
+          offwind:
+            DE:
+              2030: 0
+              2035: 0
+        Link:
+          H2 electrolysis:
+            DE:
+              2030: 0
+      limits_capacity_max:
+        Generator:
+          onwind:
+            DE:
+              2030: 100
+          offwind:
+            DE:
+              2030: 20
+          solar:
+            DE:
+              2030: 150
+  first_technology_occurrence:
+    Link:
+      urban central water pits charger: 2040 # essentially moving pits out of the optimization horizon to forbid them
+      urban central water pits discharger: 2040
+    Store:
+      urban central water pits: 2040
+
 LowDemandNoFlex:
   electricity:
     transmission_limit: v1
