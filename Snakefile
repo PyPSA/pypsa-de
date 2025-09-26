@@ -1014,6 +1014,8 @@ rule prepare_regret_network:
     output:
         regret_prenetwork=RESULTS
         + "regret_prenetworks/decision_{decision}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
+    resources:
+        mem_mb=16000,
     log:
         RESULTS
         + "logs/regret_prenetwork_{decision}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.log",
