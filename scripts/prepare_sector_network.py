@@ -480,11 +480,11 @@ def update_wind_solar_costs(
     for carrier, cost_key in carrier_cost_dict.items():
         if carrier not in n.generators.carrier.values:
             continue
-        n.generators.loc[n.generators.carrier == carrier, "lifetime"] = costs.at[
-            cost_key, "lifetime"
+        n.generators.loc[n.generators.carrier == carrier, "capital_cost"] = costs.at[
+            cost_key, "capital_cost"
         ]
-        n.generators.loc[n.generators.carrier == carrier, "efficiency"] = costs.at[
-            cost_key, "efficiency"
+        n.generators.loc[n.generators.carrier == carrier, "overnight_cost"] = costs.at[
+            cost_key, "investment"
         ]
 
     # for offshore wind, need to calculated connection costs
