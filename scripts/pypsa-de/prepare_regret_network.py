@@ -504,7 +504,7 @@ def _unfix_bottlenecks(new, deci, name, extendable_i):
         # Bottleneck links can be extended, but not reduced to fix infeasibilities due to numerical inconsistencies
         bottleneck_links = [
             "electricity distribution grid",
-            "waste CHP",
+            "HVC to air",  # waste CHP would get used as a flexible energy source otherwise
             "SMR",
             # Boilers create bottlenecks AND should be extendable for fixed_profile_scaling constraints to be applied correctly
             "rural gas boiler",
@@ -516,13 +516,6 @@ def _unfix_bottlenecks(new, deci, name, extendable_i):
         _idx = new.loc[new.carrier.isin(bottleneck_links)].index.intersection(
             extendable_i
         )
-        new.loc[_idx, "p_nom_extendable"] = True
-        new.loc[_idx, "p_nom_min"] = deci.loc[_idx, "p_nom_opt"]
-
-        # Waste outside DE can also be burned directly
-        _idx = new.query(
-            "carrier == 'HVC to air' and not index.str.startswith('DE')"
-        ).index.intersection(extendable_i)
         new.loc[_idx, "p_nom_extendable"] = True
         new.loc[_idx, "p_nom_min"] = deci.loc[_idx, "p_nom_opt"]
 
