@@ -1000,6 +1000,14 @@ def _get_capacities(n, region, cap_func, cap_string="Capacity|"):
         like="heat pump"
     ).sum()
 
+    var[cap_string + "Decentral Heat|Biomass"] = capacities_decentral_heat.filter(
+        like="biomass"
+    ).sum()
+
+    var[cap_string + "Decentral Heat|Gas"] = capacities_decentral_heat.filter(
+        like="gas"
+    ).sum()
+
     capacities_h2 = (
         cap_func(
             bus_carrier="H2",
