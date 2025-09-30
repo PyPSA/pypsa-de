@@ -1,5 +1,5 @@
 technology,parameter,value,unit,source,further description
-gas,fuel,40,EUR/MWh_th,Ariadne,
+gas,fuel,32.8,EUR/MWh_th,Ariadne,"40 EUR in 2025, converted to EUR2020 with 0.82"
 oil,fuel,32.9876,EUR2020/MWh,Ariadne,"$2020 = 0.8775 EUR2020, 1bbl = 1.6998MWh"
 coal,fuel,10.6694,EUR2020/MWh,Ariadne,"$2020 = 0.8775 EUR2020, 1t = 8.06 MWh"
 decentral air-sourced heat pump,investment,1604,EUR2020/kW_th,https://ariadneprojekt.de/media/2024/01/Ariadne-Analyse_HeizkostenEmissionenGebaeude_Januar2024.pdf https://www.enpal.de/waermepumpe/kosten/ https://www.bdew.de/media/documents/BDEW-HKV_Altbau.pdf and cost reduction from DEA
