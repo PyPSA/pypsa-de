@@ -602,7 +602,7 @@ rule modify_prenetwork:
             "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_final.nc"
         ),
     resources:
-        mem_mb=4000,
+        mem_mb=8000,
     log:
         RESULTS
         + "logs/modify_prenetwork_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.log",

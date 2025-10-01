@@ -4,13 +4,13 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20250926_less_regret_runs
+  prefix: 20251001_low_RES
   name:
   # - ExPol
   # - KN2045_Mix
   # - HighDemand
-  - LowDemand
-  - LowDemandLowRES
+  - HighDemand
+  - LowRES
   #- HighDemandNoFlex # !!! CAVEAT The 'NoFlex' substring in the scenario name determines how the regrets are computed!!!
   #- LowDemandNoFlex
   # - KN2045_NFhoch
