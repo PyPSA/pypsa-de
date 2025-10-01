@@ -84,7 +84,7 @@ HighDemandNoFlex:
     Store:
       urban central water pits: 2040
 
-LowDemand:
+LowDemand: # Demand and capacities from UBA
   electricity:
     transmission_limit: v1
   iiasa_database:
@@ -112,16 +112,21 @@ LowDemand:
       #     2025: 7.0
       #     2030: 26.0
       #     2035: 52.0
+      # Capacities from UBA are here: https://datacube.uba.de/vis?lc=de&df[ds]=dc-release&df[id]=DF_CROSS_PROJECTION_REPORT_CORE_INDICATORS_25&df[ag]=UBA&df[vs]=1.0&av=true&dq=..INSTALLIERTE_LEISTUNG_GROSSBATTERIESPEICHER%2BINSTALLIERTE_LEISTUNG_WIND_AN_LAND%2BINSTALLIERTE_LEISTUNG_WIND_AUF_SEE%2BINSTALLIERTE_LEISTUNG_PV...&pd=2025%2C&to[TIME_PERIOD]=false&pg=0&vw=tb
       limits_capacity_min:
         Generator:
           onwind:
             DE:
-              2030: 0
-              2035: 0
+              2030: 103.99
+              2035: 145.41
           offwind:
             DE:
-              2030: 0
-              2035: 0
+              2030: 26.77
+              2035: 39.97
+          solar:
+            DE:
+              2030: 214.55
+              2035: 308.60
         Link:
           H2 electrolysis:
             DE:
@@ -130,11 +135,16 @@ LowDemand:
         Generator:
           onwind:
             DE:
-              2030: 115 # EEG2023 Ziel für 2030 + 5 GW
+              2030: 103.99
+              2035: 145.41
+          offwind:
+            DE:
+              2030: 26.77
+              2035: 39.97
           solar:
             DE:
-              2030: 215 # PV Ziel 2030
-              2035: 309
+              2030: 214.55
+              2035: 308.60
   first_technology_occurrence:
     Link:
       urban central water pits charger: 2040 # essentially moving pits out of the optimization horizon to forbid them
@@ -170,12 +180,16 @@ LowDemandNoFlex:
         Generator:
           onwind:
             DE:
-              2030: 0
-              2035: 0
+              2030: 103.99
+              2035: 145.41
           offwind:
             DE:
-              2030: 0
-              2035: 0
+              2030: 26.77
+              2035: 39.97
+          solar:
+            DE:
+              2030: 214.55
+              2035: 308.60
         Link:
           H2 electrolysis:
             DE:
@@ -184,11 +198,16 @@ LowDemandNoFlex:
         Generator:
           onwind:
             DE:
-              2030: 115 # EEG2023 Ziel für 2030 + 5 GW
+              2030: 103.99
+              2035: 145.41
+          offwind:
+            DE:
+              2030: 26.77
+              2035: 39.97
           solar:
             DE:
-              2030: 215 # PV Ziel 2030
-              2035: 309
+              2030: 214.55
+              2035: 308.60
   first_technology_occurrence:
     Link:
       urban central water pits charger: 2040 # essentially moving pits out of the optimization horizon to forbid them
@@ -196,7 +215,7 @@ LowDemandNoFlex:
     Store:
       urban central water pits: 2040
 
-LowRES:
+LowRES: # Demand from UBA, lower RES capacities
   electricity:
     transmission_limit: v1
   iiasa_database:
