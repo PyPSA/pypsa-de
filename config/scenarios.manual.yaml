@@ -7,7 +7,6 @@ HighDemand:
     transmission_limit: v1
   solving:
     options:
-      transmission_losses: 0
       noisy_costs: false
     constraints:
       decentral_heat_pump_budgets:
@@ -19,18 +18,23 @@ HighDemand:
             DE:
               2030: 115   # Wind-an-Land Law
               2035: 157   # Wind-an-Land Law
-              2040: 160   # Wind-an-Land Law
           offwind:
             DE:
               2035: 40   # 40 Wind-auf-See Law
-              2040: 50   # assuming 1/3 of buildout reached in 2040
-              2045: 70   # 70 Wind-auf-See Law
           solar:
             DE: # EEG2023; Ziel for 2024: 88 GW and for 2026: 128 GW,        
               2025: 101   # assuming at least 1/3 of buildout reached in 2025
               2030: 215   # PV strategy
               2035: 309
-              2040: 400   # PV strategy
+      limits_capacity_max:
+        Generator:
+          onwind:
+            DE:
+              2030: 115 # EEG2023 Ziel für 2030 + 5 GW
+          solar:
+            DE:
+              2030: 215 # PV Ziel 2030
+              2035: 309
   first_technology_occurrence:
     Link:
       urban central water pits charger: 2040 # essentially moving pits out of the optimization horizon to forbid them
@@ -45,7 +49,6 @@ HighDemandNoFlex:
     no_flex_lt_run: true
   solving:
     options:
-      transmission_losses: 0
       noisy_costs: false
     constraints:
       decentral_heat_pump_budgets:
@@ -57,18 +60,23 @@ HighDemandNoFlex:
             DE:
               2030: 115   # Wind-an-Land Law
               2035: 157   # Wind-an-Land Law
-              2040: 160   # Wind-an-Land Law
           offwind:
             DE:
               2035: 40   # 40 Wind-auf-See Law
-              2040: 50   # assuming 1/3 of buildout reached in 2040
-              2045: 70   # 70 Wind-auf-See Law
           solar:
             DE: # EEG2023; Ziel for 2024: 88 GW and for 2026: 128 GW,        
               2025: 101   # assuming at least 1/3 of buildout reached in 2025
               2030: 215   # PV strategy
               2035: 309
-              2040: 400   # PV strategy
+      limits_capacity_max:
+        Generator:
+          onwind:
+            DE:
+              2030: 115 # EEG2023 Ziel für 2030 + 5 GW
+          solar:
+            DE:
+              2030: 215 # PV Ziel 2030
+              2035: 309
   first_technology_occurrence:
     Link:
       urban central water pits charger: 2040 # essentially moving pits out of the optimization horizon to forbid them
@@ -92,7 +100,6 @@ LowDemand:
     delay_years: 2
   solving:
     options:
-      transmission_losses: 0
       noisy_costs: false
     constraints:
       decentral_heat_pump_budgets:
@@ -119,6 +126,15 @@ LowDemand:
           H2 electrolysis:
             DE:
               2030: 0
+      limits_capacity_max:
+        Generator:
+          onwind:
+            DE:
+              2030: 115 # EEG2023 Ziel für 2030 + 5 GW
+          solar:
+            DE:
+              2030: 215 # PV Ziel 2030
+              2035: 309
   first_technology_occurrence:
     Link:
       urban central water pits charger: 2040 # essentially moving pits out of the optimization horizon to forbid them
@@ -126,7 +142,61 @@ LowDemand:
     Store:
       urban central water pits: 2040
 
-LowDemandLowRES:
+LowDemandNoFlex:
+  electricity:
+    transmission_limit: v1
+  iiasa_database:
+    no_flex_lt_run: true
+    uba_for_industry:
+    - 2025
+    - 2030
+    - 2035
+    uba_for_mobility:
+    - 2025
+    - 2030
+    - 2035
+  offshore_nep_force:
+    delay_years: 2
+  solving:
+    options:
+      noisy_costs: false
+    constraints:
+      decentral_heat_pump_budgets:
+        DE: # UBA MWMS, Projektionsbericht 2025, Abbildung 48
+          2025: 12.0
+          2030: 26.0
+          2035: 38.0
+      limits_capacity_min:
+        Generator:
+          onwind:
+            DE:
+              2030: 0
+              2035: 0
+          offwind:
+            DE:
+              2030: 0
+              2035: 0
+        Link:
+          H2 electrolysis:
+            DE:
+              2030: 0
+      limits_capacity_max:
+        Generator:
+          onwind:
+            DE:
+              2030: 115 # EEG2023 Ziel für 2030 + 5 GW
+          solar:
+            DE:
+              2030: 215 # PV Ziel 2030
+              2035: 309
+  first_technology_occurrence:
+    Link:
+      urban central water pits charger: 2040 # essentially moving pits out of the optimization horizon to forbid them
+      urban central water pits discharger: 2040
+    Store:
+      urban central water pits: 2040
+
+LowRES:
   electricity:
     transmission_limit: v1
   iiasa_database:
@@ -142,7 +212,6 @@ LowDemandLowRES:
     delay_years: 2
   solving:
     options:
-      transmission_losses: 0
       noisy_costs: false
     constraints:
       decentral_heat_pump_budgets:
@@ -176,10 +245,10 @@ LowDemandLowRES:
               2030: 100
           offwind:
             DE:
-              2030: 20
+              2030: 21
           solar:
             DE:
-              2030: 150
+              2030: 180
   first_technology_occurrence:
     Link:
       urban central water pits charger: 2040 # essentially moving pits out of the optimization horizon to forbid them
@@ -187,7 +256,8 @@ LowDemandLowRES:
     Store:
       urban central water pits: 2040
 
-LowDemandNoFlex:
+
+LowRESNoFlex:
   electricity:
     transmission_limit: v1
   iiasa_database:
@@ -204,7 +274,6 @@ LowDemandNoFlex:
     delay_years: 2
   solving:
     options:
-      transmission_losses: 0
       noisy_costs: false
     constraints:
       decentral_heat_pump_budgets:
@@ -212,6 +281,11 @@ LowDemandNoFlex:
           2025: 12.0
           2030: 26.0
           2035: 38.0
+      # central_heat_pump_budgets:
+      #   DE: # UBA MWMS, Projektionsbericht 2025, Abbildung 22
+      #     2025: 7.0
+      #     2030: 26.0
+      #     2035: 52.0
       limits_capacity_min:
         Generator:
           onwind:
@@ -226,6 +300,17 @@ LowDemandNoFlex:
           H2 electrolysis:
             DE:
               2030: 0
+      limits_capacity_max:
+        Generator:
+          onwind:
+            DE:
+              2030: 100
+          offwind:
+            DE:
+              2030: 21
+          solar:
+            DE:
+              2030: 180
   first_technology_occurrence:
     Link:
       urban central water pits charger: 2040 # essentially moving pits out of the optimization horizon to forbid them
