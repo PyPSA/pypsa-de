@@ -521,7 +521,7 @@ solving:
         solar:
           DE:
             2020: 53.7
-            2025: 110 # EEG2023; assumes for 2026: 128 GW, assuming a fair share reached by end of 2025
+            2025: 115 # EEG2023; assumes for 2026: 128 GW, assuming a fair share reached by end of 2025
             2030: 235 # PV Ziel 2030 + 20 GW
             2035: 400
             2040: 800
