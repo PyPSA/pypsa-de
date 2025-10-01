@@ -113,30 +113,18 @@ def add_power_limits(n, investment_year, limits_power_max):
         )
         # identify interconnectors
 
-        incoming_lines = n.lines[
-            (n.lines.carrier == "AC")
-            & (n.lines.bus0.str[:2] != ct)
-            & (n.lines.bus1.str[:2] == ct)
-            & n.lines.active
-        ]
-        outgoing_lines = n.lines[
-            (n.lines.carrier == "AC")
-            & (n.lines.bus0.str[:2] == ct)
-            & (n.lines.bus1.str[:2] != ct)
-            & n.lines.active
-        ]
-        incoming_links = n.links[
-            (n.links.carrier == "DC")
-            & (n.links.bus0.str[:2] != ct)
-            & (n.links.bus1.str[:2] == ct)
-            & n.links.active
-        ]
-        outgoing_links = n.links[
-            (n.links.carrier == "DC")
-            & (n.links.bus0.str[:2] == ct)
-            & (n.links.bus1.str[:2] != ct)
-            & n.links.active
-        ]
+        incoming_lines = n.lines.query(
+            f"carrier == 'AC' and active and bus0.str[:2] != {ct} and bus1.str[:2] == {ct}"
+        )
+        outgoing_lines = n.lines.query(
+            f"carrier == 'AC' and active and bus0.str[:2] == {ct} and bus1.str[:2] != {ct}"
+        )
+        incoming_links = n.links.query(
+            f"carrier == 'DC' and active and bus0.str[:2] != {ct} and bus1.str[:2] == {ct}"
+        )
+        outgoing_links = n.links.query(
+            f"carrier == 'DC' and active and bus0.str[:2] == {ct} and bus1.str[:2] != {ct}"
+        )
 
         for t in n.snapshots:
             # For incoming flows s > 0 means imports, s < 0 exports
