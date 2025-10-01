@@ -512,13 +512,18 @@ def _unfix_bottlenecks(new, deci, name, extendable_i):
             # Biomass for 2035 when gas is banned
             "rural biomass boiler",
             "urban decentral biomass boiler",
-            # OCGT as last resort to avoid load shedding
-            # (previously the model sometimes expanded waste CHPs)
-            "OCGT",
         ]
         _idx = new.loc[new.carrier.isin(bottleneck_links)].index.intersection(
             extendable_i
         )
+        new.loc[_idx, "p_nom_extendable"] = True
+        new.loc[_idx, "p_nom_min"] = deci.loc[_idx, "p_nom_opt"]
+        # OCGT as last resort to avoid load shedding
+        # allowed only in DE
+        # (previously the model sometimes expanded waste CHPs)
+        _idx = new.loc[
+            (new.carrier == "OCGT") & (new.index.str.startswith("DE"))
+        ].index.intersection(extendable_i)
         new.loc[_idx, "p_nom_extendable"] = True
         new.loc[_idx, "p_nom_min"] = deci.loc[_idx, "p_nom_opt"]
 
