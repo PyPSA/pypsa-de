@@ -1000,6 +1000,10 @@ def _get_capacities(n, region, cap_func, cap_string="Capacity|"):
         like="heat pump"
     ).sum()
 
+    var[cap_string + "Decentral Heat|Resistive Heater"] = (
+        capacities_decentral_heat.filter(like="resistive heater").sum()
+    )
+
     var[cap_string + "Decentral Heat|Biomass"] = capacities_decentral_heat.filter(
         like="biomass"
     ).sum()
@@ -1007,6 +1011,18 @@ def _get_capacities(n, region, cap_func, cap_string="Capacity|"):
     var[cap_string + "Decentral Heat|Gas"] = capacities_decentral_heat.filter(
         like="gas"
     ).sum()
+
+    var[cap_string + "Decentral Heat|Oil"] = capacities_decentral_heat.filter(
+        like="oil"
+    ).sum()
+
+    var[cap_string + "Decentral Heat|Storage Converter"] = capacities_decentral_heat[
+        capacities_decentral_heat.index.str.contains("water tanks discharger")
+    ].sum()
+
+    var[cap_string + "Decentral Heat|Storage Reservoir"] = storage_capacities[
+        storage_capacities.index.str.contains("(?:decentral|rural) water tanks")
+    ].sum()
 
     capacities_h2 = (
         cap_func(
@@ -1039,7 +1055,9 @@ def _get_capacities(n, region, cap_func, cap_string="Capacity|"):
         capacities_h2.get("H2 Electrolysis", 0) + var[cap_string + "Hydrogen|Gas"]
     )
 
-    var[cap_string + "Hydrogen|Reservoir"] = storage_capacities.get("H2 Store", 0)
+    var[cap_string + "Hydrogen|Storage Reservoir"] = var[
+        cap_string + "Hydrogen|Reservoir"
+    ] = storage_capacities.get("H2 Store", 0)
 
     capacities_gas = (
         cap_func(
