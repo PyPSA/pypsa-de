@@ -46,6 +46,9 @@ iiasa_database:
   reference_scenario: KN2045_Mix
   region: Deutschland
   regret_run:
+    demand_baselines: # names of scenarios that define the demand variations to be considered in the short-term runs
+    - HighDemand
+    - LowDemand
     scope_to_fix: EU # Supported values are DE and EU
     strict: false # If false, the model allows capacity expansion for virtual links and bottlenecks
     h2_vent: true

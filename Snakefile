@@ -1166,7 +1166,10 @@ rule plot_scenario_comparison_regrets:
             run=lambda w: [
                 r
                 for r in config_provider("run", "name")(w)
-                if r in ["LowDemand", "HighDemand"]
+                if r
+                in config_provider("iiasa_database", "regret_run", "demand_baselines")(
+                    w
+                )
             ],
             decision=config_provider("run", "name"),
             allow_missing=True,
