@@ -5542,6 +5542,10 @@ if __name__ == "__main__":
 
     # Load data
     _networks = [pypsa.Network(fn) for fn in snakemake.input.networks]
+    if snakemake.input.st_low_res_networks:
+        _networks_st = [pypsa.Network(fn) for fn in snakemake.input.st_low_res_networks]
+        N_st = len(_networks_st)
+        _networks[-N_st:] = _networks_st
 
     nhours = _networks[0].snapshot_weightings.generators.sum()
     nyears = nhours / 8760

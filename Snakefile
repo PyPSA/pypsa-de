@@ -1023,12 +1023,12 @@ rule prepare_st_low_res_network:
         + "networks/base_s_{clusters}_{opts}_{sector_opts}_{st_years}.nc",
     output:
         st_low_res_prenetwork=RESULTS
-        + "st_low_res_prenetworks/base_s_{clusters}_{opts}_{sector_opts}_{st_years}.nc",
+        + "st_low_res_prenetworks/base_s_{clusters}_{opts}_{sector_opts}_{st_years}_eeg_level_{eeg_level}.nc",
     resources:
         mem_mb=16000,
     log:
         RESULTS
-        + "logs/st_low_res_prenetwork_s_{clusters}_{opts}_{sector_opts}_{st_years}.log",
+        + "logs/st_low_res_prenetwork_s_{clusters}_{opts}_{sector_opts}_{st_years}_eeg_level_{eeg_level}.log",
     script:
         "scripts/pypsa-de/prepare_st_low_res_network.py"
 
@@ -1042,21 +1042,21 @@ rule solve_st_low_res_network:
         custom_extra_functionality=input_custom_extra_functionality,
     input:
         st_low_res_prenetwork=RESULTS
-        + "st_low_res_prenetworks/base_s_{clusters}_{opts}_{sector_opts}_{st_years}.nc",
+        + "st_low_res_prenetworks/base_s_{clusters}_{opts}_{sector_opts}_{st_years}_eeg_level_{eeg_level}.nc",
         co2_totals_name=resources("co2_totals.csv"),
         energy_totals=resources("energy_totals.csv"),
     output:
         st_low_res_network=RESULTS
-        + "st_low_res_networks/{sensitivity}/base_s_{clusters}_{opts}_{sector_opts}_{st_years}.nc",
+        + "st_low_res_networks/{sensitivity}/base_s_{clusters}_{opts}_{sector_opts}_{st_years}_eeg_level_{eeg_level}.nc",
     shadow:
         shadow_config
     log:
         solver=RESULTS
-        + "logs/st_low_res_networks/{sensitivity}/base_s_{clusters}_{opts}_{sector_opts}_{st_years}_solver.log",
+        + "logs/st_low_res_networks/{sensitivity}/base_s_{clusters}_{opts}_{sector_opts}_{st_years}_eeg_level_{eeg_level}_solver.log",
         memory=RESULTS
-        + "logs/st_low_res_networks/{sensitivity}/base_s_{clusters}_{opts}_{sector_opts}_{st_years}_memory.log",
+        + "logs/st_low_res_networks/{sensitivity}/base_s_{clusters}_{opts}_{sector_opts}_{st_years}_eeg_level_{eeg_level}_memory.log",
         python=RESULTS
-        + "logs/st_low_res_networks/{sensitivity}/base_s_{clusters}_{opts}_{sector_opts}_{st_years}_python.log",
+        + "logs/st_low_res_networks/{sensitivity}/base_s_{clusters}_{opts}_{sector_opts}_{st_years}_eeg_level_{eeg_level}_python.log",
     threads: solver_threads
     resources:
         mem_mb=config_provider("solving", "mem_mb"),
@@ -1102,25 +1102,28 @@ use rule export_ariadne_variables as export_st_variables with:
         energy_totals=resources("energy_totals.csv"),
         st_low_res_networks=expand(
             RESULTS
-            + "st_low_res_networks/{sensitivity}/base_s_{clusters}_{opts}_{sector_opts}_{st_years}.nc",
+            + "st_low_res_networks/{sensitivity}/base_s_{clusters}_{opts}_{sector_opts}_{st_years}_eeg_level_{eeg_level}.nc",
             **config["scenario"],
             st_years=config_provider("iiasa_database", "regret_run", "st_years"),
             allow_missing=True,
         ),
     output:
         exported_variables=RESULTS
-        + "st_low_res_variables/{sensitivity}/st_low_res_variables.xlsx",
+        + "st_low_res_variables/{sensitivity}/st_low_res_variables_eeg_level_{eeg_level}.xlsx",
         exported_variables_full=RESULTS
-        + "st_low_res_variables/{sensitivity}/st_low_res_variables_full.xlsx",
+        + "st_low_res_variables/{sensitivity}/st_low_res_variables_full_eeg_level_{eeg_level}.xlsx",
     log:
-        RESULTS + "logs/st_low_res_variables/{sensitivity}/st_low_res_variables.log",
+        RESULTS
+        + "logs/st_low_res_variables/{sensitivity}/st_low_res_variables_eeg_level_{eeg_level}.log",
 
 
 rule st_all:
     input:
         expand(
-            RESULTS + "st_low_res_variables/{sensitivity}/st_low_res_variables.xlsx",
+            RESULTS
+            + "st_low_res_variables/{sensitivity}/st_low_res_variables_eeg_level_{eeg_level}.xlsx",
             sensitivity=get_st_sensitivities,
+            eeg_level=config_provider("iiasa_database", "regret_run", "EEG_levels"),
             run=config_provider("run", "name"),
         ),
 

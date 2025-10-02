@@ -128,6 +128,7 @@ if __name__ == "__main__":
             sector_opts="none",
             st_years="2030",
             run="HighDemand",
+            eeg_level=0.7,
         )
 
     configure_logging(snakemake)
@@ -153,7 +154,9 @@ if __name__ == "__main__":
 
     n = fix_capacities(n_lt, snakemake.params.get("no_flex_lt_run", False))
 
-    scale_new_res_to_target(n, eeg_targets, int(st_years), ratio=1.0)
+    scale_new_res_to_target(
+        n, eeg_targets, int(st_years), ratio=float(snakemake.wildcards.eeg_level)
+    )
 
     if h2_vent:
         logger.info("H2 venting activated for short-term run.")
@@ -210,6 +213,8 @@ if __name__ == "__main__":
         regret_run=True,
     )
 
+    logger.info("Adding negative CO2 generator and dropping co2 limits.")
+
     n.add(
         "Generator",
         "co2 atmosphere",
@@ -218,9 +223,8 @@ if __name__ == "__main__":
         p_max_pu=0,
         p_nom_extendable=True,
         carrier="co2",
-        marginal_cost=co2_prices[int(st_years)],
+        marginal_cost=-co2_prices[int(st_years)],
     )
-    logger.info("Adding negative CO2 generator and dropping co2 limits.")
     n.global_constraints.drop("CO2Limit", inplace=True)
     n.global_constraints.drop("co2_limit-DE", inplace=True)
 
