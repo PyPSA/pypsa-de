@@ -120,16 +120,16 @@ def add_power_limits(n, investment_year, limits_power_max):
         # identify interconnectors
 
         incoming_lines = n.lines.query(
-            f"carrier == 'AC' and active and bus0.str[:2] != {ct} and bus1.str[:2] == {ct}"
+            f"not bus0.str.startswith('{ct}') and bus1.str.startswith('{ct}') and active"
         )
         outgoing_lines = n.lines.query(
-            f"carrier == 'AC' and active and bus0.str[:2] == {ct} and bus1.str[:2] != {ct}"
+            f"bus0.str.startswith('{ct}') and not bus1.str.startswith('{ct}') and active"
         )
         incoming_links = n.links.query(
-            f"carrier == 'DC' and active and bus0.str[:2] != {ct} and bus1.str[:2] == {ct}"
+            f"not bus0.str.startswith('{ct}') and bus1.str.startswith('{ct}') and carrier == 'DC' and active"
         )
         outgoing_links = n.links.query(
-            f"carrier == 'DC' and active and bus0.str[:2] == {ct} and bus1.str[:2] != {ct}"
+            f"bus0.str.startswith('{ct}') and not bus1.str.startswith('{ct}') and carrier == 'DC' and active"
         )
 
         for t in n.snapshots:
