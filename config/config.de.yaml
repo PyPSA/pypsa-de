@@ -56,6 +56,8 @@ iiasa_database:
     #- no_flex
     #- gas_price_60
     #- gas_price_80
+    st_years:
+    - 2030
     unit_commitment:
       enable: false
       params: custom # options: conservative, average, optimistic, custom

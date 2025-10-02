@@ -860,8 +860,10 @@ def add_empty_co2_atmosphere_store_constraint(n):
 
 def additional_functionality(n, snapshots, snakemake):
     logger.info("Adding Ariadne-specific functionality")
-
-    investment_year = int(snakemake.wildcards.planning_horizons[-4:])
+    try:
+        investment_year = int(snakemake.wildcards.planning_horizons[-4:])
+    except AttributeError:
+        investment_year = int(snakemake.wildcards.st_years[-4:])
     constraints = snakemake.params.solving["constraints"]
 
     if not snakemake.params.get("regret_run"):
