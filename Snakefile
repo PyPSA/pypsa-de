@@ -523,7 +523,7 @@ rule modify_district_heat_share:
 
 rule modify_prenetwork:
     params:
-        no_flex_lt_run=config_provider("iiasa-database", "no_flex_lt_run"),
+        no_flex_lt_run=config_provider("iiasa_database", "no_flex_lt_run"),
         efuel_export_ban=config_provider("solving", "constraints", "efuel_export_ban"),
         enable_kernnetz=config_provider("wasserstoff_kernnetz", "enable"),
         costs=config_provider("costs"),
