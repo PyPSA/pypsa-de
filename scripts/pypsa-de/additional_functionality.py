@@ -136,106 +136,106 @@ def add_power_limits(n, investment_year, limits_power_max):
             # For incoming flows s > 0 means imports, s < 0 exports
             # For outgoing flows s > 0 means exports, s < 0 imports
             # to get the positive and negative parts separately, we use auxiliary variables
-            incoming_lines_var = n.model["Line-s"].loc[t, incoming_lines.index]
-            n.model.add_variables(
-                coords=[incoming_lines.index],
+            incoming_lines_var = n.model["Line-s"].sel(
+                snapshot=t, Line=incoming_lines.index
+            )
+            incoming_lines_aux_pos = n.model.add_variables(
                 name=f"Line-s-incoming-{ct}-aux-pos-{t}",
                 lower=0,
                 upper=incoming_lines.s_nom_max,
             )
-            n.model.add_variables(
-                coords=[incoming_lines.index],
+            incoming_lines_aux_neg = n.model.add_variables(
                 name=f"Line-s-incoming-{ct}-aux-neg-{t}",
                 lower=-incoming_lines.s_nom_max,
                 upper=0,
             )
             n.model.add_constraints(
-                n.model[f"Line-s-incoming-{ct}-aux-pos-{t}"] >= incoming_lines_var,
+                incoming_lines_aux_pos >= incoming_lines_var,
                 name=f"Line-s-incoming-{ct}-aux-pos-constr-{t}",
             )
             n.model.add_constraints(
-                n.model[f"Line-s-incoming-{ct}-aux-neg-{t}"] <= incoming_lines_var,
+                incoming_lines_aux_neg <= incoming_lines_var,
                 name=f"Line-s-incoming-{ct}-aux-neg-constr-{t}",
             )
 
-            outgoing_lines_var = n.model["Line-s"].loc[t, outgoing_lines.index]
-            n.model.add_variables(
-                coords=[outgoing_lines.index],
+            outgoing_lines_var = n.model["Line-s"].sel(
+                snapshot=t, Line=outgoing_lines.index
+            )
+            outgoing_lines_aux_pos = n.model.add_variables(
                 name=f"Line-s-outgoing-{ct}-aux-pos-{t}",
                 lower=0,
                 upper=outgoing_lines.s_nom_max,
             )
-            n.model.add_variables(
-                coords=[outgoing_lines.index],
+            outgoing_lines_aux_neg = n.model.add_variables(
                 name=f"Line-s-outgoing-{ct}-aux-neg-{t}",
                 lower=-outgoing_lines.s_nom_max,
                 upper=0,
             )
             n.model.add_constraints(
-                n.model[f"Line-s-outgoing-{ct}-aux-pos-{t}"] >= outgoing_lines_var,
+                outgoing_lines_aux_pos >= outgoing_lines_var,
                 name=f"Line-s-outgoing-{ct}-aux-pos-constr-{t}",
             )
             n.model.add_constraints(
-                n.model[f"Line-s-outgoing-{ct}-aux-neg-{t}"] <= outgoing_lines_var,
+                outgoing_lines_aux_neg <= outgoing_lines_var,
                 name=f"Line-s-outgoing-{ct}-aux-neg-constr-{t}",
             )
 
-            incoming_links_var = n.model["Link-p"].loc[t, incoming_links.index]
-            n.model.add_variables(
-                coords=[incoming_links.index],
+            incoming_links_var = n.model["Link-p"].sel(
+                snapshot=t, Link=incoming_links.index
+            )
+            incoming_links_aux_pos = n.model.add_variables(
                 name=f"Link-p-incoming-{ct}-aux-pos-{t}",
                 lower=0,
                 upper=incoming_links.p_nom_max,
             )
-            n.model.add_variables(
-                coords=[incoming_links.index],
+            incoming_links_aux_neg = n.model.add_variables(
                 name=f"Link-p-incoming-{ct}-aux-neg-{t}",
                 lower=-incoming_links.p_nom_max,
                 upper=0,
             )
             n.model.add_constraints(
-                n.model[f"Link-p-incoming-{ct}-aux-pos-{t}"] >= incoming_links_var,
+                incoming_links_aux_pos >= incoming_links_var,
                 name=f"Link-p-incoming-{ct}-aux-pos-constr-{t}",
             )
             n.model.add_constraints(
-                n.model[f"Link-p-incoming-{ct}-aux-neg-{t}"] <= incoming_links_var,
+                incoming_links_aux_neg <= incoming_links_var,
                 name=f"Link-p-incoming-{ct}-aux-neg-constr-{t}",
             )
 
-            outgoing_links_var = n.model["Link-p"].loc[t, outgoing_links.index]
-            n.model.add_variables(
-                coords=[outgoing_links.index],
+            outgoing_links_var = n.model["Link-p"].sel(
+                snapshot=t, Link=outgoing_links.index
+            )
+            outgoing_links_aux_pos = n.model.add_variables(
                 name=f"Link-p-outgoing-{ct}-aux-pos-{t}",
                 lower=0,
                 upper=outgoing_links.p_nom_max,
             )
-            n.model.add_variables(
-                coords=[outgoing_links.index],
+            outgoing_links_aux_neg = n.model.add_variables(
                 name=f"Link-p-outgoing-{ct}-aux-neg-{t}",
                 lower=-outgoing_links.p_nom_max,
                 upper=0,
             )
             n.model.add_constraints(
-                n.model[f"Link-p-outgoing-{ct}-aux-pos-{t}"] >= outgoing_links_var,
+                outgoing_links_aux_pos >= outgoing_links_var,
                 name=f"Link-p-outgoing-{ct}-aux-pos-constr-{t}",
             )
             n.model.add_constraints(
-                n.model[f"Link-p-outgoing-{ct}-aux-neg-{t}"] <= outgoing_links_var,
+                outgoing_links_aux_neg <= outgoing_links_var,
                 name=f"Link-p-outgoing-{ct}-aux-neg-constr-{t}",
             )
             # To constraint the absolute values of imports and exports, we have to sum the
             # corresponding positive and negative flows separately, using auxiliary variables
             import_lhs = (
-                n.model[f"Link-p-incoming-{ct}-aux-pos-{t}"].sum()
-                + n.model[f"Line-s-incoming-{ct}-aux-pos-{t}"].sum()
-                - n.model[f"Link-p-outgoing-{ct}-aux-neg-{t}"].sum()
-                - n.model[f"Line-s-outgoing-{ct}-aux-neg-{t}"].sum()
+                incoming_links_aux_pos.sum()
+                + incoming_lines_aux_pos.sum()
+                - outgoing_links_aux_neg.sum()
+                - outgoing_lines_aux_neg.sum()
             ) / 10  # divide by 10 to improve numerical stability
             export_lhs = (
-                n.model[f"Link-p-outgoing-{ct}-aux-pos-{t}"].sum()
-                + n.model[f"Line-s-outgoing-{ct}-aux-pos-{t}"].sum()
-                - n.model[f"Link-p-incoming-{ct}-aux-neg-{t}"].sum()
-                - n.model[f"Line-s-incoming-{ct}-aux-neg-{t}"].sum()
+                outgoing_links_aux_pos.sum()
+                + outgoing_lines_aux_pos.sum()
+                - incoming_links_aux_neg.sum()
+                - incoming_lines_aux_neg.sum()
             ) / 10
 
             n.model.add_constraints(
