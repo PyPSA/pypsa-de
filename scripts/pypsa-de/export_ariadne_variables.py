@@ -1013,7 +1013,7 @@ def _get_capacities(n, region, cap_func, cap_string="Capacity|"):
     ).sum()
 
     var[cap_string + "Decentral Heat|Oil"] = capacities_decentral_heat.filter(
-        like="oil"
+        like="oil boiler"
     ).sum()
 
     var[cap_string + "Decentral Heat|Storage Converter"] = capacities_decentral_heat[
