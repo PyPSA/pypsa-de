@@ -76,4 +76,4 @@ dependencies:
   - tsam>=2.3.1
   - entsoe-py
   - ixmp4>=0.13.0
-  - pyam>=3.1.0
+  - pyam-iamc>=3.1.0
