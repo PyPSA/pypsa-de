@@ -15,6 +15,7 @@ dependencies:
 - pyam>=2.0
 - ruamel.yaml
 - jpype1
+- ixmp4>=0.13.0
 
 # Inhouse packages
 - pypsa>=0.32.1
