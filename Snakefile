@@ -1020,15 +1020,15 @@ rule prepare_st_low_res_network:
         ),
     input:
         network=RESULTS
-        + "networks/base_s_{clusters}_{opts}_{sector_opts}_{st_years}.nc",
+        + "networks/base_s_{clusters}_{opts}_{sector_opts}_{eeg_sweep_year}.nc",
     output:
         st_low_res_prenetwork=RESULTS
-        + "st_low_res_prenetworks/base_s_{clusters}_{opts}_{sector_opts}_{st_years}_eeg_level_{eeg_level}.nc",
+        + "st_low_res_prenetworks/base_s_{clusters}_{opts}_{sector_opts}_{eeg_sweep_year}_eeg_level_{eeg_level}.nc",
     resources:
         mem_mb=16000,
     log:
         RESULTS
-        + "logs/st_low_res_prenetwork_s_{clusters}_{opts}_{sector_opts}_{st_years}_eeg_level_{eeg_level}.log",
+        + "logs/st_low_res_prenetwork_s_{clusters}_{opts}_{sector_opts}_{eeg_sweep_year}_eeg_level_{eeg_level}.log",
     script:
         "scripts/pypsa-de/prepare_st_low_res_network.py"
 
@@ -1042,21 +1042,21 @@ rule solve_st_low_res_network:
         custom_extra_functionality=input_custom_extra_functionality,
     input:
         st_low_res_prenetwork=RESULTS
-        + "st_low_res_prenetworks/base_s_{clusters}_{opts}_{sector_opts}_{st_years}_eeg_level_{eeg_level}.nc",
+        + "st_low_res_prenetworks/base_s_{clusters}_{opts}_{sector_opts}_{eeg_sweep_year}_eeg_level_{eeg_level}.nc",
         co2_totals_name=resources("co2_totals.csv"),
         energy_totals=resources("energy_totals.csv"),
     output:
         st_low_res_network=RESULTS
-        + "st_low_res_networks/{sensitivity}/base_s_{clusters}_{opts}_{sector_opts}_{st_years}_eeg_level_{eeg_level}.nc",
+        + "st_low_res_networks/{sensitivity}/base_s_{clusters}_{opts}_{sector_opts}_{eeg_sweep_year}_eeg_level_{eeg_level}.nc",
     shadow:
         shadow_config
     log:
         solver=RESULTS
-        + "logs/st_low_res_networks/{sensitivity}/base_s_{clusters}_{opts}_{sector_opts}_{st_years}_eeg_level_{eeg_level}_solver.log",
+        + "logs/st_low_res_networks/{sensitivity}/base_s_{clusters}_{opts}_{sector_opts}_{eeg_sweep_year}_eeg_level_{eeg_level}_solver.log",
         memory=RESULTS
-        + "logs/st_low_res_networks/{sensitivity}/base_s_{clusters}_{opts}_{sector_opts}_{st_years}_eeg_level_{eeg_level}_memory.log",
+        + "logs/st_low_res_networks/{sensitivity}/base_s_{clusters}_{opts}_{sector_opts}_{eeg_sweep_year}_eeg_level_{eeg_level}_memory.log",
         python=RESULTS
-        + "logs/st_low_res_networks/{sensitivity}/base_s_{clusters}_{opts}_{sector_opts}_{st_years}_eeg_level_{eeg_level}_python.log",
+        + "logs/st_low_res_networks/{sensitivity}/base_s_{clusters}_{opts}_{sector_opts}_{eeg_sweep_year}_eeg_level_{eeg_level}_python.log",
     threads: solver_threads
     resources:
         mem_mb=config_provider("solving", "mem_mb"),
@@ -1102,9 +1102,11 @@ use rule export_ariadne_variables as export_st_variables with:
         energy_totals=resources("energy_totals.csv"),
         st_low_res_networks=expand(
             RESULTS
-            + "st_low_res_networks/{sensitivity}/base_s_{clusters}_{opts}_{sector_opts}_{st_years}_eeg_level_{eeg_level}.nc",
+            + "st_low_res_networks/{sensitivity}/base_s_{clusters}_{opts}_{sector_opts}_{eeg_sweep_year}_eeg_level_{eeg_level}.nc",
             **config["scenario"],
-            st_years=config_provider("iiasa_database", "regret_run", "st_years"),
+            eeg_sweep_year=config_provider(
+                "iiasa_database", "regret_run", "eeg_sweep_year"
+            ),
             allow_missing=True,
         ),
     output:
@@ -1123,6 +1125,111 @@ rule st_all:
             RESULTS
             + "st_low_res_variables/{sensitivity}/st_low_res_variables_eeg_level_{eeg_level}.xlsx",
             sensitivity=get_st_sensitivities,
+            eeg_level=config_provider("iiasa_database", "regret_run", "EEG_levels"),
+            run=config_provider("run", "name"),
+        ),
+
+
+rule solve_eeg_sweep_lt:
+    params:
+        solving=config_provider("solving"),
+        foresight=config_provider("foresight"),
+        co2_sequestration_potential=config_provider(
+            "sector", "co2_sequestration_potential", default=200
+        ),
+        custom_extra_functionality=input_custom_extra_functionality,
+        energy_year=config_provider("energy", "energy_totals_year"),
+    input:
+        network=resources(
+            "networks/base_s_{clusters}_{opts}_{sector_opts}_{eeg_sweep_year}_final.nc"
+        ),
+        co2_totals_name=resources("co2_totals.csv"),
+        energy_totals=resources("energy_totals.csv"),
+    output:
+        network=RESULTS
+        + "networks/base_s_{clusters}_{opts}_{sector_opts}_{eeg_sweep_year}_EEG_{eeg_level}.nc",
+        config=RESULTS
+        + "configs/config.base_s_{clusters}_{opts}_{sector_opts}_{eeg_sweep_year}_EEG_{eeg_level}.yaml",
+    shadow:
+        shadow_config
+    log:
+        solver=RESULTS
+        + "logs/base_s_{clusters}_{opts}_{sector_opts}_{eeg_sweep_year}_EEG_{eeg_level}_solver.log",
+        memory=RESULTS
+        + "logs/base_s_{clusters}_{opts}_{sector_opts}_{eeg_sweep_year}_EEG_{eeg_level}_memory.log",
+        python=RESULTS
+        + "logs/base_s_{clusters}_{opts}_{sector_opts}_{eeg_sweep_year}_EEG_{eeg_level}_python.log",
+    threads: solver_threads
+    resources:
+        mem_mb=config_provider("solving", "mem_mb"),
+        runtime=config_provider("solving", "runtime", default="6h"),
+    benchmark:
+        (
+            RESULTS
+            + "benchmarks/solve_sector_network/base_s_{clusters}_{opts}_{sector_opts}_{eeg_sweep_year}_EEG_{eeg_level}"
+        )
+    conda:
+        "envs/environment.yaml"
+    script:
+        "scripts/solve_network.py"
+
+
+use rule export_ariadne_variables as export_eeg_sweep_lt_variables with:
+    input:
+        template="data/template_ariadne_database.xlsx",
+        industry_demands=expand(
+            resources(
+                "industrial_energy_demand_base_s_{clusters}_{planning_horizons}.csv"
+            ),
+            **config["scenario"],
+            allow_missing=True,
+        ),
+        networks=expand(
+            RESULTS
+            + "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
+            **config["scenario"],
+            allow_missing=True,
+        ),
+        costs=expand(
+            resources("costs_{planning_horizons}.csv"),
+            **config["scenario"],
+            allow_missing=True,
+        ),
+        industrial_production_per_country_tomorrow=expand(
+            resources(
+                "industrial_production_per_country_tomorrow_{planning_horizons}-modified.csv"
+            ),
+            **config["scenario"],
+            allow_missing=True,
+        ),
+        industry_sector_ratios=expand(
+            resources("industry_sector_ratios_{planning_horizons}.csv"),
+            **config["scenario"],
+            allow_missing=True,
+        ),
+        industrial_production=resources("industrial_production_per_country.csv"),
+        energy_totals=resources("energy_totals.csv"),
+        eeg_sweep_networks=expand(
+            RESULTS
+            + "networks/base_s_{clusters}_{opts}_{sector_opts}_{eeg_sweep_year}_EEG_{eeg_level}.nc",
+            **config["scenario"],
+            eeg_sweep_year=config_provider(
+                "iiasa_database", "regret_run", "eeg_sweep_year"
+            ),
+            allow_missing=True,
+        ),
+    output:
+        exported_variables=RESULTS + "ariadne/exported_variables_EEG_{eeg_level}.xlsx",
+        exported_variables_full=RESULTS
+        + "ariadne/exported_variables_full_EEG_{eeg_level}.xlsx",
+    log:
+        RESULTS + "logs/export_ariadne_variables_EEG_{eeg_level}.log",
+
+
+rule eeg_sweep:
+    input:
+        expand(
+            RESULTS + "ariadne/exported_variables_full_EEG_{eeg_level}.xlsx",
             eeg_level=config_provider("iiasa_database", "regret_run", "EEG_levels"),
             run=config_provider("run", "name"),
         ),

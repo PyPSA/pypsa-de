@@ -1457,7 +1457,9 @@ if __name__ == "__main__":
     np.random.seed(solve_opts.get("seed", 123))
 
     n = pypsa.Network(snakemake.input.network)
-    planning_horizons = snakemake.wildcards.get("planning_horizons", None)
+    planning_horizons = snakemake.wildcards.get(
+        "planning_horizons", snakemake.wildcards.get("eeg_sweep_year", None)
+    )
 
     prepare_network(
         n,

@@ -56,13 +56,13 @@ iiasa_database:
     #- no_flex
     #- gas_price_60
     #- gas_price_80
-    st_years:
+    eeg_sweep_year:
     - 2030
     EEG_levels:
     - 1.00
     # - 0.95
     # - 0.90
-    - 0.85
+    # - 0.85
     # - 0.80
     # - 0.75
     - 0.70
@@ -776,7 +776,7 @@ onshore_nep_force:
 offshore_nep_force:
   cutin_year: 2025
   cutout_year: 2030
-  delay_years: 0
+  delay_years: 2
 
 scale_capacity:
   2020:

@@ -863,9 +863,27 @@ def additional_functionality(n, snapshots, snakemake):
     try:
         investment_year = int(snakemake.wildcards.planning_horizons[-4:])
     except AttributeError:
-        investment_year = int(snakemake.wildcards.st_years[-4:])
+        investment_year = int(snakemake.wildcards.eeg_sweep_year)
     constraints = snakemake.params.solving["constraints"]
-
+    if snakemake.wildcards.get("eeg_sweep_year"):
+        eeg_sweep_year = int(snakemake.wildcards.eeg_sweep_year)
+        assert eeg_sweep_year == 2030, "EEG sweep implemented only for 2030 "
+        lvl = float(snakemake.wildcards.eeg_level)
+        constraints["limits_capacity_min"]["Generator"]["onwind"]["DE"][
+            eeg_sweep_year
+        ] = constraints["limits_capacity_max"]["Generator"]["onwind"]["DE"][
+            eeg_sweep_year
+        ] = 115 * lvl
+        constraints["limits_capacity_min"]["Generator"]["offwind"]["DE"][
+            eeg_sweep_year
+        ] = constraints["limits_capacity_max"]["Generator"]["offwind"]["DE"][
+            eeg_sweep_year
+        ] = 30 * lvl
+        constraints["limits_capacity_min"]["Generator"]["solar"]["DE"][
+            eeg_sweep_year
+        ] = constraints["limits_capacity_max"]["Generator"]["solar"]["DE"][
+            eeg_sweep_year
+        ] = 215 * lvl
     if not snakemake.params.get("regret_run"):
         add_capacity_limits(
             n, investment_year, constraints["limits_capacity_min"], snakemake, "minimum"
