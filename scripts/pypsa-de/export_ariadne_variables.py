@@ -4593,13 +4593,13 @@ def get_economy(n, region):
         export_revenue, import_cost = get_export_import(n, region, carriers, unit="€")
         return import_cost - export_revenue
 
-    var["Cost|Total Energy System Cost|Trade|Electricity"] = (
+    var["Total Energy System Cost|Trade|Electricity"] = (
         get_trade_cost(n, region, ["AC"]) + get_trade_cost(n, region, ["DC"])
     ) / 1e9
-    var["Cost|Total Energy System Cost|Trade|Efuels"] = (
+    var["Total Energy System Cost|Trade|Efuels"] = (
         get_trade_cost(n, region, ["renewable oil", "renewable gas", "methanol"]) / 1e9
     )
-    var["Cost|Total Energy System Cost|Trade|Hydrogen"] = (
+    var["Total Energy System Cost|Trade|Hydrogen"] = (
         get_trade_cost(
             n,
             region,
@@ -4607,20 +4607,22 @@ def get_economy(n, region):
         )
         / 1e9
     )
-    var["Cost|Total Energy System Cost|Trade"] = (
-        var["Cost|Total Energy System Cost|Trade|Electricity"]
-        + var["Cost|Total Energy System Cost|Trade|Efuels"]
-        + var["Cost|Total Energy System Cost|Trade|Hydrogen"]
+    var["Total Energy System Cost|Trade"] = (
+        var["Total Energy System Cost|Trade|Electricity"]
+        + var["Total Energy System Cost|Trade|Efuels"]
+        + var["Total Energy System Cost|Trade|Hydrogen"]
     )
-    # Cost|Total Energy System Cost in billion EUR2020/yr
-    var["Cost|Total Energy System Cost|Non Trade"] = (
-        get_tsc(n, region).sum().sum() / 1e9
+    # Total Energy System Cost in billion EUR2020/yr
+    var["Total Energy System Cost|Non Trade"] = get_tsc(n, region).sum().sum() / 1e9
+
+    var["Total Energy System Cost"] = (
+        var["Total Energy System Cost|Non Trade"]
+        + var["Total Energy System Cost|Trade"]
     )
 
-    var["Cost|Total Energy System Cost"] = (
-        var["Cost|Total Energy System Cost|Non Trade"]
-        + var["Cost|Total Energy System Cost|Trade"]
-    )
+    var["Total Energy System Cost|EU"] = (
+        n.statistics.capex().sum() + n.statistics.opex().sum()
+    ) / 1e9
 
     return var
 
