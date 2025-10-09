@@ -4410,8 +4410,135 @@ def get_grid_investments(
     return var
 
 
+def calculate_cfd_payments(
+    n,
+    region="DE",
+    vre_carriers=[
+        "solar",
+        "solar-hsat",
+        "solar rooftop",
+        "offwind-ac",
+        "offwind-dc",
+        "onwind",
+    ],
+    einheitspreis=True,
+    rooftop_price_factor=2,
+    rooftop_self_consumption=0.2,
+):
+    build_years = [
+        y for y in n.generators.build_year.unique() if y in [2025, 2030, 2035]
+    ]
+    yearly_costs = {}
+
+    for year in build_years:
+        one_sided = True if year < 2027 else False
+        print(
+            f"Calculating new EEG payments for year {year} with {'one-sided' if one_sided else 'two-sided'} contracts for difference"
+        )
+
+        cost = pd.Series(dtype=float)
+        for carrier in vre_carriers:
+            # Keep in mind that, e.g., the 2025 assets represent the 2020-2025 assets
+            gens = n.generators.query(
+                f"carrier == '{carrier}' and index.str.startswith('{region}') and build_year == {year}"
+            )
+            if gens.empty:
+                print(
+                    f"No {carrier} generators found for year {year} in region {region}."
+                )
+                cost[carrier] = 0.0
+                continue
+
+            flh = n.generators_t.p_max_pu[gens.index].mean() * 8760
+            strike_price = gens.capital_cost / flh
+
+            # Not equal to n.generators_t.p[gens.index] because of curtailment
+            avail_generation = n.generators_t.p_max_pu[gens.index] * gens.p_nom_opt
+
+            if einheitspreis:
+                nodal_prices = n.buses_t.marginal_price[
+                    n.buses.query(
+                        f"index.str.startswith('{region}') and carrier == 'AC'"
+                    ).index
+                ]
+
+                nodal_flows = (
+                    n.statistics.withdrawal(
+                        bus_carrier="AC",
+                        groupby=["name", "bus", "carrier"],
+                        aggregate_time=False,
+                    )
+                    .groupby("bus")
+                    .sum()
+                    .T.filter(
+                        like=region,
+                        axis=1,
+                    )
+                )
+
+                weighted_mean_nodal_price = (
+                    nodal_flows.mul(nodal_prices)
+                    .sum(axis=1)
+                    .div(nodal_flows.sum(axis=1))
+                )
+
+                price = pd.DataFrame(
+                    {loc: weighted_mean_nodal_price for loc in strike_price.index},
+                    index=weighted_mean_nodal_price.index,
+                )
+            else:
+                price = n.buses_t.marginal_price[gens.bus]
+                price.columns = gens.index
+
+            print("average hourly price", carrier, round(price.mean().mean(), 2))
+            print("average strike price", carrier, round(strike_price.mean(), 2))
+
+            if carrier == "solar rooftop":
+                print(
+                    "Correcting rooftop PV strike price by factor",
+                    rooftop_price_factor,
+                    "and accounting self-consumption with a factor",
+                    rooftop_self_consumption,
+                )
+                strike_price *= rooftop_price_factor
+                avail_generation *= 1 - rooftop_self_consumption
+
+            if year == 2025:
+                if price.mean().mean() < 75:
+                    print("price seems to be low")
+
+            if one_sided:
+                remuneration = strike_price - price.clip(upper=strike_price, axis=1)
+            else:
+                remuneration = strike_price - price
+
+            cost[carrier] = (avail_generation * remuneration).multiply(
+                n.snapshot_weightings.generators, axis=0
+            ).values.sum() / 1e9  # in bn €
+        yearly_costs[year] = cost
+
+    print("\nNew EEG payment per carrier in bn €:\n")
+
+    return pd.DataFrame(yearly_costs)
+
+
 def get_policy(n, investment_year):
     var = pd.Series()
+
+    cfds = calculate_cfd_payments(n)
+    var["Policy|Renewable Energy Support|CfD|Solar|Rooftop"] = (
+        cfds.sum(axis=1).filter(like="solar rooftop").sum()
+    )
+    var["Policy|Renewable Energy Support|CfD|Solar|Utility"] = (
+        cfds.sum(axis=1).reindex(["solar", "solar-hsat"]).sum()
+    )
+    var["Policy|Renewable Energy Support|CfD|Wind|Onshore"] = (
+        cfds.sum(axis=1).filter(like="onwind").sum()
+    )
+    var["Policy|Renewable Energy Support|CfD|Wind|Offshore"] = (
+        cfds.sum(axis=1).filter(like="offwind").sum()
+    )
+    var["Policy|Renewable Energy Support|CfD|Total"] = cfds.sum(axis=1).sum()
 
     # add carbon component to fossil fuels if specified
     if (snakemake.params.co2_price_add_on_fossils is not None) and (
@@ -5544,7 +5671,7 @@ if __name__ == "__main__":
 
     # Load data
     _networks = [pypsa.Network(fn) for fn in snakemake.input.networks]
-    if snakemake.input.eeg_sweep_networks:
+    if snakemake.input.get("eeg_sweep_networks"):
         _sweep_networks = [
             pypsa.Network(fn) for fn in snakemake.input.eeg_sweep_networks
         ]
