@@ -900,9 +900,11 @@ def additional_functionality(n, snapshots, snakemake):
         if snakemake.wildcards.clusters != "1":
             h2_import_limits(n, investment_year, constraints["limits_volume_max"])
 
-            electricity_import_limits(
-                n, investment_year, constraints["limits_volume_max"]
-            )
+            # deactivate elec import limit since it may lead to strange flows
+            # TODO evaluate if this is necessary
+            # electricity_import_limits(
+            #     n, investment_year, constraints["limits_volume_max"]
+            # )
 
         if investment_year >= 2025:
             h2_production_limits(
