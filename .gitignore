@@ -85,6 +85,7 @@ cutouts
 
 # custom local files
 local
+figures
 # private dev folder
 dev/*
 

@@ -523,6 +523,7 @@ rule modify_district_heat_share:
 
 rule modify_prenetwork:
     params:
+        no_flex_lt_run=config_provider("iiasa_database", "no_flex_lt_run"),
         efuel_export_ban=config_provider("solving", "constraints", "efuel_export_ban"),
         enable_kernnetz=config_provider("wasserstoff_kernnetz", "enable"),
         costs=config_provider("costs"),
@@ -555,6 +556,13 @@ rule modify_prenetwork:
         bev_charge_rate=config_provider("sector", "bev_charge_rate"),
         bev_energy=config_provider("sector", "bev_energy"),
         bev_dsm_availability=config_provider("sector", "bev_dsm_availability"),
+        uba_for_industry=config_provider("iiasa_database", "uba_for_industry"),
+        scale_industry_non_energy=config_provider(
+            "iiasa_database", "scale_industry_non_energy"
+        ),
+        restrict_cross_border_flows=config_provider(
+            "iiasa_database", "restrict_cross_border_flows"
+        ),
     input:
         costs_modifications="ariadne-data/costs_{planning_horizons}-modifications.csv",
         network=resources(
@@ -575,6 +583,12 @@ rule modify_prenetwork:
         industrial_demand=resources(
             "industrial_energy_demand_base_s_{clusters}_{planning_horizons}.csv"
         ),
+        industrial_production_per_country_tomorrow=resources(
+            "industrial_production_per_country_tomorrow_{planning_horizons}-modified.csv"
+        ),
+        industry_sector_ratios=resources(
+            "industry_sector_ratios_{planning_horizons}.csv"
+        ),
         pop_weighted_energy_totals=resources(
             "pop_weighted_energy_totals_s_{clusters}.csv"
         ),
@@ -582,12 +596,13 @@ rule modify_prenetwork:
         regions_onshore=resources("regions_onshore_base_s_{clusters}.geojson"),
         regions_offshore=resources("regions_offshore_base_s_{clusters}.geojson"),
         offshore_connection_points="ariadne-data/offshore_connection_points.csv",
+        new_industrial_energy_demand="ariadne-data/UBA_Projektionsbericht2025_Abbildung31_MWMS.csv",
     output:
         network=resources(
             "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_final.nc"
         ),
     resources:
-        mem_mb=4000,
+        mem_mb=8000,
     log:
         RESULTS
         + "logs/modify_prenetwork_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.log",
@@ -595,7 +610,7 @@ rule modify_prenetwork:
         "scripts/pypsa-de/modify_prenetwork.py"
 
 
-ruleorder: modify_industry_demand > build_industrial_production_per_country_tomorrow
+ruleorder: modify_industry_production > build_industrial_production_per_country_tomorrow
 
 
 rule modify_existing_heating:
@@ -656,7 +671,7 @@ rule build_existing_chp_de:
         "scripts/pypsa-de/build_existing_chp_de.py"
 
 
-rule modify_industry_demand:
+rule modify_industry_production:
     params:
         reference_scenario=config_provider("iiasa_database", "reference_scenario"),
     input:
@@ -671,9 +686,9 @@ rule modify_industry_demand:
     resources:
         mem_mb=1000,
     log:
-        logs("modify_industry_demand_{planning_horizons}.log"),
+        logs("modify_industry_production_{planning_horizons}.log"),
     script:
-        "scripts/pypsa-de/modify_industry_demand.py"
+        "scripts/pypsa-de/modify_industry_production.py"
 
 
 rule build_wasserstoff_kernnetz:
@@ -737,7 +752,6 @@ rule download_ariadne_template:
 rule export_ariadne_variables:
     params:
         planning_horizons=config_provider("scenario", "planning_horizons"),
-        hours=config_provider("clustering", "temporal", "resolution_sector"),
         max_hours=config_provider("electricity", "max_hours"),
         costs=config_provider("costs"),
         config_industry=config_provider("industry"),
@@ -840,11 +854,22 @@ rule plot_ariadne_variables:
 
 rule ariadne_all:
     input:
-        expand(RESULTS + "graphs/costs.svg", run=config_provider("run", "name")),
-        expand(
-            RESULTS + "ariadne/capacity_detailed.png",
-            run=config_provider("run", "name"),
+        price_carbon="results/"
+        + config["run"]["prefix"]
+        + "/scenario_comparison/Price-Carbon.png",
+
+
+rule plot_ariadne_scenario_comparison:
+    params:
+        output_dir=directory(
+            "results/" + config["run"]["prefix"] + "/scenario_comparison/"
         ),
+    input:
+        expand(RESULTS + "graphs/costs.svg", run=config_provider("run", "name")),
+        # expand(
+        #     RESULTS + "ariadne/capacity_detailed.png",
+        #     run=config_provider("run", "name"),
+        # ),
         expand(
             RESULTS
             + "maps/base_s_{clusters}_{opts}_{sector_opts}-h2_network_incl_kernnetz_{planning_horizons}.pdf",
@@ -856,8 +881,12 @@ rule ariadne_all:
             RESULTS + "ariadne/exported_variables_full.xlsx",
             run=config_provider("run", "name"),
         ),
+    output:
+        price_carbon="results/"
+        + config["run"]["prefix"]
+        + "/scenario_comparison/Price-Carbon.png",
     script:
-        "scripts/pypsa-de/plot_ariadne_scenario_comparison.py"
+        "scripts/pypsa-de/plot_scenario_comparison.py"
 
 
 rule build_scenarios:
@@ -959,3 +988,483 @@ rule ariadne_report_only:
             RESULTS + "ariadne/report/elec_price_duration_curve.pdf",
             run=config_provider("run", "name"),
         ),
+
+
+def get_st_sensitivities(w):
+    dirs = ["base"]
+    sensitivities = config_provider("iiasa_database", "regret_run", "st_sensitivities")(
+        w
+    )
+    if sensitivities is None:
+        return dirs
+    for sens in sensitivities:
+        dirs.append(f"{sens}")
+    return dirs
+
+
+rule prepare_st_low_res_network:
+    params:
+        solving=config_provider("solving"),
+        foresight=config_provider("foresight"),
+        co2_sequestration_potential=config_provider(
+            "sector", "co2_sequestration_potential", default=200
+        ),
+        scope_to_fix=config_provider("iiasa_database", "regret_run", "scope_to_fix"),
+        h2_vent=config_provider("iiasa_database", "regret_run", "h2_vent"),
+        strict=config_provider("iiasa_database", "regret_run", "strict"),
+        unit_commitment=config_provider(
+            "iiasa_database", "regret_run", "unit_commitment"
+        ),
+        scale_cross_border_elec_capa=config_provider(
+            "iiasa_database", "regret_run", "scale_cross_border_elec_capa"
+        ),
+    input:
+        network=RESULTS
+        + "networks/base_s_{clusters}_{opts}_{sector_opts}_{eeg_sweep_year}.nc",
+    output:
+        st_low_res_prenetwork=RESULTS
+        + "st_low_res_prenetworks/base_s_{clusters}_{opts}_{sector_opts}_{eeg_sweep_year}_eeg_level_{eeg_level}.nc",
+    resources:
+        mem_mb=16000,
+    log:
+        RESULTS
+        + "logs/st_low_res_prenetwork_s_{clusters}_{opts}_{sector_opts}_{eeg_sweep_year}_eeg_level_{eeg_level}.log",
+    script:
+        "scripts/pypsa-de/prepare_st_low_res_network.py"
+
+
+rule solve_st_low_res_network:
+    params:
+        st_sensitivity="{sensitivity}",
+        solving=config_provider("solving"),
+        regret_run=True,
+        energy_year=config_provider("energy", "energy_totals_year"),
+        custom_extra_functionality=input_custom_extra_functionality,
+    input:
+        st_low_res_prenetwork=RESULTS
+        + "st_low_res_prenetworks/base_s_{clusters}_{opts}_{sector_opts}_{eeg_sweep_year}_eeg_level_{eeg_level}.nc",
+        co2_totals_name=resources("co2_totals.csv"),
+        energy_totals=resources("energy_totals.csv"),
+    output:
+        st_low_res_network=RESULTS
+        + "st_low_res_networks/{sensitivity}/base_s_{clusters}_{opts}_{sector_opts}_{eeg_sweep_year}_eeg_level_{eeg_level}.nc",
+    shadow:
+        shadow_config
+    log:
+        solver=RESULTS
+        + "logs/st_low_res_networks/{sensitivity}/base_s_{clusters}_{opts}_{sector_opts}_{eeg_sweep_year}_eeg_level_{eeg_level}_solver.log",
+        memory=RESULTS
+        + "logs/st_low_res_networks/{sensitivity}/base_s_{clusters}_{opts}_{sector_opts}_{eeg_sweep_year}_eeg_level_{eeg_level}_memory.log",
+        python=RESULTS
+        + "logs/st_low_res_networks/{sensitivity}/base_s_{clusters}_{opts}_{sector_opts}_{eeg_sweep_year}_eeg_level_{eeg_level}_python.log",
+    threads: solver_threads
+    resources:
+        mem_mb=config_provider("solving", "mem_mb"),
+        runtime=config_provider("solving", "runtime", default="6h"),
+    script:
+        "scripts/pypsa-de/solve_st_low_res_network.py"
+
+
+use rule export_ariadne_variables as export_st_variables with:
+    input:
+        template="data/template_ariadne_database.xlsx",
+        industry_demands=expand(
+            resources(
+                "industrial_energy_demand_base_s_{clusters}_{planning_horizons}.csv"
+            ),
+            **config["scenario"],
+            allow_missing=True,
+        ),
+        networks=expand(
+            RESULTS
+            + "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
+            **config["scenario"],
+            allow_missing=True,
+        ),
+        costs=expand(
+            resources("costs_{planning_horizons}.csv"),
+            **config["scenario"],
+            allow_missing=True,
+        ),
+        industrial_production_per_country_tomorrow=expand(
+            resources(
+                "industrial_production_per_country_tomorrow_{planning_horizons}-modified.csv"
+            ),
+            **config["scenario"],
+            allow_missing=True,
+        ),
+        industry_sector_ratios=expand(
+            resources("industry_sector_ratios_{planning_horizons}.csv"),
+            **config["scenario"],
+            allow_missing=True,
+        ),
+        industrial_production=resources("industrial_production_per_country.csv"),
+        energy_totals=resources("energy_totals.csv"),
+        st_low_res_networks=expand(
+            RESULTS
+            + "st_low_res_networks/{sensitivity}/base_s_{clusters}_{opts}_{sector_opts}_{eeg_sweep_year}_eeg_level_{eeg_level}.nc",
+            **config["scenario"],
+            eeg_sweep_year=config_provider(
+                "iiasa_database", "regret_run", "eeg_sweep_year"
+            ),
+            allow_missing=True,
+        ),
+    output:
+        exported_variables=RESULTS
+        + "st_low_res_variables/{sensitivity}/st_low_res_variables_eeg_level_{eeg_level}.xlsx",
+        exported_variables_full=RESULTS
+        + "st_low_res_variables/{sensitivity}/st_low_res_variables_full_eeg_level_{eeg_level}.xlsx",
+    log:
+        RESULTS
+        + "logs/st_low_res_variables/{sensitivity}/st_low_res_variables_eeg_level_{eeg_level}.log",
+
+
+rule st_all:
+    input:
+        expand(
+            RESULTS
+            + "st_low_res_variables/{sensitivity}/st_low_res_variables_eeg_level_{eeg_level}.xlsx",
+            sensitivity=get_st_sensitivities,
+            eeg_level=config_provider("iiasa_database", "regret_run", "EEG_levels"),
+            run=config_provider("run", "name"),
+        ),
+
+
+rule solve_eeg_sweep_lt:
+    params:
+        solving=config_provider("solving"),
+        foresight=config_provider("foresight"),
+        co2_sequestration_potential=config_provider(
+            "sector", "co2_sequestration_potential", default=200
+        ),
+        custom_extra_functionality=input_custom_extra_functionality,
+        energy_year=config_provider("energy", "energy_totals_year"),
+    input:
+        network=resources(
+            "networks/base_s_{clusters}_{opts}_{sector_opts}_{eeg_sweep_year}_final.nc"
+        ),
+        co2_totals_name=resources("co2_totals.csv"),
+        energy_totals=resources("energy_totals.csv"),
+    output:
+        network=RESULTS
+        + "networks/base_s_{clusters}_{opts}_{sector_opts}_{eeg_sweep_year}_EEG_{eeg_level}.nc",
+        config=RESULTS
+        + "configs/config.base_s_{clusters}_{opts}_{sector_opts}_{eeg_sweep_year}_EEG_{eeg_level}.yaml",
+    shadow:
+        shadow_config
+    log:
+        solver=RESULTS
+        + "logs/base_s_{clusters}_{opts}_{sector_opts}_{eeg_sweep_year}_EEG_{eeg_level}_solver.log",
+        memory=RESULTS
+        + "logs/base_s_{clusters}_{opts}_{sector_opts}_{eeg_sweep_year}_EEG_{eeg_level}_memory.log",
+        python=RESULTS
+        + "logs/base_s_{clusters}_{opts}_{sector_opts}_{eeg_sweep_year}_EEG_{eeg_level}_python.log",
+    threads: solver_threads
+    resources:
+        mem_mb=config_provider("solving", "mem_mb"),
+        runtime=config_provider("solving", "runtime", default="6h"),
+    benchmark:
+        (
+            RESULTS
+            + "benchmarks/solve_sector_network/base_s_{clusters}_{opts}_{sector_opts}_{eeg_sweep_year}_EEG_{eeg_level}"
+        )
+    conda:
+        "envs/environment.yaml"
+    script:
+        "scripts/solve_network.py"
+
+
+use rule export_ariadne_variables as export_eeg_sweep_lt_variables with:
+    input:
+        template="data/template_ariadne_database.xlsx",
+        industry_demands=expand(
+            resources(
+                "industrial_energy_demand_base_s_{clusters}_{planning_horizons}.csv"
+            ),
+            **config["scenario"],
+            allow_missing=True,
+        ),
+        networks=expand(
+            RESULTS
+            + "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
+            **config["scenario"],
+            allow_missing=True,
+        ),
+        costs=expand(
+            resources("costs_{planning_horizons}.csv"),
+            **config["scenario"],
+            allow_missing=True,
+        ),
+        industrial_production_per_country_tomorrow=expand(
+            resources(
+                "industrial_production_per_country_tomorrow_{planning_horizons}-modified.csv"
+            ),
+            **config["scenario"],
+            allow_missing=True,
+        ),
+        industry_sector_ratios=expand(
+            resources("industry_sector_ratios_{planning_horizons}.csv"),
+            **config["scenario"],
+            allow_missing=True,
+        ),
+        industrial_production=resources("industrial_production_per_country.csv"),
+        energy_totals=resources("energy_totals.csv"),
+        eeg_sweep_networks=expand(
+            RESULTS
+            + "networks/base_s_{clusters}_{opts}_{sector_opts}_{eeg_sweep_year}_EEG_{eeg_level}.nc",
+            **config["scenario"],
+            eeg_sweep_year=config_provider(
+                "iiasa_database", "regret_run", "eeg_sweep_year"
+            ),
+            allow_missing=True,
+        ),
+    output:
+        exported_variables=RESULTS + "ariadne/exported_variables_EEG_{eeg_level}.xlsx",
+        exported_variables_full=RESULTS
+        + "ariadne/exported_variables_full_EEG_{eeg_level}.xlsx",
+    log:
+        RESULTS + "logs/export_ariadne_variables_EEG_{eeg_level}.log",
+
+
+rule eeg_sweep:
+    input:
+        expand(
+            RESULTS + "ariadne/exported_variables_full_EEG_{eeg_level}.xlsx",
+            eeg_level=config_provider("iiasa_database", "regret_run", "EEG_levels"),
+            run=config_provider("run", "name"),
+        ),
+
+
+rule prepare_regret_network:
+    params:
+        solving=config_provider("solving"),
+        foresight=config_provider("foresight"),
+        co2_sequestration_potential=config_provider(
+            "sector", "co2_sequestration_potential", default=200
+        ),
+        scope_to_fix=config_provider("iiasa_database", "regret_run", "scope_to_fix"),
+        h2_vent=config_provider("iiasa_database", "regret_run", "h2_vent"),
+        strict=config_provider("iiasa_database", "regret_run", "strict"),
+        unit_commitment=config_provider(
+            "iiasa_database", "regret_run", "unit_commitment"
+        ),
+        scale_cross_border_elec_capa=config_provider(
+            "iiasa_database", "regret_run", "scale_cross_border_elec_capa"
+        ),
+    input:
+        decision=RESULTS.replace("{run}", "{decision}")
+        + "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
+        realization=RESULTS
+        + "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
+    output:
+        regret_prenetwork=RESULTS
+        + "regret_prenetworks/decision_{decision}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
+    resources:
+        mem_mb=16000,
+    log:
+        RESULTS
+        + "logs/regret_prenetwork_{decision}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.log",
+    script:
+        "scripts/pypsa-de/prepare_regret_network.py"
+
+
+rule solve_regret_network:
+    params:
+        st_sensitivity="{sensitivity}",
+        solving=config_provider("solving"),
+        regret_run=True,
+        energy_year=config_provider("energy", "energy_totals_year"),
+        custom_extra_functionality=input_custom_extra_functionality,
+    input:
+        regret_prenetwork=RESULTS
+        + "regret_prenetworks/decision_{decision}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
+        co2_totals_name=resources("co2_totals.csv"),
+        energy_totals=resources("energy_totals.csv"),
+    output:
+        regret_network=RESULTS
+        + "regret_networks/{sensitivity}/decision_{decision}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
+    shadow:
+        shadow_config
+    log:
+        solver=RESULTS
+        + "logs/regret_networks/{sensitivity}/decision_{decision}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_solver.log",
+        memory=RESULTS
+        + "logs/regret_networks/{sensitivity}/decision_{decision}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_memory.log",
+        python=RESULTS
+        + "logs/regret_networks/{sensitivity}/decision_{decision}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_python.log",
+    threads: solver_threads
+    resources:
+        mem_mb=config_provider("solving", "mem_mb"),
+        runtime=config_provider("solving", "runtime", default="6h"),
+    script:
+        "scripts/pypsa-de/solve_regret_network.py"
+
+
+rule export_regret_variables:
+    params:
+        planning_horizons=config_provider("scenario", "planning_horizons"),
+        max_hours=config_provider("electricity", "max_hours"),
+        costs=config_provider("costs"),
+        config_industry=config_provider("industry"),
+        energy_totals_year=config_provider("energy", "energy_totals_year"),
+        co2_price_add_on_fossils=config_provider("co2_price_add_on_fossils"),
+        co2_sequestration_cost=config_provider("sector", "co2_sequestration_cost"),
+        post_discretization=config_provider("solving", "options", "post_discretization"),
+        NEP_year=config_provider("costs", "NEP"),
+        NEP_transmission=config_provider("costs", "transmission"),
+    input:
+        template="data/template_ariadne_database.xlsx",
+        industry_demands=expand(
+            resources(
+                "industrial_energy_demand_base_s_{clusters}_{planning_horizons}.csv"
+            ),
+            **config["scenario"],
+            allow_missing=True,
+        ),
+        networks=expand(
+            RESULTS
+            + "regret_networks/{sensitivity}/decision_{decision}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
+            **config["scenario"],
+            allow_missing=True,
+        ),
+        costs=expand(
+            resources("costs_{planning_horizons}.csv"),
+            **config["scenario"],
+            allow_missing=True,
+        ),
+        industrial_production_per_country_tomorrow=expand(
+            resources(
+                "industrial_production_per_country_tomorrow_{planning_horizons}-modified.csv"
+            ),
+            **config["scenario"],
+            allow_missing=True,
+        ),
+        industry_sector_ratios=expand(
+            resources("industry_sector_ratios_{planning_horizons}.csv"),
+            **config["scenario"],
+            allow_missing=True,
+        ),
+        industrial_production=resources("industrial_production_per_country.csv"),
+        energy_totals=resources("energy_totals.csv"),
+    output:
+        exported_variables=RESULTS
+        + "regret_variables/{sensitivity}/regret_variables_{decision}.xlsx",
+        exported_variables_full=RESULTS
+        + "regret_variables/{sensitivity}/regret_variables_{decision}_full.xlsx",
+    resources:
+        mem_mb=16000,
+    log:
+        RESULTS
+        + "regret_variables/{sensitivity}/logs/export_regret_variables_{decision}.log",
+    script:
+        "scripts/pypsa-de/export_ariadne_variables.py"
+
+
+rule regret_no_flex:
+    input:
+        "results/"
+        + config["run"]["prefix"]
+        + "/scenario_comparison/no_flex_st_regret_networks/Price-Carbon.png",
+
+
+rule regret_base:
+    input:
+        "results/"
+        + config["run"]["prefix"]
+        + "/scenario_comparison/regret_networks/Price-Carbon.png",
+
+
+rule regret_all:
+    input:
+        lambda w: expand(
+            "results/"
+            + config["run"]["prefix"]
+            + "/scenario_comparison/{sensitivity}/Price-Carbon.png",
+            sensitivity=get_st_sensitivities,
+        ),
+        f"results/{config['run']['prefix']}/regret_plots/LT_comparison/elec_capa_comp_de_2025.png",
+        # expand("results/" + config["run"]["prefix"] + "/regret_plots/{sensitivity}/ST_comparison/elec_price_comp_de.png",
+        # sensitivity=get_st_sensitivities),
+
+
+rule plot_scenario_comparison_regrets:
+    params:
+        output_dir=directory(
+            "results/" + config["run"]["prefix"] + "/scenario_comparison/{sensitivity}"
+        ),
+    input:
+        exported_variables=expand(
+            RESULTS
+            + "regret_variables/{sensitivity}/regret_variables_{decision}_full.xlsx",
+            run=lambda w: [
+                r
+                for r in config_provider("run", "name")(w)
+                if r
+                in config_provider("iiasa_database", "regret_run", "demand_baselines")(
+                    w
+                )
+            ],
+            decision=config_provider("run", "name"),
+            allow_missing=True,
+        ),
+    output:
+        price_carbon="results/"
+        + config["run"]["prefix"]
+        + "/scenario_comparison/{sensitivity}/Price-Carbon.png",
+    script:
+        "scripts/pypsa-de/plot_scenario_comparison.py"
+
+
+rule regret_plots_lt:
+    params:
+        scenarios=get_scenarios(run),
+        planning_horizons=config_provider("scenario", "planning_horizons"),
+        plotting=config_provider("plotting"),
+        output_dir=directory(
+            "results/" + config["run"]["prefix"] + "/regret_plots/LT_comparison"
+        ),
+    input:
+        networks=expand(
+            RESULTS
+            + "regret_networks/base/decision_{run}_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
+            **config["scenario"],
+            run=config["run"]["name"],
+        ),
+        regret_variables=expand(
+            RESULTS + "regret_variables/base/regret_variables_{run}_full.xlsx",
+            run=config["run"]["name"],
+        ),
+    output:
+        elec_capa_comp_de_2025=f"results/{config['run']['prefix']}/regret_plots/LT_comparison/elec_capa_comp_de_2025.png",
+    resources:
+        mem_mb=32000,
+    script:
+        "scripts/pypsa-de/regret_plots_lt.py"
+
+
+rule regret_plots:
+    params:
+        scenarios=config["run"]["name"],
+        scenarios_config=get_scenarios(run),
+        planning_horizons=config_provider("scenario", "planning_horizons"),
+        plotting=config_provider("plotting"),
+        output_dir=directory(
+            f"results/{config['run']['prefix']}/regret_plots/{{sensitivity}}/ST_comparison"
+        ),
+    input:
+        regret_networks=lambda wildcards: expand(
+            f"results/{config['run']['prefix']}/{{run}}/regret_networks/{wildcards.sensitivity}/decision_{{decision}}_s_{{clusters}}_{{opts}}_{{sector_opts}}_{{planning_horizons}}.nc",
+            run=config["run"]["name"],
+            decision=config["run"]["name"],
+            clusters=config["scenario"]["clusters"],
+            opts=config["scenario"]["opts"],
+            sector_opts=config["scenario"]["sector_opts"],
+            planning_horizons=config["scenario"]["planning_horizons"],
+            allow_missing=True,
+        ),
+    output:
+        elec_price_comp_de=f"results/{config['run']['prefix']}/regret_plots/{{sensitivity}}/ST_comparison/elec_price_comp_de.png",
+    resources:
+        mem_mb=32000,
+    script:
+        "scripts/pypsa-de/regret_plots.py"

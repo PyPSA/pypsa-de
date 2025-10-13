@@ -2,9 +2,344 @@
 # SPDX-FileCopyrightText: : 2017-2023 The PyPSA-Eur Authors
 #
 # SPDX-License-Identifier: MIT
+HighDemand:
+  electricity:
+    transmission_limit: v1
+  solving:
+    options:
+      noisy_costs: false
+    constraints:
+      decentral_heat_pump_budgets:
+        DE: # UBA MWMS, Projektionsbericht 2025, Abbildung 48
+          2025: 12.0
+      limits_capacity_min:
+        Generator:
+          onwind:
+            DE:
+              2030: 115   # Wind-an-Land Law
+              2035: 157   # Wind-an-Land Law
+          offwind:
+            DE:
+              2035: 40   # 40 Wind-auf-See Law
+          solar:
+            DE: # EEG2023; Ziel for 2024: 88 GW and for 2026: 128 GW,        
+              2025: 101   # assuming at least 1/3 of buildout reached in 2025
+              2030: 215   # PV strategy
+              2035: 309
+      limits_capacity_max:
+        Generator:
+          onwind:
+            DE:
+              2030: 115 # EEG2023 Ziel für 2030 + 5 GW
+          solar:
+            DE:
+              2030: 215 # PV Ziel 2030
+              2035: 309
+  first_technology_occurrence:
+    Link:
+      urban central water pits charger: 2040 # essentially moving pits out of the optimization horizon to forbid them
+      urban central water pits discharger: 2040
+    Store:
+      urban central water pits: 2040
+
+HighDemandNoFlex:
+  electricity:
+    transmission_limit: v1
+  iiasa_database:
+    no_flex_lt_run: true
+  solving:
+    options:
+      noisy_costs: false
+    constraints:
+      decentral_heat_pump_budgets:
+        DE: # UBA MWMS, Projektionsbericht 2025, Abbildung 48
+          2025: 12.0
+      limits_capacity_min:
+        Generator:
+          onwind:
+            DE:
+              2030: 115   # Wind-an-Land Law
+              2035: 157   # Wind-an-Land Law
+          offwind:
+            DE:
+              2035: 40   # 40 Wind-auf-See Law
+          solar:
+            DE: # EEG2023; Ziel for 2024: 88 GW and for 2026: 128 GW,        
+              2025: 101   # assuming at least 1/3 of buildout reached in 2025
+              2030: 215   # PV strategy
+              2035: 309
+      limits_capacity_max:
+        Generator:
+          onwind:
+            DE:
+              2030: 115 # EEG2023 Ziel für 2030 + 5 GW
+          solar:
+            DE:
+              2030: 215 # PV Ziel 2030
+              2035: 309
+  first_technology_occurrence:
+    Link:
+      urban central water pits charger: 2040 # essentially moving pits out of the optimization horizon to forbid them
+      urban central water pits discharger: 2040
+    Store:
+      urban central water pits: 2040
+
+LowDemand: # Demand and capacities from UBA
+  electricity:
+    transmission_limit: v1
+  iiasa_database:
+    uba_for_industry:
+    - 2025
+    - 2030
+    - 2035
+    uba_for_mobility:
+    - 2025
+    - 2030
+    - 2035
+  offshore_nep_force:
+    delay_years: 2
+  solving:
+    options:
+      noisy_costs: false
+    constraints:
+      decentral_heat_pump_budgets:
+        DE: # UBA MWMS, Projektionsbericht 2025, Abbildung 48
+          2025: 12.0
+          2030: 26.0
+          2035: 38.0
+      # central_heat_pump_budgets:
+      #   DE: # UBA MWMS, Projektionsbericht 2025, Abbildung 22
+      #     2025: 7.0
+      #     2030: 26.0
+      #     2035: 52.0
+      # Capacities from UBA are here: https://datacube.uba.de/vis?lc=de&df[ds]=dc-release&df[id]=DF_CROSS_PROJECTION_REPORT_CORE_INDICATORS_25&df[ag]=UBA&df[vs]=1.0&av=true&dq=..INSTALLIERTE_LEISTUNG_GROSSBATTERIESPEICHER%2BINSTALLIERTE_LEISTUNG_WIND_AN_LAND%2BINSTALLIERTE_LEISTUNG_WIND_AUF_SEE%2BINSTALLIERTE_LEISTUNG_PV...&pd=2025%2C&to[TIME_PERIOD]=false&pg=0&vw=tb
+      limits_capacity_min:
+        Generator:
+          onwind:
+            DE:
+              2030: 103.99
+              2035: 145.41
+          offwind:
+            DE:
+              2030: 26.77
+              2035: 39.97
+          solar:
+            DE:
+              2030: 214.55
+              2035: 308.60
+        Link:
+          H2 electrolysis:
+            DE:
+              2030: 0
+      limits_capacity_max:
+        Generator:
+          onwind:
+            DE:
+              2030: 103.99
+              2035: 145.41
+          offwind:
+            DE:
+              2030: 26.77
+              2035: 39.97
+          solar:
+            DE:
+              2030: 214.55
+              2035: 308.60
+  first_technology_occurrence:
+    Link:
+      urban central water pits charger: 2040 # essentially moving pits out of the optimization horizon to forbid them
+      urban central water pits discharger: 2040
+    Store:
+      urban central water pits: 2040
+
+LowDemandNoFlex:
+  electricity:
+    transmission_limit: v1
+  iiasa_database:
+    no_flex_lt_run: true
+    uba_for_industry:
+    - 2025
+    - 2030
+    - 2035
+    uba_for_mobility:
+    - 2025
+    - 2030
+    - 2035
+  offshore_nep_force:
+    delay_years: 2
+  solving:
+    options:
+      noisy_costs: false
+    constraints:
+      decentral_heat_pump_budgets:
+        DE: # UBA MWMS, Projektionsbericht 2025, Abbildung 48
+          2025: 12.0
+          2030: 26.0
+          2035: 38.0
+      limits_capacity_min:
+        Generator:
+          onwind:
+            DE:
+              2030: 103.99
+              2035: 145.41
+          offwind:
+            DE:
+              2030: 26.77
+              2035: 39.97
+          solar:
+            DE:
+              2030: 214.55
+              2035: 308.60
+        Link:
+          H2 electrolysis:
+            DE:
+              2030: 0
+      limits_capacity_max:
+        Generator:
+          onwind:
+            DE:
+              2030: 103.99
+              2035: 145.41
+          offwind:
+            DE:
+              2030: 26.77
+              2035: 39.97
+          solar:
+            DE:
+              2030: 214.55
+              2035: 308.60
+  first_technology_occurrence:
+    Link:
+      urban central water pits charger: 2040 # essentially moving pits out of the optimization horizon to forbid them
+      urban central water pits discharger: 2040
+    Store:
+      urban central water pits: 2040
+
+LowRES: # Demand from UBA, lower RES capacities
+  electricity:
+    transmission_limit: v1
+  iiasa_database:
+    uba_for_industry:
+    - 2025
+    - 2030
+    - 2035
+    uba_for_mobility:
+    - 2025
+    - 2030
+    - 2035
+  offshore_nep_force:
+    delay_years: 2
+  solving:
+    options:
+      noisy_costs: false
+    constraints:
+      decentral_heat_pump_budgets:
+        DE: # UBA MWMS, Projektionsbericht 2025, Abbildung 48
+          2025: 12.0
+          2030: 26.0
+          2035: 38.0
+      # central_heat_pump_budgets:
+      #   DE: # UBA MWMS, Projektionsbericht 2025, Abbildung 22
+      #     2025: 7.0
+      #     2030: 26.0
+      #     2035: 52.0
+      limits_capacity_min:
+        Generator:
+          onwind:
+            DE:
+              2030: 0
+              2035: 0
+          offwind:
+            DE:
+              2030: 0
+              2035: 0
+        Link:
+          H2 electrolysis:
+            DE:
+              2030: 0
+      limits_capacity_max:
+        Generator:
+          onwind:
+            DE:
+              2030: 100
+          offwind:
+            DE:
+              2030: 21
+          solar:
+            DE:
+              2030: 180
+  first_technology_occurrence:
+    Link:
+      urban central water pits charger: 2040 # essentially moving pits out of the optimization horizon to forbid them
+      urban central water pits discharger: 2040
+    Store:
+      urban central water pits: 2040
+
+
+LowRESNoFlex:
+  electricity:
+    transmission_limit: v1
+  iiasa_database:
+    no_flex_lt_run: true
+    uba_for_industry:
+    - 2025
+    - 2030
+    - 2035
+    uba_for_mobility:
+    - 2025
+    - 2030
+    - 2035
+  offshore_nep_force:
+    delay_years: 2
+  solving:
+    options:
+      noisy_costs: false
+    constraints:
+      decentral_heat_pump_budgets:
+        DE: # UBA MWMS, Projektionsbericht 2025, Abbildung 48
+          2025: 12.0
+          2030: 26.0
+          2035: 38.0
+      # central_heat_pump_budgets:
+      #   DE: # UBA MWMS, Projektionsbericht 2025, Abbildung 22
+      #     2025: 7.0
+      #     2030: 26.0
+      #     2035: 52.0
+      limits_capacity_min:
+        Generator:
+          onwind:
+            DE:
+              2030: 0
+              2035: 0
+          offwind:
+            DE:
+              2030: 0
+              2035: 0
+        Link:
+          H2 electrolysis:
+            DE:
+              2030: 0
+      limits_capacity_max:
+        Generator:
+          onwind:
+            DE:
+              2030: 100
+          offwind:
+            DE:
+              2030: 21
+          solar:
+            DE:
+              2030: 180
+  first_technology_occurrence:
+    Link:
+      urban central water pits charger: 2040 # essentially moving pits out of the optimization horizon to forbid them
+      urban central water pits discharger: 2040
+    Store:
+      urban central water pits: 2040
+
 ExPol:
 # UBA CO2 pathway instead of KSG targets
-# Europen CO2 pathway fixed at 2030 for 2035-2050
+# European CO2 pathway fixed at 2030 for 2035-2050
 # Kernnetz is not assumed to be built
 # Not forcing renewables after 2030
 
