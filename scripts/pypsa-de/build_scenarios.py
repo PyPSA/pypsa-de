@@ -117,14 +117,16 @@ def get_co2_budget(df, source):
 
     nonco2 = ghg - co2
 
+    # Hard-code values for 2020 and 2025 from UBA reports / projections
+    # Table 1, https://reportnet.europa.eu/public/dataflow/1478, GHG - CO2
+    nonco2[2020] = 733.7 - 647.9
+    nonco2[2025] = 628.8 - 554.6
+
     ## PyPSA disregards nonco2 GHG emissions, but includes bunkers
 
     targets_pypsa = targets_co2 - nonco2
 
     target_fractions_pypsa = targets_pypsa.loc[targets_co2.index] / baseline_pypsa
-    target_fractions_pypsa[2020] = (
-        0.671  # Hard-coded based on REMIND data from ariadne2-internal DB
-    )
 
     return target_fractions_pypsa.round(3)
 
