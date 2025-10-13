@@ -2573,6 +2573,167 @@ def get_final_energy(
 
 
 def get_emissions(n, region, _energy_totals, industry_demand):
+    def get_constraint_emissions(n, ct):
+        lhs = []
+
+        for port in [col[3:] for col in n.links if col.startswith("bus")]:
+            links = n.links.index[
+                (n.links.index.str[:2] == ct)
+                & (n.links[f"bus{port}"] == "co2 atmosphere")
+                & ~n.links.carrier.str.contains(
+                    "shipping|aviation"
+                )  # first exclude aviation to multiply it with a domestic factor later
+            ]
+
+            if port == "0":
+                efficiency = -1.0
+            elif port == "1":
+                efficiency = n.links.loc[links, "efficiency"]
+            else:
+                efficiency = n.links.loc[links, f"efficiency{port}"]
+
+            variables = (
+                n.links_t.p0.loc[:, links]
+                .mul(efficiency)
+                .mul(n.snapshot_weightings.generators, axis=0)
+                .sum()
+            )
+            if not variables.empty:
+                lhs.append(variables)
+
+        # Aviation demand
+        energy_totals = pd.read_csv(snakemake.input.energy_totals, index_col=[0, 1])
+        domestic_aviation = energy_totals.loc[
+            (ct, snakemake.params.energy_totals_year), "total domestic aviation"
+        ]
+        international_aviation = energy_totals.loc[
+            (ct, snakemake.params.energy_totals_year), "total international aviation"
+        ]
+        domestic_aviation_factor = domestic_aviation / (
+            domestic_aviation + international_aviation
+        )
+        aviation_links = n.links[
+            (n.links.index.str[:2] == ct) & (n.links.carrier == "kerosene for aviation")
+        ]
+        lhs.append(
+            (
+                n.links_t.p0.loc[:, aviation_links.index]
+                .mul(aviation_links.efficiency2)
+                .mul(n.snapshot_weightings.generators, axis=0)
+            ).sum()
+            * domestic_aviation_factor
+        )
+
+        # Shipping oil
+        domestic_navigation = energy_totals.loc[
+            (ct, snakemake.params.energy_totals_year), "total domestic navigation"
+        ]
+        international_navigation = energy_totals.loc[
+            (ct, snakemake.params.energy_totals_year), "total international navigation"
+        ]
+        domestic_navigation_factor = domestic_navigation / (
+            domestic_navigation + international_navigation
+        )
+        shipping_links = n.links[
+            (n.links.index.str[:2] == ct) & (n.links.carrier == "shipping oil")
+        ]
+        lhs.append(
+            (
+                n.links_t.p0.loc[:, shipping_links.index].mul(
+                    n.snapshot_weightings.generators, axis=0
+                )
+                * shipping_links.efficiency2
+            ).sum()
+            * domestic_navigation_factor
+        )
+
+        # Shipping methanol
+        shipping_meoh_links = n.links[
+            (n.links.index.str[:2] == ct) & (n.links.carrier == "shipping methanol")
+        ]
+        lhs.append(
+            (
+                n.links_t.p0.loc[:, shipping_meoh_links.index].mul(
+                    n.snapshot_weightings.generators, axis=0
+                )
+                * shipping_meoh_links.efficiency2
+            ).sum()
+            * domestic_navigation_factor
+        )
+
+        # Adding Efuel imports and exports to constraint
+        incoming_oil = n.links.index[n.links.index == f"EU renewable oil -> {ct} oil"]
+        outgoing_oil = n.links.index[n.links.index == f"{ct} renewable oil -> EU oil"]
+
+        lhs.append(
+            (
+                -1
+                * n.links_t.p0.loc[:, incoming_oil].mul(
+                    n.snapshot_weightings.generators, axis=0
+                )
+                * 0.2571
+            ).sum()
+        )
+        lhs.append(
+            (
+                n.links_t.p0.loc[:, outgoing_oil].mul(
+                    n.snapshot_weightings.generators, axis=0
+                )
+                * 0.2571
+            ).sum()
+        )
+
+        incoming_methanol = n.links.index[
+            n.links.index == f"EU methanol -> {ct} methanol"
+        ]
+        outgoing_methanol = n.links.index[
+            n.links.index == f"{ct} methanol -> EU methanol"
+        ]
+
+        lhs.append(
+            (
+                -1
+                * n.links_t.p0.loc[:, incoming_methanol].mul(
+                    n.snapshot_weightings.generators, axis=0
+                )
+                / snakemake.config["sector"]["MWh_MeOH_per_tCO2"]
+            ).sum()
+        )
+
+        lhs.append(
+            (
+                n.links_t.p0.loc[:, outgoing_methanol].mul(
+                    n.snapshot_weightings.generators, axis=0
+                )
+                / snakemake.config["sector"]["MWh_MeOH_per_tCO2"]
+            ).sum()
+        )
+
+        # Methane
+        incoming_CH4 = n.links.index[n.links.index == f"EU renewable gas -> {ct} gas"]
+        outgoing_CH4 = n.links.index[n.links.index == f"{ct} renewable gas -> EU gas"]
+
+        lhs.append(
+            (
+                -1
+                * n.links_t.p0.loc[:, incoming_CH4].mul(
+                    n.snapshot_weightings.generators, axis=0
+                )
+                * 0.198
+            ).sum()
+        )
+
+        lhs.append(
+            (
+                n.links_t.p0.loc[:, outgoing_CH4].mul(
+                    n.snapshot_weightings.generators, axis=0
+                )
+                * 0.198
+            ).sum()
+        )
+
+        return pd.concat(lhs).sum() * t2Mt
+
     energy_totals = _energy_totals.loc[region[0:2]]
 
     industry_DE = industry_demand.filter(
@@ -2586,6 +2747,8 @@ def get_emissions(n, region, _energy_totals, industry_demand):
     }
 
     var = pd.Series()
+
+    var["Emissions|CO2|Model|Constraint"] = get_constraint_emissions(n, region).sum()
 
     co2_emissions = (
         n.statistics.supply(bus_carrier="co2", **kwargs)
