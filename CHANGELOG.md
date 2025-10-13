@@ -1,4 +1,5 @@
 # Changelog
+- Minor improvements to the DE CO2 constraint
 - Added an option to source industry energy demand from UBA MWMS (Projektionsbericht 2025) for the years 2025-2035
 - renamed some scripts
 - Bugfix: Enforce stricter power import limit to avoid that import from one country compensate from exports to another
