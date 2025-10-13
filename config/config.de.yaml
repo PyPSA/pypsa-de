@@ -9,8 +9,9 @@ run:
   # - ExPol
   # - KN2045_Mix
   # - HighDemand
-  - HighDemand
+  # - HighDemandNoFlex
   - LowRES
+  - LowRESNoFlex
   #- HighDemandNoFlex # !!! CAVEAT The 'NoFlex' substring in the scenario name determines how the regrets are computed!!!
   #- LowDemandNoFlex
   # - KN2045_NFhoch
@@ -47,8 +48,10 @@ iiasa_database:
   region: Deutschland
   regret_run:
     demand_baselines: # names of scenarios that define the demand variations to be considered in the short-term runs
-    - HighDemand
-    - LowRES
+    # - HighDemand
+    # - HighDemandNoFlex
+    # - LowRES
+    # - LowRESNoFlex
     scope_to_fix: EU # Supported values are DE and EU
     strict: false # If false, the model allows capacity expansion for virtual links and bottlenecks
     h2_vent: true

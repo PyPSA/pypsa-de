@@ -5775,15 +5775,16 @@ def get_data(
 if __name__ == "__main__":
     if "snakemake" not in globals():
         snakemake = mock_snakemake(
-            "export_regret_variables",
+            "export_ariadne_variables",
             simpl="",
             clusters=27,
             opts="",
             ll="vopt",
             sector_opts="None",
-            run="LowDemand",
+            run="LowRES",
             decision="LowDemand",
             sensitivity="base",
+            eeg_level=0.7,
         )
     configure_logging(snakemake)
     config = snakemake.config
