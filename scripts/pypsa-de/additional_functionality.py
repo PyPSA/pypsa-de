@@ -423,6 +423,7 @@ def add_national_co2_budgets(n, snakemake, national_co2_budgets, investment_year
     nyears = nhours / 8760
 
     sectors = determine_emission_sectors(n.config["sector"])
+    energy_totals = pd.read_csv(snakemake.input.energy_totals, index_col=[0, 1])
 
     # convert MtCO2 to tCO2
     co2_totals = 1e6 * pd.read_csv(snakemake.input.co2_totals_name, index_col=0)
@@ -447,8 +448,8 @@ def add_national_co2_budgets(n, snakemake, national_co2_budgets, investment_year
             links = n.links.index[
                 (n.links.index.str[:2] == ct)
                 & (n.links[f"bus{port}"] == "co2 atmosphere")
-                & (
-                    n.links.carrier != "kerosene for aviation"
+                & ~n.links.carrier.str.contains(
+                    "shipping|aviation"
                 )  # first exclude aviation to multiply it with a domestic factor later
             ]
 
@@ -472,27 +473,68 @@ def add_national_co2_budgets(n, snakemake, national_co2_budgets, investment_year
             )
 
         # Aviation demand
-        energy_totals = pd.read_csv(snakemake.input.energy_totals, index_col=[0, 1])
         domestic_aviation = energy_totals.loc[
             (ct, snakemake.params.energy_year), "total domestic aviation"
         ]
         international_aviation = energy_totals.loc[
             (ct, snakemake.params.energy_year), "total international aviation"
         ]
-        domestic_factor = domestic_aviation / (
+        domestic_aviation_factor = domestic_aviation / (
             domestic_aviation + international_aviation
         )
         aviation_links = n.links[
             (n.links.index.str[:2] == ct) & (n.links.carrier == "kerosene for aviation")
         ]
-        lhs.append
-        (
-            n.model["Link-p"].loc[:, aviation_links.index]
-            * aviation_links.efficiency2
-            * n.snapshot_weightings.generators
-        ).sum() * domestic_factor
+        lhs.append(
+            (
+                n.model["Link-p"].loc[:, aviation_links.index]
+                * aviation_links.efficiency2
+                * n.snapshot_weightings.generators
+            ).sum()
+            * domestic_aviation_factor
+        )
         logger.info(
-            f"Adding domestic aviation emissions for {ct} with a factor of {domestic_factor}"
+            f"Adding domestic aviation emissions for {ct} with a factor of {domestic_aviation_factor}"
+        )
+
+        # Shipping oil
+        domestic_navigation = energy_totals.loc[
+            (ct, snakemake.params.energy_year), "total domestic navigation"
+        ]
+        international_navigation = energy_totals.loc[
+            (ct, snakemake.params.energy_year), "total international navigation"
+        ]
+        domestic_navigation_factor = domestic_navigation / (
+            domestic_navigation + international_navigation
+        )
+        shipping_links = n.links[
+            (n.links.index.str[:2] == ct) & (n.links.carrier == "shipping oil")
+        ]
+        lhs.append(
+            (
+                n.model["Link-p"].loc[:, shipping_links.index]
+                * shipping_links.efficiency2
+                * n.snapshot_weightings.generators
+            ).sum()
+            * domestic_navigation_factor
+        )
+
+        # Shipping methanol
+        shipping_meoh_links = n.links[
+            (n.links.index.str[:2] == ct) & (n.links.carrier == "shipping methanol")
+        ]
+        if not shipping_meoh_links.empty:  # no shipping methanol in 2025
+            lhs.append(
+                (
+                    n.model["Link-p"].loc[:, shipping_meoh_links.index]
+                    * shipping_meoh_links.efficiency2
+                    * n.snapshot_weightings.generators
+                ).sum()
+                * domestic_navigation_factor
+            )
+
+        logger.info(
+            f"Adding domestic shipping emissions for {ct} with a factor of {domestic_navigation_factor}"
         )
 
         # Adding Efuel imports and exports to constraint
