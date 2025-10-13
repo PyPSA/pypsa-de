@@ -68,6 +68,7 @@ dependencies:
   - ca-certificates=2025.8.3=hbd8a1cb_0
   - cached-property=1.5.2=hd8ed1ab_1
   - cached_property=1.5.2=pyha770c72_1
+  - cachetools=4.2.4=pyhd8ed1ab_0
   - cairo=1.18.4=h3394656_0
   - cartopy=0.25.0=py312hf79963d_0
   - cdsapi=0.7.6=pyhd8ed1ab_0
@@ -152,8 +153,8 @@ dependencies:
   - gdk-pixbuf=2.42.12=h2b0a6b4_3
   - geographiclib=2.1=pyhd8ed1ab_0
   - geojson=3.2.0=pyhd8ed1ab_0
-  - geopandas=1.1.1=pyhd8ed1ab_0
-  - geopandas-base=1.1.1=pyha770c72_0
+  - geopandas=1.1.1=pyhd8ed1ab_1
+  - geopandas-base=1.1.1=pyha770c72_1
   - geopy=2.4.1=pyhd8ed1ab_2
   - geos=3.13.1=h97f6797_0
   - geotiff=1.7.4=h239500f_2
@@ -178,7 +179,7 @@ dependencies:
   - hdf4=4.2.15=h2a13503_7
   - hdf5=1.14.6=nompi_h6e4c0c1_103
   - hicolor-icon-theme=0.17=ha770c72_2
-  - highspy=1.11.0=np20py312ha7205f5_0
+  - highspy=1.11.0=np2py312h0f77346_1
   - hpack=4.1.0=pyhd8ed1ab_0
   - httpcore=1.0.9=pyh29332c3_0
   - httptools=0.6.4=py312h66e93f0_0
@@ -189,7 +190,7 @@ dependencies:
   - icu=75.1=he02047a_0
   - identify=2.6.13=pyhd8ed1ab_0
   - idna=3.10=pyhd8ed1ab_1
-  - immutables=0.21=py312h66e93f0_1
+  - immutables=0.21=py312h4c3975b_2
   - importlib-metadata=8.7.0=pyhe01879c_1
   - infinity=1.5=pyhd8ed1ab_1
   - iniconfig=2.0.0=pyhd8ed1ab_1
@@ -251,9 +252,10 @@ dependencies:
   - libcups=2.3.3=hb8b1518_5
   - libcurl=8.14.1=h332b0f4_0
   - libdeflate=1.24=h86f0d12_0
-  - libdrm=2.4.125=hb9d3cd8_0
+  - libdrm=2.4.125=hb03c661_1
   - libedit=3.1.20250104=pl5321h7949ede_0
   - libegl=1.7.0=ha4b6fd6_2
+  - libegl-devel=1.7.0=ha4b6fd6_2
   - libev=4.33=hd590300_2
   - libevent=2.1.12=hf998b51_1
   - libexpat=2.7.1=hecca717_0
@@ -326,7 +328,7 @@ dependencies:
   - libxslt=1.1.43=h7a3aeb2_0
   - libzip=1.11.2=h6991a6a_0
   - libzlib=1.3.1=hb9d3cd8_2
-  - linopy=0.5.5=pyhd8ed1ab_0
+  - linopy=0.5.7=pyhd8ed1ab_0
   - locket=1.0.0=pyhd8ed1ab_0
   - lxml=6.0.1=py312h70dad80_0
   - lz4=4.4.4=py312hf0f0c11_0
@@ -359,14 +361,14 @@ dependencies:
   - nbformat=5.10.4=pyhd8ed1ab_1
   - ncurses=6.5=h2d0b736_3
   - nest-asyncio=1.6.0=pyhd8ed1ab_1
-  - netcdf4=1.7.2=nompi_py312h3805cb1_102
+  - netcdf4=1.7.2=nompi_py312hdd76c12_103
   - networkx=3.5=pyhe01879c_0
-  - nlohmann_json=3.12.0=h3f2d84a_0
+  - nlohmann_json=3.12.0=h54a6638_1
   - nodeenv=1.9.1=pyhd8ed1ab_1
   - nomkl=1.0=h5ca1d4c_0
   - notebook=7.4.5=pyhd8ed1ab_0
   - notebook-shim=0.2.4=pyhd8ed1ab_1
-  - numexpr=2.10.2=py312h6a710ac_100
+  - numexpr=2.13.1=py312h88efc94_101
   - numpy=1.26.4=py312heda63a1_0
   - oauthlib=3.3.1=pyhd8ed1ab_0
   - openjdk=23.0.2=h53dfc1b_2
@@ -416,7 +418,7 @@ dependencies:
   - psycopg-c=3.2.9=py312h9b58c09_1
   - pthread-stubs=0.4=hb9d3cd8_1002
   - ptyprocess=0.7.0=pyhd8ed1ab_1
-  - pulp=2.8.0=py312hd0750ca_2
+  - pulp=2.8.0=py312hd0750ca_3
   - pure_eval=0.2.3=pyhd8ed1ab_1
   - py-cpuinfo=9.0.0=pyhd8ed1ab_1
   - pyam=3.0.0=pyhd8ed1ab_1
@@ -565,7 +567,7 @@ dependencies:
   - virtualenv=20.34.0=pyhd8ed1ab_0
   - watchfiles=1.1.0=py312h12e396e_0
   - wayland=1.24.0=h3e06ad9_0
-  - wcwidth=0.2.13=pyhd8ed1ab_1
+  - wcwidth=0.2.14=pyhd8ed1ab_0
   - webcolors=24.11.1=pyhd8ed1ab_0
   - webencodings=0.5.1=pyhd8ed1ab_3
   - websocket-client=1.8.0=pyhd8ed1ab_1
@@ -594,7 +596,7 @@ dependencies:
   - xorg-libxdamage=1.1.6=hb9d3cd8_0
   - xorg-libxdmcp=1.1.5=hb9d3cd8_0
   - xorg-libxext=1.3.6=hb9d3cd8_0
-  - xorg-libxfixes=6.0.1=hb9d3cd8_0
+  - xorg-libxfixes=6.0.2=hb03c661_0
   - xorg-libxi=1.8.2=hb9d3cd8_0
   - xorg-libxinerama=1.1.5=h5888daf_1
   - xorg-libxrandr=1.5.4=hb9d3cd8_0
@@ -602,13 +604,14 @@ dependencies:
   - xorg-libxt=1.3.1=hb9d3cd8_0
   - xorg-libxtst=1.2.5=hb9d3cd8_3
   - xorg-libxxf86vm=1.1.6=hb9d3cd8_0
+  - xorg-xorgproto=2024.1=hb9d3cd8_1
   - xyzservices=2025.4.0=pyhd8ed1ab_0
   - xz=5.8.1=hbcc6ac9_2
   - xz-gpl-tools=5.8.1=hbcc6ac9_2
   - xz-tools=5.8.1=hb9d3cd8_2
   - yaml=0.2.5=h280c20c_3
   - yte=1.8.1=pyha770c72_0
-  - zeromq=4.3.5=h3b0a872_7
+  - zeromq=4.3.5=h387f397_9
   - zict=3.0.0=pyhd8ed1ab_1
   - zipp=3.23.0=pyhd8ed1ab_0
   - zlib=1.3.1=hb9d3cd8_2
