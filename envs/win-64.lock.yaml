@@ -6,7 +6,6 @@ name: pypsa-nrw
 channels:
   - conda-forge
   - bioconda
-name: pypsa-de
 dependencies:
   - _openmp_mutex=4.5=2_gnu
   - _python_abi3_support=1.0=hd8ed1ab_2

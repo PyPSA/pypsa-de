@@ -6,7 +6,6 @@ name: pypsa-nrw
 channels:
   - conda-forge
   - bioconda
-name: pypsa-de
 dependencies:
   - _python_abi3_support=1.0=hd8ed1ab_2
   - adwaita-icon-theme=48.1=unix_1
