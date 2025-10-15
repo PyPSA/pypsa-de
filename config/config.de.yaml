@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20251013_improve_co2_limit
+  prefix: 20251015_resource_classes
   name:
   # - ExPol
   # - KN2045_Mix
@@ -138,6 +138,7 @@ atlite:
 
 renewable:
   onwind:
+    resource_classes: 5
     capacity_per_sqkm: 1.4
     cutout: europe-2019-sarah3-era5
     correction_factor: 0.95
@@ -161,6 +162,7 @@ renewable:
           hub_height: 100.
           P: 3.06
   offwind-ac:
+    resource_classes: 5
     capacity_per_sqkm: 6
     landfall_length: 30
     cutout: europe-2019-sarah3-era5
@@ -185,6 +187,7 @@ renewable:
           hub_height: 140.
           P: 5.5
   offwind-dc:
+    resource_classes: 5
     capacity_per_sqkm: 6
     landfall_length: 30
     cutout: europe-2019-sarah3-era5
@@ -214,9 +217,11 @@ renewable:
     cutout: europe-2019-sarah3-era5
     correction_factor: 0.95
   solar:
+    resource_classes: 5
     cutout: europe-2019-sarah3-era5
     correction_factor: 0.9 # scaling to Abbildung 36 of https://www.ise.fraunhofer.de/de/veroeffentlichungen/studien/aktuelle-fakten-zur-photovoltaik-in-deutschland.html
   solar-hsat:
+    resource_classes: 5
     cutout: europe-2019-sarah3-era5
     correction_factor: 0.9 # scaling to Abbildung 36 of https://www.ise.fraunhofer.de/de/veroeffentlichungen/studien/aktuelle-fakten-zur-photovoltaik-in-deutschland.html
   hydro:
