@@ -69,7 +69,7 @@ def get_co2_budget(df, source):
             data=[
                 813,
                 629,  # From UBA Projektionsbericht 2025
-                438,
+                456.8,  # angepasste Jahresemissionsgesamtmenge laut UBA Projektionsbericht 2025, Tabelle 1
             ],
         )
 
