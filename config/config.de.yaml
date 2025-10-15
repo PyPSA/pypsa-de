@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20250811_improve_database
+  prefix: 20251015_improve_database
   name:
   # - ExPol
   - KN2045_Mix
@@ -28,6 +28,7 @@ run:
   disable_progressbar: true
 
 pypsa-de:
+  retrieve_ariadne_database: false
   leitmodelle: # Model data downloaded from public IIASA database 'ariadne2'
     general: REMIND-EU v1.1
     buildings: REMod v1.0

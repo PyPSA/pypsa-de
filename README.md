@@ -87,6 +87,15 @@ PyPSA-DE is a softfork of PyPSA-EUR. As such, large parts of the functionality a
 - `co2_budget_DE_source` specify the carbon trajectory for Germany: Following the projections of the Umweltbundestamt (`UBA`) or targeting net zero with the Klimaschutzgesetz(`KSG`)
 - `costs:NEP` and `costs:transmission` - specify which year of the Netzentwicklungsplan should be used as basis for the transmission line costs (`2021,2023`) and if new HVDC links should be built with `overhead` or `underground` cables
 
+## Data sources
+
+`ariadne-data/ariadne-database.csv`
+
+* **Source:** Kopernikus Projekt Ariadne
+* **Link:** [Szenarien-Explorer](https://ariadne2.apps.ece.iiasa.ac.at/explorer)
+* **License:** CC-BY 4.0
+* **Description:** Results from the [Ariadne Report: Die Energiewende kosteneffizient gestalten](https://ariadneprojekt.de/publikation/report-szenarien-zur-klimaneutralitat-2045/)
+
 ## License
 
 The code in this repo is MIT licensed, see `./LICENSE.md`.
