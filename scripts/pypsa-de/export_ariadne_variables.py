@@ -3197,7 +3197,78 @@ def get_emissions(n, region, _energy_totals, _industry_demand):
         var["Emissions|CO2|Energy|Demand"] + var["Emissions|CO2|Energy|Demand|Bunkers"]
     )
 
+    CHP_emissions_E = CHP_emissions.multiply(CHP_E_fraction).groupby("carrier").sum()
+    CHP_emissions_H = (
+        CHP_emissions.multiply(1 - CHP_E_fraction).groupby("carrier").sum()
+    )
+    CHP_negative_emissions_E = (
+        CHP_negative_emissions.multiply(negative_CHP_E_fraction)
+        .groupby("carrier")
+        .sum()
+    )
+    CHP_negative_emissions_H = (
+        CHP_negative_emissions.multiply(1 - negative_CHP_E_fraction)
+        .groupby("carrier")
+        .sum()
+    )
+
+    var["Emissions|Gross Fossil CO2|Energy|Supply|Electricity|Gas"] = (
+        co2_emissions.reindex(
+            [
+                "OCGT",
+                "CCGT",
+            ],
+        ).sum()
+        + CHP_emissions_E.filter(like="gas").sum()
+    )
+    var["Emissions|CO2|Energy|Supply|Electricity|Gas"] = (
+        var["Emissions|Gross Fossil CO2|Energy|Supply|Electricity|Gas"]
+        - CHP_negative_emissions_E.filter(like="gas").sum()
+    )
+
+    var["Emissions|CO2|Energy|Supply|Electricity|Coal"] = var[
+        "Emissions|Gross Fossil CO2|Energy|Supply|Electricity|Coal"
+    ] = (
+        co2_emissions.reindex(
+            [
+                "coal",
+                "lignite",
+            ],
+        ).sum()
+        + CHP_emissions_E.filter(regex="coal|lignite").sum()
+    )
+    var["Emissions|CO2|Energy|Supply|Electricity|Oil"] = var[
+        "Emissions|Gross Fossil CO2|Energy|Supply|Electricity|Oil"
+    ] = (
+        co2_emissions.reindex(
+            [
+                "oil",
+            ],
+        ).sum()
+        + CHP_emissions_E.filter(like="oil").sum()
+    )
+
+    var["Emissions|CO2|Energy|Supply|Electricity|Biomass"] = (
+        CHP_negative_emissions_E.filter(like="bio").sum()
+    )
+
+    var["Emissions|Gross Fossil CO2|Energy|Supply|Electricity|Waste"] = (
+        CHP_emissions_E.filter(like="waste CHP").sum()
+    )
+    var["Emissions|CO2|Energy|Supply|Electricity|Waste"] = (
+        var["Emissions|Gross Fossil CO2|Energy|Supply|Electricity|Waste"]
+        - CHP_negative_emissions_E.filter(like="waste").sum()
+    )
+
     var["Emissions|Gross Fossil CO2|Energy|Supply|Electricity"] = (
+        var["Emissions|Gross Fossil CO2|Energy|Supply|Electricity|Gas"]
+        + var["Emissions|Gross Fossil CO2|Energy|Supply|Electricity|Coal"]
+        + var["Emissions|Gross Fossil CO2|Energy|Supply|Electricity|Oil"]
+        + var["Emissions|Gross Fossil CO2|Energy|Supply|Electricity|Waste"]
+    )
+
+    assert isclose(
+        var["Emissions|Gross Fossil CO2|Energy|Supply|Electricity"],
         co2_emissions.reindex(
             [
                 "OCGT",
@@ -3207,22 +3278,22 @@ def get_emissions(n, region, _energy_totals, _industry_demand):
                 "oil",
             ],
         ).sum()
-        + CHP_emissions.multiply(CHP_E_fraction).values.sum()
+        + CHP_emissions_E.sum(),
     )
 
     var["Emissions|CO2|Energy|Supply|Electricity"] = (
         var["Emissions|Gross Fossil CO2|Energy|Supply|Electricity"]
-        - CHP_negative_emissions.multiply(negative_CHP_E_fraction).values.sum()
+        - CHP_negative_emissions_E.sum()
     )
 
     var["Emissions|Gross Fossil CO2|Energy|Supply|Heat"] = (
         co2_emissions.filter(like="urban central").filter(like="boiler").sum()
-        + CHP_emissions.multiply(1 - CHP_E_fraction).values.sum()
+        + CHP_emissions_H.sum()
     )
 
     var["Emissions|CO2|Energy|Supply|Heat"] = (
         var["Emissions|Gross Fossil CO2|Energy|Supply|Heat"]
-        - CHP_negative_emissions.multiply(1 - negative_CHP_E_fraction).values.sum()
+        - CHP_negative_emissions_H.sum()
     )
 
     var["Emissions|CO2|Energy|Supply|Electricity and Heat"] = (
@@ -5781,7 +5852,7 @@ if __name__ == "__main__":
             opts="",
             ll="vopt",
             sector_opts="None",
-            run="LowRES",
+            run="HighDemand",
             decision="LowDemand",
             sensitivity="base",
             eeg_level=0.7,
