@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20251015_resource_classes
+  prefix: 20251016_wetter_2012
   name:
   # - ExPol
   # - KN2045_Mix

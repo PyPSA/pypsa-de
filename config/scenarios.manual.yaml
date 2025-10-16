@@ -3,6 +3,7 @@
 #
 # SPDX-License-Identifier: MIT
 HighDemand:
+  weather_year: 2012
   electricity:
     transmission_limit: v1
   solving:
@@ -43,6 +44,7 @@ HighDemand:
       urban central water pits: 2040
 
 HighDemandNoFlex:
+  weather_year: 2012
   electricity:
     transmission_limit: v1
   iiasa_database:
@@ -85,6 +87,7 @@ HighDemandNoFlex:
       urban central water pits: 2040
 
 LowDemand: # Demand and capacities from UBA
+  weather_year: 2012
   electricity:
     transmission_limit: v1
   iiasa_database:
@@ -153,6 +156,7 @@ LowDemand: # Demand and capacities from UBA
       urban central water pits: 2040
 
 LowDemandNoFlex:
+  weather_year: 2012
   electricity:
     transmission_limit: v1
   iiasa_database:
