@@ -82,6 +82,7 @@ if config["foresight"] == "perfect":
 rule all:
     input:
         expand(RESULTS + "graphs/costs.svg", run=config["run"]["name"]),
+        expand(resources("maps/power-network.pdf"), run=config["run"]["name"]),
         expand(
             resources("maps/power-network-s-{clusters}.pdf"),
             run=config["run"]["name"],
@@ -130,21 +131,17 @@ rule all:
             run=config["run"]["name"],
             carrier=config_provider("plotting", "balance_map", "bus_carriers")(w),
         ),
-        directory(
-            expand(
-                RESULTS
-                + "graphics/balance_timeseries/s_{clusters}_{opts}_{sector_opts}_{planning_horizons}",
-                run=config["run"]["name"],
-                **config["scenario"],
-            ),
+        expand(
+            RESULTS
+            + "graphics/balance_timeseries/s_{clusters}_{opts}_{sector_opts}_{planning_horizons}",
+            run=config["run"]["name"],
+            **config["scenario"],
         ),
-        directory(
-            expand(
-                RESULTS
-                + "graphics/heatmap_timeseries/s_{clusters}_{opts}_{sector_opts}_{planning_horizons}",
-                run=config["run"]["name"],
-                **config["scenario"],
-            ),
+        expand(
+            RESULTS
+            + "graphics/heatmap_timeseries/s_{clusters}_{opts}_{sector_opts}_{planning_horizons}",
+            run=config["run"]["name"],
+            **config["scenario"],
         ),
     default_target: True
 
@@ -202,7 +199,7 @@ rule rulegraph:
         r"""
         # Generate DOT file using nested snakemake with the dumped final config
         echo "[Rule rulegraph] Using final config file: {input.config_file}"
-        snakemake --rulegraph all --configfile {input.config_file} --quiet | sed -n "/digraph/,\$p" > {output.dot}
+        snakemake --rulegraph --configfile {input.config_file} --quiet | sed -n "/digraph/,\$p" > {output.dot}
 
         # Generate visualizations from the DOT file
         if [ -s {output.dot} ]; then
@@ -305,33 +302,6 @@ rule clean:
         print("Data downloaded to data/ has not been cleaned.")
 
 
-rule retrieve_egon_data:
-    output:
-        spatial="data/egon/demandregio_spatial_2018.json",
-        mapping="data/egon/mapping_technologies.json",
-    shell:
-        """
-        mkdir -p data/egon
-        curl -o {output.spatial} "https://api.opendata.ffe.de/demandregio/demandregio_spatial?id_spatial=5&year=2018"
-        curl -o {output.mapping} "https://api.opendata.ffe.de/demandregio/demandregio_spatial_description?id_spatial=5"
-        """
-
-
-rule retrieve_ariadne_database:
-    params:
-        db_name=config["iiasa_database"]["db_name"],
-        leitmodelle=config["iiasa_database"]["leitmodelle"],
-        scenarios=config["iiasa_database"]["scenarios"],
-    output:
-        data="resources/ariadne_database.csv",
-    log:
-        "logs/retrieve_ariadne_database.log",
-    resources:
-        mem_mb=1000,
-    script:
-        "scripts/pypsa-de/retrieve_ariadne_database.py"
-
-
 rule modify_cost_data:
     params:
         file_path="ariadne-data/costs/",
@@ -357,29 +327,92 @@ rule modify_cost_data:
         "scripts/pypsa-de/modify_cost_data.py"
 
 
+if config["enable"]["retrieve"]:
+
+    rule retrieve_ariadne_database:
+        output:
+            data="data/ariadne_database.csv",
+        log:
+            "logs/retrieve_ariadne_database.log",
+        resources:
+            mem_mb=1000,
+        script:
+            "scripts/pypsa-de/retrieve_ariadne_database.py"
+
+
+if config["enable"]["retrieve"]:
+
+    rule retrieve_ariadne_template:
+        input:
+            storage(
+                "https://github.com/iiasa/ariadne-intern-workflow/raw/main/attachments/2025-01-27_template_Ariadne.xlsx",
+                keep_local=True,
+            ),
+        output:
+            "data/template_ariadne_database.xlsx",
+        run:
+            move(input[0], output[0])
+
+
+if config["enable"]["retrieve"]:
+
+    rule retrieve_mastr:
+        input:
+            storage(
+                "https://zenodo.org/records/8225106/files/bnetza_open_mastr_2023-08-08_B.zip",
+                keep_local=True,
+            ),
+        params:
+            "data/mastr",
+        output:
+            "data/mastr/bnetza_open_mastr_2023-08-08_B_biomass.csv",
+            "data/mastr/bnetza_open_mastr_2023-08-08_B_combustion.csv",
+        run:
+            unpack_archive(input[0], params[0])
+
+
+if config["enable"]["retrieve"]:
+
+    rule retrieve_egon_data:
+        output:
+            spatial="data/egon/demandregio_spatial_2018.json",
+            mapping="data/egon/mapping_technologies.json",
+        shell:
+            """
+            mkdir -p data/egon
+            curl -o {output.spatial} "https://api.opendata.ffe.de/demandregio/demandregio_spatial?id_spatial=5&year=2018"
+            curl -o {output.mapping} "https://api.opendata.ffe.de/demandregio/demandregio_spatial_description?id_spatial=5"
+            """
+
+
 if config["enable"]["retrieve"] and config["enable"].get("retrieve_cost_data", True):
 
     ruleorder: modify_cost_data > retrieve_cost_data
 
 
-rule build_mobility_demand:
+rule build_exogenous_mobility_data:
     params:
-        reference_scenario=config_provider("iiasa_database", "reference_scenario"),
+        reference_scenario=config_provider("pypsa-de", "reference_scenario"),
         planning_horizons=config_provider("scenario", "planning_horizons"),
-        leitmodelle=config_provider("iiasa_database", "leitmodelle"),
+        leitmodelle=config_provider("pypsa-de", "leitmodelle"),
+        ageb_for_mobility=config_provider("pypsa-de", "ageb_for_mobility"),
+        uba_for_mobility=config_provider("pypsa-de", "uba_for_mobility"),
+        shipping_oil_share=config_provider("sector", "shipping_oil_share"),
+        aviation_demand_factor=config_provider("sector", "aviation_demand_factor"),
+        energy_totals_year=config_provider("energy", "energy_totals_year"),
     input:
-        ariadne="resources/ariadne_database.csv",
-        clustered_pop_layout=resources("pop_layout_base_s_{clusters}.csv"),
+        ariadne="data/ariadne_database.csv",
+        energy_totals=resources("energy_totals.csv"),
     output:
-        mobility_demand=resources(
-            "mobility_demand_aladin_{clusters}_{planning_horizons}.csv"
+        mobility_data=resources(
+            "modified_mobility_data_{clusters}_{planning_horizons}.csv"
         ),
     resources:
         mem_mb=1000,
     log:
-        logs("build_mobility_demand_{clusters}_{planning_horizons}.log"),
+        logs("build_exogenous_mobility_data_{clusters}_{planning_horizons}.log"),
     script:
-        "scripts/pypsa-de/build_mobility_demand.py"
+        "scripts/pypsa-de/build_exogenous_mobility_data.py"
 
 
 rule build_egon_data:
@@ -410,7 +443,7 @@ rule prepare_district_heating_subnodes:
         cities="data/fernwaermeatlas/cities_geolocations.geojson",
         lau_regions="data/lau_regions.zip",
         census=storage(
-            "https://www.zensus2022.de/static/Zensus_Veroeffentlichung/Zensus2022_Heizungsart.zip",
+            "https://www.destatis.de/static/DE/zensus/gitterdaten/Zensus2022_Heizungsart.zip",
             keep_local=True,
         ),
         osm_land_cover=storage(
@@ -541,9 +574,6 @@ rule modify_prenetwork:
         must_run=config_provider("must_run"),
         clustering=config_provider("clustering", "temporal", "resolution_sector"),
         H2_plants=config_provider("electricity", "H2_plants_DE"),
-        land_transport_electric_share=config_provider(
-            "sector", "land_transport_electric_share"
-        ),
         onshore_nep_force=config_provider("onshore_nep_force"),
         offshore_nep_force=config_provider("offshore_nep_force"),
         shipping_methanol_efficiency=config_provider(
@@ -553,6 +583,9 @@ rule modify_prenetwork:
         shipping_methanol_share=config_provider("sector", "shipping_methanol_share"),
         mwh_meoh_per_tco2=config_provider("sector", "MWh_MeOH_per_tCO2"),
         scale_capacity=config_provider("scale_capacity"),
+        bev_charge_rate=config_provider("sector", "bev_charge_rate"),
+        bev_energy=config_provider("sector", "bev_energy"),
+        bev_dsm_availability=config_provider("sector", "bev_dsm_availability"),
     input:
         costs_modifications="ariadne-data/costs_{planning_horizons}-modifications.csv",
         network=resources(
@@ -564,10 +597,9 @@ rule modify_prenetwork:
             else []
         ),
         costs=resources("costs_{planning_horizons}.csv"),
-        aladin_demand=resources(
-            "mobility_demand_aladin_{clusters}_{planning_horizons}.csv"
+        modified_mobility_data=resources(
+            "modified_mobility_data_{clusters}_{planning_horizons}.csv"
         ),
-        transport_data=resources("transport_data_s_{clusters}.csv"),
         biomass_potentials=resources(
             "biomass_potentials_s_{clusters}_{planning_horizons}.csv"
         ),
@@ -598,11 +630,8 @@ ruleorder: modify_industry_demand > build_industrial_production_per_country_tomo
 
 
 rule modify_existing_heating:
-    params:
-        iiasa_reference_scenario=config_provider("iiasa_database", "reference_scenario"),
-        leitmodelle=config_provider("iiasa_database", "leitmodelle"),
     input:
-        ariadne="resources/ariadne_database.csv",
+        ariadne="data/ariadne_database.csv",
         existing_heating="data/existing_infrastructure/existing_heating_raw.csv",
     output:
         existing_heating=resources("existing_heating.csv"),
@@ -612,21 +641,6 @@ rule modify_existing_heating:
         logs("modify_existing_heating.log"),
     script:
         "scripts/pypsa-de/modify_existing_heating.py"
-
-
-rule retrieve_mastr:
-    input:
-        storage(
-            "https://zenodo.org/records/8225106/files/bnetza_open_mastr_2023-08-08_B.zip",
-            keep_local=True,
-        ),
-    params:
-        "data/mastr",
-    output:
-        "data/mastr/bnetza_open_mastr_2023-08-08_B_biomass.csv",
-        "data/mastr/bnetza_open_mastr_2023-08-08_B_combustion.csv",
-    run:
-        unpack_archive(input[0], params[0])
 
 
 rule build_existing_chp_de:
@@ -657,9 +671,9 @@ rule build_existing_chp_de:
 
 rule modify_industry_demand:
     params:
-        reference_scenario=config_provider("iiasa_database", "reference_scenario"),
+        reference_scenario=config_provider("pypsa-de", "reference_scenario"),
     input:
-        ariadne="resources/ariadne_database.csv",
+        ariadne="data/ariadne_database.csv",
         industrial_production_per_country_tomorrow=resources(
             "industrial_production_per_country_tomorrow_{planning_horizons}.csv"
         ),
@@ -719,18 +733,6 @@ rule cluster_wasserstoff_kernnetz:
         logs("cluster_wasserstoff_kernnetz_{clusters}.log"),
     script:
         "scripts/pypsa-de/cluster_wasserstoff_kernnetz.py"
-
-
-rule download_ariadne_template:
-    input:
-        storage(
-            "https://github.com/iiasa/ariadne-intern-workflow/raw/main/attachments/2025-01-27_template_Ariadne.xlsx",
-            keep_local=True,
-        ),
-    output:
-        "data/template_ariadne_database.xlsx",
-    run:
-        move(input[0], output[0])
 
 
 rule export_ariadne_variables:
@@ -793,11 +795,10 @@ rule export_ariadne_variables:
 
 rule plot_ariadne_variables:
     params:
-        iiasa_scenario=config_provider("iiasa_database", "reference_scenario"),
-        reference_scenario=config_provider("iiasa_database", "reference_scenario"),
+        reference_scenario=config_provider("pypsa-de", "reference_scenario"),
     input:
         exported_variables_full=RESULTS + "ariadne/exported_variables_full.xlsx",
-        ariadne_database="resources/ariadne_database.csv",
+        ariadne_database="data/ariadne_database.csv",
     output:
         primary_energy=RESULTS + "ariadne/primary_energy.png",
         primary_energy_detailed=RESULTS + "ariadne/primary_energy_detailed.png",
@@ -862,9 +863,9 @@ rule ariadne_all:
 rule build_scenarios:
     params:
         scenarios=config["run"]["name"],
-        leitmodelle=config["iiasa_database"]["leitmodelle"],
+        leitmodelle=config["pypsa-de"]["leitmodelle"],
     input:
-        ariadne_database="resources/ariadne_database.csv",
+        ariadne_database="data/ariadne_database.csv",
         scenario_yaml=config["run"]["scenarios"]["manual_file"],
     output:
         scenario_yaml=config["run"]["scenarios"]["file"],

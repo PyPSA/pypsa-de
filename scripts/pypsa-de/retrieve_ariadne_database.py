@@ -11,16 +11,9 @@ if __name__ == "__main__":
         snakemake = mock_snakemake("retrieve_ariadne_database")
 
     configure_logging(snakemake)
-    logger.info(
-        f"Retrieving from IIASA database {snakemake.params.db_name}\nmodels {list(snakemake.params.leitmodelle.values())}\nscenarios {snakemake.params.scenarios}"
-    )
+    logger.info("Retrieving from IIASA database 'ariadne2'.")
 
-    db = pyam.read_iiasa(
-        snakemake.params.db_name,
-        model=list(snakemake.params.leitmodelle.values()),
-        scenario=snakemake.params.scenarios,
-        # Download only the most recent iterations of scenarios
-    )
+    db = pyam.read_iiasa("ariadne2")
 
     logger.info("Successfully retrieved database.")
     db.timeseries().to_csv(snakemake.output.data)

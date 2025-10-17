@@ -23,7 +23,7 @@ The following carriers are considered:
 - process emission from feedstock
 - (ammonia)
 
-If the `config["industry"]["ammonia"] <https://pypsa-eur.readthedocs.io/en/latest/configuration.html#industry>` is set to true the ammonia demand is not converted to hydrogen and electricity but is considered as a separate carrier.
+If the `config["ammonia"] <https://pypsa-eur.readthedocs.io/en/latest/configuration.html#industry>` is set to true the ammonia demand is not converted to hydrogen and electricity but is considered as a separate carrier.
 
 The unit of the specific energy consumption is MWh/t material and tCO2/t material for process emissions.
 """
@@ -1643,6 +1643,9 @@ if __name__ == "__main__":
         != 1
     ):
         logger.error(
+            "Fractions for steam processing do not sum to 1! Please check config[industry][steam_biomass_fraction], config[industry][steam_hydrogen_fraction] and config[industry][steam_electricity_fraction]!"
+        )
+        raise ValueError(
             "Fractions for steam processing do not sum to 1! Please check config[industry][steam_biomass_fraction], config[industry][steam_hydrogen_fraction] and config[industry][steam_electricity_fraction]!"
         )
 

@@ -8,7 +8,6 @@ on:
     branches:
     - main
   schedule:
-  - cron: "0 5 * * 1-6"
   - cron: "0 5 * * 0"
   workflow_dispatch:
 
@@ -35,7 +34,7 @@ jobs:
         shell: bash -l {0}
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
     - name: Setup env file path (ubuntu)
       if: matrix.os == 'ubuntu'
@@ -53,8 +52,8 @@ jobs:
 
     - name: Use base env file if it was changed
       run: |
-        git fetch origin master
-        if git diff --name-only origin/master | grep '${{ env.BASE_ENV }}'; then
+        git fetch origin ${{ github.event.repository.default_branch }}
+        if git diff --name-only origin/${{ github.event.repository.default_branch }} | grep '${{ env.BASE_ENV }}'; then
           echo "Base env ${{ env.BASE_ENV }} changed. Using it instead of locked envs."
           echo "env_file=${{ env.BASE_ENV }}" >> $GITHUB_ENV
         else
@@ -70,7 +69,7 @@ jobs:
         path: |
           data
           cutouts
-          resources/ariadne_database.csv
+          data/ariadne_database.csv
         key: data-cutouts-${{ env.WEEK }}
 
     - uses: conda-incubator/setup-miniconda@v3

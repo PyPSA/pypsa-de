@@ -82,7 +82,7 @@ test:
 	echo "Build scenarios..."
 	snakemake -call build_scenarios
 	echo "Run DACH config..."
-	snakemake -call ariadne_all --configfile=config/test/config.dach.yaml
+	snakemake -call ariadne_all --until export_ariadne_variables --configfile=config/test/config.dach.yaml
 	echo "All tests completed successfully."
 
 unit-test:
@@ -95,6 +95,7 @@ clean-tests:
 	snakemake -call --configfile config/test/config.myopic.yaml --delete-all-output
 	snakemake -call make_summary_perfect --configfile config/test/config.perfect.yaml --delete-all-output
 	snakemake -call --configfile config/test/config.scenarios.yaml -n --delete-all-output
+	snakemake -call plot_power_networks_clustered --configfile config/test/config.tyndp.yaml --delete-all-output
 
 # Removes all created files except for large cutout files (similar to fresh clone)
 reset:

@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20253006_fix_chp_lifetime
+  prefix: 20250811_improve_database
   name:
   # - ExPol
   - KN2045_Mix
@@ -27,22 +27,16 @@ run:
     - modify_existing_heating
   disable_progressbar: true
 
-iiasa_database:
-  db_name: ariadne2
-  leitmodelle:
+pypsa-de:
+  leitmodelle: # Model data downloaded from public IIASA database 'ariadne2'
     general: REMIND-EU v1.1
     buildings: REMod v1.0
     transport: Aladin v1
     industry: FORECAST v1.0
-  scenarios:
-  - ExPol
-  - KN2045_Elek
-  - KN2045_H2
-  - KN2045_Mix
-  - KN2045_NFniedrig
-  - KN2045_NFhoch
   reference_scenario: KN2045_Mix
   region: Deutschland
+  ageb_for_mobility: true # In 2020 use AGEB data for final energy demand and KBA for vehicles
+  uba_for_mobility: false # For 2025–2035 use MWMS scenario from UBA Projektionsbericht 2025
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#foresight
 foresight: myopic
@@ -311,6 +305,11 @@ sector:
     rural: true
   co2_spatial: true
   biomass_spatial: true
+  ammonia: false
+  methanol:
+    methanol_to_power:
+      ocgt: false
+    biomass_to_methanol: false
   #relax so no infeasibility in 2050 with no land transport demand
   min_part_load_fischer_tropsch: 0.
   regional_oil_demand: true  #set to true if regional CO2 constraints needed
@@ -321,6 +320,7 @@ sector:
   biogas_upgrading_cc: true
   biomass_to_liquid: true
   biomass_to_liquid_cc: true
+  electrobiofuels: false
   cluster_heat_buses: true
   # calculated based on ariadne "Stock|Space Heating"
   # and then 2% of buildings renovated per year to reduce their demand by 80%
@@ -332,34 +332,34 @@ sector:
     2040: 0.29
     2045: 0.36
     2050: 0.43
+  # For Germany these settings get overwritten in build_exogenous_mobility_data
   land_transport_fuel_cell_share:
-    2020: 0.05
-    2025: 0.05
-    2030: 0.05
-    2035: 0.05
-    2040: 0.05
-    2045: 0.05
-    2050: 0.05
+    2020: 0.01
+    2025: 0.01
+    2030: 0.02
+    2035: 0.03
+    2040: 0.03
+    2045: 0.03
+    2050: 0.03
   land_transport_electric_share:
     2020: 0.05
     2025: 0.15
     2030: 0.3
     2035: 0.45
-    2040: 0.7
-    2045: 0.85
-    2050: 0.95
+    2040: 0.72
+    2045: 0.87
+    2050: 0.97
   land_transport_ice_share:
-    2020: 0.9
-    2025: 0.8
-    2030: 0.65
-    2035: 0.5
+    2020: 0.94
+    2025: 0.84
+    2030: 0.68
+    2035: 0.52
     2040: 0.25
     2045: 0.1
     2050: 0.0
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#industry
 industry:
-  ammonia: false
   steam_biomass_fraction: 0.4
   steam_hydrogen_fraction: 0.3
   steam_electricity_fraction: 0.3

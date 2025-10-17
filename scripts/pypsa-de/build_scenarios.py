@@ -129,6 +129,47 @@ def get_co2_budget(df, source):
     return target_fractions_pypsa.round(3)
 
 
+def write_weather_dependent_config(config, scenario, weather_year):
+    # Insert weather-dependent configuration dynamically
+    cutout_name = f"europe-{weather_year}-sarah3-era5"
+
+    # atlite section
+    config[scenario]["atlite"] = {
+        "default_cutout": cutout_name,
+        "cutouts": {
+            cutout_name: {
+                "module": ["sarah", "era5"],
+                "x": [-12.0, 42.0],
+                "y": [33.0, 72.0],
+                "dx": 0.3,
+                "dy": 0.3,
+                "time": [str(weather_year), str(weather_year)],
+            }
+        },
+    }
+
+    # snapshots section
+    config[scenario]["snapshots"] = {
+        "start": f"{weather_year}-01-01",
+        "end": f"{int(weather_year) + 1}-01-01",
+        "inclusive": "left",
+    }
+
+    # renewable section
+    config[scenario]["renewable"] = {
+        "onwind": {"cutout": cutout_name},
+        "offwind-ac": {"cutout": cutout_name},
+        "offwind-dc": {"cutout": cutout_name},
+        "offwind-float": {"cutout": cutout_name},
+        "solar": {"cutout": cutout_name},
+        "solar-hsat": {"cutout": cutout_name},
+        "hydro": {"cutout": cutout_name},
+    }
+
+    # lines section
+    config[scenario]["lines"] = {"dynamic_line_rating": {"cutout": cutout_name}}
+
+
 def write_to_scenario_yaml(input, output, scenarios, df):
     # read in yaml file
     yaml = ruamel.yaml.YAML()
@@ -140,13 +181,24 @@ def write_to_scenario_yaml(input, output, scenarios, df):
                 f"Found an empty scenario config for {scenario}. Using default config `pypsa.de.yaml`."
             )
             config[scenario] = {}
+        if config[scenario].get("weather_year", False):
+            weather_year = config[scenario]["weather_year"]
+            default_weather_year = int(snakemake.config["snapshots"]["start"][:4])
+            if (
+                snakemake.config["run"]["shared_resources"]["policy"] != False
+                and weather_year != default_weather_year
+            ):
+                raise ValueError(
+                    f"The run uses shared resources, but weather year {weather_year} in scenario {scenario} does not match the start year of the snapshots {default_weather_year}. If you are running scenarios with multiple weather years, make sure to deactivate shared_resources!"
+                )
+            write_weather_dependent_config(config, scenario, weather_year)
 
         reference_scenario = (
             config[scenario]
-            .get("iiasa_database", {})
+            .get("pypsa-de", {})
             .get(
                 "reference_scenario",
-                snakemake.config["iiasa_database"]["reference_scenario"],
+                snakemake.config["pypsa-de"]["reference_scenario"],
             )  # Using the default reference scenario from pypsa.de.yaml
         )
 

@@ -13,8 +13,14 @@ import numpy as np
 import pandas as pd
 import pypsa
 from numpy import isclose
+from pypsa.statistics import get_transmission_carriers
 
-from scripts._helpers import configure_logging, mock_snakemake
+from scripts._helpers import (
+    configure_logging,
+    mock_snakemake,
+    set_scenario_config,
+    update_config_from_wildcards,
+)
 from scripts.add_electricity import calculate_annuity, load_costs
 
 logger = logging.getLogger(__name__)
@@ -58,7 +64,7 @@ def domestic_length_factor(n, carriers, region="DE"):
         if carrier not in (
             n.links.carrier.unique().tolist() + n.lines.carrier.unique().tolist()
         ):
-            print(f"Carrier '{carrier}' is neither in lines nor links.")
+            logger.info(f"Carrier '{carrier}' is neither in lines nor links.")
             continue  # Skip this carrier if not found in both links and lines
 
         # Loop through relevant components
@@ -89,7 +95,7 @@ def domestic_length_factor(n, carriers, region="DE"):
                     )
                     length_factors[(carrier, c.name)] = length_factor
                 else:
-                    print(
+                    logger.info(
                         f"No domestic or cross-border links found for {carrier} in {c.name}."
                     )
 
@@ -298,7 +304,7 @@ def sum_co2(n, carrier, region):
             .index("co2 atmosphere")
         )
     except KeyError:
-        print(
+        logger.info(
             "Warning: carrier `",
             carrier,
             "` not found in network.links.carrier!",
@@ -348,6 +354,7 @@ def add_system_cost_rows(n):
             df.loc[df.carrier == carrier, "lifetime"] = lifetime
         else:
             logger.error(f"Mean lifetime of {carrier} is not infinite!")
+            raise ValueError()
 
     logger.info("Overwriting lifetime of components to compute annuities")
 
@@ -1090,7 +1097,7 @@ def _get_capacities(n, region, cap_func, cap_string="Capacity|"):
         #
         var[cap_string + "Methanol"] = capacities_methanol.get("methanolisation", 0)
     except KeyError:
-        print(
+        logger.info(
             "Warning: carrier `methanol` not found in network.links.carrier! Assuming 0 capacities."
         )
         var[cap_string + "Methanol"] = 0
@@ -1899,7 +1906,14 @@ def get_secondary_energy(n, region, _industry_demand):
 
 
 def get_final_energy(
-    n, region, _industry_demand, _energy_totals, _sector_ratios, _industry_production
+    n,
+    region,
+    _industry_demand,
+    _energy_totals,
+    _sector_ratios,
+    _industry_production,
+    config,
+    config_industry,
 ):
     var = pd.Series()
 
@@ -1910,7 +1924,7 @@ def get_final_energy(
     h2_fossil_fraction = _get_h2_fossil_fraction(n)
     oil_fractions = _get_fuel_fractions(n, region, "oil")
 
-    if config_industry["ammonia"]:
+    if config["sector"]["ammonia"]:
         # MWh/a
         Haber_Bosch_NH3 = (
             n.statistics.supply(bus_carrier="NH3", **kwargs)
@@ -3069,7 +3083,7 @@ def get_emissions(n, region, _energy_totals, industry_demand):
         - co2_negative_emissions.get("DAC", 0)
     )
 
-    print(
+    logger.info(
         "Differences in accounting for CO2 emissions:",
         emission_difference,
     )
@@ -4294,14 +4308,187 @@ def get_policy(n, investment_year):
 def get_economy(n, region):
     var = pd.Series()
 
-    s = n.statistics
-    grouper = ["country", "carrier"]
-    system_cost = s.capex(groupby=grouper).add(s.opex(groupby=grouper))
+    def get_tsc(n, country):
+        pypsa.options.set_option("params.statistics.drop_zero", False)
+        capex = n.statistics.capex(
+            groupby=pypsa.statistics.groupers["name", "carrier"], nice_names=False
+        )
+
+        opex = n.statistics.opex(
+            groupby=pypsa.statistics.groupers["name", "carrier"], nice_names=False
+        )
+
+        # filter inter country transmission lines and links
+        inter_country_lines = n.lines.bus0.map(n.buses.country) != n.lines.bus1.map(
+            n.buses.country
+        )
+        inter_country_links = n.links.bus0.map(n.buses.country) != n.links.bus1.map(
+            n.buses.country
+        )
+        #
+        transmission_carriers = get_transmission_carriers(n).get_level_values("carrier")
+        transmission_lines = n.lines.carrier.isin(transmission_carriers)
+        transmission_links = n.links.carrier.isin(transmission_carriers)
+        #
+        country_transmission_lines = (
+            (n.lines.bus0.str.contains(country)) & ~(n.lines.bus1.str.contains(country))
+        ) | (
+            ~(n.lines.bus0.str.contains(country)) & (n.lines.bus1.str.contains(country))
+        )
+        country_tranmission_links = (
+            (n.links.bus0.str.contains(country)) & ~(n.links.bus1.str.contains(country))
+        ) | (
+            ~(n.links.bus0.str.contains(country)) & (n.links.bus1.str.contains(country))
+        )
+        #
+        inter_country_transmission_lines = (
+            inter_country_lines & transmission_lines & country_transmission_lines
+        )
+        inter_country_transmission_links = (
+            inter_country_links & transmission_links & country_tranmission_links
+        )
+        inter_country_transmission_lines_i = inter_country_transmission_lines[
+            inter_country_transmission_lines
+        ].index
+        inter_country_transmission_links_i = inter_country_transmission_links[
+            inter_country_transmission_links
+        ].index
+        inter_country_transmission_i = inter_country_transmission_lines_i.union(
+            inter_country_transmission_links_i
+        )
+
+        #
+        tsc = pd.concat([capex, opex], axis=1, keys=["capex", "opex"])
+        tsc = tsc.reset_index().set_index("name")
+        tsc.loc[inter_country_transmission_i, ["capex", "opex"]] = (
+            tsc.loc[inter_country_transmission_i, ["capex", "opex"]] / 2
+        )
+        tsc.rename(
+            index={
+                index: index + " " + country for index in inter_country_transmission_i
+            },
+            inplace=True,
+        )
+        # rename inter region links and lines
+        to_rename_links = n.links[
+            (n.links.bus0.str.contains(region))
+            & (n.links.bus1.str.contains(region))
+            & ~(n.links.index.str.contains(region))
+        ].index
+        to_rename_lines = n.lines[
+            (n.lines.bus0.str.contains(region))
+            & (n.lines.bus1.str.contains(region))
+            & ~(n.lines.index.str.contains(region))
+        ].index
+        tsc.rename(
+            index={index: index + " " + region for index in to_rename_links},
+            inplace=True,
+        )
+        tsc.rename(
+            index={index: index + " " + region for index in to_rename_lines},
+            inplace=True,
+        )
+
+        tsc = (
+            tsc.filter(like=country, axis=0)
+            .drop("component", axis=1)
+            .groupby("carrier")
+            .sum()
+        )
+
+        return tsc
+
+    def get_link_opex(n, carriers, region, sw):
+        # get flow of electricity/hydrogen...
+        # multiply it with the marginal costs
+        supplying = n.links[
+            (n.links.carrier.isin(carriers))
+            & (n.links.bus0.str.startswith(region))
+            & (~n.links.bus1.str.startswith(region))
+        ].index
+
+        receiving = n.links[
+            (n.links.carrier.isin(carriers))
+            & (~n.links.bus0.str.startswith(region))
+            & (n.links.bus1.str.startswith(region))
+        ].index
+
+        trade_out = 0
+        for index in supplying:
+            # price of energy in trade country
+            marg_price = n.buses_t.marginal_price[n.links.loc[index].bus0]
+            trade = n.links_t.p1[index].mul(sw)
+            trade_out += marg_price.mul(trade).sum()
+
+        trade_in = 0
+        for index in receiving:
+            # price of energy in Germany
+            marg_price = n.buses_t.marginal_price[n.links.loc[index].bus0]
+            trade = n.links_t.p1[index].mul(sw)
+            trade_in += marg_price.mul(trade).sum()
+        return abs(trade_in) - abs(trade_out)
+        # > 0: costs for Germany
+        # < 0: profit for Germany
+
+    def get_line_opex(n, region, sw):
+        supplying = n.lines[
+            (n.lines.carrier.isin(["AC"]))
+            & (n.lines.bus0.str.startswith(region))
+            & (~n.lines.bus1.str.startswith(region))
+        ].index
+        receiving = n.lines[
+            (n.lines.carrier.isin(["AC"]))
+            & (~n.lines.bus0.str.startswith(region))
+            & (n.lines.bus1.str.startswith(region))
+        ].index
+
+        # i have to clip the trade
+        net_out = 0
+        for index in supplying:
+            trade = n.lines_t.p1[index].mul(sw)
+            trade_out = trade.clip(lower=0)  # positive
+            trade_in = trade.clip(upper=0)  # negative
+            marg_price_DE = n.buses_t.marginal_price[n.lines.loc[index].bus0]
+            marg_price_EU = n.buses_t.marginal_price[n.lines.loc[index].bus1]
+            net_out += (
+                trade_out.mul(marg_price_DE).sum() + trade_in.mul(marg_price_EU).sum()
+            )
+            # net_out > 0: Germany is exporting more electricity
+            # net_out < 0: Germany is importing more electricity
+
+        net_in = 0
+        for index in receiving:
+            trade = n.lines_t.p1[index].mul(sw)
+            trade_in = trade.clip(lower=0)  # positive
+            trade_out = trade.clip(upper=0)  # negative
+            trade_out = trade_out.clip(upper=0)
+            marg_price_EU = n.buses_t.marginal_price[n.lines.loc[index].bus0]
+            marg_price_DE = n.buses_t.marginal_price[n.lines.loc[index].bus1]
+            net_in += (
+                trade_in.mul(marg_price_EU).sum() + trade_out.mul(marg_price_DE).sum()
+            )
+            # net_in > 0: Germany is importing more electricity
+            # net_in < 0: Germany is exporting more electricity
+
+        return -net_out + net_in
+
+    trade_carriers = [
+        "DC",
+        "H2 pipeline",
+        "H2 pipeline (Kernnetz)",
+        "H2 pipeline retrofittedrenewable oil",
+        "renewable gas",
+        "methanol",
+    ]
+
+    sw = n.snapshot_weightings.generators
+    tsc = get_tsc(n, region).sum().sum()
+    trade_costs = get_link_opex(n, trade_carriers, region, sw) + get_line_opex(
+        n, region, sw
+    )
 
     # Cost|Total Energy System Cost in billion EUR2020/yr
-    var["Cost|Total Energy System Cost"] = round(
-        system_cost.groupby("country").sum()[region] / 1e9, 4
-    )
+    var["Cost|Total Energy System Cost"] = round((tsc + trade_costs) / 1e9, 4)
 
     return var
 
@@ -4445,7 +4632,7 @@ def get_trade(n, region):
         )
 
     exports_oil_renew, imports_oil_renew = get_export_import_links(
-        n, region, ["renewable oil", "methanol"]
+        n, region, ["renewable oil"]
     )
 
     var["Trade|Secondary Energy|Liquids|Biomass|Volume"] = (
@@ -5019,6 +5206,8 @@ def get_ariadne_var(
     costs,
     region,
     year,
+    config,
+    config_industry,
 ):
     var = pd.concat(
         [
@@ -5038,6 +5227,8 @@ def get_ariadne_var(
                 energy_totals,
                 sector_ratios,
                 industry_production,
+                config,
+                config_industry,
             ),
             get_prices(n, region),
             get_emissions(n, region, energy_totals, industry_demand),
@@ -5061,6 +5252,8 @@ def get_data(
     costs,
     region,
     year,
+    config,
+    config_industry,
     version="0.10",
     scenario="test",
 ):
@@ -5073,6 +5266,8 @@ def get_data(
         costs,
         region,
         year,
+        config,
+        config_industry,
     )
 
     # Renaming variables
@@ -5160,7 +5355,8 @@ if __name__ == "__main__":
             run="KN2045_Mix",
         )
     configure_logging(snakemake)
-    config = snakemake.config
+    set_scenario_config(snakemake)
+    update_config_from_wildcards(snakemake.config, snakemake.wildcards)
     config_industry = snakemake.params.config_industry
     planning_horizons = snakemake.params.planning_horizons
     post_discretization = snakemake.params.post_discretization
@@ -5251,7 +5447,7 @@ if __name__ == "__main__":
 
     yearly_dfs = []
     for i, year in enumerate(planning_horizons):
-        print(f"Getting data for year {year}...")
+        logger.info(f"Getting data for year {year}...")
         yearly_dfs.append(
             get_data(
                 networks[i],
@@ -5262,7 +5458,9 @@ if __name__ == "__main__":
                 costs[i],
                 "DE",
                 year=year,
-                version=config["version"],
+                config=snakemake.config,
+                config_industry=snakemake.params.config_industry,
+                version=snakemake.config["version"],
                 scenario=snakemake.wildcards.run,
             )
         )
@@ -5274,7 +5472,7 @@ if __name__ == "__main__":
         yearly_dfs,
     )
 
-    print("Gleichschaltung of AC-Startnetz with investments for AC projects")
+    logger.info("Gleichschaltung of AC-Startnetz with investments for AC projects")
     # In this hacky part of the code we assure that the investments for the AC projects, match those of the NEP-AC-Startnetz
     # Thus the variable 'Investment|Energy Supply|Electricity|Transmission|AC' is equal to the sum of exogeneous AC projects, endogenous AC expansion and Übernahme of NEP costs (mainly Systemdienstleistungen (Reactive Power Compensation) and lines that are below our spatial resolution)
     ac_startnetz = 14.5 / 5 / EUR20TOEUR23  # billion EUR
@@ -5298,7 +5496,7 @@ if __name__ == "__main__":
             [2025, 2030, 2035, 2040],
         ] += (ac_startnetz - ac_projects_invest) / 4
 
-    print("Assigning mean investments of year and year + 5 to year.")
+    logger.info("Assigning mean investments of year and year + 5 to year.")
     investment_rows = df.loc[df["Variable"].str.contains("Investment")]
     average_investments = (
         investment_rows[planning_horizons]
@@ -5320,11 +5518,7 @@ if __name__ == "__main__":
     with pd.ExcelWriter(snakemake.output.exported_variables_full) as writer:
         df.round(5).to_excel(writer, sheet_name="data", index=False)
 
-    print(
-        "Dropping variables which are not in the template:",
-        *df.loc[df["Unit"] == "NA"]["Variable"],
-        sep="\n",
-    )
+    logger.info("Dropping variables which are not in the template.")
     ariadne_df = df.drop(df.loc[df["Unit"] == "NA"].index)
 
     meta = pd.Series(
