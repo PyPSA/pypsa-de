@@ -339,6 +339,7 @@ if config["pypsa-de"]["retrieve_ariadne_database"]:
         script:
             "scripts/pypsa-de/retrieve_ariadne_database.py"
 
+
 def get_ariadne_database(w):
     if config["pypsa-de"]["retrieve_ariadne_database"]:
         return "data/ariadne_database.csv"
