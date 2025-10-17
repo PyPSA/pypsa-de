@@ -77,7 +77,7 @@ PyPSA-DE is a softfork of PyPSA-EUR. As such, large parts of the functionality a
 
 ## New Config Options
 
-- `iiasa_database` - interaction with IIASA database. Specify a database, and `leitmodelle` for demand and co2 emissions data in specific sectors
+- `pypsa-de` - interaction with IIASA database. Specify a database, and `leitmodelle` for demand and co2 emissions data in specific sectors
 - `wasserstoff_kernnetz` - configure which parts of the Wasserstoff Kernnetz should be included in the model
 - `new_decentral_fossil_boiler_ban` - specify in which country and which years to ban fossil boilers
 - `coal_generation_ban` - specify in which country and which years to ban electricity generation from coal
@@ -86,6 +86,15 @@ PyPSA-DE is a softfork of PyPSA-EUR. As such, large parts of the functionality a
 - `solving:constraints` - specify PyPSA-DE specific limits, e.g. on capacity, trade and generation
 - `co2_budget_DE_source` specify the carbon trajectory for Germany: Following the projections of the Umweltbundestamt (`UBA`) or targeting net zero with the Klimaschutzgesetz(`KSG`)
 - `costs:NEP` and `costs:transmission` - specify which year of the Netzentwicklungsplan should be used as basis for the transmission line costs (`2021,2023`) and if new HVDC links should be built with `overhead` or `underground` cables
+
+## Data sources
+
+`ariadne-data/ariadne-database.csv`
+
+* **Source:** Kopernikus Projekt Ariadne
+* **Link:** [Szenarien-Explorer](https://ariadne2.apps.ece.iiasa.ac.at/explorer)
+* **License:** CC-BY 4.0
+* **Description:** Results from the [Ariadne Report: Die Energiewende kosteneffizient gestalten](https://ariadneprojekt.de/publikation/report-szenarien-zur-klimaneutralitat-2045/)
 
 ## License
 

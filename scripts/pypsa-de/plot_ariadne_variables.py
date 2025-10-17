@@ -1,8 +1,16 @@
+import matplotlib
+
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from scripts._helpers import mock_snakemake
+from scripts._helpers import (
+    configure_logging,
+    mock_snakemake,
+    set_scenario_config,
+    update_config_from_wildcards,
+)
 
 
 def plot_trade(
@@ -804,6 +812,10 @@ if __name__ == "__main__":
             # configfiles="config/config.public.yaml"
         )
 
+    configure_logging(snakemake)
+    set_scenario_config(snakemake)
+    update_config_from_wildcards(snakemake.config, snakemake.wildcards)
+
     df = (
         pd.read_excel(
             snakemake.input.exported_variables_full,
@@ -817,14 +829,16 @@ if __name__ == "__main__":
     elec_val_plot(df, savepath=snakemake.output.elec_val_2020)
 
     df.drop(columns=[2020], inplace=True)
-    df.columns = df.columns.astype(str)
+
     leitmodell = "REMIND-EU v1.1"
 
     dfremind = pd.read_csv(
         snakemake.input.ariadne_database,
         index_col=["model", "scenario", "region", "variable", "unit"],
-    ).loc[leitmodell, snakemake.params.reference_scenario, "Deutschland"][df.columns]
+    ).loc[leitmodell, snakemake.params.reference_scenario, "Deutschland"]
     dfremind.index.names = df.index.names
+    dfremind.columns = dfremind.columns.astype(int)
+    dfremind = dfremind[df.columns]
 
     side_by_side_plot(
         df,
@@ -864,10 +878,10 @@ if __name__ == "__main__":
         drop_regex=r"^(?!.*(Fossil|Renewables|Losses|Price|Volume)).+",
     )
 
-    if df.loc["Final Energy|Industry excl Non-Energy Use|Hydrogen", "2025"].item() < 0:
-        val = df.loc["Final Energy|Industry excl Non-Energy Use|Hydrogen", "2025"]
-        df.loc["Final Energy|Industry excl Non-Energy Use|Hydrogen", "2025"] = 0
-        df.loc["Final Energy|Hydrogen", "2025"] = 0
+    if df.loc["Final Energy|Industry excl Non-Energy Use|Hydrogen", 2025].item() < 0:
+        val = df.loc["Final Energy|Industry excl Non-Energy Use|Hydrogen", 2025]
+        df.loc["Final Energy|Industry excl Non-Energy Use|Hydrogen", 2025] = 0
+        df.loc["Final Energy|Hydrogen", 2025] = 0
         print("WARNING! NEGATIVE HYDROGEN DEMAND IN INDUSTRY IN 2025! ", val)
     side_by_side_plot(
         df,

@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20250926_improve_power_limits
+  prefix: 20251017_improve_power_limits
   name:
   # - ExPol
   - KN2045_Mix
@@ -27,20 +27,13 @@ run:
     - modify_existing_heating
   disable_progressbar: true
 
-iiasa_database:
-  db_name: ariadne2
-  leitmodelle:
+pypsa-de:
+  retrieve_ariadne_database: false
+  leitmodelle: # Model data downloaded from public IIASA database 'ariadne2'
     general: REMIND-EU v1.1
     buildings: REMod v1.0
     transport: Aladin v1
     industry: FORECAST v1.0
-  scenarios:
-  - ExPol
-  - KN2045_Elek
-  - KN2045_H2
-  - KN2045_Mix
-  - KN2045_NFniedrig
-  - KN2045_NFhoch
   reference_scenario: KN2045_Mix
   region: Deutschland
   ageb_for_mobility: true # In 2020 use AGEB data for final energy demand and KBA for vehicles

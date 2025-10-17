@@ -1,5 +1,8 @@
 # Changelog
 - Bugfix: Enforce stricter power import limit to avoid that import from one country compensate from exports to another
+- Added the IIASA database to the repository and disabled re-downloading it by default.
+- Simplified IIASA database download, rename `iiasa_database` config section to `pypsa-de`
+- Updated technology-data to v0.13.4
 - Bugfix: Enforce stricter H2 derivative import limit to avoid that exports of one type of derivative compensate for imports of another
 - Added an option to source mobility demand from UBA MWMS (Projektionsbericht 2025) for the years 2025-2035
 - Renamed functions and script for exogenous mobility demand
