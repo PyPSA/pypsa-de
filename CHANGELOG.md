@@ -1,5 +1,5 @@
 # Changelog
-
+- Bugfix: Enforce stricter power import limit to avoid that import from one country compensate from exports to another
 - Added the IIASA database to the repository and disabled re-downloading it by default.
 - Simplified IIASA database download, rename `iiasa_database` config section to `pypsa-de`
 - Updated technology-data to v0.13.4
