@@ -102,60 +102,104 @@ def add_power_limits(n, investment_year, limits_power_max):
     """
     " Restricts the maximum inflow/outflow of electricity from/to a country.
     """
+
+    def add_pos_neg_aux_variables(n, idx, infix):
+        """
+        For every snapshot in the network `n` this functions adds auxiliary variables corresponding to the positive and negative parts of the dynamical variables of the network components specified in the index `idx`. The `infix` parameter is used to create unique names for the auxiliary variables and constraints.
+
+        Parameters
+        ----------
+        n : pypsa.Network
+            The PyPSA network object containing the model.
+        idx : pandas.Index
+            The index of the network component (e.g., lines or links) for which to create auxiliary variables.
+        infix : str
+            A string used to create unique names for the auxiliary variables and constraints.
+        """
+
+        var_key = f"{idx.name}-{'s' if idx.name == 'Line' else 'p'}"
+        var = n.model[var_key].sel({idx.name: idx})
+        aux_pos = n.model.add_variables(
+            name=f"{var_key}-{infix}-aux-pos",
+            lower=0,
+            coords=[n.snapshots, idx],
+        )
+        aux_neg = n.model.add_variables(
+            name=f"{var_key}-{infix}-aux-neg",
+            upper=0,
+            coords=[n.snapshots, idx],
+        )
+        n.model.add_constraints(
+            aux_pos >= var,
+            name=f"{var_key}-{infix}-aux-pos-constr",
+        )
+        n.model.add_constraints(
+            aux_neg <= var,
+            name=f"{var_key}-{infix}-aux-neg-constr",
+        )
+        return aux_pos, aux_neg
+
     for ct in limits_power_max:
         if investment_year not in limits_power_max[ct].keys():
             continue
 
-        limit = 1e3 * limits_power_max[ct][investment_year] / 10
+        lim = 1e3 * limits_power_max[ct][investment_year]  # in MW
 
         logger.info(
-            f"Adding constraint on electricity import/export from/to {ct} to be < {limit} MW"
+            f"Adding constraint on electricity import/export from/to {ct} to be < {lim} MW"
         )
-        incoming_line = n.lines.index[
-            (n.lines.carrier == "AC")
-            & (n.lines.bus0.str[:2] != ct)
-            & (n.lines.bus1.str[:2] == ct)
-        ]
-        outgoing_line = n.lines.index[
-            (n.lines.carrier == "AC")
-            & (n.lines.bus0.str[:2] == ct)
-            & (n.lines.bus1.str[:2] != ct)
-        ]
+        # identify interconnectors
 
-        incoming_link = n.links.index[
-            (n.links.carrier == "DC")
-            & (n.links.bus0.str[:2] != ct)
-            & (n.links.bus1.str[:2] == ct)
-        ]
-        outgoing_link = n.links.index[
-            (n.links.carrier == "DC")
-            & (n.links.bus0.str[:2] == ct)
-            & (n.links.bus1.str[:2] != ct)
-        ]
+        incoming_lines = n.lines.query(
+            f"not bus0.str.startswith('{ct}') and bus1.str.startswith('{ct}') and active"
+        )
+        outgoing_lines = n.lines.query(
+            f"bus0.str.startswith('{ct}') and not bus1.str.startswith('{ct}') and active"
+        )
+        incoming_links = n.links.query(
+            f"not bus0.str.startswith('{ct}') and bus1.str.startswith('{ct}') and carrier == 'DC' and active"
+        )
+        outgoing_links = n.links.query(
+            f"bus0.str.startswith('{ct}') and not bus1.str.startswith('{ct}') and carrier == 'DC' and active"
+        )
 
-        # iterate over snapshots - otherwise exporting of postnetwork fails since
-        # the constraints are time dependent
-        for t in n.snapshots:
-            incoming_line_p = n.model["Line-s"].loc[t, incoming_line]
-            outgoing_line_p = n.model["Line-s"].loc[t, outgoing_line]
-            incoming_link_p = n.model["Link-p"].loc[t, incoming_link]
-            outgoing_link_p = n.model["Link-p"].loc[t, outgoing_link]
+        # define auxiliary variables for positive and negative parts of line and link flows
 
-            lhs = (
-                incoming_link_p.sum()
-                - outgoing_link_p.sum()
-                + incoming_line_p.sum()
-                - outgoing_line_p.sum()
-            ) / 10
-            # divide by 10 to avoid numerical issues
+        incoming_lines_aux_pos, incoming_lines_aux_neg = add_pos_neg_aux_variables(
+            n, incoming_lines.index, f"incoming-{ct}"
+        )
 
-            cname_upper = f"Power-import-limit-{ct}-{t}"
-            cname_lower = f"Power-export-limit-{ct}-{t}"
+        outgoing_lines_aux_pos, outgoing_lines_aux_neg = add_pos_neg_aux_variables(
+            n, outgoing_lines.index, f"outgoing-{ct}"
+        )
 
-            n.model.add_constraints(lhs <= limit, name=cname_upper)
-            n.model.add_constraints(lhs >= -limit, name=cname_lower)
+        incoming_links_aux_pos, incoming_links_aux_neg = add_pos_neg_aux_variables(
+            n, incoming_links.index, f"incoming-{ct}"
+        )
 
-            # not adding to network as the shadow prices are not needed
+        outgoing_links_aux_pos, outgoing_links_aux_neg = add_pos_neg_aux_variables(
+            n, outgoing_links.index, f"outgoing-{ct}"
+        )
+
+        # To constraint the absolute values of imports and exports, we have to sum the
+        # corresponding positive and negative flows separately, using the auxiliary variables
+
+        import_lhs = (
+            incoming_links_aux_pos.sum(dim="Link")
+            + incoming_lines_aux_pos.sum(dim="Line")
+            - outgoing_links_aux_neg.sum(dim="Link")
+            - outgoing_lines_aux_neg.sum(dim="Line")
+        ) / 10
+
+        export_lhs = (
+            outgoing_links_aux_pos.sum(dim="Link")
+            + outgoing_lines_aux_pos.sum(dim="Line")
+            - incoming_links_aux_neg.sum(dim="Link")
+            - incoming_lines_aux_neg.sum(dim="Line")
+        ) / 10
+
+        n.model.add_constraints(import_lhs <= lim / 10, name=f"Power-import-limit-{ct}")
+        n.model.add_constraints(export_lhs <= lim / 10, name=f"Power-export-limit-{ct}")
 
 
 def h2_import_limits(n, investment_year, limits_volume_max):
@@ -382,6 +426,9 @@ def add_national_co2_budgets(n, snakemake, national_co2_budgets, investment_year
     for ct in national_co2_budgets:
         if ct != "DE":
             logger.error(
+                f"CO2 budget for countries other than `DE` is not yet supported. Found country {ct}. Please check the config file."
+            )
+            raise NotImplementedError(
                 f"CO2 budget for countries other than `DE` is not yet supported. Found country {ct}. Please check the config file."
             )
 

@@ -1645,6 +1645,9 @@ if __name__ == "__main__":
         logger.error(
             "Fractions for steam processing do not sum to 1! Please check config[industry][steam_biomass_fraction], config[industry][steam_hydrogen_fraction] and config[industry][steam_electricity_fraction]!"
         )
+        raise ValueError(
+            "Fractions for steam processing do not sum to 1! Please check config[industry][steam_biomass_fraction], config[industry][steam_hydrogen_fraction] and config[industry][steam_electricity_fraction]!"
+        )
 
     logger.info(
         f"Steam processing fractions set to {params['steam_biomass_fraction']} biomass, {params['steam_hydrogen_fraction']} hydrogen and {params['steam_electricity_fraction']} electricity."

@@ -195,10 +195,10 @@ def write_to_scenario_yaml(input, output, scenarios, df):
 
         reference_scenario = (
             config[scenario]
-            .get("iiasa_database", {})
+            .get("pypsa-de", {})
             .get(
                 "reference_scenario",
-                snakemake.config["iiasa_database"]["reference_scenario"],
+                snakemake.config["pypsa-de"]["reference_scenario"],
             )  # Using the default reference scenario from pypsa.de.yaml
         )
 
