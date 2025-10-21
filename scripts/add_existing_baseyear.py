@@ -1113,13 +1113,8 @@ if __name__ == "__main__":
 
         snakemake = mock_snakemake(
             "add_existing_baseyear",
-<<<<<<< HEAD
-            configfiles=["config/config.nrw.yaml"],
-            clusters="adm",
-=======
             clusters="27",
             ll="vopt",
->>>>>>> upstream/main
             opts="",
             sector_opts="",
             planning_horizons="2045",

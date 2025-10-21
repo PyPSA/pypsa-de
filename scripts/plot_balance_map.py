@@ -30,11 +30,13 @@ if __name__ == "__main__":
 
         snakemake = mock_snakemake(
             "plot_balance_map",
-            clusters="10",
+            clusters="adm",
             opts="",
             sector_opts="",
-            planning_horizons="2050",
-            carrier="H2",
+            planning_horizons="2020",
+            carrier="AC",
+            configfiles=["config/config.nrw.yaml"],
+            run="KN2045_Mix",
         )
 
     configure_logging(snakemake)
@@ -266,7 +268,16 @@ if __name__ == "__main__":
 
     # Add bus legend
     legend_bus_sizes = config["bus_sizes"]
-    carrier_unit = config["unit"]
+    carrier_unit = config["unit"]  # Add branch legend
+    legend_branch_sizes = config["branch_sizes"]
+    if legend_branch_sizes is not None:
+        add_legend_lines(
+            ax,
+            [s * branch_width_factor for s in legend_branch_sizes],
+            [f"{s} {carrier_unit}" for s in legend_branch_sizes],
+            patch_kw={"color": "#666"},
+            legend_kw={"bbox_to_anchor": (0.25, 1), **legend_kwargs},
+        )
     if legend_bus_sizes is not None:
         add_legend_semicircles(
             ax,
