@@ -103,7 +103,7 @@ def add_power_limits(n, investment_year, limits_power_max):
     " Restricts the maximum inflow/outflow of electricity from/to a country.
     """
 
-    def add_pos_neg_aux_variables(n, idx, infix):
+    def add_pos_neg_aux_variables(n, idx, var_name, infix):
         """
         For every snapshot in the network `n` this functions adds auxiliary variables corresponding to the positive and negative parts of the dynamical variables of the network components specified in the index `idx`. The `infix` parameter is used to create unique names for the auxiliary variables and constraints.
 
@@ -116,26 +116,24 @@ def add_power_limits(n, investment_year, limits_power_max):
         infix : str
             A string used to create unique names for the auxiliary variables and constraints.
         """
-
-        var_key = f"{idx.name}-{'s' if idx.name == 'Line' else 'p'}"
-        var = n.model[var_key].sel({idx.name: idx})
+        var = n.model[var_name].sel({"name": idx})
         aux_pos = n.model.add_variables(
-            name=f"{var_key}-{infix}-aux-pos",
+            name=f"{var_name}-{infix}-aux-pos",
             lower=0,
             coords=[n.snapshots, idx],
         )
         aux_neg = n.model.add_variables(
-            name=f"{var_key}-{infix}-aux-neg",
+            name=f"{var_name}-{infix}-aux-neg",
             upper=0,
             coords=[n.snapshots, idx],
         )
         n.model.add_constraints(
             aux_pos >= var,
-            name=f"{var_key}-{infix}-aux-pos-constr",
+            name=f"{var_name}-{infix}-aux-pos-constr",
         )
         n.model.add_constraints(
             aux_neg <= var,
-            name=f"{var_key}-{infix}-aux-neg-constr",
+            name=f"{var_name}-{infix}-aux-neg-constr",
         )
         return aux_pos, aux_neg
 
@@ -166,37 +164,36 @@ def add_power_limits(n, investment_year, limits_power_max):
         # define auxiliary variables for positive and negative parts of line and link flows
 
         incoming_lines_aux_pos, incoming_lines_aux_neg = add_pos_neg_aux_variables(
-            n, incoming_lines.index, f"incoming-{ct}"
+            n, incoming_lines.index, "Line-s", f"incoming-{ct}"
         )
 
         outgoing_lines_aux_pos, outgoing_lines_aux_neg = add_pos_neg_aux_variables(
-            n, outgoing_lines.index, f"outgoing-{ct}"
+            n, outgoing_lines.index, "Line-s", f"outgoing-{ct}"
         )
 
         incoming_links_aux_pos, incoming_links_aux_neg = add_pos_neg_aux_variables(
-            n, incoming_links.index, f"incoming-{ct}"
+            n, incoming_links.index, "Link-p", f"incoming-{ct}"
         )
 
         outgoing_links_aux_pos, outgoing_links_aux_neg = add_pos_neg_aux_variables(
-            n, outgoing_links.index, f"outgoing-{ct}"
+            n, outgoing_links.index, "Link-p", f"outgoing-{ct}"
         )
-
         # To constraint the absolute values of imports and exports, we have to sum the
         # corresponding positive and negative flows separately, using the auxiliary variables
 
         import_lhs = (
-            incoming_links_aux_pos.sum(dim="Link")
-            + incoming_lines_aux_pos.sum(dim="Line")
-            - outgoing_links_aux_neg.sum(dim="Link")
-            - outgoing_lines_aux_neg.sum(dim="Line")
-        ) / 10
+            incoming_links_aux_pos
+            + incoming_lines_aux_pos
+            - outgoing_links_aux_neg
+            - outgoing_lines_aux_neg
+        ).sum(dim="name") / 10
 
         export_lhs = (
-            outgoing_links_aux_pos.sum(dim="Link")
-            + outgoing_lines_aux_pos.sum(dim="Line")
-            - incoming_links_aux_neg.sum(dim="Link")
-            - incoming_lines_aux_neg.sum(dim="Line")
-        ) / 10
+            outgoing_links_aux_pos
+            + outgoing_lines_aux_pos
+            - incoming_links_aux_neg
+            - incoming_lines_aux_neg
+        ).sum(dim="name") / 10
 
         n.model.add_constraints(import_lhs <= lim / 10, name=f"Power-import-limit-{ct}")
         n.model.add_constraints(export_lhs <= lim / 10, name=f"Power-export-limit-{ct}")
