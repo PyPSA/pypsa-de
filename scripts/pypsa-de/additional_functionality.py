@@ -28,19 +28,19 @@ def add_capacity_limits(n, investment_year, limits_capacity, sense="maximum"):
                 )
 
                 valid_components = (
-                    (c.df.index.str[:2] == ct)
-                    & (c.df.carrier.str[: len(carrier)] == carrier)
-                    & ~c.df.carrier.str.contains("thermal")
+                    (c.static.index.str[:2] == ct)
+                    & (c.static.carrier.str[: len(carrier)] == carrier)
+                    & ~c.static.carrier.str.contains("thermal")
                 )  # exclude solar thermal
 
-                existing_index = c.df.index[
-                    valid_components & ~c.df[attr + "_nom_extendable"]
+                existing_index = c.static.index[
+                    valid_components & ~c.static[attr + "_nom_extendable"]
                 ]
-                extendable_index = c.df.index[
-                    valid_components & c.df[attr + "_nom_extendable"]
+                extendable_index = c.static.index[
+                    valid_components & c.static[attr + "_nom_extendable"]
                 ]
 
-                existing_capacity = c.df.loc[existing_index, attr + "_nom"].sum()
+                existing_capacity = c.static.loc[existing_index, attr + "_nom"].sum()
 
                 logger.info(
                     f"Existing {c.name} {carrier} capacity in {ct}: {existing_capacity} {units}"
