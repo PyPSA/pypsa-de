@@ -43,6 +43,7 @@ dependencies:
   - aws-crt-cpp=0.34.4=hc2cf59f_0
   - aws-sdk-cpp=1.11.606=h296c955_4
   - babel=2.17.0=pyhd8ed1ab_0
+  - bcrypt=5.0.0=py312hdabe01f_0
   - beautifulsoup4=4.14.2=pyha770c72_0
   - bleach=6.2.0=pyh29332c3_4
   - bleach-with-css=6.2.0=h82add2a_4
@@ -80,6 +81,7 @@ dependencies:
   - coin-or-osi=0.108.11=h5b68f48_7
   - coin-or-utils=2.11.12=hdb10741_6
   - colorama=0.4.6=pyhd8ed1ab_1
+  - colour=0.1.5=pyhd8ed1ab_2
   - comm=0.2.3=pyhe01879c_0
   - conda-inject=1.3.2=pyhd8ed1ab_0
   - configargparse=1.7.1=pyhe01879c_0
@@ -119,6 +121,8 @@ dependencies:
   - filelock=3.20.0=pyhd8ed1ab_0
   - findlibs=0.1.2=pyhd8ed1ab_0
   - fiona=1.10.1=py312h6e88f47_3
+  - flexcache=0.3=pyhd8ed1ab_1
+  - flexparser=0.4=pyhd8ed1ab_1
   - folium=0.20.0=pyhd8ed1ab_0
   - font-ttf-dejavu-sans-mono=2.37=hab24e00_0
   - font-ttf-inconsolata=3.000=h77eed37_0
@@ -135,6 +139,7 @@ dependencies:
   - fribidi=1.0.16=hfd05255_0
   - frozenlist=1.7.0=py312hfdf67e6_0
   - fsspec=2025.9.0=pyhd8ed1ab_0
+  - furl=2.1.4=pyhd8ed1ab_0
   - geographiclib=2.1=pyhd8ed1ab_0
   - geojson=3.2.0=pyhd8ed1ab_0
   - geopandas=1.1.1=pyhd8ed1ab_1
@@ -288,12 +293,15 @@ dependencies:
   - lz4=4.4.4=py312ha1aa51a_1
   - lz4-c=1.10.0=h2466b09_1
   - lzo=2.10=h6a83c73_1002
+  - mako=1.3.10=pyhd8ed1ab_0
   - mapclassify=2.10.0=pyhd8ed1ab_1
+  - markdown-it-py=4.0.0=pyhd8ed1ab_0
   - markupsafe=3.0.3=py312h05f76fc_0
   - matplotlib=3.10.7=py312h2e8e312_0
   - matplotlib-base=3.10.7=py312h0ebf65c_0
   - matplotlib-inline=0.2.1=pyhd8ed1ab_0
   - mccabe=0.7.0=pyhd8ed1ab_1
+  - mdurl=0.1.2=pyhd8ed1ab_1
   - memory_profiler=0.61.0=pyhd8ed1ab_1
   - minizip=4.0.10=h9fa1bad_0
   - mistune=3.1.4=pyhcf101f3_0
@@ -319,13 +327,17 @@ dependencies:
   - numexpr=2.14.1=mkl_py312hd035341_0
   - numpy=1.26.4=py312h8753938_0
   - oauthlib=3.3.1=pyhd8ed1ab_0
+  - openjdk=24.0.2=hda6743d_0
   - openjpeg=2.5.4=h24db6dd_0
   - openpyxl=3.1.5=py312h83acffa_2
   - openssl=3.5.4=h725018a_0
   - orc=2.2.1=h7414dfc_0
+  - orderedmultidict=1.0.1=pyhd8ed1ab_2
   - overrides=7.7.0=pyhd8ed1ab_1
   - packaging=25.0=pyh29332c3_1
   - pandas=2.3.3=py312hc128f0a_1
+  - pandera=0.26.1=hd8ed1ab_0
+  - pandera-base=0.26.1=pyhd8ed1ab_0
   - pandocfilters=1.5.0=pyhd8ed1ab_0
   - pango=1.56.4=h03d888a_0
   - parso=0.8.5=pyhcf101f3_0
@@ -397,6 +409,7 @@ dependencies:
   - python-fastjsonschema=2.21.2=pyhe01879c_0
   - python-gil=3.12.12=hd8ed1ab_1
   - python-json-logger=2.0.7=pyhd8ed1ab_0
+  - python-multipart=0.0.20=pyhff2d567_0
   - python-tzdata=2025.2=pyhd8ed1ab_0
   - python-utils=3.9.1=pyhff2d567_1
   - python_abi=3.12=8_cp312
@@ -457,17 +470,34 @@ dependencies:
   - snuggs=1.4.7=pyhd8ed1ab_2
   - sortedcontainers=2.4.0=pyhd8ed1ab_1
   - soupsieve=2.8=pyhd8ed1ab_0
+  - sqlalchemy=2.0.43=py312he06e257_1
+  - sqlalchemy-utils=0.42.0=hd8ed1ab_0
+  - sqlalchemy-utils-arrow=0.42.0=hd8ed1ab_0
+  - sqlalchemy-utils-babel=0.42.0=hd8ed1ab_0
+  - sqlalchemy-utils-base=0.42.0=pyhd8ed1ab_0
+  - sqlalchemy-utils-color=0.42.0=hd8ed1ab_0
+  - sqlalchemy-utils-encrypted=0.42.0=hd8ed1ab_0
+  - sqlalchemy-utils-intervals=0.42.0=hd8ed1ab_0
+  - sqlalchemy-utils-password=0.42.0=hd8ed1ab_0
+  - sqlalchemy-utils-pendulum=0.42.0=hd8ed1ab_0
+  - sqlalchemy-utils-phone=0.42.0=hd8ed1ab_0
+  - sqlalchemy-utils-timezone=0.42.0=hd8ed1ab_0
+  - sqlalchemy-utils-url=0.42.0=hd8ed1ab_0
+  - sqlalchemy-with-postgresql-psycopg=2.0.43=pyhd8ed1ab_0
+  - sqlalchemy-with-postgresql-psycopgbinary=2.0.43=pyhd8ed1ab_0
   - sqlite=3.50.4=hdb435a2_0
   - stack_data=0.6.3=pyhd8ed1ab_1
   - starlette=0.49.1=pyhfdc7a7d_0
   - statsmodels=0.14.5=py312h196c9fc_1
+  - symlink-exe-runtime=1.0=hcfcfb64_0
+  - tabula-py=2.7.0=py312h2e8e312_1
   - tabulate=0.9.0=pyhd8ed1ab_2
   - tbb=2021.13.0=h18a62a1_3
   - tblib=3.1.0=pyhd8ed1ab_0
-  - tenacity=9.1.2=pyhd8ed1ab_0
   - terminado=0.18.1=pyh5737063_0
   - threadpoolctl=3.6.0=pyhecae5ae_0
   - throttler=1.2.2=pyhd8ed1ab_0
+  - time-machine=2.19.0=py312he5662c2_1
   - tinycss2=1.4.0=pyhd8ed1ab_0
   - tk=8.6.13=h2c6b04d_2
   - toml=0.10.2=pyhd8ed1ab_1
@@ -482,7 +512,9 @@ dependencies:
   - typer-slim=0.20.0=pyhcf101f3_0
   - typer-slim-standard=0.20.0=h65a100f_0
   - typing-extensions=4.15.0=h396c80c_0
+  - typing-inspection=0.4.2=pyhd8ed1ab_0
   - typing_extensions=4.15.0=pyhcf101f3_0
+  - typing_inspect=0.9.0=pyhd8ed1ab_1
   - typing_utils=0.1.0=pyhd8ed1ab_1
   - tzdata=2025b=h78e105d_0
   - ucrt=10.0.26100.0=h57928b3_0
@@ -510,6 +542,7 @@ dependencies:
   - widgetsnbextension=3.6.10=pyhd8ed1ab_0
   - win_inet_pton=1.1.0=pyh7428d3b_8
   - winpty=0.4.3=4
+  - wquantiles=0.6=pyhd8ed1ab_1
   - wrapt=1.17.3=py312he06e257_1
   - xarray=2025.6.1=pyhd8ed1ab_1
   - xerces-c=3.2.5=he0c23c2_2
