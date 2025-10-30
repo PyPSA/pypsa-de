@@ -4,6 +4,7 @@ import sys
 import pandas as pd
 from xarray import DataArray
 
+from scripts._helpers import PYPSA_V1
 from scripts.prepare_sector_network import determine_emission_sectors
 
 logger = logging.getLogger(__name__)
@@ -103,7 +104,7 @@ def add_power_limits(n, investment_year, limits_power_max):
     " Restricts the maximum inflow/outflow of electricity from/to a country.
     """
 
-    def add_pos_neg_aux_variables(n, idx, infix):
+    def add_pos_neg_aux_variables(n, component, idx, infix):
         """
         For every snapshot in the network `n` this functions adds auxiliary variables corresponding to the positive and negative parts of the dynamical variables of the network components specified in the index `idx`. The `infix` parameter is used to create unique names for the auxiliary variables and constraints.
 
@@ -111,14 +112,17 @@ def add_power_limits(n, investment_year, limits_power_max):
         ----------
         n : pypsa.Network
             The PyPSA network object containing the model.
+        component : str
+            Name of the component
         idx : pandas.Index
             The index of the network component (e.g., lines or links) for which to create auxiliary variables.
         infix : str
             A string used to create unique names for the auxiliary variables and constraints.
         """
 
-        var_key = f"{idx.name}-{'s' if idx.name == 'Line' else 'p'}"
-        var = n.model[var_key].sel({idx.name: idx})
+        var_key = f"{component}-{'s' if component == 'Line' else 'p'}"
+        dim_name = "name" if PYPSA_V1 else component
+        var = n.model[var_key].sel({dim_name: idx})
         aux_pos = n.model.add_variables(
             name=f"{var_key}-{infix}-aux-pos",
             lower=0,
@@ -166,36 +170,36 @@ def add_power_limits(n, investment_year, limits_power_max):
         # define auxiliary variables for positive and negative parts of line and link flows
 
         incoming_lines_aux_pos, incoming_lines_aux_neg = add_pos_neg_aux_variables(
-            n, incoming_lines.index, f"incoming-{ct}"
+            n, "Line", incoming_lines.index, f"incoming-{ct}"
         )
 
         outgoing_lines_aux_pos, outgoing_lines_aux_neg = add_pos_neg_aux_variables(
-            n, outgoing_lines.index, f"outgoing-{ct}"
+            n, "Line", outgoing_lines.index, f"outgoing-{ct}"
         )
 
         incoming_links_aux_pos, incoming_links_aux_neg = add_pos_neg_aux_variables(
-            n, incoming_links.index, f"incoming-{ct}"
+            n, "Link", incoming_links.index, f"incoming-{ct}"
         )
 
         outgoing_links_aux_pos, outgoing_links_aux_neg = add_pos_neg_aux_variables(
-            n, outgoing_links.index, f"outgoing-{ct}"
+            n, "Link", outgoing_links.index, f"outgoing-{ct}"
         )
 
         # To constraint the absolute values of imports and exports, we have to sum the
         # corresponding positive and negative flows separately, using the auxiliary variables
-
+        dim_name = "name" if PYPSA_V1 else "Link"
         import_lhs = (
-            incoming_links_aux_pos.sum(dim="Link")
-            + incoming_lines_aux_pos.sum(dim="Line")
-            - outgoing_links_aux_neg.sum(dim="Link")
-            - outgoing_lines_aux_neg.sum(dim="Line")
+            incoming_links_aux_pos.sum(dim=dim_name)
+            + incoming_lines_aux_pos.sum(dim=dim_name)
+            - outgoing_links_aux_neg.sum(dim=dim_name)
+            - outgoing_lines_aux_neg.sum(dim=dim_name)
         ) / 10
 
         export_lhs = (
-            outgoing_links_aux_pos.sum(dim="Link")
-            + outgoing_lines_aux_pos.sum(dim="Line")
-            - incoming_links_aux_neg.sum(dim="Link")
-            - incoming_lines_aux_neg.sum(dim="Line")
+            outgoing_links_aux_pos.sum(dim=dim_name)
+            + outgoing_lines_aux_pos.sum(dim=dim_name)
+            - incoming_links_aux_neg.sum(dim=dim_name)
+            - incoming_lines_aux_neg.sum(dim=dim_name)
         ) / 10
 
         n.model.add_constraints(import_lhs <= lim / 10, name=f"Power-import-limit-{ct}")
