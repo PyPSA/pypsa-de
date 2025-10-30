@@ -4,11 +4,28 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: "nrw"
-  name: "KN2045_Mix"
+  prefix: nrw
+  name:
+  # - ExPol
+  - KN2045_Mix
+  # - KN2045_Elek
+  # - KN2045_H2
+  # - KN2045_NFniedrig
+  # - KN2045_NFhoch
   scenarios:
-    enable: false
-
+    enable: true
+    manual_file: config/scenarios.manual.yaml
+    file: config/scenarios.automated.yaml
+  shared_resources:
+    policy: base #stops recalculating
+    exclude:
+    - existing_heating.csv   # specify files which should not be shared between scenarios
+    - costs
+    - retrieve_cost   # This is necessary to save retrieve_cost_data_{year}.log in the correct folder
+    - industry_sector_ratios
+    - build_industry_sector_ratios   # This is necessary to save build_industry_sector_ratios_data.log in the correct folder
+    - modify_existing_heating
+  disable_progressbar: true
 enable:
   retrieve: true
   retrieve_databundle: true
