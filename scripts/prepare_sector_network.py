@@ -6061,6 +6061,7 @@ def lossy_bidirectional_links(n, carrier, efficiencies={}, subset=None):
     rev_links["length"] = 0
     rev_links["reversed"] = True
     rev_links.index = rev_links.index.map(lambda x: x + "-reversed")
+    rev_links.index.name = "name"
 
     n.links["reversed"] = n.links.get("reversed", False)
     n.links = pd.concat([n.links, rev_links], sort=False)
