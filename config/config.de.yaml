@@ -83,8 +83,8 @@ iiasa_database:
   no_flex_lt_run: false # If true, removes all flexibility options
   scale_industry_non_energy: false # Scale non-energy industry demand directly proportional to energy demand
   restrict_cross_border_flows: # restricts cross border flows between all countries (AC)
-    2025: 0.5
-    2030: 0.5
+    2025: 0.4
+    2030: 0.45
     2035: 0.5
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#foresight
