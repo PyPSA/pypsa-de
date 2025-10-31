@@ -1,3 +1,6 @@
+import sys
+sys.path.insert(0, '..')
+
 # SPDX-FileCopyrightText: Contributors to PyPSA-Eur <https://github.com/pypsa/pypsa-eur>
 #
 # SPDX-License-Identifier: MIT
@@ -1399,12 +1402,13 @@ if __name__ == "__main__":
         from scripts._helpers import mock_snakemake
 
         snakemake = mock_snakemake(
-            "solve_sector_network",
+            "solve_sector_network_myopic",
             opts="",
             clusters="adm",
             configfiles="config/config.nrw.yaml",
             sector_opts="",
-            planning_horizons="2045",
+            planning_horizons="2035",
+            run="KN2045_Mix"
         )
     configure_logging(snakemake)
     set_scenario_config(snakemake)
