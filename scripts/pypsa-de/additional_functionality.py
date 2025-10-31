@@ -916,12 +916,17 @@ def additional_functionality(n, snapshots, snakemake):
         add_h2_derivate_limit(n, investment_year, constraints["limits_volume_max"])
 
         if isinstance(constraints["co2_budget_national"], dict):
-            add_national_co2_budgets(
-                n,
-                snakemake,
-                constraints["co2_budget_national"],
-                investment_year,
-            )
+            if "co2 atmosphere" not in n.generators.index:
+                add_national_co2_budgets(
+                    n,
+                    snakemake,
+                    constraints["co2_budget_national"],
+                    investment_year,
+                )
+            else:
+                logger.warning(
+                    "CO2 atmosphere generator found. Skipping national CO2 budget constraints to avoid conflicts."
+                )
         else:
             logger.warning("No national CO2 budget specified!")
 

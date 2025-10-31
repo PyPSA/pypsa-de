@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20251016_wetter_2012
+  prefix: 20251031_force_co2_price
   name:
   # - ExPol
   # - KN2045_Mix
@@ -86,6 +86,8 @@ iiasa_database:
     2025: 0.4
     2030: 0.45
     2035: 0.5
+  force_co2_price:
+    2030: 200.0
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#foresight
 foresight: myopic

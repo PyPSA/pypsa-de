@@ -1541,4 +1541,21 @@ if __name__ == "__main__":
             n, snakemake.params.restrict_cross_border_flows[current_year]
         )
 
+    if current_year in snakemake.params.get("force_co2_price", {}):
+        logger.info("Adding negative CO2 generator and dropping co2 limits.")
+
+        n.add(
+            "Generator",
+            "co2 atmosphere",
+            bus="co2 atmosphere",
+            p_min_pu=-1,
+            p_max_pu=0,
+            p_nom_extendable=True,
+            carrier="co2",
+            marginal_cost=-snakemake.params.force_co2_price[current_year],
+        )
+        n.global_constraints.drop("CO2Limit", inplace=True)
+        # Instead of removing it here, never add it in additional_functionality
+        # n.global_constraints.drop("co2_limit-DE", inplace=True)
+
     n.export_to_netcdf(snakemake.output.network)

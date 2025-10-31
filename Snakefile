@@ -563,6 +563,7 @@ rule modify_prenetwork:
         restrict_cross_border_flows=config_provider(
             "iiasa_database", "restrict_cross_border_flows"
         ),
+        force_co2_price=config_provider("iiasa_database", "force_co2_price"),
     input:
         costs_modifications="ariadne-data/costs_{planning_horizons}-modifications.csv",
         network=resources(
