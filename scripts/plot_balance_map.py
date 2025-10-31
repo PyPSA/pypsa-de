@@ -33,7 +33,7 @@ if __name__ == "__main__":
             clusters="adm",
             opts="",
             sector_opts="",
-            planning_horizons="2020",
+            planning_horizons="2030",
             carrier="AC",
             configfiles=["config/config.nrw.yaml"],
             run="KN2045_Mix",
@@ -45,7 +45,7 @@ if __name__ == "__main__":
 
     n = pypsa.Network(snakemake.input.network)
     sanitize_carriers(n, snakemake.config)
-    pypsa.options.params.statistics.round = 3
+    pypsa.options.params.statistics.round = 6
     pypsa.options.params.statistics.drop_zero = True
     pypsa.options.params.statistics.nice_names = False
 
@@ -165,11 +165,11 @@ if __name__ == "__main__":
     transformer_flow = flow.get("Transformer")
 
     n.plot(
-        bus_sizes=bus_sizes * bus_size_factor,
-        bus_colors=colors,
-        bus_split_circles=True,
-        line_widths=line_widths * branch_width_factor,
-        link_widths=link_widths * branch_width_factor,
+        bus_size=bus_sizes * bus_size_factor,
+        bus_color=colors,
+        bus_split_circle=True,
+        line_width=line_widths * branch_width_factor,
+        link_width=link_widths * branch_width_factor,
         line_flow=line_flow * flow_size_factor if line_flow is not None else None,
         link_flow=link_flow * flow_size_factor if link_flow is not None else None,
         transformer_flow=transformer_flow * flow_size_factor
@@ -177,7 +177,7 @@ if __name__ == "__main__":
         else None,
         ax=ax,
         margin=0.2,
-        color_geomap={"border": "darkgrey", "coastline": "darkgrey"},
+        geomap_color={"border": "darkgrey", "coastline": "darkgrey"},
         geomap=True,
         boundaries=boundaries,
     )
