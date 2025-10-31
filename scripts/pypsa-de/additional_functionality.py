@@ -882,7 +882,7 @@ def additional_functionality(n, snapshots, snakemake):
             eeg_sweep_year
         ] = constraints["limits_capacity_max"]["Generator"]["offwind"]["DE"][
             eeg_sweep_year
-        ] = 30 * lvl
+        ] = 25 * lvl
         constraints["limits_capacity_min"]["Generator"]["solar"]["DE"][
             eeg_sweep_year
         ] = constraints["limits_capacity_max"]["Generator"]["solar"]["DE"][
