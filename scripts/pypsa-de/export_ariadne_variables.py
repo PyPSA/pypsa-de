@@ -2469,7 +2469,7 @@ def get_final_energy(
 
     var["Final Energy|Agriculture|Electricity"] = sum_load(
         n, "agriculture electricity", region
-    )
+    ) + sum_load(n, "agriculture machinery electric", region)
     var["Final Energy|Agriculture|Heat"] = sum_load(n, "agriculture heat", region)
     var["Final Energy|Agriculture|Liquids"] = sum_load(
         n, "agriculture machinery oil", region
