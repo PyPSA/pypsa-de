@@ -412,9 +412,13 @@ def create_network_topology(
     lk_attrs = n.links.columns.intersection(lk_attrs)
 
     candidates = pd.concat(
-        [n.lines[ln_attrs],
-         n.links.loc[(n.links.carrier.isin(carriers)) & (n.links.underwater_fraction > 0.1),
-         lk_attrs]]
+        [
+            n.lines[ln_attrs],
+            n.links.loc[
+                (n.links.carrier.isin(carriers)) & (n.links.underwater_fraction > 0.1),
+                lk_attrs,
+            ],
+        ]
     ).fillna(0)
 
     # base network topology purely on location not carrier

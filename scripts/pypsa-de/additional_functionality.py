@@ -37,7 +37,9 @@ def add_capacity_limits(n, investment_year, limits_capacity, sense="maximum"):
                     valid_components & ~c.static[attr + "_nom_extendable"]
                 ]
                 extendable_index = c.static.index[
-                    valid_components & c.static[attr + "_nom_extendable"] & c.static.active
+                    valid_components
+                    & c.static[attr + "_nom_extendable"]
+                    & c.static.active
                 ]
 
                 existing_capacity = c.static.loc[existing_index, attr + "_nom"].sum()
