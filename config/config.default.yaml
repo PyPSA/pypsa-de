@@ -717,6 +717,9 @@ sector:
   co2_spatial: true
   co2_network: true
   co2_network_cost_factor: 1
+  european_co2_pipelines: 
+    enable: true
+    length_factor: 1.25
   cc_fraction: 0.9
   hydrogen_underground_storage: true
   hydrogen_underground_storage_locations:
