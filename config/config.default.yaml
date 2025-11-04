@@ -720,6 +720,18 @@ sector:
   european_co2_pipelines: 
     enable: true
     length_factor: 1.25
+    utilisation_factor: 0.8
+    transport_volume_mtpa:
+      "Aramis": 15
+      "Arcon": 15
+      "Belgium backbone": 15
+      "CO2TransPorts": 15
+      "CarbonConnect": 15
+      "Delta Rhine Corridor": 15
+      "EU2NSEA": 15
+      "N-Lites": 15
+      "OGE": 15
+      "PYCASSO": 15
   cc_fraction: 0.9
   hydrogen_underground_storage: true
   hydrogen_underground_storage_locations:
