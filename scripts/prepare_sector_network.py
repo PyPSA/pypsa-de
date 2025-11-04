@@ -412,7 +412,13 @@ def create_network_topology(
     lk_attrs = n.links.columns.intersection(lk_attrs)
 
     candidates = pd.concat(
-        [n.lines[ln_attrs], n.links.loc[n.links.carrier.isin(carriers), lk_attrs]]
+        [
+            n.lines[ln_attrs],
+            n.links.loc[
+                (n.links.carrier.isin(carriers)) & (n.links.underwater_fraction > 0.1),
+                lk_attrs,
+            ],
+        ]
     ).fillna(0)
 
     # base network topology purely on location not carrier
@@ -4252,7 +4258,7 @@ def add_biomass(
         transport_costs = pd.read_csv(biomass_transport_costs_file, index_col=0)
         transport_costs = transport_costs.squeeze()
         biomass_transport = create_network_topology(
-            n, "biomass transport ", bidirectional=False
+            n, "biomass transport ", carriers=[""], bidirectional=False
         )
 
         # costs
