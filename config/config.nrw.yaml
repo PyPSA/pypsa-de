@@ -112,6 +112,7 @@ clustering:
   mode: administrative
   administrative:
     level: 0
+    BE: 2
     DE: 1
     NL: 1
     DEA: 3
