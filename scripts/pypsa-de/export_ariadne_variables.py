@@ -1614,7 +1614,19 @@ def get_secondary_energy(n, region, _industry_demand):
     var["Secondary Energy|Electricity|Curtailment"] = (
         n.statistics.curtailment(bus_carrier=["AC", "low voltage"], **kwargs)
         .filter(like=region)
-        .values.sum()
+        .groupby("carrier")
+        .sum()
+        .reindex(
+            [
+                "offwind-ac",
+                "offwind-dc",
+                "onwind",
+                "solar",
+                "solar rooftop",
+                "solar-hsat",
+            ]
+        )
+        .sum()
     )
 
     electricity_balance = (
