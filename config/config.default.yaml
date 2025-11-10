@@ -719,19 +719,28 @@ sector:
   co2_network_cost_factor: 1
   european_co2_pipelines: 
     enable: true
+    build_year: 2030
     length_factor: 1.25
-    utilisation_factor: 0.8
+    mtpa_utilisation_factor: 1
     transport_volume_mtpa:
-      "Aramis": 15
-      "Arcon": 15
-      "Belgium backbone": 15
-      "CO2TransPorts": 15
-      "CarbonConnect": 15
-      "Delta Rhine Corridor": 15
-      "EU2NSEA": 15
-      "N-Lites": 15
-      "OGE": 15
-      "PYCASSO": 15
+      "Aramis": 22 # https://www.aramis-ccs.com/files/Aramis-brochure_aug24_ENG.pdf
+      "Acorn": 20 # >20 Mtpa, *2030
+      "Belgium backbone": 30 # "Nordsee CO2-Korridor DE-BE" *2030
+      "CO2TransPorts": 10 # Expected 2.5 Mtpa, however max at 10 Mtpa, see https://www.porthosco2.nl/en/faq
+      "CarbonConnect": 20 # 20-40 Mtpa, *?
+      "Delta Rhine Corridor": 45 # *?
+      "EU2NSEA": 20 # 20-40 Mtpa, *2029
+      "N-Lites": 10 # >10 Mtpa, *2026, transport capacity by 2030
+      "OGE": 18.8 # CCU/CCS project collection says 120 Mtpa, seems way too high
+      "PYCASSO": 8 # Project website says 1 Mtpa in first year, then 3 Mtpa, capacity unclear
+    co2_sequestration_potential: # Mtpa
+      "Acorn": 10 # 152 MtCO2 total capacity over 15 years https://www.scottish-enterprise.com/media/jhic3qav/ccus-economic-impact-assessment-report.pdf
+      "Aramis": 22 # 5 Mtpa at launch store, https://www.aramis-ccs.com/faq/, https://www.shell.com/what-we-do/carbon-capture-and-storage/shell-offshore-carbon-storage-nl/working-in-partnership.html
+      "CO2TransPorts": 2.5 # https://www.porthosco2.nl/en/project/
+      "CarbonConnect": 40 # ? based on upper bound of transport capacity
+      "East Mey": 33 # 500 MtCO2 total capacity over 15 years https://www.scottish-enterprise.com/media/jhic3qav/ccus-economic-impact-assessment-report.pdf
+      "EU2NSEA": 25 # https://ec.europa.eu/assets/cinea/PCI/files/PCIFiche_13.8_1st_PCI_PMI_list.pdf
+      "N-Lites": 5 # https://ec.europa.eu/assets/cinea/PCI/files/PMIFiche_13.13_1st_PCI_PMI_list.pdf
   cc_fraction: 0.9
   hydrogen_underground_storage: true
   hydrogen_underground_storage_locations:

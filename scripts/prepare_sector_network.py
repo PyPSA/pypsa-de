@@ -881,6 +881,8 @@ def add_co2_tracking(n, costs, options, sequestration_potential_file=None):
         sequestration_buses,
         bus0=spatial.co2.nodes,
         bus1=sequestration_buses,
+        marginal_cost=options["co2_sequestration_cost"],
+        capital_cost=0.1, # TODO: needed?
         carrier="co2 sequestered",
         efficiency=1.0,
         p_nom_extendable=True,
@@ -914,18 +916,19 @@ def add_co2_tracking(n, costs, options, sequestration_potential_file=None):
     else:
         e_nom_max = np.inf
 
-    n.add(
-        "Store",
-        sequestration_buses,
-        e_nom_extendable=True,
-        e_nom_max=e_nom_max,
-        capital_cost=options["co2_sequestration_cost"],
-        overnight_cost=pd.NA,
-        marginal_cost=-0.1,
-        bus=sequestration_buses,
-        lifetime=options["co2_sequestration_lifetime"],
-        carrier="co2 sequestered",
-    )
+    # TODO: Originally, they are always added
+    if options["regional_co2_sequestration_potential"]["enable"]:
+        n.add(
+            "Store",
+            sequestration_buses,
+            e_nom_extendable=False,
+            e_nom=e_nom_max,
+            overnight_cost=pd.NA,
+            marginal_cost=-0.1,
+            bus=sequestration_buses,
+            lifetime=options["co2_sequestration_lifetime"],
+            carrier="co2 sequestered",
+        )
 
     n.add("Carrier", "co2 sequestered")
 
@@ -6433,6 +6436,130 @@ def add_import_options(
         )
 
 
+def add_european_co2_pipelines(
+    n,
+    costs,
+    buses_offshore,
+    pipelines,
+    stores,
+    options,
+    investment_year,
+    co2_network_cost_factor=1.0,
+):
+    """Add planned European CO2 pipeline projects to the network."""
+
+    build_year = options["european_co2_pipelines"].get("build_year", 2030)
+
+    ### Add offshore buses
+    buses_offshore = pd.read_csv(buses_offshore, index_col=0, dtype={"bus": str})
+    pipelines = pd.read_csv(pipelines, index_col=0, dtype={"bus0": str, "bus1": str})
+    stores = pd.read_csv(stores, index_col=0, dtype={"bus": str})
+
+    if build_year <= investment_year:
+        # Filter by investment year
+        pipelines = pipelines[pipelines["build_year"] >= investment_year]
+        stores = stores[stores["build_year"] >= investment_year]
+
+        logger.info("Adding CO2 stored and sequestered offshore buses.")
+        if "CO2" not in n.carriers.index:
+            n.add("Carrier", "CO2")
+
+        if "co2 sequestered" not in n.carriers.index:
+            n.add("Carrier", "co2 sequestered")
+        
+        n.add(
+            "Bus",
+            buses_offshore.index + " co2 sequestered",
+            location=buses_offshore.index + " co2 sequestered",
+            carrier = "co2 sequestered",
+            unit="t_co2",
+            x=buses_offshore["x"].rename(lambda x: x + " co2 sequestered"),
+            y=buses_offshore["y"].rename(lambda x: x + " co2 sequestered"),
+        )
+
+        if "co2 stored" not in n.carriers.index:
+            n.add("Carrier", "co2 stored")
+        n.add(
+            "Bus",
+            buses_offshore.index + " co2 stored",
+            location=buses_offshore.index + " co2 stored",
+            carrier = "co2 stored",
+            unit="t_co2",
+            x=buses_offshore["x"].rename(lambda x: x + " co2 stored"),
+            y=buses_offshore["y"].rename(lambda x: x + " co2 stored"),
+        )
+
+        # Connecting links
+        n.add(
+            "Link",
+            buses_offshore.index + " co2 sequestered",
+            bus0=buses_offshore.index + " co2 stored",
+            bus1=buses_offshore.index + " co2 sequestered",
+            marginal_cost=options["co2_sequestration_cost"],
+            capital_cost=0.1,
+            carrier="co2 sequestered",
+            efficiency=1,
+            p_nom_extendable=True, # TODO, set to false? and p_nom to infinity?
+        )
+        
+        ### Add pipelines
+        logger.info("Adding planned European CO2 pipelines.")
+
+        cost_onshore = (
+            (1 - pipelines.underwater_fraction)
+            * costs.at["CO2 pipeline", "capital_cost"]
+            * pipelines.length
+        )
+        investment_onshore = (
+            (1 - pipelines.underwater_fraction)
+            * costs.at["CO2 pipeline", "investment"]
+            * pipelines.length
+        )
+        cost_submarine = (
+            pipelines.underwater_fraction
+            * costs.at["CO2 submarine pipeline", "capital_cost"]
+            * pipelines.length
+        )
+        investment_submarine = (
+            pipelines.underwater_fraction
+            * costs.at["CO2 submarine pipeline", "investment"]
+            * pipelines.length
+        )
+        capital_cost = cost_onshore + cost_submarine
+        overnight_cost = investment_onshore + investment_submarine
+        capital_cost *= co2_network_cost_factor
+        overnight_cost *= co2_network_cost_factor
+
+        n.add(
+            "Link",
+            pipelines.index,
+            bus0=pipelines.bus0 + " co2 stored",
+            bus1=pipelines.bus1 + " co2 stored",
+            p_min_pu=-1,
+            p_nom=pipelines.p_nom,
+            p_nom_extendable=False,
+            length=pipelines.length,
+            capital_cost=capital_cost,
+            overnight_cost=overnight_cost,
+            carrier="CO2 pipeline",
+            lifetime=costs.at["CO2 pipeline", "lifetime"],
+        )
+
+        ### Add stores
+        logger.info("Adding planned European CO2 stores.")
+        n.add(
+            "Store",
+            stores.index,
+            bus=stores.bus + " co2 sequestered",
+            e_nom=stores.e_nom,
+            e_nom_extendable=False,
+            marginal_cost=-0.1,
+            lifetime=options["co2_sequestration_lifetime"],
+            carrier="co2 sequestered",
+        )
+
+
+
 if __name__ == "__main__":
     if "snakemake" not in globals():
         from scripts._helpers import mock_snakemake
@@ -6440,9 +6567,11 @@ if __name__ == "__main__":
         snakemake = mock_snakemake(
             "prepare_sector_network",
             opts="",
-            clusters="10",
+            clusters="adm",
             sector_opts="",
-            planning_horizons="2050",
+            planning_horizons="2030",
+            run="KN2045_Mix",
+            configfiles=["config/config.nrw.yaml"],
         )
 
     configure_logging(snakemake)  # pylint: disable=E0606
@@ -6676,6 +6805,21 @@ if __name__ == "__main__":
         add_co2_network(
             n,
             costs,
+            co2_network_cost_factor=snakemake.config["sector"][
+                "co2_network_cost_factor"
+            ],
+        )
+    
+    # Add European CO2 pipelines
+    if options["european_co2_pipelines"]["enable"]:
+        add_european_co2_pipelines(
+            n,
+            costs,
+            buses_offshore=snakemake.input.buses_offshore,
+            pipelines=snakemake.input.links_co2_pipeline,
+            stores=snakemake.input.stores_co2,
+            options=options,
+            investment_year=investment_year,
             co2_network_cost_factor=snakemake.config["sector"][
                 "co2_network_cost_factor"
             ],

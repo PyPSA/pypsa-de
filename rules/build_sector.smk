@@ -1283,6 +1283,23 @@ def input_heat_source_power(w):
     }
 
 
+def input_european_co2_pipelines(w):
+    european_co2_pipelines = config_provider("sector", "european_co2_pipelines")(w)
+    if european_co2_pipelines["enable"]:
+        inputs= {
+            "buses_offshore": resources("european_co2_pipelines/buses_offshore_s_{clusters}_{opts}.csv"),
+            "links_co2_pipeline": resources("european_co2_pipelines/links_co2_pipeline_s_{clusters}_{opts}.csv"),
+            "stores_co2": resources("european_co2_pipelines/stores_co2_s_{clusters}_{opts}.csv"),
+        }
+    else :
+        inputs= {
+            "buses_offshore": [],
+            "links_co2_pipeline": [],
+            "stores_co2": [],
+        }
+    return inputs
+
+
 rule prepare_sector_network:
     params:
         time_resolution=config_provider("clustering", "temporal", "resolution_sector"),
@@ -1319,6 +1336,7 @@ rule prepare_sector_network:
     input:
         unpack(input_profile_offwind),
         unpack(input_heat_source_power),
+        unpack(input_european_co2_pipelines),
         **rules.cluster_gas_network.output,
         **rules.build_gas_input_locations.output,
         snapshot_weightings=resources(
@@ -1470,14 +1488,14 @@ rule build_european_co2_pipelines:
         scope=resources("europe_shape.geojson"),
         kml="data/CCUCCS Projektsammlung.kml"
     output:
-        buses_pcipmi_offshore=resources(
-            "pcipmi_projects/buses_pcipmi_offshore_s_{clusters}_{opts}.csv"
+        buses_offshore=resources(
+            "european_co2_pipelines/buses_offshore_s_{clusters}_{opts}.csv"
         ),
         links_co2_pipeline=resources(
-            "pcipmi_projects/links_co2_pipeline_s_{clusters}_{opts}.csv"
+            "european_co2_pipelines/links_co2_pipeline_s_{clusters}_{opts}.csv"
         ),
         stores_co2=resources(
-            "pcipmi_projects/stores_co2_s_{clusters}_{opts}.csv"
+            "european_co2_pipelines/stores_co2_s_{clusters}_{opts}.csv"
         ),
     log:
         logs("build_european_co2_pipelines_{clusters}_{opts}.log"),

@@ -131,6 +131,55 @@ wasserstoff_kernnetz:
   cutoff_year: 2028
   force_all_ipcei_pci: true
 
+sector:
+  regional_co2_sequestration_potential:
+    enable: false
+    attribute:
+    - conservative estimate Mt
+    - conservative estimate GAS Mt
+    - conservative estimate OIL Mt
+    - conservative estimate aquifer Mt
+    include_onshore: false
+    min_size: 3
+    max_size: 25
+    years_of_storage: 25
+  co2_sequestration_potential:
+    2020: 0
+    2025: 0
+    2030: 137
+    2035: 137
+    2040: 137
+    2045: 137
+    2050: 137
+  co2_sequestration_cost: 30
+  co2_sequestration_lifetime: 50
+  co2_spatial: true
+  co2_network: false
+  co2_network_cost_factor: 1
+  european_co2_pipelines: 
+    enable: true
+    build_year: 2030
+    length_factor: 1.25
+    mtpa_utilisation_factor: 1
+    transport_volume_mtpa:
+      "Aramis": 22 # https://www.aramis-ccs.com/files/Aramis-brochure_aug24_ENG.pdf
+      "Acorn": 20 # >20 Mtpa, *2030
+      "Belgium backbone": 30 # "Nordsee CO2-Korridor DE-BE" *2030
+      "CO2TransPorts": 10 # Expected 2.5 Mtpa, however max at 10 Mtpa, see https://www.porthosco2.nl/en/faq
+      "CarbonConnect": 20 # 20-40 Mtpa, *?
+      "Delta Rhine Corridor": 45 # *?
+      "EU2NSEA": 20 # 20-40 Mtpa, *2029
+      "N-Lites": 10 # >10 Mtpa, *2026, transport capacity by 2030
+      "OGE": 18.8 # CCU/CCS project collection says 120 Mtpa, seems way too high
+      "PYCASSO": 8 # Project website says 1 Mtpa in first year, then 3 Mtpa, capacity unclear
+    co2_sequestration_potential: # Mtpa
+      "Acorn": 10 # 152 MtCO2 total capacity over 15 years https://www.scottish-enterprise.com/media/jhic3qav/ccus-economic-impact-assessment-report.pdf
+      "Aramis": 22 # 5 Mtpa at launch store, https://www.aramis-ccs.com/faq/, https://www.shell.com/what-we-do/carbon-capture-and-storage/shell-offshore-carbon-storage-nl/working-in-partnership.html
+      "CarbonConnect": 40 # ? based on upper bound of transport capacity
+      "CO2TransPorts": 2.5 # https://www.porthosco2.nl/en/project/
+      "East Mey": 33 # 500 MtCO2 total capacity over 15 years https://www.scottish-enterprise.com/media/jhic3qav/ccus-economic-impact-assessment-report.pdf
+      "EU2NSEA": 25 # https://ec.europa.eu/assets/cinea/PCI/files/PCIFiche_13.8_1st_PCI_PMI_list.pdf
+      "N-Lites": 5 # https://ec.europa.eu/assets/cinea/PCI/files/PMIFiche_13.13_1st_PCI_PMI_list.pdf
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#solving
 solving:
   runtime: 12h
