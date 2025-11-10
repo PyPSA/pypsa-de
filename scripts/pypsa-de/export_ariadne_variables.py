@@ -1653,19 +1653,29 @@ def get_secondary_energy(n, region, _industry_demand):
         ).sum()
     )
 
-    # TODO Compute transmission losses via links_t
-    # var["Secondary Energy|Electricity|Transmission Losses"] = \
-    #     n.statistics.withdrawal(
-    #         bus_carrier=["AC", "low voltage"], **kwargs
-    #     ).filter(like=region).groupby(["carrier"]).sum().get(
-    #         ["AC", "DC", "electricity distribution grid"]
-    #     ).subtract(
-    #         n.statistics.supply(
-    #             bus_carrier=["AC", "low voltage"], **kwargs
-    #         ).filter(like=region).groupby(["carrier"]).sum().get(
-    #             ["AC", "DC", "electricity distribution grid"]
-    #         )
-    #     ).sum()
+    idx = n.lines.query(
+        f"bus0.str.contains('{region}') and bus1.str.contains('{region}')"
+    ).index
+    acl = (
+        n.lines_t.p0[idx].sum(axis=1).multiply(n.snapshot_weightings.generators).sum()
+        + n.lines_t.p1[idx].sum(axis=1).multiply(n.snapshot_weightings.generators).sum()
+    )
+    idx = n.links.query(
+        f"bus0.str.contains('{region}') and bus1.str.contains('{region}') and carrier == 'DC'"
+    ).index
+    dcl = (
+        n.links_t.p0[idx].sum(axis=1).multiply(n.snapshot_weightings.generators).sum()
+        + n.links_t.p1[idx].sum(axis=1).multiply(n.snapshot_weightings.generators).sum()
+    )
+    idx = n.links.query(
+        f"bus0.str.contains('{region}') and bus1.str.contains('{region}') and carrier == 'electricity distribution grid'"
+    ).index
+    distril = (
+        n.links_t.p0[idx].sum(axis=1).multiply(n.snapshot_weightings.generators).sum()
+        + n.links_t.p1[idx].sum(axis=1).multiply(n.snapshot_weightings.generators).sum()
+    )
+
+    var["Secondary Energy|Electricity|Transmission Losses"] = acl + dcl + distril
 
     # supply - withdrawal
     # var["Secondary Energy|Electricity|Storage"] = \
@@ -5819,6 +5829,7 @@ def get_data(
     var["Demand|Electricity"] = var.reindex(
         [
             "Secondary Energy|Electricity|Storage Losses",
+            "Secondary Energy|Electricity|Transmission Losses",
             "Secondary Energy Input|Electricity|Heat",
             "Secondary Energy Input|Electricity|Hydrogen",
             "Secondary Energy Input|Electricity|Liquids",
