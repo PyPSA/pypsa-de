@@ -6456,10 +6456,6 @@ def add_european_co2_pipelines(
     stores = pd.read_csv(stores, index_col=0, dtype={"bus": str})
 
     if build_year <= investment_year:
-        # Filter by investment year
-        pipelines = pipelines[pipelines["build_year"] >= investment_year]
-        stores = stores[stores["build_year"] >= investment_year]
-
         logger.info("Adding CO2 stored and sequestered offshore buses.")
         if "CO2" not in n.carriers.index:
             n.add("Carrier", "CO2")
