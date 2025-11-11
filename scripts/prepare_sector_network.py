@@ -6539,6 +6539,7 @@ def add_european_co2_pipelines(
             overnight_cost=overnight_cost,
             carrier="CO2 pipeline",
             lifetime=costs.at["CO2 pipeline", "lifetime"],
+            build_year=build_year,
         )
 
         ### Add stores
@@ -6552,6 +6553,7 @@ def add_european_co2_pipelines(
             marginal_cost=-0.1,
             lifetime=options["co2_sequestration_lifetime"],
             carrier="co2 sequestered",
+            build_year=build_year,
         )
 
 
