@@ -57,7 +57,7 @@ scenario:
   - ''
   sector_opts:
   - ''
-  planning_horizons:
+  planning_horizons:1
   - 2020
   - 2025
   - 2030
@@ -328,5 +328,5 @@ plotting:
     bus_carriers:
     - AC
     - H2
-    - "co2 stored"
+    - co2_stored
 

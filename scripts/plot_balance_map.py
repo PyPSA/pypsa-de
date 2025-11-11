@@ -52,6 +52,7 @@ if __name__ == "__main__":
     regions = gpd.read_file(snakemake.input.regions).set_index("name")
     config = snakemake.params.plotting
     carrier = snakemake.wildcards.carrier
+    carrier = carrier.replace("_", " ")
 
     # fill empty colors or "" with light grey
     mask = n.carriers.color.isna() | n.carriers.color.eq("")
