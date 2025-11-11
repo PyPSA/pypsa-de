@@ -162,8 +162,8 @@ plotting:
       vmax:
       region_unit: €/t_${CO_2}$
       bus_factor: 0.03
-      branch_factor: 1
-      flow_factor: 2_000
+      branch_factor: 0.02
+      flow_factor: 25
       bus_sizes:
       - 50
       - 10

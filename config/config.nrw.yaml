@@ -2,6 +2,10 @@
 #
 # SPDX-License-Identifier: CC0-1.0
 
+remote:
+  ssh: z1
+  path: scratch/projects/pypsa-nrw
+
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
   prefix: nrw
@@ -324,4 +328,5 @@ plotting:
     bus_carriers:
     - AC
     - H2
+    - "co2 stored"
 
