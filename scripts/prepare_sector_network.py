@@ -6531,7 +6531,7 @@ def add_european_co2_pipelines(
             pipelines.index,
             bus0=pipelines.bus0 + " co2 stored",
             bus1=pipelines.bus1 + " co2 stored",
-            p_min_pu=-1,
+            p_min_pu=pipelines.p_min_pu,
             p_nom=pipelines.p_nom,
             p_nom_extendable=False,
             length=pipelines.length,

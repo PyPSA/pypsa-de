@@ -431,6 +431,37 @@ def create_unique_ids(df):
     return df
 
 
+def make_unidirectional_offshore_links(pipelines, buses_co2_offshore):
+    # Identify those where one bus is an offshore bus
+    offshore_bus_names = set(buses_co2_offshore.index)
+
+    pipelines = pipelines.copy()
+    pipelines["p_min_pu"] = -1
+
+    idx = (
+        pipelines.loc[
+            pipelines.apply(
+                lambda row: (row["bus0"] in offshore_bus_names)
+                ^ (row["bus1"] in offshore_bus_names), axis=1,
+            ), 
+        ]
+    ).index
+
+    # Guarantee that bus1 is always the offshore bus
+    def swap_buses(row):
+        if row["bus0"] in offshore_bus_names:
+            return pd.Series({"bus0": row["bus1"], "bus1": row["bus0"]})
+        else:
+            return pd.Series({"bus0": row["bus0"], "bus1": row["bus1"]})
+    
+    pipelines.loc[idx, ["bus0", "bus1"]] = pipelines.loc[idx].apply(swap_buses, axis=1)
+
+    # Set p_min_pu to 0 for these links
+    pipelines.loc[idx, "p_min_pu"] = 0
+
+    return pipelines
+
+
 def aggregate_links(gdf):
 
     crs = gdf.crs
@@ -616,6 +647,8 @@ if __name__ == "__main__":
     pipelines = pipelines.reset_index(drop=True)
 
     pipelines = aggregate_links(pipelines)
+
+    pipelines = make_unidirectional_offshore_links(pipelines, buses_co2_offshore)
 
     # Create unique IDs
     pipelines = create_unique_ids(pipelines.rename(columns={"label": "id"}))
