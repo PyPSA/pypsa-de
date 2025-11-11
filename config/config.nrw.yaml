@@ -57,7 +57,7 @@ scenario:
   - ''
   sector_opts:
   - ''
-  planning_horizons:1
+  planning_horizons:
   - 2020
   - 2025
   - 2030
