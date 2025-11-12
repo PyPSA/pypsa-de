@@ -670,6 +670,8 @@ rule build_existing_chp_de:
         ),
     output:
         german_chp=resources("german_chp_base_s_{clusters}.csv"),
+    resources:
+        mem_mb=4000,
     log:
         logs("build_existing_chp_de_{clusters}.log"),
     script:
