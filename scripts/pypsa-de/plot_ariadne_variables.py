@@ -658,122 +658,80 @@ def within_plot(
     return fig
 
 
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+
 def elec_val_plot(df, savepath):
-    # electricity validation for 2020
+    years = df.columns.astype(int)
+
+    # use 2020 if available, otherwise first available year
+    if 2020 in years:
+        year = 2020
+        title_suffix = "2020"
+    else:
+        year = years[0]
+        title_suffix = f"{year} (2020 data unavailable)"
+
     elec_capacities = pd.DataFrame(
         index=[
-            "ror",
-            "hydro",
-            "battery",
-            "biomass",
-            "nuclear",
-            "lignite",
-            "coal",
-            "oil",
-            "gas",
-            "wind_onshore",
-            "wind_offshore",
-            "solar",
+            "ror", "hydro", "battery", "biomass", "nuclear",
+            "lignite", "coal", "oil", "gas",
+            "wind_onshore", "wind_offshore", "solar",
         ]
     )
     elec_generation = pd.DataFrame(
         index=[
-            "net exports",
-            "ror",
-            "hydro",
-            "battery",
-            "biomass",
-            "nuclear",
-            "lignite",
-            "coal",
-            "oil",
-            "gas",
-            "wind",
-            "solar",
+            "net exports", "ror", "hydro", "battery", "biomass",
+            "nuclear", "lignite", "coal", "oil", "gas", "wind", "solar",
         ]
     )
 
+    # real capacities (fixed 2020 reference)
     elec_capacities["real"] = [
-        4.94,
-        9.69,
-        2.4,
-        8.72,
-        8.11,
-        20.86,
-        23.74,
-        4.86,
-        32.54,
-        54.25,
-        7.86,
-        54.36,
-    ]  # https://energy-charts.info/charts/installed_power/chart.htm?l=en&c=DE&year=2020
+        4.94, 9.69, 2.4, 8.72, 8.11, 20.86, 23.74, 4.86,
+        32.54, 54.25, 7.86, 54.36,
+    ]
+
+    # PyPSA model capacities (year-dependent)
     elec_capacities["pypsa"] = [
         0,
-        df.loc[("Capacity|Electricity|Hydro", "GW"), 2020],
+        df.loc[("Capacity|Electricity|Hydro", "GW"), year],
         0,
-        df.loc[("Capacity|Electricity|Biomass", "GW"), 2020],
-        df.loc[("Capacity|Electricity|Nuclear", "GW"), 2020],
-        df.loc[("Capacity|Electricity|Coal|Lignite", "GW"), 2020],
-        df.loc[("Capacity|Electricity|Coal|Hard Coal", "GW"), 2020],
-        df.loc[("Capacity|Electricity|Oil", "GW"), 2020],
-        df.loc[("Capacity|Electricity|Gas", "GW"), 2020],
-        df.loc[("Capacity|Electricity|Wind|Onshore", "GW"), 2020],
-        df.loc[("Capacity|Electricity|Wind|Offshore", "GW"), 2020],
-        df.loc[("Capacity|Electricity|Solar", "GW"), 2020],
+        df.loc[("Capacity|Electricity|Biomass", "GW"), year],
+        df.loc[("Capacity|Electricity|Nuclear", "GW"), year],
+        df.loc[("Capacity|Electricity|Coal|Lignite", "GW"), year],
+        df.loc[("Capacity|Electricity|Coal|Hard Coal", "GW"), year],
+        df.loc[("Capacity|Electricity|Oil", "GW"), year],
+        df.loc[("Capacity|Electricity|Gas", "GW"), year],
+        df.loc[("Capacity|Electricity|Wind|Onshore", "GW"), year],
+        df.loc[("Capacity|Electricity|Wind|Offshore", "GW"), year],
+        df.loc[("Capacity|Electricity|Solar", "GW"), year],
     ]
 
     elec_generation["real (gross)"] = [
-        -18.9,  # net exports",
-        np.nan,  # ror
-        18.7,  # hydro
-        np.nan,  # battery
-        45,  # biomass
-        64,  # nuclear
-        91,  # lignite
-        43,  # coal
-        4.7,  # oil
-        95,  # gas
-        132,  # wind
-        50,  # solar
+        -18.9, np.nan, 18.7, np.nan, 45, 64, 91, 43, 4.7, 95, 132, 50,
     ]
-    # https://www.destatis.de/DE/Themen/Branchen-Unternehmen/Energie/Erzeugung/Tabellen/bruttostromerzeugung.html
-    # https://www.bdew.de/media/documents/Bruttostromerz_D_Entw_10J_online_o_dw2x_jaehrlich_FS_05042024_nlA6lUa.pdf
-
-    # obtained so that it fits how pypsa models the energy sector
     elec_generation["real (net, pypsa representation)"] = [
-        -18.9,  # 34 TWH in 2019             "net exports",
-        0,  # "ror" due to reporting
-        18.54,  # "hydro"
-        np.nan,  # "battery"
-        44.85,  # "biomass"
-        60.91,  # "nuclear"
-        84.5,  # "lignite"  (82.13 + 2.37 (industrial own production)
-        38.7,  # "coal"
-        3.71,  #  "oil"
-        91.7,  # "gas" 34.6 (industry self consumption) + 57.1 (fossil gas grid feed in)
-        129.64,  # "wind"
-        48.5,  # "solar"
+        -18.9, 0, 18.54, np.nan, 44.85, 60.91, 84.5, 38.7, 3.71, 91.7, 129.64, 48.5,
     ]
-    # https://energy-charts.info/charts/energy_pie/chart.htm?l=de&c=DE&interval=year&year=2020
-    # https://www.bundesnetzagentur.de/SharedDocs/Pressemitteilungen/DE/2021/20210102_smard.html
-    # https://energy-charts.info/charts/energy/chart.htm?l=en&c=DE&interval=year&year=2020&source=total
-
     elec_generation["pypsa (net)"] = [
-        -df.loc[("Trade|Secondary Energy|Electricity|Volume", "TWh/yr"), 2020],
+        -df.loc[("Trade|Secondary Energy|Electricity|Volume", "TWh/yr"), year],
         0,
-        df.loc[("Secondary Energy|Electricity|Hydro", "TWh/yr"), 2020],
+        df.loc[("Secondary Energy|Electricity|Hydro", "TWh/yr"), year],
         0,
-        df.loc[("Secondary Energy|Electricity|Biomass", "TWh/yr"), 2020],
-        df.loc[("Secondary Energy|Electricity|Nuclear", "TWh/yr"), 2020],
-        df.loc[("Secondary Energy|Electricity|Coal|Lignite", "TWh/yr"), 2020],
-        df.loc[("Secondary Energy|Electricity|Coal|Hard Coal", "TWh/yr"), 2020],
-        df.loc[("Secondary Energy|Electricity|Oil", "TWh/yr"), 2020],
-        df.loc[("Secondary Energy|Electricity|Gas", "TWh/yr"), 2020],
-        df.loc[("Secondary Energy|Electricity|Wind", "TWh/yr"), 2020],
-        df.loc[("Secondary Energy|Electricity|Solar", "TWh/yr"), 2020],
+        df.loc[("Secondary Energy|Electricity|Biomass", "TWh/yr"), year],
+        df.loc[("Secondary Energy|Electricity|Nuclear", "TWh/yr"), year],
+        df.loc[("Secondary Energy|Electricity|Coal|Lignite", "TWh/yr"), year],
+        df.loc[("Secondary Energy|Electricity|Coal|Hard Coal", "TWh/yr"), year],
+        df.loc[("Secondary Energy|Electricity|Oil", "TWh/yr"), year],
+        df.loc[("Secondary Energy|Electricity|Gas", "TWh/yr"), year],
+        df.loc[("Secondary Energy|Electricity|Wind", "TWh/yr"), year],
+        df.loc[("Secondary Energy|Electricity|Solar", "TWh/yr"), year],
     ]
 
-    # elec_generation.loc["sum/10"] = elec_generation.sum().div(10)
+    # difference check rows (optional)
     elec_generation.loc["sum_real_gross-sum_pypsa", "sum_real_gross-sum_pypsa"] = (
         elec_generation.sum()["real (gross)"] - elec_generation.sum()["pypsa (net)"]
     )
@@ -783,18 +741,18 @@ def elec_val_plot(df, savepath):
     )
 
     fig, axes = plt.subplots(1, 2, figsize=(14, 6), width_ratios=[1, 1.5])
+
     elec_capacities.plot(kind="bar", ax=axes[0])
     axes[0].set_ylabel("GW")
-    axes[0].set_title("Installed Capacities Germany 2020")
+    axes[0].set_title(f"Installed Capacities Germany {title_suffix}")
 
     elec_generation.plot(kind="bar", ax=axes[1])
     axes[1].set_ylabel("TWh")
-    axes[1].set_title("Electricity Generation Germany 2020")
+    axes[1].set_title(f"Electricity Generation Germany {title_suffix}")
 
     plt.tight_layout()
-    plt.close()
     fig.savefig(savepath, bbox_inches="tight")
-
+    plt.close(fig)
     return fig
 
 
@@ -828,8 +786,9 @@ if __name__ == "__main__":
     ).round(5)
 
     years = df.columns.astype(int)
+    elec_val_plot(df, savepath=snakemake.output.elec_val_2020)
+
     if 2020 in years:
-        elec_val_plot(df, savepath=snakemake.output.elec_val_2020)
         df.drop(columns=[2020], inplace=True)
 
     leitmodell = "REMIND-EU v1.1"
