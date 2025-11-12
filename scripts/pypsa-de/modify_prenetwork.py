@@ -832,15 +832,15 @@ def modify_rescom_demand(n):
     )
     # UBA Projektionsbericht 2025, Tabelle 18, Verbrauch GHD + Haushalte ohne Wärmepumpen, 2030
 
-    uba_rescom = 94.9 - 3.1 + 143.5 - 23.6
-    fraction_modelyear = n.snapshot_weightings.stores.sum() / 8760
+    uba_rescom = (94.9 - 3.1 + 143.5 - 23.6) * 1e6
+    fraction_modelyear = n.snapshot_weightings.generators.sum() / 8760
     loads_i = n.loads[
         (n.loads.carrier == "electricity") & n.loads.index.str.startswith("DE")
     ]
     old_demand = (
         n.loads_t.p_set.loc[:, loads_i.index]
         .sum(axis=1)
-        .mul(n.snapshot_weightings.stores)
+        .mul(n.snapshot_weightings.generators)
         .sum()
     )
     new_demand = uba_rescom * fraction_modelyear
@@ -1465,8 +1465,8 @@ if __name__ == "__main__":
             opts="",
             ll="vopt",
             sector_opts="none",
-            planning_horizons="2025",
-            run="HighDemand",
+            planning_horizons="2030",
+            run="LowRES",
         )
 
     configure_logging(snakemake)
