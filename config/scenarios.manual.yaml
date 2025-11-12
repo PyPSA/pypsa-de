@@ -99,6 +99,8 @@ LowDemand: # Demand and capacities from UBA
     - 2025
     - 2030
     - 2035
+    uba_for_rescom_electricity:
+    - 2030
   offshore_nep_force:
     delay_years: 2
   solving:
@@ -169,6 +171,8 @@ LowDemandNoFlex:
     - 2025
     - 2030
     - 2035
+    uba_for_rescom_electricity:
+    - 2030
   offshore_nep_force:
     delay_years: 2
   solving:
@@ -231,6 +235,8 @@ LowRES: # Demand from UBA, lower RES capacities
     - 2025
     - 2030
     - 2035
+    uba_for_rescom_electricity:
+    - 2030
   offshore_nep_force:
     delay_years: 2
   solving:
@@ -293,6 +299,8 @@ LowRESNoFlex:
     - 2025
     - 2030
     - 2035
+    uba_for_rescom_electricity:
+    - 2030
   offshore_nep_force:
     delay_years: 2
   solving:

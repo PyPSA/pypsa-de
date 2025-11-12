@@ -826,6 +826,31 @@ def must_run(n, params):
             n.links.loc[links_i, "p_min_pu"] = p_min_pu
 
 
+def modify_rescom_demand(n):
+    logger.info(
+        "Modifying residential and commercial electricity demand in Germany towards UBA Projektionsbericht 2025."
+    )
+    # UBA Projektionsbericht 2025, Tabelle 18, Verbrauch GHD + Haushalte ohne Wärmepumpen, 2030
+
+    uba_rescom = 94.9 - 3.1 + 143.5 - 23.6
+    fraction_modelyear = n.snapshot_weightings.stores.sum() / 8760
+    loads_i = n.loads[
+        (n.loads.carrier == "electricity") & n.loads.index.str.startswith("DE")
+    ]
+    old_demand = (
+        n.loads_t.p_set.loc[:, loads_i.index]
+        .sum(axis=1)
+        .mul(n.snapshot_weightings.stores)
+        .sum()
+    )
+    new_demand = uba_rescom * fraction_modelyear
+    scale_factor = new_demand / old_demand
+    logger.info(
+        f"Scaling residential and commercial electricity loads in Germany by {scale_factor:.2f}.\nPrevious total demand: {old_demand:.2f} MWh/a, new total demand: {new_demand:.2f} MWh/a."
+    )
+    n.loads_t.p_set.loc[:, loads_i.index] *= scale_factor
+
+
 def modify_mobility_demand(n, mobility_data_file):
     """
     Change loads in Germany to use exogenous data for road demand.
@@ -1361,7 +1386,7 @@ def modify_industry_demand(
 
     for carrier in [
         "industry electricity",
-        "H2 for industry",
+        # "H2 for industry", # skip because UBA is too optimistic on H2
         "solid biomass for industry",
         "low-temperature heat for industry",
     ]:
@@ -1527,6 +1552,12 @@ if __name__ == "__main__":
             scale_non_energy=snakemake.params.scale_industry_non_energy,
         )
 
+    if current_year in snakemake.params.uba_for_rescom_electricity:
+        if current_year != 2030:
+            logger.error(
+                "The UBA for rescom electricity data is only available for 2030. Please check your config."
+            )
+        modify_rescom_demand(n)
     # For regret runs
     deactivate_late_transmission_projects(n, current_year)
 

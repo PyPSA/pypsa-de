@@ -557,6 +557,9 @@ rule modify_prenetwork:
         bev_energy=config_provider("sector", "bev_energy"),
         bev_dsm_availability=config_provider("sector", "bev_dsm_availability"),
         uba_for_industry=config_provider("iiasa_database", "uba_for_industry"),
+        uba_for_rescom_electricity=config_provider(
+            "iiasa_database", "uba_for_rescom_electricity"
+        ),
         scale_industry_non_energy=config_provider(
             "iiasa_database", "scale_industry_non_energy"
         ),
