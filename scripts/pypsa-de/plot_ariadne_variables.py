@@ -803,13 +803,13 @@ if __name__ == "__main__":
         snakemake = mock_snakemake(
             "plot_ariadne_variables",
             simpl="",
-            clusters=49,
+            clusters="adm",
             opts="",
-            ll="v1.2",
-            sector_opts="None",
+            ll="vopt",
+            sector_opts="none",
             planning_horizons="2045",
             run="KN2045_Mix",
-            # configfiles="config/config.public.yaml"
+            configfiles="config/config.nrw.yaml"
         )
 
     configure_logging(snakemake)
@@ -826,9 +826,11 @@ if __name__ == "__main__":
         .groupby(["Variable", "Unit"], dropna=False)
         .sum()
     ).round(5)
-    elec_val_plot(df, savepath=snakemake.output.elec_val_2020)
 
-    df.drop(columns=[2020], inplace=True)
+    years = df.columns.astype(int)
+    if 2020 in years:
+        elec_val_plot(df, savepath=snakemake.output.elec_val_2020)
+        df.drop(columns=[2020], inplace=True)
 
     leitmodell = "REMIND-EU v1.1"
 
@@ -878,11 +880,11 @@ if __name__ == "__main__":
         drop_regex=r"^(?!.*(Fossil|Renewables|Losses|Price|Volume)).+",
     )
 
-    if df.loc["Final Energy|Industry excl Non-Energy Use|Hydrogen", 2025].item() < 0:
-        val = df.loc["Final Energy|Industry excl Non-Energy Use|Hydrogen", 2025]
-        df.loc["Final Energy|Industry excl Non-Energy Use|Hydrogen", 2025] = 0
-        df.loc["Final Energy|Hydrogen", 2025] = 0
-        print("WARNING! NEGATIVE HYDROGEN DEMAND IN INDUSTRY IN 2025! ", val)
+    if df.loc["Final Energy|Industry excl Non-Energy Use|Hydrogen", years[0]].item() < 0:
+        val = df.loc["Final Energy|Industry excl Non-Energy Use|Hydrogen", years[0]]
+        df.loc["Final Energy|Industry excl Non-Energy Use|Hydrogen", years[0]] = 0
+        df.loc["Final Energy|Hydrogen", years[0]] = 0
+        print(f"WARNING! NEGATIVE HYDROGEN DEMAND IN INDUSTRY IN {years[0]}! ", val)
     side_by_side_plot(
         df,
         dfremind,
