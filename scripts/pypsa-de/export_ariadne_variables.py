@@ -5348,11 +5348,12 @@ if __name__ == "__main__":
         snakemake = mock_snakemake(
             "export_ariadne_variables",
             simpl="",
-            clusters=27,
+            clusters="adm",
             opts="",
             ll="vopt",
-            sector_opts="None",
+            sector_opts="none",
             run="KN2045_Mix",
+            configfiles=["config/config.nrw.yaml"]
         )
     configure_logging(snakemake)
     set_scenario_config(snakemake)
@@ -5428,7 +5429,7 @@ if __name__ == "__main__":
 
     if "debug" == "debug":  # For debugging
         var = pd.Series()
-        idx = 6
+        idx = 0
         n = networks[idx]
         c = costs[idx]
         _industry_demand = industry_demands[idx]
@@ -5480,12 +5481,16 @@ if __name__ == "__main__":
     ac_projects_invest = df.query(
         "Variable == 'Investment|Energy Supply|Electricity|Transmission|AC|NEP|Onshore'"
     )[planning_horizons].values.sum()
+    
+    active_years = [
+        int(year) for year in modelyears if int(year) in [2025, 2030, 2035, 2040]
+    ]
 
     df.loc[
         df.query(
             "Variable == 'Investment|Energy Supply|Electricity|Transmission|AC|Übernahme|Startnetz Delta'"
         ).index,
-        [2025, 2030, 2035, 2040],
+        active_years,
     ] += (ac_startnetz - ac_projects_invest) / 4
 
     for suffix in ["|AC|NEP", "|AC", "", " and Distribution"]:
@@ -5493,7 +5498,7 @@ if __name__ == "__main__":
             df.query(
                 f"Variable == 'Investment|Energy Supply|Electricity|Transmission{suffix}'"
             ).index,
-            [2025, 2030, 2035, 2040],
+            active_years,
         ] += (ac_startnetz - ac_projects_invest) / 4
 
     logger.info("Assigning mean investments of year and year + 5 to year.")
@@ -5534,3 +5539,4 @@ if __name__ == "__main__":
     with pd.ExcelWriter(snakemake.output.exported_variables) as writer:
         ariadne_df.round(5).to_excel(writer, sheet_name="data", index=False)
         meta.to_frame().T.to_excel(writer, sheet_name="meta", index=False)
+
