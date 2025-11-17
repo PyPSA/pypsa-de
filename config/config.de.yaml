@@ -4,17 +4,17 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20251031_force_co2_price
+  prefix: 20251117_improve_no_flex
   name:
   # - ExPol
   # - KN2045_Mix
   # - HighDemand
   # - HighDemandNoFlex
-  - LowRES
-  - LowRESNoFlex
-  #- HighDemandNoFlex # !!! CAVEAT The 'NoFlex' substring in the scenario name determines how the regrets are computed!!!
-  #- LowDemandNoFlex
-  # - KN2045_NFhoch
+  # - LowRES
+  # - LowRESNoFlex
+  # - HighDemandNoFlex # !!! CAVEAT The 'NoFlex' substring in the scenario name determines how the regrets are computed!!!
+  # - LowDemand
+  - LowDemandNoFlex
   scenarios:
     enable: true
     manual_file: config/scenarios.manual.yaml

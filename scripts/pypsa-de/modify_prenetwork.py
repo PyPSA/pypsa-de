@@ -1424,8 +1424,8 @@ def modify_industry_demand(
         )
 
 
-def remove_flexibility_options(n):
-    logger.info("Removing decentral TES, batteries, and BEV DSM from the network.")
+def remove_flexibility_options(n, current_year):
+    logger.info("Removing decentral TES, home batteries, and BEV DSM from the network.")
     carriers_to_drop = [
         "urban decentral water tanks charger",
         "urban decentral water tanks discharger",
@@ -1433,11 +1433,8 @@ def remove_flexibility_options(n):
         "rural water tanks charger",
         "rural water tanks discharger",
         "rural water tanks",
-        "battery charger",
-        "battery discharger",
         "home battery charger",
         "home battery discharger",
-        "battery",
         "home battery",
         "EV battery",
     ]
@@ -1446,6 +1443,25 @@ def remove_flexibility_options(n):
     # Need to keep the EV battery bus
     carriers_to_drop.remove("EV battery")
     n.remove("Bus", n.buses.query("carrier in @carriers_to_drop").index)
+
+    if current_year == 2030:
+        carriers_to_drop = [
+            "battery charger",
+            "battery discharger",
+            "battery",
+        ]
+        n.remove(
+            "Link",
+            n.links.query(
+                f"carrier in {carriers_to_drop} and build_year == {current_year}"
+            ).index,
+        )
+        n.remove(
+            "Store",
+            n.stores.query(
+                f"carrier in {carriers_to_drop} and build_year == {current_year}"
+            ).index,
+        )
 
 
 def restrict_cross_border_flows(n, s_max_pu):
@@ -1563,7 +1579,7 @@ if __name__ == "__main__":
 
     if snakemake.params.no_flex_lt_run:
         logger.info("Run without flexibility options detected.")
-        remove_flexibility_options(n)
+        remove_flexibility_options(n, current_year)
 
     fix_transmission_DE(n)
 
