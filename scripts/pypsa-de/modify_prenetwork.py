@@ -1425,7 +1425,8 @@ def modify_industry_demand(
 
 
 def remove_flexibility_options(n, current_year):
-    logger.info("Removing decentral TES, home batteries, and BEV DSM from the network.")
+    logger.info("Removing decentral TES and BEV DSM from the network.")
+    n.remove("Store", n.stores.query("carrier == 'EV battery'").index)
     carriers_to_drop = [
         "urban decentral water tanks charger",
         "urban decentral water tanks discharger",
@@ -1433,19 +1434,17 @@ def remove_flexibility_options(n, current_year):
         "rural water tanks charger",
         "rural water tanks discharger",
         "rural water tanks",
-        "home battery charger",
-        "home battery discharger",
-        "home battery",
-        "EV battery",
     ]
-    n.remove("Link", n.links.query("carrier in @carriers_to_drop").index)
-    n.remove("Store", n.stores.query("carrier in @carriers_to_drop").index)
-    # Need to keep the EV battery bus
-    carriers_to_drop.remove("EV battery")
-    n.remove("Bus", n.buses.query("carrier in @carriers_to_drop").index)
+    n.remove("Link", n.links.query(f"carrier in {carriers_to_drop}").index)
+    n.remove("Store", n.stores.query(f"carrier in {carriers_to_drop}").index)
+    n.remove("Bus", n.buses.query(f"carrier in {carriers_to_drop}").index)
 
     if current_year == 2030:
+        logger.info("Removing decentral TES and batteries from the network.")
         carriers_to_drop = [
+            "home battery charger",
+            "home battery discharger",
+            "home battery",
             "battery charger",
             "battery discharger",
             "battery",
