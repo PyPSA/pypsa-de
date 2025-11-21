@@ -10,9 +10,16 @@ HighDemand:
     options:
       noisy_costs: false
     constraints:
-      decentral_heat_pump_budgets:
-        DE: # UBA MWMS, Projektionsbericht 2025, Abbildung 48
-          2025: 12.0
+      decentral_heat_budgets:  # UBA MWMS, Projektionsbericht 2025, Abbildung 48
+        heat_pump:
+          DE:
+            2025: 12.0
+        resistive_heater:
+          DE:
+            2025: 30.0
+        biomass_boiler:
+          DE:
+            2025: 103.0
       limits_capacity_min:
         Generator:
           onwind:
@@ -53,9 +60,16 @@ HighDemandNoFlex:
     options:
       noisy_costs: false
     constraints:
-      decentral_heat_pump_budgets:
-        DE: # UBA MWMS, Projektionsbericht 2025, Abbildung 48
-          2025: 12.0
+      decentral_heat_budgets:  # UBA MWMS, Projektionsbericht 2025, Abbildung 48
+        heat_pump:
+          DE:
+            2025: 12.0
+        resistive_heater:
+          DE:
+            2025: 30.0
+        biomass_boiler:
+          DE:
+            2025: 103.0
       limits_capacity_min:
         Generator:
           onwind:
@@ -107,11 +121,22 @@ LowDemand: # Demand and capacities from UBA
     options:
       noisy_costs: false
     constraints:
-      decentral_heat_pump_budgets:
-        DE: # UBA MWMS, Projektionsbericht 2025, Abbildung 48
-          2025: 12.0
-          2030: 26.0
-          2035: 38.0
+      decentral_heat_budgets:  # UBA MWMS, Projektionsbericht 2025, Abbildung 48
+        heat_pump:
+          DE:
+            2025: 12.0
+            2030: 26.0
+            2035: 38.0
+        resistive_heater:
+          DE:
+            2025: 30.0
+            2030: 23.0
+            2035: 19.0
+        biomass_boiler:
+          DE:
+            2025: 103.0
+            2030: 90.0
+            2035: 76.0
       # central_heat_pump_budgets:
       #   DE: # UBA MWMS, Projektionsbericht 2025, Abbildung 22
       #     2025: 7.0
@@ -179,11 +204,22 @@ LowDemandNoFlex:
     options:
       noisy_costs: false
     constraints:
-      decentral_heat_pump_budgets:
-        DE: # UBA MWMS, Projektionsbericht 2025, Abbildung 48
-          2025: 12.0
-          2030: 26.0
-          2035: 38.0
+      decentral_heat_budgets:  # UBA MWMS, Projektionsbericht 2025, Abbildung 48
+        heat_pump:
+          DE:
+            2025: 12.0
+            2030: 26.0
+            2035: 38.0
+        resistive_heater:
+          DE:
+            2025: 30.0
+            2030: 23.0
+            2035: 19.0
+        biomass_boiler:
+          DE:
+            2025: 103.0
+            2030: 90.0
+            2035: 76.0
       limits_capacity_min:
         Generator:
           onwind:
@@ -243,11 +279,22 @@ LowRES: # Demand from UBA, lower RES capacities
     options:
       noisy_costs: false
     constraints:
-      decentral_heat_pump_budgets:
-        DE: # UBA MWMS, Projektionsbericht 2025, Abbildung 48
-          2025: 12.0
-          2030: 26.0
-          2035: 38.0
+      decentral_heat_budgets:  # UBA MWMS, Projektionsbericht 2025, Abbildung 48
+        heat_pump:
+          DE:
+            2025: 12.0
+            2030: 26.0
+            2035: 38.0
+        resistive_heater:
+          DE:
+            2025: 30.0
+            2030: 23.0
+            2035: 19.0
+        biomass_boiler:
+          DE:
+            2025: 103.0
+            2030: 90.0
+            2035: 76.0
       # central_heat_pump_budgets:
       #   DE: # UBA MWMS, Projektionsbericht 2025, Abbildung 22
       #     2025: 7.0
@@ -307,11 +354,22 @@ LowRESNoFlex:
     options:
       noisy_costs: false
     constraints:
-      decentral_heat_pump_budgets:
-        DE: # UBA MWMS, Projektionsbericht 2025, Abbildung 48
-          2025: 12.0
-          2030: 26.0
-          2035: 38.0
+      decentral_heat_budgets:  # UBA MWMS, Projektionsbericht 2025, Abbildung 48
+        heat_pump:
+          DE:
+            2025: 12.0
+            2030: 26.0
+            2035: 38.0
+        resistive_heater:
+          DE:
+            2025: 30.0
+            2030: 23.0
+            2035: 19.0
+        biomass_boiler:
+          DE:
+            2025: 103.0
+            2030: 90.0
+            2035: 76.0
       # central_heat_pump_budgets:
       #   DE: # UBA MWMS, Projektionsbericht 2025, Abbildung 22
       #     2025: 7.0

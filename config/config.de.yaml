@@ -4,16 +4,15 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20251117_improve_no_flex
+  prefix: 20251121_improve_decentral_heat
   name:
   # - ExPol
   # - KN2045_Mix
-  # - HighDemand
-  # - HighDemandNoFlex
+  - HighDemand
+  - HighDemandNoFlex
   # - LowRES
   # - LowRESNoFlex
-  # - HighDemandNoFlex # !!! CAVEAT The 'NoFlex' substring in the scenario name determines how the regrets are computed!!!
-  # - LowDemand
+  - LowDemand
   - LowDemandNoFlex
   scenarios:
     enable: true

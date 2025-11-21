@@ -627,73 +627,82 @@ def add_national_co2_budgets(n, snakemake, national_co2_budgets, investment_year
         )
 
 
-def add_decentral_heat_pump_budgets(n, decentral_heat_pump_budgets, investment_year):
-    carriers = [
-        "rural air heat pump",
-        "rural ground heat pump",
-        "urban decentral air heat pump",
-        "rural resistive heater",
-        "urban decentral resistive heater",
-    ]
+def add_decentral_heat_budgets(n, decentral_heat_budgets, investment_year):
+    carrier_dict = {
+        "heat pump": [
+            "rural air heat pump",
+            "rural ground heat pump",
+            "urban decentral air heat pump",
+        ],
+        "resistive heater": [
+            "rural resistive heater",
+            "urban decentral resistive heater",
+        ],
+        "biomass boiler": [
+            "rural biomass boiler",
+            "urban decentral biomass boiler",
+        ],
+    }
 
-    heat_pumps = n.links.index[n.links.carrier.isin(carriers)]
+    for asset_type, budget_dict in decentral_heat_budgets.items():
+        assets = n.links.index[n.links.carrier.isin(carrier_dict[asset_type])]
 
-    if heat_pumps.empty:
-        logger.warning(
-            "No heat pumps found in the network. Skipping decentral heat pump budgets."
-        )
-        return
-
-    if investment_year not in decentral_heat_pump_budgets["DE"].keys():
-        logger.warning(
-            f"No decentral heat pump budget for {investment_year} found in the config file. Skipping."
-        )
-        return
-
-    logger.info("Adding decentral heat pump budgets")
-
-    for ct in decentral_heat_pump_budgets:
-        if ct != "DE":
-            logger.error(
-                f"Heat pump budget for countries other than `DE` is not yet supported. Found country {ct}. Please check the config file."
-            )
-
-        limit = decentral_heat_pump_budgets[ct][investment_year] * 1e6
-
-        logger.info(
-            f"Limiting decentral heat pump electricity consumption in country {ct} to {decentral_heat_pump_budgets[ct][investment_year]:.1%} MWh.",
-        )
-        heat_pumps = heat_pumps[heat_pumps.str.startswith(ct)]
-
-        lhs = []
-
-        lhs.append(
-            (
-                n.model["Link-p"].loc[:, heat_pumps] * n.snapshot_weightings.generators
-            ).sum()
-        )
-
-        lhs = sum(lhs)
-
-        cname = f"decentral_heat_pump_limit-{ct}"
-        if cname in n.global_constraints.index:
+        if assets.empty:
             logger.warning(
-                f"Global constraint {cname} already exists. Dropping and adding it again."
+                f"No {asset_type}s found in the network. Skipping decentral {asset_type} budgets."
             )
-            n.global_constraints.drop(cname, inplace=True)
+            return
 
-        n.model.add_constraints(
-            lhs <= limit,
-            name=f"GlobalConstraint-{cname}",
-        )
-        n.add(
-            "GlobalConstraint",
-            cname,
-            constant=limit,
-            sense="<=",
-            type="",
-            carrier_attribute="",
-        )
+        if investment_year not in budget_dict["DE"].keys():
+            logger.warning(
+                f"No decentral {asset_type} budget for {investment_year} found in the config file. Skipping."
+            )
+            return
+
+        logger.info(f"Adding decentral {asset_type} budgets")
+
+        for ct in budget_dict:
+            if ct != "DE":
+                logger.error(
+                    f"{asset_type.capitalize()} budget for countries other than `DE` is not yet supported. Found country {ct}. Please check the config file."
+                )
+
+            limit = budget_dict[ct][investment_year] * 1e6
+
+            logger.info(
+                f"Limiting decentral {asset_type} electricity consumption in country {ct} to {budget_dict[ct][investment_year]:.1%} MWh.",
+            )
+            assets = assets[assets.str.startswith(ct)]
+
+            lhs = []
+
+            lhs.append(
+                (
+                    n.model["Link-p"].loc[:, assets] * n.snapshot_weightings.generators
+                ).sum()
+            )
+
+            lhs = sum(lhs)
+
+            cname = f"decentral_{asset_type}_limit-{ct}"
+            if cname in n.global_constraints.index:
+                logger.warning(
+                    f"Global constraint {cname} already exists. Dropping and adding it again."
+                )
+                n.global_constraints.drop(cname, inplace=True)
+
+            n.model.add_constraints(
+                lhs <= limit,
+                name=f"GlobalConstraint-{cname}",
+            )
+            n.add(
+                "GlobalConstraint",
+                cname,
+                constant=limit,
+                sense="<=",
+                type="",
+                carrier_attribute="",
+            )
 
 
 def force_boiler_profiles_existing_per_boiler(n):
@@ -934,10 +943,10 @@ def additional_functionality(n, snapshots, snakemake):
 
     force_boiler_profiles_existing_per_boiler(n)
 
-    if isinstance(constraints.get("decentral_heat_pump_budgets"), dict):
-        add_decentral_heat_pump_budgets(
+    if isinstance(constraints.get("decentral_heat_budgets"), dict):
+        add_decentral_heat_budgets(
             n,
-            constraints["decentral_heat_pump_budgets"],
+            constraints["decentral_heat_budgets"],
             investment_year,
         )
 
