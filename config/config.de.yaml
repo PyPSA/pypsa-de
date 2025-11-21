@@ -80,7 +80,8 @@ iiasa_database:
   - 2025
   uba_for_industry: # For 2025–2035 use MWMS scenario from UBA Projektionsbericht 2025
   - 2025
-  uba_for_rescom_electricity: false
+  uba_for_rescom_electricity:
+  - 1900  # dummy entry to disable UBA scaling for rescom electricity demand
   no_flex_lt_run: false # If true, removes all flexibility options
   scale_industry_non_energy: false # Scale non-energy industry demand directly proportional to energy demand
   restrict_cross_border_flows: # restricts cross border flows between all countries (AC)
