@@ -629,16 +629,16 @@ def add_national_co2_budgets(n, snakemake, national_co2_budgets, investment_year
 
 def add_decentral_heat_budgets(n, decentral_heat_budgets, investment_year):
     carrier_dict = {
-        "heat pump": [
+        "heat_pump": [
             "rural air heat pump",
             "rural ground heat pump",
             "urban decentral air heat pump",
         ],
-        "resistive heater": [
+        "resistive_heater": [
             "rural resistive heater",
             "urban decentral resistive heater",
         ],
-        "biomass boiler": [
+        "biomass_boiler": [
             "rural biomass boiler",
             "urban decentral biomass boiler",
         ],
