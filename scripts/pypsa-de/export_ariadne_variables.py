@@ -633,19 +633,17 @@ def get_producer_rents(n, region):
     pr_expanded = revenue.sub(excapex, fill_value=0).sub(opex, fill_value=0)
     pr_expanded = pr_expanded.groupby(pr_expanded.index.map(carrier_map)).sum()
     pr_expanded.index = (
-        "Production Rent|Annual|Expanded Assets Only|Electricity|" + pr_expanded.index
+        "Producer Rent|Annual|Expanded Assets Only|Electricity|" + pr_expanded.index
     )
     pr_20 = revenue.sub(capex20, fill_value=0).sub(opex, fill_value=0)
     pr_20 = pr_20.groupby(pr_20.index.map(carrier_map)).sum()
-    pr_20.index = (
-        "Production Rent|Annual|20-year Assets Only|Electricity|" + pr_20.index
-    )
+    pr_20.index = "Producer Rent|Annual|20-year Assets Only|Electricity|" + pr_20.index
     pr = revenue.sub(capex, fill_value=0).sub(opex, fill_value=0)
     pr = pr.groupby(pr.index.map(carrier_map)).sum()
-    pr.index = "Production Rent|Annual|All Assets|Electricity|" + pr.index
+    pr.index = "Producer Rent|Annual|All Assets|Electricity|" + pr.index
     pr_st = revenue.sub(opex, fill_value=0)
     pr_st = pr_st.groupby(pr_st.index.map(carrier_map)).sum()
-    pr_st.index = "Production Rent|Short-term|Electricity|" + pr_st.index
+    pr_st.index = "Producer Rent|Short-term|Electricity|" + pr_st.index
 
     return pd.concat([pr_expanded, pr_20, pr, pr_st])
 
@@ -6013,6 +6011,7 @@ def get_ariadne_var(
             get_trade(n, region),
             get_economy(n, region),
             get_system_cost(n, region),
+            get_producer_rents(n, region),
         ]
     )
 
