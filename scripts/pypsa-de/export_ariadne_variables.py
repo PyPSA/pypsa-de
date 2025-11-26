@@ -410,6 +410,246 @@ def add_system_cost_rows(n):
             # n.links.query("carrier=='DC' and index.str.startswith('DC')")[["carrier","annuity","capital_cost","lifetime","FOM","build_year"]].sort_values("FOM")
 
 
+def get_producer_rents(n, region):
+    carrier_dict = {
+        "Non-Biomass Renewables": [
+            (
+                "Generator",
+                "offwind-ac",
+            ),
+            (
+                "Generator",
+                "offwind-dc",
+            ),
+            (
+                "Generator",
+                "onwind",
+            ),
+            (
+                "Generator",
+                "ror",
+            ),
+            (
+                "Generator",
+                "solar rooftop",
+            ),
+            ("Generator", "solar-hsat"),
+            (
+                "Link",
+                "hydro",
+            ),
+        ],
+        "Consumers": [
+            (
+                "Link",
+                "BEV charger",
+            ),
+            (
+                "Link",
+                "DAC",
+            ),
+            (
+                "Link",
+                "H2 Electrolysis",
+            ),
+            (
+                "Link",
+                "H2 Fuel Cell",
+            ),
+            (
+                "Link",
+                "methanolisation",
+            ),
+            (
+                "Link",
+                "rural air heat pump",
+            ),
+            (
+                "Link",
+                "rural ground heat pump",
+            ),
+            (
+                "Link",
+                "rural resistive heater",
+            ),
+            (
+                "Link",
+                "urban central air heat pump",
+            ),
+            (
+                "Link",
+                "urban central resistive heater",
+            ),
+            (
+                "Link",
+                "urban decentral air heat pump",
+            ),
+            (
+                "Link",
+                "urban decentral resistive heater",
+            ),
+            (
+                "Load",
+                "agriculture electricity",
+            ),
+            (
+                "Load",
+                "agriculture machinery electric",
+            ),
+            (
+                "Load",
+                "electricity",
+            ),
+            (
+                "Load",
+                "industry electricity",
+            ),
+        ],
+        "Conventional": [
+            (
+                "Link",
+                "CCGT",
+            ),
+            (
+                "Link",
+                "OCGT",
+            ),
+            (
+                "Link",
+                "coal",
+            ),
+            (
+                "Link",
+                "lignite",
+            ),
+            (
+                "Link",
+                "nuclear",
+            ),
+            ("Link", "oil"),
+            ("Link", "urban central coal CHP"),
+            ("Link", "urban central gas CHP"),
+            ("Link", "urban central gas CHP CC"),
+            ("Link", "urban central lignite CHP"),
+            ("Link", "urban central oil CHP"),
+        ],
+        "Transmission": [  # is this correct?
+            (
+                "Line",
+                "AC",
+            ),
+            (
+                "Link",
+                "DC",
+            ),
+            # ("Link",'H2 pipeline',),
+            # ("Link","H2 pipeline (Kernnetz)",),
+            (
+                "Link",
+                "electricity distribution grid",
+            ),
+        ],
+        "Biomass": [
+            (
+                "Link",
+                "solid biomass",
+            ),
+            (
+                "Link",
+                "urban central solid biomass CHP",
+            ),
+            (
+                "Link",
+                "urban central solid biomass CHP CC",
+            ),
+        ],
+        "Stores": [
+            (
+                "StorageUnit",
+                "PHS",
+            ),
+            (
+                "Link",
+                "home battery charger",
+            ),
+            (
+                "Link",
+                "home battery discharger",
+            ),
+            (
+                "Link",
+                "battery charger",
+            ),
+            (
+                "Link",
+                "battery discharger",
+            ),
+        ],
+        "Waste": [
+            (
+                "Link",
+                "waste CHP",
+            ),
+            (
+                "Link",
+                "waste CHP CC",
+            ),
+        ],
+    }
+    # Invert the dictionary to map specific carriers to their general categories
+    carrier_map = {val: key for key, values in carrier_dict.items() for val in values}
+    revenue = (
+        n.statistics.revenue(groupby=["bus", "carrier"], nice_names=False)
+        .filter(like="DE")
+        .groupby(level=["component", "carrier"])
+        .sum()
+    )
+    capex = (
+        n.statistics.capex(groupby=["bus", "carrier"], nice_names=False)
+        .filter(like="DE")
+        .groupby(level=["component", "carrier"])
+        .sum()
+    )
+    capex_by_year = n.statistics.capex(
+        groupby=["bus", "carrier", "build_year"], nice_names=False
+    )
+    _capex20 = capex_by_year[
+        capex_by_year.index.get_level_values("build_year") >= (2030 - 20)
+    ]
+    capex20 = _capex20.filter(like="DE").groupby(level=["component", "carrier"]).sum()
+    excapex = (
+        n.statistics.expanded_capex(groupby=["bus", "carrier"], nice_names=False)
+        .filter(like="DE")
+        .groupby(level=["component", "carrier"])
+        .sum()
+    )
+    opex = (
+        n.statistics.opex(groupby=["bus", "carrier"], nice_names=False)
+        .filter(like="DE")
+        .groupby(level=["component", "carrier"])
+        .sum()
+    )
+
+    pr_expanded = revenue.sub(excapex, fill_value=0).sub(opex, fill_value=0)
+    pr_expanded = pr_expanded.groupby(pr_expanded.index.map(carrier_map)).sum()
+    pr_expanded.index = (
+        "Production Rent|Annual|Expanded Assets Only|Electricity|" + pr_expanded.index
+    )
+    pr_20 = revenue.sub(capex20, fill_value=0).sub(opex, fill_value=0)
+    pr_20 = pr_20.groupby(pr_20.index.map(carrier_map)).sum()
+    pr_20.index = (
+        "Production Rent|Annual|20-year Assets Only|Electricity|" + pr_20.index
+    )
+    pr = revenue.sub(capex, fill_value=0).sub(opex, fill_value=0)
+    pr = pr.groupby(pr.index.map(carrier_map)).sum()
+    pr.index = "Production Rent|Annual|All Assets|Electricity|" + pr.index
+    pr_st = revenue.sub(opex, fill_value=0)
+    pr_st = pr_st.groupby(pr_st.index.map(carrier_map)).sum()
+    pr_st.index = "Production Rent|Short-term|Electricity|" + pr_st.index
+
+    return pd.concat([pr_expanded, pr_20, pr, pr_st])
+
+
 """
     get_system_cost(n, region)
 
