@@ -1783,15 +1783,26 @@ def get_secondary_energy(n, region, _industry_demand):
         ],
     ).sum()
 
+    gas_fractions = _get_fuel_fractions(n, region, "gas")
+    var["Secondary Energy|Electricity|Gas|Fossil"] = (
+        var["Secondary Energy|Electricity|Gas"] * gas_fractions["Natural Gas"]
+    )
+    var["Secondary Energy|Electricity|Gas|Biomass"] = (
+        var["Secondary Energy|Electricity|Gas"] * gas_fractions["Biomass"]
+    )
+
     var["Secondary Energy|Electricity|Fossil"] = (
-        var["Secondary Energy|Electricity|Gas"]
+        var["Secondary Energy|Electricity|Gas|Fossil"]
         + var["Secondary Energy|Electricity|Oil"]
         + var["Secondary Energy|Electricity|Coal"]
     )
 
-    var["Secondary Energy|Electricity|Biomass|w/o CCS"] = electricity_supply.reindex(
-        ["urban central solid biomass CHP", "solid biomass", "biogas"]
-    ).sum()
+    var["Secondary Energy|Electricity|Biomass|w/o CCS"] = (
+        electricity_supply.reindex(
+            ["urban central solid biomass CHP", "solid biomass", "biogas"]
+        ).sum()
+        + var["Secondary Energy|Electricity|Gas|Biomass"]
+    )
     var["Secondary Energy|Electricity|Biomass|w/ CCS"] = electricity_supply.get(
         "urban central solid biomass CHP CC", 0
     )
@@ -1799,8 +1810,8 @@ def get_secondary_energy(n, region, _industry_demand):
         like="solid biomass"
     ).sum()
     var["Secondary Energy|Electricity|Biomass|Gaseous and Liquid"] = (
-        electricity_supply.get("biogas")
-    )
+        electricity_supply.get("biogas", 0)
+    ) + var["Secondary Energy|Electricity|Gas|Biomass"]
     var["Secondary Energy|Electricity|Biomass"] = (
         var["Secondary Energy|Electricity|Biomass|w/o CCS"]
         + var["Secondary Energy|Electricity|Biomass|w/ CCS"]
