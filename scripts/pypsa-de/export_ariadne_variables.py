@@ -647,8 +647,12 @@ def get_producer_rents(n, region):
 
     var = pd.concat([pr_expanded, pr_20, pr, pr_st])
 
-    var["Electricity System Cost|CAPEX"] = capex.sum()
-    var["Electricity System Cost|OPEX"] = opex.sum()
+    var["Electricity System Cost|CAPEX"] = (
+        capex.groupby(capex.index.map(carrier_map)).sum().sum()
+    )
+    var["Electricity System Cost|OPEX"] = (
+        opex.groupby(opex.index.map(carrier_map)).sum().sum()
+    )
     return var
 
 
