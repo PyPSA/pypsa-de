@@ -5264,6 +5264,11 @@ def get_economy(n, region):
         n.statistics.capex().sum() + n.statistics.opex().sum()
     ) / 1e9
 
+    rev = n.statistics.revenue(groupby=["bus"]).loc["Load"]
+    var["Total Energy System Cost|Load Revenue"] = (
+        rev[rev.index.str.startswith(region)].sum() / 1e9
+    )
+
     return var
 
 
