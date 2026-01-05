@@ -426,7 +426,7 @@ def get_ariadne_database(w):
         return "ariadne-data/ariadne_database.csv"
 
 
-if config["enable"]["retrieve"]:
+if config["pypsa-de"]["retrieve"]:
 
     rule retrieve_ariadne_template:
         input:
@@ -440,7 +440,7 @@ if config["enable"]["retrieve"]:
             move(input[0], output[0])
 
 
-if config["enable"]["retrieve"]:
+if config["pypsa-de"]["retrieve"]:
 
     rule retrieve_mastr:
         input:
@@ -457,7 +457,7 @@ if config["enable"]["retrieve"]:
             unpack_archive(input[0], params[0])
 
 
-if config["enable"]["retrieve"]:
+if config["pypsa-de"]["retrieve"]:
 
     rule retrieve_egon_data:
         output:
@@ -471,7 +471,7 @@ if config["enable"]["retrieve"]:
             """
 
 
-if config["enable"]["retrieve"] and config["enable"].get("retrieve_cost_data", True):
+if config["pypsa-de"]["retrieve"]:
 
     ruleorder: modify_cost_data > retrieve_cost_data
 

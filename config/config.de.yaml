@@ -29,6 +29,7 @@ run:
 
 pypsa-de:
   retrieve_ariadne_database: false
+  retrieve: false
   leitmodelle: # Model data downloaded from public IIASA database 'ariadne2'
     general: REMIND-EU v1.1
     buildings: REMod v1.0
