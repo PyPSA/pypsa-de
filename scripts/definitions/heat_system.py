@@ -223,7 +223,7 @@ class HeatSystem(Enum):
         str
             The name for the heat pump costs.
         """
-        if heat_source in ["ptes", "geothermal"]:
+        if heat_source in ["ptes", "geothermal", "sea_water", "river_water"]:
             return f"{self.central_or_decentral} excess-heat-sourced heat pump"
         else:
             return f"{self.central_or_decentral} {heat_source}-sourced heat pump"
@@ -285,3 +285,16 @@ class HeatSystem(Enum):
             The name for the oil boiler costs.
         """
         return "decentral oil boiler"
+
+    @property
+    def biomass_boiler_costs_name(self) -> str:
+        """
+        Generates the name for the biomass boiler costs based on the heat system.
+        Used to retrieve data from `technology-data <https://github.com/PyPSA/technology-data>`.
+
+        Returns
+        -------
+        str
+            The name for the biomass boiler costs.
+        """
+        return "biomass boiler"

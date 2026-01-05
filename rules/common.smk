@@ -6,10 +6,15 @@ import copy
 from functools import partial, lru_cache
 
 import os, sys, glob
+import requests
+
+
+import pandas as pd
+import json
 
 sys.path.insert(0, os.path.abspath("../scripts"))
 
-from scripts._helpers import validate_checksum, update_config_from_wildcards
+from scripts._helpers import update_config_from_wildcards
 from snakemake.utils import update_config
 
 
@@ -77,6 +82,75 @@ def config_provider(*keys, default=None):
         return partial(static_getter, keys=keys, default=default)
 
 
+@lru_cache
+def load_data_versions(file_path):
+    data_versions = pd.read_csv(
+        file_path, dtype=str, na_filter=False, delimiter=",", comment="#"
+    )
+
+    # Turn 'tags' column from string representation of list to individual columns
+    data_versions["tags"] = data_versions["tags"].apply(
+        lambda x: json.loads(x.replace("'", '"'))
+    )
+    exploded = data_versions.explode("tags")
+    dummies = pd.get_dummies(exploded["tags"], dtype=bool)
+    tags_matrix = dummies.groupby(dummies.index).max()
+    data_versions = data_versions.join(tags_matrix)
+
+    return data_versions
+
+
+def dataset_version(
+    name: str,
+) -> pd.Series:
+    """
+    Return the dataset version information and url for a given dataset name.
+
+    The dataset name is used to determine the source and version of the dataset from the configuration.
+    Then the 'data/versions.csv' file is queried to find the matching dataset entry.
+
+    Parameters:
+    name: str
+        The name of the dataset to retrieve version information for.
+
+    Returns:
+    pd.Series
+        A pandas Series containing the dataset version information, including source, version, tags, and URL
+    """
+
+    dataset_config = config["data"][
+        name
+    ]  # TODO as is right now, it is not compatible with config_provider
+    data_versions = load_data_versions("data/versions.csv")
+
+    dataset = data_versions.loc[
+        (data_versions["dataset"] == name)
+        & (data_versions["source"] == dataset_config["source"])
+        & (data_versions["supported"])  # Limit to supported versions only
+        & (
+            data_versions["version"] == dataset_config["version"]
+            if "latest" != dataset_config["version"]
+            else True
+        )
+        & (data_versions["latest"] if "latest" == dataset_config["version"] else True)
+    ]
+
+    if dataset.empty:
+        raise ValueError(
+            f"Dataset '{name}' with source '{dataset_config['source']}' for '{dataset_config['version']}' not found in data/versions.csv."
+        )
+
+    # Return single-row DataFrame as a Series
+    dataset = dataset.squeeze()
+
+    # Generate output folder path in the `data` directory
+    dataset["folder"] = Path(
+        "data", name, dataset["source"], dataset["version"]
+    ).as_posix()
+
+    return dataset
+
+
 def solver_threads(w):
     solver_options = config_provider("solving", "solver_options")(w)
     option_set = config_provider("solving", "solver", "options")(w)
@@ -112,28 +186,6 @@ def input_custom_extra_functionality(w):
     return []
 
 
-def has_internet_access(url: str = "https://www.zenodo.org", timeout: int = 5) -> bool:
-    """
-    Checks if internet connection is available by sending a HEAD request
-    to a reliable server like Zenodo.
-
-    Parameters:
-    - url (str): The URL to check for internet connection. Default is Zenodo.
-    - timeout (int | float): The maximum time (in seconds) the request should wait.
-
-    Returns:
-    - bool: True if the internet is available, otherwise False.
-    """
-    try:
-        # Send a HEAD request to avoid fetching full response
-        response = requests.head(url, timeout=timeout, allow_redirects=True)
-        return response.status_code == 200
-    except requests.ConnectionError:  # (e.g., no internet, DNS issues)
-        return False
-    except requests.Timeout:  # (e.g., slow or no network)
-        return False
-
-
 def solved_previous_horizon(w):
     planning_horizons = config_provider("scenario", "planning_horizons")(w)
     i = planning_horizons.index(int(w.planning_horizons))
@@ -148,9 +200,13 @@ def solved_previous_horizon(w):
 
 
 def input_cutout(wildcards, cutout_names="default"):
+
+    cutouts_path = dataset_version("cutout")["folder"]
+
     if cutout_names == "default":
         cutout_names = config_provider("atlite", "default_cutout")(wildcards)
+
     if isinstance(cutout_names, list):
-        return [CDIR.joinpath(cn + ".nc").as_posix() for cn in cutout_names]
+        return [f"{cutouts_path}/{cn}.nc" for cn in cutout_names]
     else:
-        return CDIR.joinpath(cutout_names + ".nc").as_posix()
+        return f"{cutouts_path}/{cutout_names}.nc"

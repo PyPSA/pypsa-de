@@ -24,13 +24,13 @@ from scipy.stats import beta
 from scripts._helpers import (
     configure_logging,
     get,
+    load_costs,
     set_scenario_config,
     update_config_from_wildcards,
 )
 from scripts.add_electricity import (
     calculate_annuity,
     flatten,
-    load_costs,
     sanitize_carriers,
     sanitize_locations,
 )
@@ -794,7 +794,9 @@ def add_eu_bus(n, x=-5.5, y=46):
     n.add("Carrier", "none")
 
 
-def add_co2_tracking(n, costs, options, sequestration_potential_file=None):
+def add_co2_tracking(
+    n, costs, options, sequestration_potential_file=None, co2_price: float = 0.0
+):
     """
     Add CO2 tracking components to the network including atmospheric CO2,
     CO2 storage, and sequestration infrastructure.
@@ -818,6 +820,9 @@ def add_co2_tracking(n, costs, options, sequestration_potential_file=None):
     sequestration_potential_file : str, optional
         Path to CSV file containing regional CO2 sequestration potentials.
         Required if options['regional_co2_sequestration_potential']['enable'] is True.
+    co2_price : float, optional
+        CO2 price that needs to be paid for emitting into the atmosphere and which is
+        gained by removing from the atmosphere.
 
     Returns
     -------
@@ -843,10 +848,11 @@ def add_co2_tracking(n, costs, options, sequestration_potential_file=None):
     n.add(
         "Store",
         "co2 atmosphere",
-        e_nom_extendable=True,
+        e_nom=np.inf,
         e_min_pu=-1,
         carrier="co2",
         bus="co2 atmosphere",
+        marginal_cost=-co2_price,
     )
 
     # add CO2 tanks
@@ -1106,11 +1112,11 @@ def add_biomass_to_methanol(n, costs):
         + costs.at["biomass-to-methanol", "CO2 stored"],
         p_nom_extendable=True,
         capital_cost=costs.at["biomass-to-methanol", "capital_cost"]
-        / costs.at["biomass-to-methanol", "efficiency"],
+        * costs.at["biomass-to-methanol", "efficiency"],
         overnight_cost=costs.at["biomass-to-methanol", "investment"]
-        / costs.at["biomass-to-methanol", "efficiency"],
+        * costs.at["biomass-to-methanol", "efficiency"],
         marginal_cost=costs.loc["biomass-to-methanol", "VOM"]
-        / costs.at["biomass-to-methanol", "efficiency"],
+        * costs.at["biomass-to-methanol", "efficiency"],
     )
 
 
@@ -1133,7 +1139,7 @@ def add_biomass_to_methanol_cc(n, costs):
         * costs.at["biomass-to-methanol", "capture rate"],
         p_nom_extendable=True,
         capital_cost=costs.at["biomass-to-methanol", "capital_cost"]
-        / costs.at["biomass-to-methanol", "efficiency"]
+        * costs.at["biomass-to-methanol", "efficiency"]
         + costs.at["biomass CHP capture", "capital_cost"]
         * costs.at["biomass-to-methanol", "CO2 stored"],
         overnight_cost=costs.at["biomass-to-methanol", "investment"]
@@ -1141,7 +1147,7 @@ def add_biomass_to_methanol_cc(n, costs):
         + costs.at["biomass CHP capture", "investment"]
         * costs.at["biomass-to-methanol", "CO2 stored"],
         marginal_cost=costs.loc["biomass-to-methanol", "VOM"]
-        / costs.at["biomass-to-methanol", "efficiency"],
+        * costs.at["biomass-to-methanol", "efficiency"],
     )
 
 
@@ -1384,7 +1390,7 @@ def add_co2limit(n, options, co2_totals_file, countries, nyears, limit):
     nyears : float, optional
         Number of years for the CO2 budget, by default 1.0
     limit : float, optional
-        CO2 limit as a fraction of 1990 levels, by default 0.0
+        CO2 limit as a fraction of 1990 levels
 
     Returns
     -------
@@ -1399,6 +1405,9 @@ def add_co2limit(n, options, co2_totals_file, countries, nyears, limit):
     to the network. The limit is calculated as a fraction of historical emissions
     multiplied by the number of years.
     """
+    if limit is None:
+        return
+
     logger.info(f"Adding CO2 budget limit as per unit of 1990 levels of {limit}")
 
     sectors = determine_emission_sectors(options)
@@ -1726,7 +1735,7 @@ def insert_electricity_distribution_grid(
     n.links.loc[v2gs, "bus1"] += " low voltage"
 
     hps = n.links.index[n.links.carrier.str.contains("heat pump")]
-    n.links.loc[hps, "bus0"] += " low voltage"
+    n.links.loc[hps, "bus1"] += " low voltage"
 
     rh = n.links.index[n.links.carrier.str.contains("resistive heater")]
     n.links.loc[rh, "bus0"] += " low voltage"
@@ -1741,7 +1750,7 @@ def insert_electricity_distribution_grid(
 
     fn = solar_rooftop_potentials_fn
     if len(fn) > 0:
-        potential = pd.read_csv(fn, index_col=["bus", "bin"]).squeeze()
+        potential = pd.read_csv(fn, index_col=["bus", "bin"]).squeeze(axis=1)
         potential.index = potential.index.map(flatten) + " solar"
 
         n.add(
@@ -1969,6 +1978,7 @@ def add_storage_and_grids(
         efficiency=costs.at["electrolysis", "efficiency"],
         capital_cost=costs.at["electrolysis", "capital_cost"],
         overnight_cost=costs.at["electrolysis", "investment"],
+        p_min_pu=options["min_part_load_electrolysis"],
         lifetime=costs.at["electrolysis", "lifetime"],
     )
 
@@ -2969,6 +2979,7 @@ def add_heat(
     retro_cost_file: str,
     floor_area_file: str,
     heat_source_profile_files: dict[str, str],
+    heat_dsm_profile_file: str,
     params: dict,
     pop_weighted_energy_totals: pd.DataFrame,
     heating_efficiencies: pd.DataFrame,
@@ -3004,6 +3015,8 @@ def add_heat(
         Path to CSV file containing floor area data
     heat_source_profile_files : dict[str, str]
         Dictionary mapping heat source names to their data file paths
+    heat_dsm_profile_file : str
+        Path to CSV file containing demand-side management profiles for heat
     params : dict
         Dictionary containing parameters including:
         - heat_pump_sources
@@ -3144,6 +3157,62 @@ def add_heat(
             carrier=f"{heat_system} heat",
             p_set=heat_load.loc[n.snapshots],
         )
+
+        if options["residential_heat"]["dsm"]["enable"] and heat_system in [
+            HeatSystem.RESIDENTIAL_RURAL,
+            HeatSystem.RESIDENTIAL_URBAN_DECENTRAL,
+            HeatSystem.URBAN_CENTRAL,
+        ]:
+            factor = heat_system.heat_demand_weighting(
+                urban_fraction=urban_fraction[nodes], dist_fraction=dist_fraction[nodes]
+            )
+
+            heat_dsm_profile = pd.read_csv(
+                heat_dsm_profile_file,
+                header=1,
+                index_col=0,
+                parse_dates=True,
+            )[nodes].reindex(n.snapshots)
+
+            e_nom = (
+                heat_demand[["residential space"]]
+                .T.groupby(level=1)
+                .sum()
+                .T[nodes]
+                .multiply(factor)
+            )
+
+            heat_dsm_restriction_value = options["residential_heat"]["dsm"][
+                "restriction_value"
+            ].get(investment_year)
+            heat_dsm_profile = heat_dsm_profile * heat_dsm_restriction_value
+            e_nom = e_nom.max()
+
+            # Allow to overshoot or undercool the target temperatures / heat demand in dsm
+            e_min_pu, e_max_pu = 0, 0
+            if "overheat" in options["residential_heat"]["dsm"]["direction"]:
+                e_max_pu = heat_dsm_profile
+            if "undercool" in options["residential_heat"]["dsm"]["direction"]:
+                e_min_pu = (-1) * heat_dsm_profile
+
+            # Thermal (standing) losses of buildings assumed to be the same as decentralized water tanks
+            n.add(
+                "Store",
+                nodes,
+                suffix=f" {heat_system} heat dsm",
+                bus=nodes + f" {heat_system} heat",
+                carrier=f"{heat_system} heat dsm",
+                standing_loss=costs.at[
+                    "decentral water tank storage", "standing_losses"
+                ]
+                / 100,  # convert %/hour into unit/hour
+                e_cyclic=True,
+                e_nom=e_nom,
+                e_max_pu=e_max_pu,
+                e_min_pu=e_min_pu,
+            )
+
+            logger.info(f"Adding DSM in {heat_system} heating.")
 
         if options["tes"]:
             n.add("Carrier", f"{heat_system} water tanks")
@@ -3386,7 +3455,7 @@ def add_heat(
                 .to_pandas()
                 .reindex(index=n.snapshots)
                 if options["time_dep_hp_cop"]
-                else costs.at[costs_name_heat_pump, "efficiency"]
+                else costs.loc[[costs_name_heat_pump], ["efficiency"]]
             )
 
             if heat_source in params.limited_heat_sources:
@@ -3394,7 +3463,16 @@ def add_heat(
                 p_max_source = pd.read_csv(
                     heat_source_profile_files[heat_source],
                     index_col=0,
+                    parse_dates=True,
                 ).squeeze()[nodes]
+
+                # if only dimension is nodes, convert series to dataframe with columns as nodes and index as snapshots
+                if p_max_source.ndim == 1:
+                    p_max_source = pd.DataFrame(
+                        [p_max_source] * len(n.snapshots),
+                        index=n.snapshots,
+                        columns=nodes,
+                    )
 
                 # add resource
                 heat_carrier = f"{heat_system} {heat_source} heat"
@@ -3407,7 +3485,8 @@ def add_heat(
                     carrier=heat_carrier,
                 )
 
-                if heat_source in params.direct_utilisation_heat_sources:
+                # TODO: implement better handling of zero-cost heat sources
+                try:
                     capital_cost = (
                         costs.at[
                             heat_system.heat_source_costs_name(heat_source),
@@ -3425,10 +3504,14 @@ def add_heat(
                     lifetime = costs.at[
                         heat_system.heat_source_costs_name(heat_source), "lifetime"
                     ]
-                else:
+                except KeyError:
+                    logger.warning(
+                        f"Heat source {heat_source} not found in cost data. Assuming zero cost and infinite lifetime."
+                    )
                     capital_cost = 0.0
                     overnight_cost = 0.0
                     lifetime = np.inf
+
                 n.add(
                     "Generator",
                     nodes,
@@ -3439,27 +3522,29 @@ def add_heat(
                     capital_cost=capital_cost,
                     overnight_cost=overnight_cost,
                     lifetime=lifetime,
-                    p_nom_max=p_max_source,
+                    p_nom_max=p_max_source.max(),
+                    p_max_pu=p_max_source / p_max_source.max(),
                 )
-
                 # add heat pump converting source heat + electricity to urban central heat
                 n.add(
                     "Link",
                     nodes,
                     suffix=f" {heat_system} {heat_source} heat pump",
-                    bus0=nodes,
-                    bus1=nodes + f" {heat_carrier}",
-                    bus2=nodes + f" {heat_system} heat",
+                    bus0=nodes + f" {heat_system} heat",
+                    bus1=nodes,
+                    bus2=nodes + f" {heat_carrier}",
                     carrier=f"{heat_system} {heat_source} heat pump",
-                    efficiency=(-(cop_heat_pump - 1)).clip(upper=0),
-                    efficiency2=cop_heat_pump,
-                    capital_cost=costs.at[costs_name_heat_pump, "efficiency"]
-                    * costs.at[costs_name_heat_pump, "capital_cost"]
+                    efficiency=(1 / cop_heat_pump.clip(lower=0.001)).squeeze(),
+                    efficiency2=(1 - (1 / cop_heat_pump.clip(lower=0.001))).squeeze(),
+                    capital_cost=costs.at[costs_name_heat_pump, "capital_cost"]
                     * overdim_factor,
-                    overnight_cost=costs.at[costs_name_heat_pump, "efficiency"]
-                    * costs.at[costs_name_heat_pump, "investment"]
+                    overnight_cost=costs.at[costs_name_heat_pump, "investment"]
                     * overdim_factor,
                     p_nom_extendable=True,
+                    p_min_pu=(
+                        -cop_heat_pump / cop_heat_pump.clip(lower=0.001)
+                    ).squeeze(),
+                    p_max_pu=0,
                     lifetime=costs.at[costs_name_heat_pump, "lifetime"],
                 )
 
@@ -3510,19 +3595,21 @@ def add_heat(
                     "Link",
                     nodes,
                     suffix=f" {heat_system} {heat_source} heat pump",
-                    bus0=nodes,
-                    bus1=nodes + f" {heat_system} water pits",
-                    bus2=nodes + f" {heat_system} heat",
+                    bus0=nodes + f" {heat_system} heat",
+                    bus1=nodes,
+                    bus2=nodes + f" {heat_system} water pits",
                     carrier=f"{heat_system} {heat_source} heat pump",
-                    efficiency=(-(cop_heat_pump - 1)).clip(upper=0),
-                    efficiency2=cop_heat_pump,
-                    capital_cost=costs.at[costs_name_heat_pump, "efficiency"]
-                    * costs.at[costs_name_heat_pump, "capital_cost"]
+                    efficiency=(1 / (cop_heat_pump - 1).clip(lower=0.001)).squeeze(),
+                    efficiency2=(1 - 1 / cop_heat_pump.clip(lower=0.001)).squeeze(),
+                    capital_cost=costs.at[costs_name_heat_pump, "capital_cost"]
                     * overdim_factor,
-                    overnight_cost=costs.at[costs_name_heat_pump, "efficiency"]
-                    * costs.at[costs_name_heat_pump, "investment"]
+                    overnight_cost=costs.at[costs_name_heat_pump, "investment"]
                     * overdim_factor,
                     p_nom_extendable=True,
+                    p_min_pu=(
+                        -cop_heat_pump / cop_heat_pump.clip(lower=0.001)
+                    ).squeeze(),
+                    p_max_pu=0,
                     lifetime=costs.at[costs_name_heat_pump, "lifetime"],
                 )
 
@@ -3531,16 +3618,18 @@ def add_heat(
                     "Link",
                     nodes,
                     suffix=f" {heat_system} {heat_source} heat pump",
-                    bus0=nodes,
-                    bus1=nodes + f" {heat_system} heat",
+                    bus0=nodes + f" {heat_system} heat",
+                    bus1=nodes,
                     carrier=f"{heat_system} {heat_source} heat pump",
-                    efficiency=cop_heat_pump,
-                    capital_cost=costs.at[costs_name_heat_pump, "efficiency"]
-                    * costs.at[costs_name_heat_pump, "capital_cost"]
+                    efficiency=(1 / cop_heat_pump.clip(lower=0.001)).squeeze(),
+                    capital_cost=costs.at[costs_name_heat_pump, "capital_cost"]
                     * overdim_factor,
-                    overnight_cost=costs.at[costs_name_heat_pump, "efficiency"]
-                    * costs.at[costs_name_heat_pump, "investment"]
+                    overnight_cost=costs.at[costs_name_heat_pump, "investment"]
                     * overdim_factor,
+                    p_min_pu=(
+                        -cop_heat_pump / cop_heat_pump.clip(lower=0.001)
+                    ).squeeze(),
+                    p_max_pu=0,
                     p_nom_extendable=True,
                     lifetime=costs.at[costs_name_heat_pump, "lifetime"],
                 )
@@ -6466,11 +6555,7 @@ if __name__ == "__main__":
     nhours = n.snapshot_weightings.generators.sum()
     nyears = nhours / 8760
 
-    costs = load_costs(
-        snakemake.input.costs,
-        snakemake.params.costs,
-        nyears=nyears,
-    )
+    costs = load_costs(snakemake.input.costs)
 
     pop_weighted_energy_totals = (
         pd.read_csv(snakemake.input.pop_weighted_energy_totals, index_col=0) * nyears
@@ -6518,11 +6603,18 @@ if __name__ == "__main__":
 
     add_eu_bus(n)
 
+    emission_prices = snakemake.params["emission_prices"]
+    co2_price = (
+        get(emission_prices["co2"], investment_year)
+        if emission_prices["enable"]
+        else 0.0
+    )
     add_co2_tracking(
         n,
         costs,
         options,
         sequestration_potential_file=snakemake.input.sequestration_potential,
+        co2_price=co2_price,
     )
 
     add_generation(
@@ -6591,6 +6683,7 @@ if __name__ == "__main__":
                 for source in snakemake.params.limited_heat_sources
                 if source in snakemake.input.keys()
             },
+            heat_dsm_profile_file=snakemake.input.heat_dsm_profile,
             params=snakemake.params,
             pop_weighted_energy_totals=pop_weighted_energy_totals,
             heating_efficiencies=heating_efficiencies,

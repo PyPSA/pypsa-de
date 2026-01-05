@@ -19,11 +19,12 @@ import xarray as xr
 
 from scripts._helpers import (
     configure_logging,
+    load_costs,
     sanitize_custom_columns,
     set_scenario_config,
     update_config_from_wildcards,
 )
-from scripts.add_electricity import load_costs, sanitize_carriers
+from scripts.add_electricity import sanitize_carriers
 from scripts.build_energy_totals import cartesian
 from scripts.build_powerplants import add_custom_powerplants
 from scripts.definitions.heat_system import HeatSystem
@@ -897,11 +898,8 @@ def add_heating_capacities_installed_before_baseyear(
             not heat_system == HeatSystem.URBAN_CENTRAL
         ) and use_electricity_distribution_grid:
             nodes_elec = nodes + " low voltage"
-            nodes_biomass = nodes
         else:
             nodes_elec = nodes.str.split().str[:2].str.join(" ")
-            nodes_biomass = nodes_elec
-
             too_large_grouping_years = [
                 gy for gy in grouping_years if gy >= int(baseyear)
             ]
@@ -955,19 +953,18 @@ def add_heating_capacities_installed_before_baseyear(
                     "Link",
                     nodes,
                     suffix=f" {heat_system} {heat_source} heat pump-{grouping_year}",
-                    bus0=nodes_elec,
-                    bus1=nodes + " " + heat_system.value + " heat",
+                    bus0=nodes + " " + heat_system.value + " heat",
+                    bus1=nodes_elec,
                     carrier=f"{heat_system} {heat_source} heat pump",
-                    efficiency=efficiency,
-                    capital_cost=costs.at[costs_name, "efficiency"]
-                    * costs.at[costs_name, "capital_cost"],
-                    overnight_cost=costs.at[costs_name, "efficiency"]
-                    * costs.at[costs_name, "investment"],
+                    efficiency=1 / efficiency.clip(lower=0.001),
+                    capital_cost=costs.at[costs_name, "capital_cost"],
+                    overnight_cost=costs.at[costs_name, "investment"],
                     p_nom=existing_capacities.loc[
                         nodes, (heat_system.value, f"{heat_source} heat pump")
                     ]
-                    * ratio
-                    / costs.at[costs_name, "efficiency"],
+                    * ratio,
+                    p_max_pu=0,
+                    p_min_pu=-1 * efficiency / efficiency.clip(lower=0.001),
                     build_year=int(grouping_year),
                     lifetime=costs.at[costs_name, "lifetime"],
                 )
@@ -1061,29 +1058,40 @@ def add_heating_capacities_installed_before_baseyear(
                     f"{heat_system.central_or_decentral} gas boiler", "lifetime"
                 ],
             )
-            # add biomass boilers
-            n.add(
-                "Link",
-                nodes,
-                suffix=f" {heat_system} biomass boiler-{grouping_year}",
-                bus0=spatial.biomass.df.loc[nodes_biomass, "nodes"].values,
-                bus1=nodes + " " + heat_system.value + " heat",
-                carrier=heat_system.value + " biomass boiler",
-                efficiency=costs.at["biomass boiler", "efficiency"],
-                capital_cost=costs.at["biomass boiler", "efficiency"]
-                * costs.at["biomass boiler", "capital_cost"],
-                overnight_cost=costs.at["biomass boiler", "efficiency"]
-                * costs.at["biomass boiler", "investment"],
-                p_nom=(
-                    existing_capacities.loc[
-                        nodes, (heat_system.value, "biomass boiler")
-                    ]
-                    * ratio
-                    / costs.at["biomass boiler", "efficiency"]
-                ),
-                build_year=int(grouping_year),
-                lifetime=costs.at["biomass boiler", "lifetime"],
+
+            efficiency = get_efficiency(
+                heat_system, "biomass", nodes, heating_efficiencies, costs
             )
+
+            # prevents redundant addition of urban central biomass boiler which tends to crash
+            if (
+                existing_capacities.loc[
+                    nodes, (heat_system.value, "biomass boiler")
+                ].sum()
+                > 0
+            ):
+                n.add(
+                    "Link",
+                    nodes,
+                    suffix=f" {heat_system} biomass boiler-{grouping_year}",
+                    bus0=spatial.biomass.nodes,
+                    bus1=nodes + " " + heat_system.value + " heat",
+                    carrier=heat_system.value + " biomass boiler",
+                    efficiency=efficiency,
+                    capital_cost=efficiency
+                    * costs.at["biomass boiler", "capital_cost"],
+                    overnight_cost=efficiency
+                    * costs.at["biomass boiler", "investment"],
+                    p_nom=(
+                        existing_capacities.loc[
+                            nodes, (heat_system.value, "biomass boiler")
+                        ]
+                        * ratio
+                        / efficiency
+                    ),
+                    build_year=int(grouping_year),
+                    lifetime=costs.at["biomass boiler", "lifetime"],
+                )
 
             # delete links with p_nom=nan corresponding to extra nodes in country
             n.remove(
@@ -1138,12 +1146,7 @@ if __name__ == "__main__":
     spatial = define_spatial(n.buses[n.buses.carrier == "AC"].index, options)
     add_build_year_to_new_assets(n, baseyear)
 
-    Nyears = n.snapshot_weightings.generators.sum() / 8760.0
-    costs = load_costs(
-        snakemake.input.costs,
-        snakemake.params.costs,
-        nyears=Nyears,
-    )
+    costs = load_costs(snakemake.input.costs)
 
     grouping_years_power = snakemake.params.existing_capacities["grouping_years_power"]
     grouping_years_heat = snakemake.params.existing_capacities["grouping_years_heat"]
