@@ -3,9 +3,9 @@
 # SPDX-License-Identifier: MIT
 
 [workspace]
-authors = ["Contributors to PyPSA-Eur"]
+authors = ["Contributors to PyPSA-Eur and PyPSA-DE"]
 channels = ["conda-forge", "bioconda", "gurobi"]
-name = "pypsa-eur"
+name = "pypsa-de"
 platforms = ["win-64", "linux-64", "osx-64", "osx-arm64"]
 version = "0.1.0"
 
@@ -35,6 +35,14 @@ update-dags = """
 """
 
 [dependencies]
+# Add additional packages only to pypsa-de specific section
+# All other packages should be identical to pypsa-eur (in best case the same, otherwise
+# maybe different pins)
+# pypsa-de specific
+pycountry = ">=24.6.1"
+pyam = ">=2.0"
+"ruamel.yaml" = ">=0.18.10"
+# common packages 
 atlite = ">=0.3"
 bokeh = ">=3.8.0"
 cartopy = ">=0.25.0"
