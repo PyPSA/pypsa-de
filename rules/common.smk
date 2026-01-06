@@ -12,8 +12,6 @@ import requests
 import pandas as pd
 import json
 
-sys.path.insert(0, os.path.abspath("../scripts"))
-
 from scripts._helpers import update_config_from_wildcards
 from snakemake.utils import update_config
 
