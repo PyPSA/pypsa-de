@@ -527,7 +527,7 @@ rule prepare_district_heating_subnodes:
         regions_onshore=resources("regions_onshore_base_s_{clusters}.geojson"),
         fernwaermeatlas="data/fernwaermeatlas/fernwaermeatlas.xlsx",
         cities="data/fernwaermeatlas/cities_geolocations.geojson",
-        lau_regions="data/lau_regions.zip",
+        lau_regions=rules.retrieve_lau_regions.output["zip"],
         census=storage(
             "https://www.destatis.de/static/DE/zensus/gitterdaten/Zensus2022_Heizungsart.zip",
             keep_local=True,
@@ -593,7 +593,7 @@ rule add_district_heating_subnodes:
         existing_heating_distribution=lambda w: resources(
             f"existing_heating_distribution_base_s_{{clusters}}_{baseyear_value(w)}.csv"
         ),
-        lau_regions="data/lau_regions.zip",
+        lau_regions=rules.retrieve_lau_regions.output["zip"],
     output:
         network=resources(
             "networks/base-extended_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc"
