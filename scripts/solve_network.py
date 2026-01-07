@@ -1408,11 +1408,6 @@ def create_optimization_model(
     logger.info("Adding extra functionality (custom constraints)...")
     extra_functionality(n, n.snapshots, planning_horizons)
 
-    if status == "warning":
-        raise RuntimeError(
-            "Solving status 'warning'. Results may not be reliable. Aborting."
-        )
-
     return n
 
 
@@ -1544,6 +1539,11 @@ if __name__ == "__main__":
         logger.info(f"Labels:\n{labels}")
         n.model.print_infeasibilities()
         raise RuntimeError("Solving status 'infeasible'. Infeasibilities computed.")
+
+    if status == "warning":
+        raise RuntimeError(
+            "Solving status 'warning'. Results may not be reliable. Aborting."
+        )
 
     n.meta = dict(snakemake.config, **dict(wildcards=dict(snakemake.wildcards)))
     n.export_to_netcdf(snakemake.output.network)
