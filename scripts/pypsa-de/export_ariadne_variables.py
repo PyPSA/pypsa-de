@@ -5395,17 +5395,9 @@ if __name__ == "__main__":
     # Load data
     _networks = [pypsa.Network(fn) for fn in snakemake.input.networks]
 
-    nhours = _networks[0].snapshot_weightings.generators.sum()
-    nyears = nhours / 8760
-
     costs = list(
         map(
-            lambda _costs: load_costs(
-                _costs,
-                snakemake.params.costs,
-                snakemake.params.max_hours,
-                nyears,
-            ).multiply(1e-9),  # in bn €
+            lambda _costs: load_costs(_costs).multiply(1e-9),  # in bn €
             snakemake.input.costs,
         )
     )

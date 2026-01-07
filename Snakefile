@@ -801,8 +801,6 @@ rule export_ariadne_variables:
     params:
         planning_horizons=config_provider("scenario", "planning_horizons"),
         hours=config_provider("clustering", "temporal", "resolution_sector"),
-        max_hours=config_provider("electricity", "max_hours"),
-        costs=config_provider("costs"),
         config_industry=config_provider("industry"),
         energy_totals_year=config_provider("energy", "energy_totals_year"),
         co2_sequestration_cost=config_provider("sector", "co2_sequestration_cost"),
@@ -825,7 +823,7 @@ rule export_ariadne_variables:
             allow_missing=True,
         ),
         costs=expand(
-            resources("costs_{planning_horizons}.csv"),
+            resources("costs_{planning_horizons}_processed.csv"),
             **config["scenario"],
             allow_missing=True,
         ),
@@ -968,8 +966,6 @@ rule plot_ariadne_report:
         plotting=config_provider("plotting"),
         run=config_provider("run", "name"),
         foresight=config_provider("foresight"),
-        costs=config_provider("costs"),
-        max_hours=config_provider("electricity", "max_hours"),
         post_discretization=config_provider("solving", "options", "post_discretization"),
         NEP_year=lambda w: config_provider("costs", "custom_cost_fn")(w)[-8:-4],
         hours=config_provider("clustering", "temporal", "resolution_sector"),
@@ -988,7 +984,7 @@ rule plot_ariadne_report:
         ),
         rc="matplotlibrc",
         costs=expand(
-            resources("costs_{planning_horizons}.csv"),
+            resources("costs_{planning_horizons}_processed.csv"),
             **config["scenario"],
             allow_missing=True,
         ),

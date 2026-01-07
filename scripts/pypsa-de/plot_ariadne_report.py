@@ -2794,16 +2794,11 @@ if __name__ == "__main__":
     ### Modify postnetworks (this might be moved to a separate script)
 
     # Load costs (needed for modification)
-    nhours = int(snakemake.params.hours[:-1])
-    nyears = nhours / 8760
 
     costs = list(
         map(
             lambda _costs: load_costs(
                 _costs,
-                snakemake.params.costs,
-                snakemake.params.max_hours,
-                nyears,
             ).multiply(1e-9),  # in bn EUR
             snakemake.input.costs,
         )
