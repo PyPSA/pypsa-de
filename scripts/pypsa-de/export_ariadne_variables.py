@@ -4276,25 +4276,15 @@ def get_grid_investments(
 
 def get_policy(n, investment_year):
     var = pd.Series()
-
-    # add carbon component to fossil fuels if specified
-    if (snakemake.params.co2_price_add_on_fossils is not None) and (
-        investment_year in snakemake.params.co2_price_add_on_fossils.keys()
-    ):
-        co2_price_add_on = snakemake.params.co2_price_add_on_fossils[investment_year]
-    else:
-        co2_price_add_on = 0.0
     try:
         co2_limit_de = n.global_constraints.loc["co2_limit-DE", "mu"]
     except KeyError:
         co2_limit_de = 0
-    var["Price|Carbon"] = (
-        -n.global_constraints.loc["CO2Limit", "mu"] - co2_limit_de + co2_price_add_on
-    )
+    var["Price|Carbon"] = -n.global_constraints.loc["CO2Limit", "mu"] - co2_limit_de
 
-    var["Price|Carbon|EU-wide Regulation All Sectors"] = (
-        -n.global_constraints.loc["CO2Limit", "mu"] + co2_price_add_on
-    )
+    var["Price|Carbon|EU-wide Regulation All Sectors"] = -n.global_constraints.loc[
+        "CO2Limit", "mu"
+    ]
 
     # Price|Carbon|EU-wide Regulation Non-ETS
 

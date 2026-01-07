@@ -85,7 +85,7 @@ PyPSA-DE is a softfork of PyPSA-EUR. As such, large parts of the functionality a
 - `first_technology_occurrence` - specify the year form which on specific technologies are available
 - `solving:constraints` - specify PyPSA-DE specific limits, e.g. on capacity, trade and generation
 - `co2_budget_DE_source` specify the carbon trajectory for Germany: Following the projections of the Umweltbundestamt (`UBA`) or targeting net zero with the Klimaschutzgesetz(`KSG`)
-- `costs:NEP` and `costs:transmission` - specify which year of the Netzentwicklungsplan should be used as basis for the transmission line costs (`2021,2023`) and if new HVDC links should be built with `overhead` or `underground` cables
+- `costs:transmission` - specify  if new HVDC links should be built with `overhead` or `underground` cables. the basic cost assumptions of the Netzentwicklungsplan (`2021,2023`) can be changed by using one of the two corresponding `custom_cost_nep_*.csv` files provided in the `ariadne-data` folder
 
 ## Data sources
 

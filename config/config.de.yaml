@@ -265,8 +265,7 @@ first_technology_occurrence:
     H2 pipeline retrofitted: 2025
 
 costs:
-  horizon: "mean" # "optimist", "pessimist" or "mean"
-  NEP: 2023
+  custom_cost_fn: ariadne-data/custom_costs_nep_2023.csv
   transmission: "overhead" # either overhead line ("overhead") or underground cable ("underground")
 
 
@@ -700,11 +699,6 @@ pypsa_eur:
   - PHS
   - hydro
   Store: []
-
-
-co2_price_add_on_fossils:
-  # 2020: 25
-  # 2025: 60
 
 must_run:
   2020:

@@ -1289,15 +1289,8 @@ if __name__ == "__main__":
     logger.info("Adding PyPSA-DE specific functionality")
 
     n = pypsa.Network(snakemake.input.network)
-    nhours = n.snapshot_weightings.generators.sum()
-    nyears = nhours / 8760
 
-    costs = load_costs(
-        snakemake.input.costs,
-        snakemake.params.costs,
-        snakemake.params.max_hours,
-        nyears,
-    )
+    costs = load_costs(snakemake.input.costs)
 
     modify_mobility_demand(n, snakemake.input.modified_mobility_data)
 

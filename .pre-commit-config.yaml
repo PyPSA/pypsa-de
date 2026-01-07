@@ -55,9 +55,3 @@ repos:
   rev: v0.11.2
   hooks:
   - id: snakefmt
-
-  # Check for FSFE REUSE compliance (licensing)
-- repo: https://github.com/fsfe/reuse-tool
-  rev: v6.0.0
-  hooks:
-  - id: reuse-lint-file

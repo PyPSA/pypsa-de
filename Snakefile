@@ -381,31 +381,6 @@ rule clean:
         print("Data downloaded to data/ has not been cleaned.")
 
 
-rule modify_cost_data:
-    params:
-        file_path="ariadne-data/costs/",
-        file_name="costs_{planning_horizons}.csv",
-        cost_horizon=config_provider("costs", "horizon"),
-        NEP=config_provider("costs", "NEP"),
-        planning_horizons=config_provider("scenario", "planning_horizons"),
-        co2_price_add_on_fossils=config_provider("co2_price_add_on_fossils"),
-    input:
-        modifications=lambda w: (
-            "ariadne-data/costs_2019-modifications.csv"
-            if w.planning_horizons == "2020"
-            and config_provider("energy", "energy_totals_year") == 2019
-            else "ariadne-data/costs_{planning_horizons}-modifications.csv"
-        ),
-    output:
-        resources("costs_{planning_horizons}.csv"),
-    resources:
-        mem_mb=1000,
-    log:
-        logs("modify_cost_data_{planning_horizons}.log"),
-    script:
-        "scripts/pypsa-de/modify_cost_data.py"
-
-
 if config["pypsa-de"]["retrieve_ariadne_database"]:
 
     rule retrieve_ariadne_database:
@@ -642,8 +617,6 @@ rule modify_prenetwork:
     params:
         efuel_export_ban=config_provider("solving", "constraints", "efuel_export_ban"),
         enable_kernnetz=config_provider("wasserstoff_kernnetz", "enable"),
-        costs=config_provider("costs"),
-        max_hours=config_provider("electricity", "max_hours"),
         technology_occurrence=config_provider("first_technology_occurrence"),
         fossil_boiler_ban=config_provider("new_decentral_fossil_boiler_ban"),
         coal_ban=config_provider("coal_generation_ban"),
@@ -673,7 +646,6 @@ rule modify_prenetwork:
         bev_energy=config_provider("sector", "bev_energy"),
         bev_dsm_availability=config_provider("sector", "bev_dsm_availability"),
     input:
-        costs_modifications="ariadne-data/costs_{planning_horizons}-modifications.csv",
         network=resources(
             "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_brownfield.nc"
         ),
@@ -682,7 +654,9 @@ rule modify_prenetwork:
             if config_provider("wasserstoff_kernnetz", "enable")(w)
             else []
         ),
-        costs=resources("costs_{planning_horizons}.csv"),
+        costs=lambda w: resources(
+            f"costs_{config_provider("scenario", "planning_horizons",0)(w)}_processed.csv"
+        ),
         modified_mobility_data=resources(
             "modified_mobility_data_{clusters}_{planning_horizons}.csv"
         ),
@@ -831,10 +805,9 @@ rule export_ariadne_variables:
         costs=config_provider("costs"),
         config_industry=config_provider("industry"),
         energy_totals_year=config_provider("energy", "energy_totals_year"),
-        co2_price_add_on_fossils=config_provider("co2_price_add_on_fossils"),
         co2_sequestration_cost=config_provider("sector", "co2_sequestration_cost"),
         post_discretization=config_provider("solving", "options", "post_discretization"),
-        NEP_year=config_provider("costs", "NEP"),
+        NEP_year=lambda w: config_provider("costs", "custom_cost_fn")(w)[-8:-4],
         NEP_transmission=config_provider("costs", "transmission"),
     input:
         template="data/template_ariadne_database.xlsx",
@@ -998,7 +971,7 @@ rule plot_ariadne_report:
         costs=config_provider("costs"),
         max_hours=config_provider("electricity", "max_hours"),
         post_discretization=config_provider("solving", "options", "post_discretization"),
-        NEP_year=config_provider("costs", "NEP"),
+        NEP_year=lambda w: config_provider("costs", "custom_cost_fn")(w)[-8:-4],
         hours=config_provider("clustering", "temporal", "resolution_sector"),
         NEP_transmission=config_provider("costs", "transmission"),
     input:

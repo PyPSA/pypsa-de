@@ -1,4 +1,5 @@
 # Changelog
+- Upstream: PyPSA-Eur adopted a new functionality for overwriting costs. PyPSA-DE follows this convention now. As a consequence, the `costs:horizon:optimist/mean/pessimist` is no longer available. `Mean` will be provided exclusively from now on. Also, the costs assumptions for onwind turbines changed sligthly. Furthermore, "costs:NEP_year:2021/2023" is no longer available, instead one of the  custom_cost files for these NEP years provided in the `ariadne-data` folder has to be specified.
 - Bugfix: Enforce stricter power import limit to avoid that import from one country compensate from exports to another
 - Added the IIASA database to the repository and disabled re-downloading it by default.
 - Simplified IIASA database download, rename `iiasa_database` config section to `pypsa-de`
