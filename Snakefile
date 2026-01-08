@@ -395,16 +395,6 @@ if (ARIADNE_DATABASE := dataset_version("ariadne_database"))["source"] in ["prim
         script:
             "scripts/pypsa-de/retrieve_ariadne_database.py"
 
-    rule retrieve_ariadne_template:
-        input:
-            storage(
-                "https://github.com/iiasa/ariadne-intern-workflow/raw/main/attachments/2025-01-27_template_Ariadne.xlsx",
-            ),
-        output:
-            "data/template_ariadne_database.xlsx",
-        run:
-            move(input[0], output[0])
-
 
 if (ARIADNE_DATABASE := dataset_version("ariadne_database"))["source"] in ["archive"]:
 
@@ -415,13 +405,27 @@ if (ARIADNE_DATABASE := dataset_version("ariadne_database"))["source"] in ["arch
             raw_xlsx=storage(ARIADNE_DATABASE["url"]),
         output:
             data="data/ariadne_database.csv",
-            template="data/template_ariadne_database.xlsx",
         log:
             "logs/retrieve_ariadne_database_archive.log",
         resources:
             mem_mb=1000,
         script:
             "scripts/pypsa-de/retrieve_ariadne_database.py"
+
+
+if (ARIADNE_TEMPLATE := dataset_version("ariadne_template"))["source"] in [
+    "primary",
+]:
+
+    rule retrieve_ariadne_template:
+        input:
+            storage(
+                "https://github.com/iiasa/ariadne-intern-workflow/raw/main/attachments/2025-01-27_template_Ariadne.xlsx",
+            ),
+        output:
+            "data/template_ariadne_database.xlsx",
+        run:
+            move(input[0], output[0])
 
 
 if (OPEN_MASTR := dataset_version("open_mastr"))["source"] in ["primary"]:

@@ -728,6 +728,9 @@ data:
   ariadne_database:
     source: archive
     version: latest
+  ariadne_template:
+    source: primary
+    version: latest
   open_mastr:
     source: primary
     version: latest

@@ -26,11 +26,11 @@ if __name__ == "__main__":
         df = sheets["data"]
         df.loc[df["region"] == "DEU", "region"] = "Deutschland"
         df.to_csv(snakemake.output.data, index=False)
-        template = sheets["variables"]
-        template = template.rename(
-            columns={
-                "unit": "Unit",
-                "variable": "Variable",
-            }
-        )
-        template.to_excel(snakemake.output.template, index=False)
+        # template = sheets["variables"]
+        # template = template.rename(
+        #     columns={
+        #         "unit": "Unit",
+        #         "variable": "Variable",
+        #     }
+        # )
+        # template.to_excel(snakemake.output.template, index=False, sheet_name="variable_definitions")
