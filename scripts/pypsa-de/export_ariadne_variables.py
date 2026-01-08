@@ -866,6 +866,11 @@ def _get_capacities(n, region, cap_func, cap_string="Capacity|"):
         )
         .multiply(MW2GW)
     )
+    heat_pump_idxs = capacities_central_heat.filter(like="heat pump").index
+    capacities_central_heat[heat_pump_idxs] = abs(
+        capacities_central_heat[heat_pump_idxs]
+    )
+
     if cap_string.startswith("Investment") or cap_string.startswith("System Cost"):
         secondary_heat_techs = [
             "DAC",
@@ -996,6 +1001,10 @@ def _get_capacities(n, region, cap_func, cap_string="Capacity|"):
             errors="ignore",  # drop existing labels or do nothing
         )
         .multiply(MW2GW)
+    )
+    heat_pump_idxs = capacities_decentral_heat.filter(like="heat pump").index
+    capacities_decentral_heat[heat_pump_idxs] = abs(
+        capacities_decentral_heat[heat_pump_idxs]
     )
 
     var[cap_string + "Decentral Heat|Solar thermal"] = capacities_decentral_heat.filter(
