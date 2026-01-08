@@ -321,19 +321,21 @@ def unravel_carbonaceous_fuels(n):
     n.add("Carrier", "renewable oil")
 
     n.add("Bus", "DE", x=10.5, y=51.2, carrier="none")
-    n.add("Bus", "DE oil", location="DE", carrier="oil")
-    n.add("Bus", "DE oil primary", location="DE", carrier="oil primary")
+    n.add("Bus", "DE oil", location="DE", carrier="oil", unit="MWh_th")
+    n.add("Bus", "DE oil primary", location="DE", carrier="oil primary", unit="MWh_th")
     n.add(
         "Bus",
         "DE renewable oil",
         location="DE",
         carrier="renewable oil",
+        unit="MWh_th",
     )
     n.add(
         "Bus",
         "EU renewable oil",
         location="EU",
         carrier="renewable oil",
+        unit="MWh_th",
     )
 
     # add one generator for DE oil primary
@@ -467,6 +469,7 @@ def unravel_carbonaceous_fuels(n):
         "DE methanol",
         location="DE",
         carrier="methanol",
+        unit="MWh_th",
     )
 
     # change links from EU meoh to DE meoh
@@ -626,6 +629,7 @@ def unravel_gasbus(n, costs):
         "DE gas",
         location="DE",
         carrier="gas",
+        unit="MWh_LHV",
     )
 
     n.add(
@@ -633,6 +637,7 @@ def unravel_gasbus(n, costs):
         "DE gas primary",
         location="DE",
         carrier="gas primary",
+        unit="MWh_LHV",
     )
 
     n.add(
@@ -678,12 +683,14 @@ def unravel_gasbus(n, costs):
         "DE renewable gas",
         carrier="renewable gas",
         location="DE",
+        unit="MWh_LHV",
     )
     n.add(
         "Bus",
         "EU renewable gas",
         location="EU",
         carrier="renewable gas",
+        unit="MWh_LHV",
     )
 
     ### renewable gas
