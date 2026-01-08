@@ -424,14 +424,11 @@ if (ARIADNE_DATABASE := dataset_version("ariadne_database"))["source"] in ["arch
             "scripts/pypsa-de/retrieve_ariadne_database.py"
 
 
-if config["pypsa-de"]["retrieve"]:
+if (OPEN_MASTR := dataset_version("open_mastr"))["source"] in ["primary"]:
 
-    rule retrieve_mastr:
+    rule retrieve_open_mastr:
         input:
-            storage(
-                "https://zenodo.org/records/8225106/files/bnetza_open_mastr_2023-08-08_B.zip",
-                keep_local=True,
-            ),
+            storage(OPEN_MASTR["url"]),
         params:
             "data/mastr",
         output:
@@ -441,18 +438,22 @@ if config["pypsa-de"]["retrieve"]:
             unpack_archive(input[0], params[0])
 
 
-if config["pypsa-de"]["retrieve"]:
+if (EGON := dataset_version("egon"))["source"] in ["primary"]:
 
     rule retrieve_egon_data:
+        input:
+            spatial=storage(
+                f"{EGON['url']}?id_spatial=5&year=2018",
+            ),
+            mapping=storage(
+                f"{EGON['url']}_description?id_spatial=5",
+            ),
         output:
             spatial="data/egon/demandregio_spatial_2018.json",
             mapping="data/egon/mapping_technologies.json",
-        shell:
-            """
-            mkdir -p data/egon
-            curl -o {output.spatial} "https://api.opendata.ffe.de/demandregio/demandregio_spatial?id_spatial=5&year=2018"
-            curl -o {output.mapping} "https://api.opendata.ffe.de/demandregio/demandregio_spatial_description?id_spatial=5"
-            """
+        run:
+            move(input.spatial, output.spatial)
+            move(input.mapping, output.mapping)
 
 
 rule build_exogenous_mobility_data:

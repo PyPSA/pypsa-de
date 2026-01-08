@@ -28,7 +28,6 @@ run:
   disable_progressbar: true
 
 pypsa-de:
-  retrieve: false
   leitmodelle: # Model data downloaded from public IIASA database 'ariadne2'
     general: REMIND-EU v1.1
     buildings: REMod v1.0
@@ -728,4 +727,10 @@ scale_capacity:
 data:
   ariadne_database:
     source: archive
+    version: latest
+  open_mastr:
+    source: primary
+    version: latest
+  egon:
+    source: primary
     version: latest

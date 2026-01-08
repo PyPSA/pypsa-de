@@ -33,4 +33,4 @@ if __name__ == "__main__":
                 "variable": "Variable",
             }
         )
-        template.to_csv(snakemake.output.template, index=False)
+        template.to_excel(snakemake.output.template, index=False)
