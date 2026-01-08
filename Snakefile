@@ -381,38 +381,47 @@ rule clean:
         print("Data downloaded to data/ has not been cleaned.")
 
 
-if config["pypsa-de"]["retrieve_ariadne_database"]:
+if (ARIADNE_DATABASE := dataset_version("ariadne_database"))["source"] in ["primary"]:
 
     rule retrieve_ariadne_database:
+        params:
+            source="primary",
         output:
             data="data/ariadne_database.csv",
         log:
-            "logs/retrieve_ariadne_database.log",
+            "logs/retrieve_ariadne_database_primary.log",
         resources:
             mem_mb=1000,
         script:
             "scripts/pypsa-de/retrieve_ariadne_database.py"
 
-
-def get_ariadne_database(w):
-    if config["pypsa-de"]["retrieve_ariadne_database"]:
-        return "data/ariadne_database.csv"
-    else:
-        return "data/pypsa-de/ariadne_database.csv"
-
-
-if config["pypsa-de"]["retrieve"]:
-
     rule retrieve_ariadne_template:
         input:
             storage(
                 "https://github.com/iiasa/ariadne-intern-workflow/raw/main/attachments/2025-01-27_template_Ariadne.xlsx",
-                keep_local=True,
             ),
         output:
             "data/template_ariadne_database.xlsx",
         run:
             move(input[0], output[0])
+
+
+if (ARIADNE_DATABASE := dataset_version("ariadne_database"))["source"] in ["archive"]:
+
+    rule retrieve_ariadne_database:
+        params:
+            source="archive",
+        input:
+            raw_xlsx=storage(ARIADNE_DATABASE["url"]),
+        output:
+            data="data/ariadne_database.csv",
+            template="data/template_ariadne_database.xlsx",
+        log:
+            "logs/retrieve_ariadne_database_archive.log",
+        resources:
+            mem_mb=1000,
+        script:
+            "scripts/pypsa-de/retrieve_ariadne_database.py"
 
 
 if config["pypsa-de"]["retrieve"]:
@@ -457,7 +466,7 @@ rule build_exogenous_mobility_data:
         aviation_demand_factor=config_provider("sector", "aviation_demand_factor"),
         energy_totals_year=config_provider("energy", "energy_totals_year"),
     input:
-        ariadne=get_ariadne_database,
+        ariadne="data/ariadne_database.csv",
         energy_totals=resources("energy_totals.csv"),
     output:
         mobility_data=resources(
@@ -686,7 +695,7 @@ ruleorder: modify_industry_demand > build_industrial_production_per_country_tomo
 
 rule modify_existing_heating:
     input:
-        ariadne=get_ariadne_database,
+        ariadne="data/ariadne_database.csv",
         existing_heating="data/existing_infrastructure/existing_heating_raw.csv",
     output:
         existing_heating=resources("existing_heating.csv"),
@@ -730,7 +739,7 @@ rule modify_industry_demand:
     params:
         reference_scenario=config_provider("pypsa-de", "reference_scenario"),
     input:
-        ariadne=get_ariadne_database,
+        ariadne="data/ariadne_database.csv",
         industrial_production_per_country_tomorrow=resources(
             "industrial_production_per_country_tomorrow_{planning_horizons}.csv"
         ),
@@ -852,7 +861,7 @@ rule plot_ariadne_variables:
         reference_scenario=config_provider("pypsa-de", "reference_scenario"),
     input:
         exported_variables_full=RESULTS + "ariadne/exported_variables_full.xlsx",
-        ariadne_database=get_ariadne_database,
+        ariadne_database="data/ariadne_database.csv",
     output:
         primary_energy=RESULTS + "ariadne/primary_energy.png",
         primary_energy_detailed=RESULTS + "ariadne/primary_energy_detailed.png",
@@ -919,7 +928,7 @@ rule build_scenarios:
         scenarios=config["run"]["name"],
         leitmodelle=config["pypsa-de"]["leitmodelle"],
     input:
-        ariadne_database=get_ariadne_database,
+        ariadne_database="data/ariadne_database.csv",
         scenario_yaml=config["run"]["scenarios"]["manual_file"],
     output:
         scenario_yaml=config["run"]["scenarios"]["file"],

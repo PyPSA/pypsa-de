@@ -28,7 +28,6 @@ run:
   disable_progressbar: true
 
 pypsa-de:
-  retrieve_ariadne_database: false
   retrieve: false
   leitmodelle: # Model data downloaded from public IIASA database 'ariadne2'
     general: REMIND-EU v1.1
@@ -725,3 +724,8 @@ scale_capacity:
     DE:
       CCGT: 10000
       "urban central gas CHP": 22000
+
+data:
+  ariadne_database:
+    source: archive
+    version: latest
