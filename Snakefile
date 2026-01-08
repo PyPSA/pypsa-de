@@ -446,11 +446,6 @@ if config["pypsa-de"]["retrieve"]:
             """
 
 
-if config["pypsa-de"]["retrieve"]:
-
-    ruleorder: modify_cost_data > retrieve_cost_data
-
-
 rule build_exogenous_mobility_data:
     params:
         reference_scenario=config_provider("pypsa-de", "reference_scenario"),
