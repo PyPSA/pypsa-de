@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20251121_improve_decentral_heat
+  prefix: 20251113_lower_rescom_merge
   name:
   # - ExPol
   # - KN2045_Mix
@@ -19,7 +19,7 @@ run:
     manual_file: config/scenarios.manual.yaml
     file: config/scenarios.automated.yaml
   shared_resources:
-    policy: base #stops recalculating
+    policy: false #stops recalculating
     exclude:
     - existing_heating.csv   # specify files which should not be shared between scenarios
     - costs
@@ -62,11 +62,11 @@ iiasa_database:
     - 2030
     EEG_levels:
     - 1.00
-    # - 0.95
-    # - 0.90
-    # - 0.85
-    # - 0.80
-    # - 0.75
+    - 0.95
+    - 0.90
+    - 0.85
+    - 0.80
+    - 0.75
     - 0.70
     unit_commitment:
       enable: false
@@ -97,7 +97,7 @@ foresight: myopic
 # Wildcard docs in https://pypsa-eur.readthedocs.io/en/latest/wildcards.html
 scenario:
   clusters:
-  - 27 #current options: 27, 49
+  - 49 #current options: 27, 49
   opts:
   - ''
   sector_opts:
@@ -244,40 +244,40 @@ clustering:
   # print(fw.div(fw.sum()).subtract(5e-5).round(4).to_dict().__repr__().replace(",","\n"))
   focus_weights:
   # 27 nodes: 8 for Germany, 3 for Italy, 2 each for Denmark, UK and Spain, 1 per each of other 10 "Stromnachbarn"
-    'DE': 0.2966
-    'AT': 0.0370
-    'BE': 0.0370
-    'CH': 0.0370
-    'CZ': 0.0370
-    'DK': 0.0741
-    'FR': 0.0370
-    'GB': 0.0741
-    'LU': 0.0370
-    'NL': 0.0370
-    'NO': 0.0370
-    'PL': 0.0370
-    'SE': 0.0370
-    'ES': 0.0741
-    'IT': 0.1111
+    # 'DE': 0.2966
+    # 'AT': 0.0370
+    # 'BE': 0.0370
+    # 'CH': 0.0370
+    # 'CZ': 0.0370
+    # 'DK': 0.0741
+    # 'FR': 0.0370
+    # 'GB': 0.0741
+    # 'LU': 0.0370
+    # 'NL': 0.0370
+    # 'NO': 0.0370
+    # 'PL': 0.0370
+    # 'SE': 0.0370
+    # 'ES': 0.0741
+    # 'IT': 0.1111
   # high spatial resolution: change clusters to 49
   # 49 nodes: 30 for Germany, 3 for Italy, 2 each for Denmark, UK and Spain, 1 per each of other 10 "Stromnachbarn"
-    # 'DE': 0.6124
-    # 'AT': 0.0204
-    # 'BE': 0.0204
-    # 'CH': 0.0204
-    # 'CZ': 0.0204
-    # 'DK': 0.0408
-    # 'FR': 0.0204
-    # 'GB': 0.0408
-    # 'LU': 0.0204
-    # 'NL': 0.0204
-    # 'NO': 0.0204
-    # 'PL': 0.0204
-    # 'SE': 0.0204
-    # 'ES': 0.0408
-    # 'IT': 0.0612
+    'DE': 0.6124
+    'AT': 0.0204
+    'BE': 0.0204
+    'CH': 0.0204
+    'CZ': 0.0204
+    'DK': 0.0408
+    'FR': 0.0204
+    'GB': 0.0408
+    'LU': 0.0204
+    'NL': 0.0204
+    'NO': 0.0204
+    'PL': 0.0204
+    'SE': 0.0204
+    'ES': 0.0408
+    'IT': 0.0612
   temporal:
-    resolution_sector: 365H
+    resolution_sector: 3H 
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#co2-budget
 co2_budget:
@@ -330,7 +330,7 @@ costs:
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#sector
 sector:
   v2g: false
-  solar_thermal: false
+  solar_thermal: true
   district_heating:
     potential: 0.3
     progress:
@@ -486,8 +486,8 @@ industry:
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#solving
 solving:
-  runtime: 12h
-  mem_mb: 70000 #30000 is OK for 22 nodes, 365H; 140000 for 22 nodes 3H; 400000 for 44 nodes 3H
+  runtime: 24h 
+  mem_mb: 190000 #30000 is OK for 22 nodes, 365H; 140000 for 22 nodes 3H; 400000 for 44 nodes 3H
   options:
     assign_all_duals: true
     load_shedding: false
