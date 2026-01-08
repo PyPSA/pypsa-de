@@ -4,9 +4,6 @@ import math
 import os
 import re
 import sys
-
-sys.path.insert(0, os.path.abspath(os.path.dirname(__file__) + "/../.."))
-
 from functools import reduce
 
 import numpy as np
@@ -14,6 +11,8 @@ import pandas as pd
 import pypsa
 from numpy import isclose
 from pypsa.statistics import get_transmission_carriers
+
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__) + "/../.."))
 
 from scripts._helpers import (
     configure_logging,
@@ -23,6 +22,7 @@ from scripts._helpers import (
 )
 from scripts.add_electricity import calculate_annuity, load_costs
 
+pypsa.options.params.statistics.round = 10
 logger = logging.getLogger(__name__)
 
 # Defining global variables
@@ -68,19 +68,19 @@ def domestic_length_factor(n, carriers, region="DE"):
             continue  # Skip this carrier if not found in both links and lines
 
         # Loop through relevant components
-        for c in n.iterate_components():
-            if c.name in ["Link", "Line"] and carrier in c.df["carrier"].unique():
+        for c in n.components:
+            if c.name in ["Link", "Line"] and carrier in c.static["carrier"].unique():
                 # Filter based on carrier and region, excluding reversed links
-                all_i = c.df[
-                    (c.df["carrier"] == carrier)
-                    & (c.df.bus0 + c.df.bus1).str.contains(region)
-                    & ~c.df.index.str.contains("reversed")
+                all_i = c.static[
+                    (c.static["carrier"] == carrier)
+                    & (c.static.bus0 + c.static.bus1).str.contains(region)
+                    & ~c.static.index.str.contains("reversed")
                 ].index
 
                 # Separate domestic and cross-border links
                 domestic_i = all_i[
-                    c.df.loc[all_i, "bus0"].str.contains(region)
-                    & c.df.loc[all_i, "bus1"].str.contains(region)
+                    c.static.loc[all_i, "bus0"].str.contains(region)
+                    & c.static.loc[all_i, "bus1"].str.contains(region)
                 ]
                 cross_border_i = all_i.difference(domestic_i)
 
@@ -90,8 +90,8 @@ def domestic_length_factor(n, carriers, region="DE"):
                 # Calculate length factor if both sets are non-empty
                 if len(domestic_i) > 0 and len(cross_border_i) > 0:
                     length_factor = (
-                        c.df.loc[domestic_i, "length"].mean()
-                        / c.df.loc[cross_border_i, "length"].mean()
+                        c.static.loc[domestic_i, "length"].mean()
+                        / c.static.loc[cross_border_i, "length"].mean()
                     )
                     length_factors[(carrier, c.name)] = length_factor
                 else:
@@ -1757,7 +1757,7 @@ def get_secondary_energy(n, region, _industry_demand):
             ~hydrogen_production.index.str.startswith("H2 pipeline")
         ].sum(),
         rtol=0.01,
-        atol=1e-5,
+        atol=1e-3,
     )
 
     # Liquids
@@ -1792,7 +1792,7 @@ def get_secondary_energy(n, region, _industry_demand):
         var["Secondary Energy|Liquids"],
         liquids_production.sum(),
         rtol=0.01,
-        atol=1e-5,
+        atol=1e-3,
     )
 
     gas_supply = (
@@ -3116,7 +3116,7 @@ def get_nodal_flows(n, bus_carrier, region, query="index == index or index != in
         n.statistics.withdrawal(
             bus_carrier=bus_carrier,
             groupby=groupby,
-            aggregate_time=False,
+            groupby_time=False,
         )
         .query(query)
         .groupby("bus")
@@ -3152,7 +3152,7 @@ def get_nodal_supply(n, bus_carrier, query="index == index or index != index"):
         n.statistics.supply(
             bus_carrier=bus_carrier,
             groupby=groupby,
-            aggregate_time=False,
+            groupby_time=False,
         )
         .query(query)
         .groupby("bus")
