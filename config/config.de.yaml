@@ -265,7 +265,7 @@ first_technology_occurrence:
     H2 pipeline retrofitted: 2025
 
 costs:
-  custom_cost_fn: ariadne-data/custom_costs_nep_2023.csv
+  custom_cost_fn: data/pypsa-de/custom_costs_nep_2023.csv
   transmission: "overhead" # either overhead line ("overhead") or underground cable ("underground")
 
 

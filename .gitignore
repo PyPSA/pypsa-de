@@ -25,6 +25,15 @@ gurobi.log
 /logs
 /notebooks
 /data/*
+# Allowlist a small subset under data/pypsa-de.
+# Important: parent directories must be un-ignored for negations to take effect.
+!/data/pypsa-de/
+/data/pypsa-de/*
+!/data/pypsa-de/custom_costs_nep_2021.csv
+!/data/pypsa-de/custom_costs_nep_2023.csv
+!/data/pypsa-de/offshore_connection_points.csv
+!/data/pypsa-de/wasserstoff_kernnetz/
+!/data/pypsa-de/wasserstoff_kernnetz/**
 /cutouts
 /tmp
 doc/_build

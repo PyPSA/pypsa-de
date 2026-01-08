@@ -41,7 +41,7 @@ This will run all analysis steps to reproduce results. If computational resource
 ## Repo structure
 
 * `config`: configuration files
-* `ariadne-data`: Germany specific data from the Ariadne project
+* `data/pypsa-de`: Germany specific data from the Ariadne project
 * `scripts`: contains the Python scripts for the workflow, the Germany specific code needed to run this repo is contained in `scripts/pypsa-de`
 * `cutouts`: very large weather data cutouts supplied by atlite library (does not exist initially)
 * `data`: place for raw data (does not exist initially)
@@ -85,11 +85,11 @@ PyPSA-DE is a softfork of PyPSA-EUR. As such, large parts of the functionality a
 - `first_technology_occurrence` - specify the year form which on specific technologies are available
 - `solving:constraints` - specify PyPSA-DE specific limits, e.g. on capacity, trade and generation
 - `co2_budget_DE_source` specify the carbon trajectory for Germany: Following the projections of the Umweltbundestamt (`UBA`) or targeting net zero with the Klimaschutzgesetz(`KSG`)
-- `costs:transmission` - specify  if new HVDC links should be built with `overhead` or `underground` cables. the basic cost assumptions of the Netzentwicklungsplan (`2021,2023`) can be changed by using one of the two corresponding `custom_cost_nep_*.csv` files provided in the `ariadne-data` folder
+- `costs:transmission` - specify  if new HVDC links should be built with `overhead` or `underground` cables. the basic cost assumptions of the Netzentwicklungsplan (`2021,2023`) can be changed by using one of the two corresponding `custom_cost_nep_*.csv` files provided in the `data/pypsa-de` folder
 
 ## Data sources
 
-`ariadne-data/ariadne-database.csv`
+`data/pypsa-de/data/pypsa-debase.csv`
 
 * **Source:** Kopernikus Projekt Ariadne
 * **Link:** [Szenarien-Explorer](https://ariadne2.apps.ece.iiasa.ac.at/explorer)

@@ -398,7 +398,7 @@ def get_ariadne_database(w):
     if config["pypsa-de"]["retrieve_ariadne_database"]:
         return "data/ariadne_database.csv"
     else:
-        return "ariadne-data/ariadne_database.csv"
+        return "data/pypsa-de/ariadne_database.csv"
 
 
 if config["pypsa-de"]["retrieve"]:
@@ -667,7 +667,7 @@ rule modify_prenetwork:
         shipping_demand=resources("shipping_demand_s_{clusters}.csv"),
         regions_onshore=resources("regions_onshore_base_s_{clusters}.geojson"),
         regions_offshore=resources("regions_offshore_base_s_{clusters}.geojson"),
-        offshore_connection_points="ariadne-data/offshore_connection_points.csv",
+        offshore_connection_points="data/pypsa-de/offshore_connection_points.csv",
     output:
         network=resources(
             "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_final.nc"
@@ -766,7 +766,7 @@ rule build_wasserstoff_kernnetz:
             "https://geodata.ucdavis.edu/gadm/gadm4.1/json/gadm41_DEU_1.json.zip",
             keep_local=True,
         ),
-        locations="ariadne-data/wasserstoff_kernnetz/locations_wasserstoff_kernnetz.csv",
+        locations="data/pypsa-de/wasserstoff_kernnetz/locations_wasserstoff_kernnetz.csv",
         regions_onshore=resources("regions_onshore_base_s.geojson"),
         regions_offshore=resources("regions_offshore_base_s.geojson"),
     output:
