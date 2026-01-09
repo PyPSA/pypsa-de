@@ -1796,10 +1796,10 @@ def plot_h2_map(n, regions, savepath, only_de=False):
 
     n.plot(
         geomap=True,
-        bus_sizes=bus_sizes,
-        bus_colors=bus_colors,
-        link_colors=color_h2_pipe,
-        link_widths=link_widths_total,
+        bus_size=bus_sizes,
+        bus_color=bus_colors,
+        link_color=color_h2_pipe,
+        link_width=link_widths_total,
         branch_components=["Link"],
         ax=ax,
         **map_opts,
@@ -1807,9 +1807,9 @@ def plot_h2_map(n, regions, savepath, only_de=False):
 
     n.plot(
         geomap=True,
-        bus_sizes=0,
-        link_colors=color_retrofit,
-        link_widths=link_widths_retro,
+        bus_size=0,
+        link_color=color_retrofit,
+        link_width=link_widths_retro,
         branch_components=["Link"],
         ax=ax,
         **map_opts,
@@ -1817,9 +1817,9 @@ def plot_h2_map(n, regions, savepath, only_de=False):
 
     n.plot(
         geomap=True,
-        bus_sizes=0,
-        link_colors=color_kern,
-        link_widths=link_widths_kern,
+        bus_size=0,
+        link_color=color_kern,
+        link_width=link_widths_kern,
         branch_components=["Link"],
         ax=ax,
         **map_opts,
@@ -2125,10 +2125,10 @@ def plot_h2_map_de(
 
     n.plot(
         geomap=True,
-        bus_sizes=bus_sizes,
-        bus_colors=tech_colors,
-        link_colors=color_h2_pipe,
-        link_widths=link_widths_total,
+        bus_size=bus_sizes,
+        bus_color=tech_colors,
+        link_color=color_h2_pipe,
+        link_width=link_widths_total,
         branch_components=["Link"],
         ax=ax,
         **map_opts,
@@ -2136,9 +2136,9 @@ def plot_h2_map_de(
 
     n.plot(
         geomap=True,
-        bus_sizes=0,
-        link_colors=color_retrofit,
-        link_widths=link_widths_retro,
+        bus_size=0,
+        link_color=color_retrofit,
+        link_width=link_widths_retro,
         branch_components=["Link"],
         ax=ax,
         **map_opts,
@@ -2146,9 +2146,9 @@ def plot_h2_map_de(
 
     n.plot(
         geomap=True,
-        bus_sizes=0,
-        link_colors=color_kern,
-        link_widths=link_widths_kern,
+        bus_size=0,
+        link_color=color_kern,
+        link_width=link_widths_kern,
         branch_components=["Link"],
         ax=ax,
         **map_opts,
@@ -2381,12 +2381,12 @@ def plot_elec_map_de(
     m.plot(
         ax=ax,
         margin=0.06,
-        bus_sizes=bus_sizes,
-        bus_colors=tech_colors,
-        line_widths=line_widths,
-        line_colors=tech_colors["AC"],
-        link_widths=link_widths.clip(0),
-        link_colors=tech_colors["DC"],
+        bus_size=bus_sizes,
+        bus_color=tech_colors,
+        line_width=line_widths,
+        line_color=tech_colors["AC"],
+        link_width=link_widths.clip(0),
+        link_color=tech_colors["DC"],
     )
 
     regions_de.to_crs(display_projection.proj4_init).plot(
@@ -2495,7 +2495,7 @@ def plot_cap_map_de(
     savepath,
 ):
     m = network.copy()
-    m.mremove("Bus", m.buses[m.buses.x == 0].index)
+    m.remove("Bus", m.buses[m.buses.x == 0].index)
     m.buses.drop(m.buses.index[m.buses.carrier != "AC"], inplace=True)
 
     # storage as cmap on map
@@ -2578,8 +2578,8 @@ def plot_cap_map_de(
     m.plot(
         ax=ax,
         margin=0.06,
-        bus_sizes=bus_sizes,
-        bus_colors=tech_colors,
+        bus_size=bus_sizes,
+        bus_color=tech_colors,
         line_alpha=0,
         link_alpha=0,
     )
