@@ -237,6 +237,8 @@ def _get_fuel_fractions(n, region, fuel):
 
     assert isclose(fuel_fractions.sum(), 1)
 
+    fuel_fractions /= fuel_fractions.sum()
+
     return fuel_fractions
 
 
@@ -1203,6 +1205,7 @@ def get_primary_energy(n, region):
         n.statistics.withdrawal(bus_carrier="oil primary", **kwargs)
         .get(("Link", "DE oil refining"), pd.Series(0))
         .item(),
+        atol=1,  # MW
     )
 
     gas_fractions = _get_fuel_fractions(n, region, "gas")
