@@ -468,7 +468,7 @@ solving:
         onwind:
           DE:
             2020: 54.5
-            2025: 69
+            2025: 68  # # Abb. 4_9 https://www.agora-energiewende.de/fileadmin/Projekte/2025/2025-28_DE_JAW25/A-EW_391_Die_Energiewende_in_Deutschland_Stand_der_Dinge_2025_WEB.pdf
             2030: 115 # EEG2023 Ziel für 2030
             2035: 160 # EEG2023 Ziel für 2040
             2040: 250
@@ -478,15 +478,15 @@ solving:
           DE:
             2020: 7.8
             2025: 11.3
-            2030: 29.3 # uba Projektionsbericht and NEP without delayed BalWin 3
-            2035: 50 # Planned projects until 2035 (offshore_connection_points.csv) -1.3 GW for potential delays
+            2030: 24   # very optimistic upper ceiling to "Mittelfristprognose zur deutschlandweiten Stromerzeugung"
+            2035: 50   # Planned projects until 2035 (offshore_connection_points.csv) -1.3 GW for potential delays
             2040: 65   # Planned projects until 2040 -1.5 GW for potential retirments
             2045: 70
             2050: 70
         solar:
           DE:
             2020: 53.7
-            2025: 110 # EEG2023; assumes for 2026: 128 GW, assuming a fair share reached by end of 2025
+            2025: 119 # Abb. 4_9 https://www.agora-energiewende.de/fileadmin/Projekte/2025/2025-28_DE_JAW25/A-EW_391_Die_Energiewende_in_Deutschland_Stand_der_Dinge_2025_WEB.pdf
             2030: 235 # PV Ziel 2030 + 20 GW
             2035: 400
             2040: 800
@@ -533,21 +533,20 @@ solving:
       Generator:
         onwind:
           DE:
+            2025: 67    # Abb. 4_9 https://www.agora-energiewende.de/fileadmin/Projekte/2025/2025-28_DE_JAW25/A-EW_391_Die_Energiewende_in_Deutschland_Stand_der_Dinge_2025_WEB.pdf
             2030: 99    # Wind-an-Land Law 2028
             2035: 115   # Wind-an-Land Law 2030
             2040: 157   # target 2035
             2045: 160   # target 2040
         offwind:
           DE:
-            2030: 22.5   # 75% Wind-auf-See Law
+            2030: 18   # Mittelfristprognose zur deutschlandweiten Stromerzeugung
             2035: 35
             2040: 42
             2045: 50
         solar:
           DE:
-              # EEG2023; Ziel for 2024: 88 GW and for 2026: 128 GW,
-              # assuming at least 1/3 of difference reached in 2025
-            2025: 101
+            2025: 118 # Abb. 4_9 https://www.agora-energiewende.de/fileadmin/Projekte/2025/2025-28_DE_JAW25/A-EW_391_Die_Energiewende_in_Deutschland_Stand_der_Dinge_2025_WEB.pdf
         Link:
           H2 Electrolysis:
             DE:
@@ -723,7 +722,7 @@ onshore_nep_force:
 offshore_nep_force:
   cutin_year: 2025
   cutout_year: 2030
-  delay_years: 0
+  delay_years: 2
 
 scale_capacity:
   2020:
