@@ -316,7 +316,10 @@ sector:
   regional_coal_demand: true  #set to true if regional CO2 constraints needed
   gas_network: false
   regional_gas_demand: true
+  regional_co2_sequestration_potential:
+    enable: false
   H2_retrofit: true
+  hydrogen_turbine: false
   biogas_upgrading_cc: true
   biomass_to_liquid: true
   biomass_to_liquid_cc: true
