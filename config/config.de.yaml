@@ -261,7 +261,10 @@ first_technology_occurrence:
     H2 pipeline: 2025
     H2 Electrolysis: 2025
     H2 pipeline retrofitted: 2025
-
+    urban central water pits charger: 2035
+    urban central water pits discharger: 2035
+  Store:
+    urban central water pits: 2035
 costs:
   custom_cost_fn: data/pypsa-de/custom_costs_nep_2023.csv
   transmission: "overhead" # either overhead line ("overhead") or underground cable ("underground")
@@ -499,6 +502,9 @@ solving:
             2040: 50000
             2045: 80000
             2050: 80000
+        urban central water tanks:
+          DE:
+            2025: 120 # GWh, https://www.hamburg-institut.com/wp-content/uploads/2023/12/Referenzblatt_SysGF-1.pdf
       Link:
         methanolisation:
           DE:
