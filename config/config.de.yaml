@@ -303,6 +303,7 @@ sector:
     urban decentral: true
     rural: true
   co2_spatial: true
+  co2_network: false
   biomass_spatial: true
   ammonia: false
   methanol:
