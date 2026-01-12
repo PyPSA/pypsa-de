@@ -66,7 +66,13 @@ def get_co2_budget(df, source):
         ## GHG targets according to KSG
         initial_years_co2 = pd.Series(
             index=[2020, 2025, 2030],
-            data=[813, 643, 438],
+            data=[
+                813,  # historisch
+                # 643,  # Ziel laut KSG
+                640,  # geschätzt, https://www.agora-energiewende.de/fileadmin/Projekte/2025/2025-28_DE_JAW25/A-EW_391_Die_Energiewende_in_Deutschland_Stand_der_Dinge_2025_WEB.pdf,
+                # 438,  # Ziel laut KSG
+                456.8,  # Durch UBA anhand der Emissionsdaten 2024 vom 15.3.2025 rechnerisch ermittelte Vorschläge für die Anpassung der Jahresemissionsgesamtmengen nach § 4 Abs. 2 KSG
+            ],
         )
 
         later_years_co2 = pd.Series(
