@@ -21,15 +21,16 @@ logger = logging.getLogger(__name__)
 
 def first_technology_occurrence(n):
     """
-    Sets p_nom_extendable to false for carriers with configured first
-    occurrence if investment year is before configured year.
+    Drop configured technologies before configured year.
     """
 
     for c, carriers in snakemake.params.technology_occurrence.items():
         for carrier, first_year in carriers.items():
             if int(snakemake.wildcards.planning_horizons) < first_year:
-                logger.info(f"{carrier} not extendable before {first_year}.")
-                n.df(c).loc[n.df(c).carrier == carrier, "p_nom_extendable"] = False
+                to_drop = n.df(c).query(f"carrier == '{carrier}'").index
+                if to_drop.empty:
+                    continue
+                n.remove(c, to_drop)
 
 
 def fix_new_boiler_profiles(n):
