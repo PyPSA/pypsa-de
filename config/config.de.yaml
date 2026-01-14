@@ -360,14 +360,6 @@ industry:
   steam_biomass_fraction: 0.4
   steam_hydrogen_fraction: 0.3
   steam_electricity_fraction: 0.3
-  St_primary_fraction:
-    2020: 0.6
-    2025: 0.55
-    2030: 0.5
-    2035: 0.45
-    2040: 0.4
-    2045: 0.35
-    2050: 0.3
   DRI_fraction:
     2020: 0
     2025: 0
@@ -388,22 +380,6 @@ industry:
     2040: 0.6
     2045: 0.5
     2050: 0.4
-  HVC_mechanical_recycling_fraction:
-    2020: 0.12
-    2025: 0.15
-    2030: 0.18
-    2035: 0.21
-    2040: 0.24
-    2045: 0.27
-    2050: 0.30
-  HVC_chemical_recycling_fraction:
-    2020: 0.0
-    2025: 0.0
-    2030: 0.04
-    2035: 0.08
-    2040: 0.12
-    2045: 0.16
-    2050: 0.20
   # 15 Mt HVC production (from IDEES) -> 6 Mt Plastikabfälle,
   # To substitute for other waste, assume all Plastikabfall is used energetically whereas in reality ~40% is recycled
   # see https://github.com/PyPSA/pypsa-ariadne/pull/292
