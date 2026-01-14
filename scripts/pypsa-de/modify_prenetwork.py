@@ -1277,6 +1277,14 @@ def scale_capacity(n, scaling):
                 ]
 
 
+def limit_cross_border_flows_ac(n, s_max_pu):
+    logger.info(
+        f"Limiting AC cross-border flows between all countries to {s_max_pu} of maximum capacity."
+    )
+    cross_border_lines = n.lines.index[n.lines.bus0.str[:2] != n.lines.bus1.str[:2]]
+    n.lines.loc[cross_border_lines, "s_max_pu"] = s_max_pu
+
+
 if __name__ == "__main__":
     if "snakemake" not in globals():
         snakemake = mock_snakemake(
@@ -1353,5 +1361,10 @@ if __name__ == "__main__":
     scale_capacity(n, snakemake.params.scale_capacity)
 
     sanitize_custom_columns(n)
+
+    if current_year in snakemake.params.limit_cross_border_flows_ac:
+        limit_cross_border_flows_ac(
+            n, snakemake.params.limit_cross_border_flows_ac[current_year]
+        )
 
     n.export_to_netcdf(snakemake.output.network)

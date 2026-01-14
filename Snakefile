@@ -654,6 +654,9 @@ rule modify_prenetwork:
         bev_charge_rate=config_provider("sector", "bev_charge_rate"),
         bev_energy=config_provider("sector", "bev_energy"),
         bev_dsm_availability=config_provider("sector", "bev_dsm_availability"),
+        limit_cross_border_flows_ac=config_provider(
+            "pypsa-de", "limit_cross_border_flows_ac"
+        ),
     input:
         network=resources(
             "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_brownfield.nc"

@@ -37,6 +37,14 @@ pypsa-de:
   region: Deutschland
   ageb_for_mobility: true # In 2020 use AGEB data for final energy demand and KBA for vehicles
   uba_for_mobility: false # For 2025–2035 use MWMS scenario from UBA Projektionsbericht 2025
+  limit_cross_border_flows_ac:  # relevant if only one node per country is used
+    2020: 0.4
+    2025: 0.4
+    2030: 0.45
+    2035: 0.49 # = 0.7 * 0.7 <=> security margin * CEP target 
+    2040: 0.49
+    2045: 0.49
+    2050: 0.49
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#foresight
 foresight: myopic
