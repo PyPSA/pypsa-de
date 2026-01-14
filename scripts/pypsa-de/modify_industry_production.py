@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 if __name__ == "__main__":
     if "snakemake" not in globals():
         snakemake = mock_snakemake(
-            "modify_industry_demand",
+            "modify_industry_production",
             simpl="",
             clusters=22,
             opts="",
