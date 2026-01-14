@@ -336,30 +336,24 @@ sector:
     2045: 0.36
     2050: 0.43
   # For Germany these settings get overwritten in build_exogenous_mobility_data
+  # Essentially all PyPSA-EUR settings but with a little bit of hydrogen to allow for the later overwrites
   land_transport_fuel_cell_share:
-    2020: 0.01
-    2025: 0.01
-    2030: 0.02
-    2035: 0.03
-    2040: 0.03
-    2045: 0.03
-    2050: 0.03
+    2020: 0.001
+    2025: 0.001
+    2030: 0.001
+    2035: 0.001
+    2040: 0.001
+    2045: 0.001
+    2050: 0.001
   land_transport_electric_share:
-    2020: 0.05
-    2025: 0.15
-    2030: 0.3
-    2035: 0.45
-    2040: 0.72
-    2045: 0.87
-    2050: 0.97
+    2050: 0.999
   land_transport_ice_share:
-    2020: 0.94
-    2025: 0.84
-    2030: 0.68
-    2035: 0.52
-    2040: 0.25
-    2045: 0.1
-    2050: 0.0
+    2020: 0.999
+    2025: 0.949
+    2030: 0.799
+    2035: 0.549
+    2040: 0.299
+    2045: 0.149
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#industry
 industry:
