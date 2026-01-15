@@ -91,18 +91,8 @@ def get_co2_budget(df, source):
         )
     else:
         raise ValueError("Invalid source for CO2 budget.")
-    ## Compute nonco2 from Ariadne-Leitmodell (REMIND)
 
-    # co2 = (
-    #     df.loc["Emissions|CO2 incl Bunkers","Mt CO2/yr"]
-    #     - df.loc["Emissions|CO2|Land-Use Change","Mt CO2-equiv/yr"]
-    #     - df.loc["Emissions|CO2|Energy|Demand|Bunkers","Mt CO2/yr"]
-    # )
-    # ghg = (
-    #     df.loc["Emissions|Kyoto Gases","Mt CO2-equiv/yr"]
-    #     - df.loc["Emissions|Kyoto Gases|Land-Use Change","Mt CO2-equiv/yr"]
-    #     # No Kyoto Gas emissions for Bunkers recorded in Ariadne DB
-    # )
+    ## Compute nonco2 from Ariadne-Leitmodell (REMIND)
 
     try:
         co2_land_use_change = df.loc["Emissions|CO2|Land-Use Change", "Mt CO2-equiv/yr"]
@@ -123,14 +113,20 @@ def get_co2_budget(df, source):
 
     nonco2 = ghg - co2
 
+    # Hard-code values for 2020 and 2025 from UBA reports / projections
+    # Table 1, https://reportnet.europa.eu/public/dataflow/1478, GHG - CO2
+    nonco2[2020] = 733.7 - 647.9
+    nonco2[2025] = 628.8 - 554.6
+
     ## PyPSA disregards nonco2 GHG emissions, but includes bunkers
 
     targets_pypsa = targets_co2 - nonco2
 
+    logger.info("Non-CO2 GHG emissions assumed (in Mt CO2-equiv/yr):")
+    for year in nonco2.index:
+        logger.info(f"{year}: {nonco2.loc[year]:.1f}")
+
     target_fractions_pypsa = targets_pypsa.loc[targets_co2.index] / baseline_pypsa
-    target_fractions_pypsa[2020] = (
-        0.671  # Hard-coded based on REMIND data from ariadne2-internal DB
-    )
 
     return target_fractions_pypsa.round(3)
 
