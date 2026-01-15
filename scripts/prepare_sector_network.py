@@ -2423,6 +2423,7 @@ def add_EVs(
     temperature: pd.DataFrame,
     spatial: SimpleNamespace,
     options: dict,
+    investment_year: int,
 ) -> None:
     """
     Add electric vehicle (EV) infrastructure to the network.
@@ -2463,6 +2464,7 @@ def add_EVs(
         - bev_energy: float
         - bev_dsm_availability: float
         - v2g: bool
+    investment_year: int
 
     Returns
     -------
@@ -2872,6 +2874,7 @@ def add_land_transport(
             temperature,
             spatial,
             options,
+            investment_year,
         )
 
     if shares["fuel_cell"] > 0:
