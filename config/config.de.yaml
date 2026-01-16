@@ -278,6 +278,8 @@ first_technology_occurrence:
     urban central water pits discharger: 2035
   Store:
     urban central water pits: 2035
+  Bus:
+    urban central water pits: 2035
 costs:
   custom_cost_fn: data/pypsa-de/custom_costs_nep_2023.csv
   transmission: "overhead" # either overhead line ("overhead") or underground cable ("underground")
