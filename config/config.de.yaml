@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20251017_improve_power_limits
+  prefix: 20260114_limit_cross_border_flows
   name:
   # - ExPol
   - KN2045_Mix
@@ -36,7 +36,20 @@ pypsa-de:
   reference_scenario: KN2045_Mix
   region: Deutschland
   ageb_for_mobility: true # In 2020 use AGEB data for final energy demand and KBA for vehicles
-  uba_for_mobility: false # For 2025–2035 use MWMS scenario from UBA Projektionsbericht 2025
+  uba_for_mobility: # Available for 2025–2035; uses MWMS scenario from UBA Projektionsbericht 2025
+  - 2025
+  uba_for_industry: # Available for 2025–2035; uses MWMS scenario from UBA Projektionsbericht 2025
+    scale_non_energy: false # Scale non-energy demand directly proportional to energy demand
+    enable: # Allowed values are "false" or a subset of [2025, 2030, 2035]
+    - 2025
+  limit_cross_border_flows_ac:  # relevant if only one node per country is used
+    2020: 0.4
+    2025: 0.4
+    2030: 0.45
+    2035: 0.49 # = 0.7 * 0.7 <=> security margin * CEP target 
+    2040: 0.49
+    2045: 0.49
+    2050: 0.49
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#foresight
 foresight: myopic
@@ -261,7 +274,12 @@ first_technology_occurrence:
     H2 pipeline: 2025
     H2 Electrolysis: 2025
     H2 pipeline retrofitted: 2025
-
+    urban central water pits charger: 2035
+    urban central water pits discharger: 2035
+  Store:
+    urban central water pits: 2035
+  Bus:
+    urban central water pits: 2035
 costs:
   custom_cost_fn: data/pypsa-de/custom_costs_nep_2023.csv
   transmission: "overhead" # either overhead line ("overhead") or underground cable ("underground")
@@ -336,44 +354,30 @@ sector:
     2045: 0.36
     2050: 0.43
   # For Germany these settings get overwritten in build_exogenous_mobility_data
+  # Essentially all PyPSA-EUR settings but with a little bit of hydrogen to allow for the later overwrites
   land_transport_fuel_cell_share:
-    2020: 0.01
-    2025: 0.01
-    2030: 0.02
-    2035: 0.03
-    2040: 0.03
-    2045: 0.03
-    2050: 0.03
+    2020: 0.001
+    2025: 0.001
+    2030: 0.001
+    2035: 0.001
+    2040: 0.001
+    2045: 0.001
+    2050: 0.001
   land_transport_electric_share:
-    2020: 0.05
-    2025: 0.15
-    2030: 0.3
-    2035: 0.45
-    2040: 0.72
-    2045: 0.87
-    2050: 0.97
+    2050: 0.999
   land_transport_ice_share:
-    2020: 0.94
-    2025: 0.84
-    2030: 0.68
-    2035: 0.52
-    2040: 0.25
-    2045: 0.1
-    2050: 0.0
+    2020: 0.999
+    2025: 0.949
+    2030: 0.799
+    2035: 0.549
+    2040: 0.299
+    2045: 0.149
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#industry
 industry:
   steam_biomass_fraction: 0.4
   steam_hydrogen_fraction: 0.3
   steam_electricity_fraction: 0.3
-  St_primary_fraction:
-    2020: 0.6
-    2025: 0.55
-    2030: 0.5
-    2035: 0.45
-    2040: 0.4
-    2045: 0.35
-    2050: 0.3
   DRI_fraction:
     2020: 0
     2025: 0
@@ -394,22 +398,6 @@ industry:
     2040: 0.6
     2045: 0.5
     2050: 0.4
-  HVC_mechanical_recycling_fraction:
-    2020: 0.12
-    2025: 0.15
-    2030: 0.18
-    2035: 0.21
-    2040: 0.24
-    2045: 0.27
-    2050: 0.30
-  HVC_chemical_recycling_fraction:
-    2020: 0.0
-    2025: 0.0
-    2030: 0.04
-    2035: 0.08
-    2040: 0.12
-    2045: 0.16
-    2050: 0.20
   # 15 Mt HVC production (from IDEES) -> 6 Mt Plastikabfälle,
   # To substitute for other waste, assume all Plastikabfall is used energetically whereas in reality ~40% is recycled
   # see https://github.com/PyPSA/pypsa-ariadne/pull/292
@@ -468,7 +456,7 @@ solving:
         onwind:
           DE:
             2020: 54.5
-            2025: 69
+            2025: 68  # # Abb. 4_9 https://www.agora-energiewende.de/fileadmin/Projekte/2025/2025-28_DE_JAW25/A-EW_391_Die_Energiewende_in_Deutschland_Stand_der_Dinge_2025_WEB.pdf
             2030: 115 # EEG2023 Ziel für 2030
             2035: 160 # EEG2023 Ziel für 2040
             2040: 250
@@ -478,15 +466,15 @@ solving:
           DE:
             2020: 7.8
             2025: 11.3
-            2030: 29.3 # uba Projektionsbericht and NEP without delayed BalWin 3
-            2035: 50 # Planned projects until 2035 (offshore_connection_points.csv) -1.3 GW for potential delays
+            2030: 24   # very optimistic upper ceiling to "Mittelfristprognose zur deutschlandweiten Stromerzeugung"
+            2035: 50   # Planned projects until 2035 (offshore_connection_points.csv) -1.3 GW for potential delays
             2040: 65   # Planned projects until 2040 -1.5 GW for potential retirments
             2045: 70
             2050: 70
         solar:
           DE:
             2020: 53.7
-            2025: 110 # EEG2023; assumes for 2026: 128 GW, assuming a fair share reached by end of 2025
+            2025: 119 # Abb. 4_9 https://www.agora-energiewende.de/fileadmin/Projekte/2025/2025-28_DE_JAW25/A-EW_391_Die_Energiewende_in_Deutschland_Stand_der_Dinge_2025_WEB.pdf
             2030: 235 # PV Ziel 2030 + 20 GW
             2035: 400
             2040: 800
@@ -502,6 +490,9 @@ solving:
             2040: 50000
             2045: 80000
             2050: 80000
+        urban central water tanks:
+          DE:
+            2025: 120 # GWh, https://www.hamburg-institut.com/wp-content/uploads/2023/12/Referenzblatt_SysGF-1.pdf
       Link:
         methanolisation:
           DE:
@@ -530,21 +521,20 @@ solving:
       Generator:
         onwind:
           DE:
+            2025: 67    # Abb. 4_9 https://www.agora-energiewende.de/fileadmin/Projekte/2025/2025-28_DE_JAW25/A-EW_391_Die_Energiewende_in_Deutschland_Stand_der_Dinge_2025_WEB.pdf
             2030: 99    # Wind-an-Land Law 2028
             2035: 115   # Wind-an-Land Law 2030
             2040: 157   # target 2035
             2045: 160   # target 2040
         offwind:
           DE:
-            2030: 22.5   # 75% Wind-auf-See Law
+            2030: 18   # Mittelfristprognose zur deutschlandweiten Stromerzeugung
             2035: 35
             2040: 42
             2045: 50
         solar:
           DE:
-              # EEG2023; Ziel for 2024: 88 GW and for 2026: 128 GW,
-              # assuming at least 1/3 of difference reached in 2025
-            2025: 101
+            2025: 118 # Abb. 4_9 https://www.agora-energiewende.de/fileadmin/Projekte/2025/2025-28_DE_JAW25/A-EW_391_Die_Energiewende_in_Deutschland_Stand_der_Dinge_2025_WEB.pdf
         Link:
           H2 Electrolysis:
             DE:
@@ -601,8 +591,8 @@ solving:
       # boundary condition lower?
         DE:
           2020: 0
-          2025: 0
-          2030: 10
+          2025: 6
+          2030: 20
           2035: 105
           2040: 200
           2045: 300
@@ -720,7 +710,7 @@ onshore_nep_force:
 offshore_nep_force:
   cutin_year: 2025
   cutout_year: 2030
-  delay_years: 0
+  delay_years: 2
 
 scale_capacity:
   2020:

@@ -1,4 +1,12 @@
 # Changelog
+- added 2 delay years to the offshore NEP, s.t. capacity in 2030 is ~20GW
+- improved script name `modify_industry_demand` -> `modify_industry_production`
+- excluded international shipping from DE-specific CO2 emisisons
+- improved land transport shares, and some RES constraints
+- disabled ptes before 2035
+- add function to limit cross border electricity flows, to comply with the 0.7 security margin and the 0.7 EU trade capacity goals
+- Added an option to source industry energy demand from UBA MWMS (Projektionsbericht 2025) for the years 2025-2035
+- renamed some scripts
 - Upstream: PyPSA-Eur adopted a new functionality for overwriting costs. PyPSA-DE follows this convention now. As a consequence, the `costs:horizon:optimist/mean/pessimist` is no longer available. `Mean` will be provided exclusively from now on. Also, the costs assumptions for onwind turbines changed sligthly. Furthermore, "costs:NEP_year:2021/2023" is no longer available, instead one of the  custom_cost files for these NEP years provided in the `data/pypsa-de` folder has to be specified.
 - The `ariadne-data` folder has been moved and renamed to `data/pypsa-de` to conform with the syntax of `scripts/pypsa-de`
 - Bugfix: Enforce stricter power import limit to avoid that import from one country compensate from exports to another

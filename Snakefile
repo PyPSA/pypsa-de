@@ -654,6 +654,13 @@ rule modify_prenetwork:
         bev_charge_rate=config_provider("sector", "bev_charge_rate"),
         bev_energy=config_provider("sector", "bev_energy"),
         bev_dsm_availability=config_provider("sector", "bev_dsm_availability"),
+        uba_for_industry=config_provider("pypsa-de", "uba_for_industry", "enable"),
+        scale_industry_non_energy=config_provider(
+            "pypsa-de", "uba_for_industry", "scale_industry_non_energy"
+        ),
+        limit_cross_border_flows_ac=config_provider(
+            "pypsa-de", "limit_cross_border_flows_ac"
+        ),
     input:
         network=resources(
             "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_brownfield.nc"
@@ -675,6 +682,12 @@ rule modify_prenetwork:
         industrial_demand=resources(
             "industrial_energy_demand_base_s_{clusters}_{planning_horizons}.csv"
         ),
+        industrial_production_per_country_tomorrow=resources(
+            "industrial_production_per_country_tomorrow_{planning_horizons}-modified.csv"
+        ),
+        industry_sector_ratios=resources(
+            "industry_sector_ratios_{planning_horizons}.csv"
+        ),
         pop_weighted_energy_totals=resources(
             "pop_weighted_energy_totals_s_{clusters}.csv"
         ),
@@ -682,6 +695,7 @@ rule modify_prenetwork:
         regions_onshore=resources("regions_onshore_base_s_{clusters}.geojson"),
         regions_offshore=resources("regions_offshore_base_s_{clusters}.geojson"),
         offshore_connection_points="data/pypsa-de/offshore_connection_points.csv",
+        new_industrial_energy_demand="data/pypsa-de/UBA_Projektionsbericht2025_Abbildung31_MWMS.csv",
     output:
         network=resources(
             "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_final.nc"
@@ -695,7 +709,7 @@ rule modify_prenetwork:
         "scripts/pypsa-de/modify_prenetwork.py"
 
 
-ruleorder: modify_industry_demand > build_industrial_production_per_country_tomorrow
+ruleorder: modify_industry_production > build_industrial_production_per_country_tomorrow
 
 
 rule modify_existing_heating:
@@ -740,7 +754,7 @@ rule build_existing_chp_de:
         "scripts/pypsa-de/build_existing_chp_de.py"
 
 
-rule modify_industry_demand:
+rule modify_industry_production:
     params:
         reference_scenario=config_provider("pypsa-de", "reference_scenario"),
     input:
@@ -755,9 +769,9 @@ rule modify_industry_demand:
     resources:
         mem_mb=1000,
     log:
-        logs("modify_industry_demand_{planning_horizons}.log"),
+        logs("modify_industry_production_{planning_horizons}.log"),
     script:
-        "scripts/pypsa-de/modify_industry_demand.py"
+        "scripts/pypsa-de/modify_industry_production.py"
 
 
 rule build_wasserstoff_kernnetz:
