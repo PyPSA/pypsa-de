@@ -670,9 +670,7 @@ rule modify_prenetwork:
             if config_provider("wasserstoff_kernnetz", "enable")(w)
             else []
         ),
-        costs=lambda w: resources(
-            f"costs_{config_provider("scenario", "planning_horizons",0)(w)}_processed.csv"
-        ),
+        costs=resources("costs_{planning_horizons}_processed.csv"),
         modified_mobility_data=resources(
             "modified_mobility_data_{clusters}_{planning_horizons}.csv"
         ),
