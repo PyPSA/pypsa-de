@@ -661,6 +661,7 @@ rule modify_prenetwork:
         limit_cross_border_flows_ac=config_provider(
             "pypsa-de", "limit_cross_border_flows_ac"
         ),
+        remove_electricity_grid=config_provider("remove_electricity_grid"),
     input:
         network=resources(
             "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_brownfield.nc"

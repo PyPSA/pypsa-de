@@ -236,3 +236,28 @@ KN2045_NFhoch:
       2040: 0.24
       2045: 0.29
       2050: 0.33
+
+
+KN2045_Mix_no_grid:
+
+  remove_electricity_grid: true
+
+KN2045_Mix_transmission_limit_1.0:
+
+  electricity:
+    transmission_limit: v1.0
+
+KN2045_Mix_transmission_limit_1.1:
+
+  electricity:
+    transmission_limit: v1.1
+
+KN2045_Mix_transmission_limit_1.2:
+
+  electricity:
+    transmission_limit: v1.2
+
+KN2045_Mix_transmission_limit_1.3:
+
+  electricity:
+    transmission_limit: v1.3

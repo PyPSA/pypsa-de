@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20260114_limit_cross_border_flows
+  prefix: 20260203-elec-grid-limitations
   name:
   # - ExPol
   - KN2045_Mix
@@ -12,6 +12,11 @@ run:
   # - KN2045_H2
   # - KN2045_NFniedrig
   # - KN2045_NFhoch
+  - KN2045_Mix_no_grid
+  - KN2045_Mix_transmission_limit_1.0
+  - KN2045_Mix_transmission_limit_1.1
+  - KN2045_Mix_transmission_limit_1.2
+  - KN2045_Mix_transmission_limit_1.3
   scenarios:
     enable: true
     manual_file: config/scenarios.manual.yaml
@@ -66,13 +71,13 @@ scenario:
   sector_opts:
   - none
   planning_horizons:
-  - 2020
+  # - 2020
   - 2025
-  - 2030
+  # - 2030
   - 2035
-  - 2040
+  # - 2040
   - 2045
-  - 2050
+  # - 2050
 
 existing_capacities:
   grouping_years_power: [1920, 1950, 1955, 1960, 1965, 1970, 1975, 1980, 1985, 1990, 1995, 2000, 2005, 2010, 2015, 2020]
@@ -336,7 +341,7 @@ sector:
   regional_gas_demand: true
   regional_co2_sequestration_potential:
     enable: false
-  H2_retrofit: true
+  H2_retrofit: false
   hydrogen_turbine: false
   biogas_upgrading_cc: true
   biomass_to_liquid: true
