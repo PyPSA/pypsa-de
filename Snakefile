@@ -7,7 +7,10 @@ import yaml
 import sys
 from os.path import normpath, exists, join
 from shutil import copyfile, move, rmtree, unpack_archive
+from dotenv import load_dotenv
 from snakemake.utils import min_version
+
+load_dotenv()
 
 min_version("8.11")
 
@@ -17,12 +20,15 @@ from scripts._helpers import (
     get_shadow,
     path_provider,
 )
+from scripts.lib.validation.config import validate_config
 
 
 configfile: "config/config.default.yaml"
 configfile: "config/plotting.default.yaml"
 configfile: "config/config.de.yaml"
 
+
+validate_config(config)
 
 run = config["run"]
 scenarios = get_scenarios(run)
