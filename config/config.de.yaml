@@ -208,7 +208,7 @@ clustering:
     'CH': 0.0370
     'CZ': 0.0370
     'DK': 0.0741
-    'FR': 0.0370
+    'FR': 0.0741
     'GB': 0.0741
     'LU': 0.0370
     'NL': 0.0370
@@ -216,7 +216,7 @@ clustering:
     'PL': 0.0370
     'SE': 0.0370
     'ES': 0.0741
-    'IT': 0.1111
+    'IT': 0.0741
   # high spatial resolution: change clusters to 49
   # 49 nodes: 30 for Germany, 3 for Italy, 2 each for Denmark, UK and Spain, 1 per each of other 10 "Stromnachbarn"
     # 'DE': 0.6124
@@ -225,7 +225,7 @@ clustering:
     # 'CH': 0.0204
     # 'CZ': 0.0204
     # 'DK': 0.0408
-    # 'FR': 0.0204
+    # 'FR': 0.0408
     # 'GB': 0.0408
     # 'LU': 0.0204
     # 'NL': 0.0204
@@ -233,7 +233,7 @@ clustering:
     # 'PL': 0.0204
     # 'SE': 0.0204
     # 'ES': 0.0408
-    # 'IT': 0.0612
+    # 'IT': 0.0408
   temporal:
     resolution_sector: 365H
 
