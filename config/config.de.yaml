@@ -66,17 +66,16 @@ scenario:
   sector_opts:
   - none
   planning_horizons:
-  - 2020
   - 2025
   - 2030
   - 2035
   - 2040
   - 2045
-  - 2050
+  # - 2050
 
 existing_capacities:
-  grouping_years_power: [1920, 1950, 1955, 1960, 1965, 1970, 1975, 1980, 1985, 1990, 1995, 2000, 2005, 2010, 2015, 2020]
-  grouping_years_heat: [1980, 1985, 1990, 1995, 2000, 2005, 2010, 2015, 2019] # heat grouping years >= baseyear will be ignored
+  grouping_years_power: [1920, 1950, 1955, 1960, 1965, 1970, 1975, 1980, 1985, 1990, 1995, 2000, 2005, 2010, 2015, 2020, 2025]
+  grouping_years_heat: [1980, 1985, 1990, 1995, 2000, 2005, 2010, 2015, 2020, 2024] # heat grouping years >= baseyear will be ignored
   fill_value_gas_chp_lifetime: 40 # if no explicit lifetime is given use 40 years. The number was chosen s.t. the existing capacities in 2020 match with statistics.
 
 
@@ -663,11 +662,11 @@ plotting:
 #powerplants_filter: (DateOut >= 2019 or DateOut != DateOut)
 electricity:
   renewable_carriers: [solar, solar-hsat, onwind, offwind-ac, offwind-dc, hydro] # removed offwind-float
-  powerplants_filter: (DateOut >= 2019 or DateOut != DateOut) and not (Country == "DE" and Set == "CHP")
+  powerplants_filter: (DateOut >= 2024 or DateOut != DateOut) and not (Country == "DE" and Set == "CHP")
   custom_powerplants: true
   custom_file: resources/german_chp.csv
   estimate_renewable_capacities:
-    year: 2019
+    year: 2024
   H2_plants_DE:
     enable: true
     start: 2030 # should be < force
