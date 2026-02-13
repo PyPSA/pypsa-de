@@ -4,10 +4,11 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20260114_limit_cross_border_flows
+  prefix: 20260213_H2plantsEU
   name:
   # - ExPol
   - KN2045_Mix
+  # - KN2045_Mix_H2plantsEU
   # - KN2045_Elek
   # - KN2045_H2
   # - KN2045_NFniedrig
@@ -194,30 +195,32 @@ lines:
     cutout: europe-2019-sarah3-era5
 
 clustering:
-  # simplify_network:
-  #   to_substations: true
+  mode: administrative
+  administrative:
+    level: 0
+    DE: 2
   # Code snippet for editing focus_weights
   # fw = pd.Series(snakemake.config["clustering"]["focus_weights"])
   # fw = fw.div(fw.min()).round()
   # fw["ES"] = 1
   # print(fw.div(fw.sum()).subtract(5e-5).round(4).to_dict().__repr__().replace(",","\n"))
-  focus_weights:
-  # 27 nodes: 8 for Germany, 3 for Italy, 2 each for Denmark, UK and Spain, 1 per each of other 10 "Stromnachbarn"
-    'DE': 0.2965
-    'AT': 0.0370
-    'BE': 0.0370
-    'CH': 0.0370
-    'CZ': 0.0370
-    'DK': 0.0741
-    'FR': 0.0741
-    'GB': 0.0741
-    'LU': 0.0370
-    'NL': 0.0370
-    'NO': 0.0370
-    'PL': 0.0370
-    'SE': 0.0370
-    'ES': 0.0741
-    'IT': 0.0741
+  # focus_weights:
+  # # 27 nodes: 8 for Germany, 3 for Italy, 2 each for Denmark, UK and Spain, 1 per each of other 10 "Stromnachbarn"
+  #   'DE': 0.2965
+  #   'AT': 0.0370
+  #   'BE': 0.0370
+  #   'CH': 0.0370
+  #   'CZ': 0.0370
+  #   'DK': 0.0741
+  #   'FR': 0.0741
+  #   'GB': 0.0741
+  #   'LU': 0.0370
+  #   'NL': 0.0370
+  #   'NO': 0.0370
+  #   'PL': 0.0370
+  #   'SE': 0.0370
+  #   'ES': 0.0741
+  #   'IT': 0.0741
   # high spatial resolution: change clusters to 49
   # 49 nodes: 30 for Germany, 3 for Italy, 2 each for Denmark, UK and Spain, 1 per each of other 10 "Stromnachbarn"
     # 'DE': 0.6124
