@@ -73,6 +73,10 @@ KN2045_Mix:
 # Importe erneuerbar erzeugter Energien auf mittlerem Niveau
 # dient als Referenzszenario in der Familie der Ariadne-Szenarien
 
+KN2045_Mix_H2plantsEU:
+  electricity:
+    H2_plants:
+      enable: EU
 
 KN2045_Elek:
 # Fokus auf dem Hochlauf von Technologien zur direkten Elektrifizierung der Sektoren
