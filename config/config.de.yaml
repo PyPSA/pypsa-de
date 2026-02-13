@@ -38,10 +38,12 @@ pypsa-de:
   ageb_for_mobility: true # In 2020 use AGEB data for final energy demand and KBA for vehicles
   uba_for_mobility: # Available for 2025–2035; uses MWMS scenario from UBA Projektionsbericht 2025
   - 2025
+  - 2030
   uba_for_industry: # Available for 2025–2035; uses MWMS scenario from UBA Projektionsbericht 2025
     scale_non_energy: false # Scale non-energy demand directly proportional to energy demand
     enable: # Allowed values are "false" or a subset of [2025, 2030, 2035]
     - 2025
+    - 2030
   limit_cross_border_flows_ac:  # relevant if only one node per country is used
     2020: 0.4
     2025: 0.4
