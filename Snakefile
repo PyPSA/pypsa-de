@@ -641,7 +641,7 @@ rule modify_prenetwork:
         transmission_costs=config_provider("costs", "transmission"),
         must_run=config_provider("must_run"),
         clustering=config_provider("clustering", "temporal", "resolution_sector"),
-        H2_plants=config_provider("electricity", "H2_plants_DE"),
+        H2_plants=config_provider("electricity", "H2_plants"),
         onshore_nep_force=config_provider("onshore_nep_force"),
         offshore_nep_force=config_provider("offshore_nep_force"),
         shipping_methanol_efficiency=config_provider(
@@ -921,10 +921,10 @@ rule plot_ariadne_variables:
 rule ariadne_all:
     input:
         expand(RESULTS + "graphs/costs.svg", run=config_provider("run", "name")),
-        expand(
-            RESULTS + "ariadne/capacity_detailed.png",
-            run=config_provider("run", "name"),
-        ),
+        # expand(
+        #     RESULTS + "ariadne/capacity_detailed.png",
+        #     run=config_provider("run", "name"),
+        # ),
         expand(
             RESULTS
             + "maps/base_s_{clusters}_{opts}_{sector_opts}-h2_network_incl_kernnetz_{planning_horizons}.pdf",

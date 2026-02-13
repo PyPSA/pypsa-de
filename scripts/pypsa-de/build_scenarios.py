@@ -15,7 +15,9 @@ logger = logging.getLogger(__name__)
 
 
 def get_transport_growth(df, planning_horizons):
-    aviation = df.loc["Final Energy|Bunkers|Aviation", "TWh/yr"]
+    aviation = df.xs(
+        ("Final Energy|Bunkers|Aviation", "TWh/yr"), level=("variable", "unit")
+    ).squeeze()
 
     aviation[2020] = 111.25  # Ariadne2-internal DB, Aladin model
     aviation_growth_factor = aviation / aviation[2020]
@@ -26,8 +28,9 @@ def get_transport_growth(df, planning_horizons):
 def get_primary_steel_share(df, planning_horizons):
     # Get share of primary steel production
     model = snakemake.params.leitmodelle["industry"]
-    total_steel = df.loc[model, "Production|Steel"]
-    primary_steel = df.loc[model, "Production|Steel|Primary"]
+    model_df = df.xs(model, level="model")
+    total_steel = model_df.xs("Production|Steel", level="variable").squeeze()
+    primary_steel = model_df.xs("Production|Steel|Primary", level="variable").squeeze()
 
     total_steel[2020] = 40.621  # Ariadne2-internal DB, FORECAST, 2021
     primary_steel[2020] = 28.53  # Ariadne2-internal DB, FORECAST, 2021
@@ -35,15 +38,18 @@ def get_primary_steel_share(df, planning_horizons):
     primary_steel_share = primary_steel / total_steel
     primary_steel_share = primary_steel_share[planning_horizons]
 
-    return primary_steel_share.set_index(pd.Index(["Primary_Steel_Share"]))
+    return pd.DataFrame([primary_steel_share], index=["Primary_Steel_Share"])
 
 
 def get_DRI_share(df, planning_horizons):
     # Get share of DRI steel production
     model = "FORECAST v1.0"
-    total_steel = df.loc[model, "Production|Steel|Primary"]
+    model_df = df.xs(model, level="model")
+    total_steel = model_df.xs("Production|Steel|Primary", level="variable").squeeze()
     # Assuming that only hydrogen DRI steel is sustainable and DRI using natural gas is phased out
-    DRI_steel = df.loc[model, "Production|Steel|Primary|Direct Reduction Hydrogen"]
+    DRI_steel = model_df.xs(
+        "Production|Steel|Primary|Direct Reduction Hydrogen", level="variable"
+    ).squeeze()
 
     total_steel[2020] = 40.621  # Ariadne2-internal DB, FORECAST, 2021
     DRI_steel[2020] = 0  # Ariadne2-internal DB, FORECAST, 2021
@@ -51,7 +57,7 @@ def get_DRI_share(df, planning_horizons):
     DRI_steel_share = DRI_steel / total_steel
     DRI_steel_share = DRI_steel_share[planning_horizons]
 
-    return DRI_steel_share.set_index(pd.Index(["DRI_Steel_Share"]))
+    return pd.DataFrame([DRI_steel_share], index=["DRI_Steel_Share"])
 
 
 def get_co2_budget(df, source):
@@ -95,21 +101,36 @@ def get_co2_budget(df, source):
     ## Compute nonco2 from Ariadne-Leitmodell (REMIND)
 
     try:
-        co2_land_use_change = df.loc["Emissions|CO2|Land-Use Change", "Mt CO2-equiv/yr"]
+        co2_land_use_change = df.xs(
+            ("Emissions|CO2|Land-Use Change", "Mt CO2-equiv/yr"),
+            level=("variable", "unit"),
+        ).squeeze()
     except KeyError:  # Key not in Ariadne public database
-        co2_land_use_change = df.loc["Emissions|CO2|AFOLU", "Mt CO2/yr"]
+        co2_land_use_change = df.xs(
+            ("Emissions|CO2|AFOLU", "Mt CO2/yr"), level=("variable", "unit")
+        ).squeeze()
 
-    co2 = df.loc["Emissions|CO2", "Mt CO2/yr"] - co2_land_use_change
+    co2 = (
+        df.xs(("Emissions|CO2", "Mt CO2/yr"), level=("variable", "unit")).squeeze()
+        - co2_land_use_change
+    )
 
     try:
-        kyoto_land_use_change = df.loc[
-            "Emissions|Kyoto Gases|Land-Use Change", "Mt CO2-equiv/yr"
-        ]
+        kyoto_land_use_change = df.xs(
+            ("Emissions|Kyoto Gases|Land-Use Change", "Mt CO2-equiv/yr"),
+            level=("variable", "unit"),
+        ).squeeze()
     except KeyError:  # Key not in Ariadne public database
         # Guesstimate of difference from Ariadne 2 data
         kyoto_land_use_change = co2_land_use_change + 4.5
 
-    ghg = df.loc["Emissions|Kyoto Gases", "Mt CO2-equiv/yr"] - kyoto_land_use_change
+    ghg = (
+        df.xs(
+            ("Emissions|Kyoto Gases", "Mt CO2-equiv/yr"),
+            level=("variable", "unit"),
+        ).squeeze()
+        - kyoto_land_use_change
+    )
 
     nonco2 = ghg - co2
 
@@ -217,10 +238,9 @@ def write_to_scenario_yaml(input, output, scenarios, df):
             "Using hard-coded values for the year 2020 for aviation demand, steel shares and non-co2 emissions. Source: Model results in the Ariadne2-internal database"
         )
 
-        aviation_demand_factor = get_transport_growth(
-            df.loc[snakemake.params.leitmodelle["transport"], reference_scenario, :],
-            planning_horizons,
-        )
+        transport_df = df.xs(snakemake.params.leitmodelle["transport"], level="model")
+        transport_df = transport_df.xs(reference_scenario, level="scenario")
+        aviation_demand_factor = get_transport_growth(transport_df, planning_horizons)
         if not config[scenario].get("co2_budget_DE_source"):
             logger.info(
                 f"No CO2 budget source for DE specified in the scenario config. Using KSG targets and REMIND emissions from {reference_scenario} for the {scenario} scenario."
@@ -229,10 +249,9 @@ def write_to_scenario_yaml(input, output, scenarios, df):
         else:
             co2_budget_source = config[scenario]["co2_budget_DE_source"]
 
-        co2_budget_fractions = get_co2_budget(
-            df.loc[snakemake.params.leitmodelle["general"], reference_scenario],
-            co2_budget_source,
-        )
+        general_df = df.xs(snakemake.params.leitmodelle["general"], level="model")
+        general_df = general_df.xs(reference_scenario, level="scenario")
+        co2_budget_fractions = get_co2_budget(general_df, co2_budget_source)
 
         if not config[scenario].get("sector"):
             config[scenario]["sector"] = {}
@@ -247,13 +266,10 @@ def write_to_scenario_yaml(input, output, scenarios, df):
                 aviation_demand_factor.loc[year].item(), 4
             )
 
-        st_primary_fraction = get_primary_steel_share(
-            df.loc[:, reference_scenario, :], planning_horizons
-        )
+        scenario_df = df.xs(reference_scenario, level="scenario")
+        st_primary_fraction = get_primary_steel_share(scenario_df, planning_horizons)
 
-        dri_fraction = get_DRI_share(
-            df.loc[:, reference_scenario, :], planning_horizons
-        )
+        dri_fraction = get_DRI_share(scenario_df, planning_horizons)
         if not config[scenario].get("industry"):
             config[scenario]["industry"] = {}
 
@@ -313,7 +329,7 @@ if __name__ == "__main__":
     )
     ariadne_db.columns = ariadne_db.columns.astype(int)
 
-    df = ariadne_db.loc[:, :, "Deutschland"]
+    df = ariadne_db.xs("Deutschland", level="region")
 
     scenarios = snakemake.params.scenarios
 

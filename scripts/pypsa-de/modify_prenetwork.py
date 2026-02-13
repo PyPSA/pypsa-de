@@ -1032,20 +1032,27 @@ def modify_industry_demand(
         )
 
 
-def add_hydrogen_turbines(n):
+def add_hydrogen_turbines(n, H2_plants):
     """
     This adds links that instead of a gas turbine use a hydrogen turbine.
 
     It is assumed that the efficiency stays the same. This function is
     only applied to German nodes.
     """
-    logger.info("Adding hydrogen turbine technologies for Germany.")
 
+    scope = H2_plants.get("enable")
+    if scope not in ["DE", "EU"]:
+        msg = f"Invalid value in `H2_plants:enable` for adding hydrogen turbines: {scope}. Expected 'DE' or 'EU'."
+        logger.error(msg)
+        raise ValueError(msg)
+    logger.info(f"Adding hydrogen turbine technologies in {scope}.")
+    if scope == "EU":
+        scope = ""
     gas_carrier = ["OCGT", "CCGT"]
     for carrier in gas_carrier:
         gas_plants = n.links[
             (n.links.carrier == carrier)
-            & (n.links.index.str[:2] == "DE")
+            & (n.links.index.str.startswith(scope))
             & (n.links.p_nom_extendable)
         ].index
         if gas_plants.empty:
@@ -1062,7 +1069,7 @@ def add_hydrogen_turbines(n):
     # special handling of CHPs
     gas_plants = n.links[
         (n.links.carrier == "urban central gas CHP")
-        & (n.links.index.str[:2] == "DE")
+        & (n.links.index.str.startswith(scope))
         & (n.links.p_nom_extendable)
     ].index
     h2_plants = n.links.loc[gas_plants].copy()
@@ -1459,7 +1466,7 @@ if __name__ == "__main__":
         if snakemake.params.H2_plants["start"] <= int(
             snakemake.wildcards.planning_horizons
         ):
-            add_hydrogen_turbines(n)
+            add_hydrogen_turbines(n, snakemake.params.H2_plants)
         if snakemake.params.H2_plants["force"] <= int(
             snakemake.wildcards.planning_horizons
         ):
