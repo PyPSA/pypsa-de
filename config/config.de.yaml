@@ -201,7 +201,7 @@ clustering:
   # print(fw.div(fw.sum()).subtract(5e-5).round(4).to_dict().__repr__().replace(",","\n"))
   focus_weights:
   # 27 nodes: 8 for Germany, 3 for Italy, 2 each for Denmark, UK and Spain, 1 per each of other 10 "Stromnachbarn"
-    'DE': 0.2966
+    'DE': 0.2965
     'AT': 0.0370
     'BE': 0.0370
     'CH': 0.0370
