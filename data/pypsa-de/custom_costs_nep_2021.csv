@@ -1,4 +1,7 @@
 planning_horizon,technology,parameter,value,unit,source,further description
+all,biomass boiler,discount rate,0.04,per unit,default for decentral, from old pypsa cost assumptions
+all,home battery inverter,discount rate,0.04,per unit,default for decentral, from old pypsa cost assumptions
+all,home battery storage,discount rate,0.04,per unit,default for decentral, from old pypsa cost assumptions
 all,HVAC overhead,investment,472,EUR2020/MW/km,NEP2021,"Assuming High Temperature Low Sag Cables with higher Amperage"
 all,offwind-ac-connection-submarine,investment,3786,EUR2020/MW/km,NEP2021,"220kv, 1A, 2 circuits, 3 phases, inflation"
 all,offwind-ac-connection-underground,investment,3786,EUR2020/MW/km,NEP2021,
