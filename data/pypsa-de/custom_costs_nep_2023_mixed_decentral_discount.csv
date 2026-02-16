@@ -1,18 +1,25 @@
 planning_horizon,technology,parameter,value,unit,source,further description
-all,biomass boiler,discount rate,0.04,per unit,default for decentral, from old pypsa cost assumptions
-all,home battery inverter,discount rate,0.04,per unit,default for decentral, from old pypsa cost assumptions
-all,home battery storage,discount rate,0.04,per unit,default for decentral, from old pypsa cost assumptions
-all,HVAC overhead,investment,472,EUR2020/MW/km,NEP2021,"Assuming High Temperature Low Sag Cables with higher Amperage"
-all,offwind-ac-connection-submarine,investment,3786,EUR2020/MW/km,NEP2021,"220kv, 1A, 2 circuits, 3 phases, inflation"
-all,offwind-ac-connection-underground,investment,3786,EUR2020/MW/km,NEP2021,
-all,offwind-ac-station,investment,697,EUR2020/kW,NEP2021,"cost of two stations, landseitig and seeseitig"
+all,home battery inverter,discount rate,0.055,per unit,assuming 50:50 commercial:private,
+all,home battery storage,discount rate,0.055,per unit,assuming 50:50 commercial:private,
+all,solar-rooftop,discount rate,0.055,per unit,assuming 50:50 commercial:private,
+all,biomass boiler,discount rate,0.05,per unit,assuming 50:50 commercial:private,
+all,decentral air-sourced heat pump,discount rate,0.05,per unit,assuming 1:2 commercial:private,
+all,decentral gas boiler,discount rate,0.05,per unit,assuming 1:2 commercial:private,
+all,decentral ground-sourced heat pump,discount rate,0.05,per unit,assuming 1:2 commercial:private,
+all,decentral resistive heater,discount rate,0.05,per unit,assuming 1:2 commercial:private,
+all,decentral solar thermal,discount rate,0.05,per unit,assuming 1:2 commercial:private,
+all,decentral water tank storage,discount rate,0.05,per unit,assuming 1:2 commercial:private,
+all,HVAC overhead,investment,772,EUR2020/MW/km,NEP2023,"Assuming High Temperature Low Sag Cables with higher Amperage"
+all,offwind-ac-connection-submarine,investment,2488,EUR2020/MW/km,NEP2023,
+all,offwind-ac-connection-underground,investment,2488,EUR2020/MW/km,NEP2023,
+all,offwind-ac-station,investment,722,EUR2020/kW,NEP2023,"cost of two stations, landseitig and seeseitig"
 all,HVDC inverter pair,investment,597015,EUR2020/MW,NEP2021+NEP2023
 all,HVDC overhead,investment,995,EUR2020/MW/km,NEP2021+NEP2023
-all,HVDC underground,investment,3234,EUR2020/MW/km,NEP2021,
-all,HVDC submarine,investment,3234,EUR2020/MW/km,NEP2021,"set equal to HVDC underground"
-all,offwind-dc-connection-submarine,investment,1990,EUR2020/MW/km,NEP2021,"DC 525kv seeseitig"
-all,offwind-dc-connection-underground,investment,3234,EUR2020/MW/km,NEP2021,"DC 525kv landseitig"
-all,offwind-dc-station,investment,746,EUR2020/kW,NEP2021,"cost of two stations, landseitig and seeseitig"
+all,HVDC underground,investment,2978,EUR2020/MW/km,NEP2023,
+all,HVDC submarine,investment,2978,EUR2020/MW/km,NEP2023,"set equal to HVDC underground"
+all,offwind-dc-connection-submarine,investment,2708,EUR2020/MW/km,NEP2023,"DC 525kv seeseitig"
+all,offwind-dc-connection-underground,investment,3430,EUR2020/MW/km,NEP2023,"DC 525kv landseitig"
+all,offwind-dc-station,investment,903,EUR2020/kW,NEP2023,"cost of two stations, landseitig and seeseitig"
 all,electricity distribution grid,investment,1500,EUR2020/kW,oriented towards JRC-EU-TIMES
 all,biomass boiler,pelletizing cost,17.8,EUR/MWh_pellets,Assumption based on doi:10.1016/j.rser.2019.109506,Additional added transport costs of 8.8 EUR/MWh
 all,offwind-dc-connection-submarine,FOM,0.35,%/year,Hagspiel et al. (2014): doi:10.1016/j.energy.2014.01.025-table A.2,copied from HVDC submarine
@@ -88,7 +95,7 @@ all,hydrogen storage underground,investment,0.55,EUR/kWh,Langfristszenarien Szen
 2050,coal,fuel,6.4016,EUR2020/MWh,Ariadne,"$2020 = 0.8775 EUR2020, 1t = 8.06 MWh"
 2050,decentral air-sourced heat pump,investment,1362,EUR2020/kW_th,https://ariadneprojekt.de/media/2024/01/Ariadne-Analyse_HeizkostenEmissionenGebaeude_Januar2024.pdf https://www.enpal.de/waermepumpe/kosten/ https://www.bdew.de/media/documents/BDEW-HKV_Altbau.pdf and cost reduction from DEA
 2050,decentral ground-sourced heat pump,investment,2219,EUR2020/kW_th,https://ariadneprojekt.de/media/2024/01/Ariadne-Analyse_HeizkostenEmissionenGebaeude_Januar2024.pdf https://www.enpal.de/waermepumpe/kosten/ https://www.bdew.de/media/documents/BDEW-HKV_Altbau.pdf and cost reduction from DEA
-all,solar,marginal_cost,0.01,EUR/MWh,Default value to prevent mathematical degeneracy in optimisation,
+all,solar-utility,marginal_cost,0.01,EUR/MWh,Default value to prevent mathematical degeneracy in optimisation,
 all,onwind,marginal_cost,0.015,EUR/MWh,Default value to prevent mathematical degeneracy in optimisation,
 all,offwind,marginal_cost,0.015,EUR/MWh,Default value to prevent mathematical degeneracy in optimisation,
 all,hydro,marginal_cost,0,EUR/MWh,Default value to prevent mathematical degeneracy in optimisation,
