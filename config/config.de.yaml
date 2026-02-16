@@ -484,16 +484,6 @@ solving:
             2040: 800
             2045: 1000
             2050: 1000
-      Store:
-        co2 sequestered:
-          DE:
-            2020: 0
-            2025: 0
-            2030: 10000
-            2035: 20000
-            2040: 50000
-            2045: 80000
-            2050: 80000
         urban central water tanks:
           DE:
             2025: 120 # GWh, https://www.hamburg-institut.com/wp-content/uploads/2023/12/Referenzblatt_SysGF-1.pdf
