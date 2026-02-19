@@ -8,8 +8,8 @@ run:
   name:
   # - ExPol
   - KN2045_Mix
-  - KN2045_Mix_MixedDecentralDiscount
-  - KN2045_Mix_HighDecentralDiscount
+  # - KN2045_Mix_LowDecentralDiscount
+  # - KN2045_Mix_HighDecentralDiscount
   # - KN2045_Mix_H2plantsEU
   # - KN2045_Elek
   # - KN2045_H2
