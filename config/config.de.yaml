@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20260219_wy2013
+  prefix: 20260220_merge_v2026.02
   name:
   # - ExPol
   - KN2045_Mix
@@ -423,6 +423,7 @@ solving:
   runtime: 12h
   mem_mb: 70000 #30000 is OK for 22 nodes, 365H; 140000 for 22 nodes 3H; 400000 for 44 nodes 3H
   options:
+    custom_extra_functionality: "../scripts/pypsa-de/additional_functionality.py"
     assign_all_duals: true
     load_shedding: false
     skip_iterations: true # settings for post-discretization: false
