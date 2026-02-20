@@ -547,7 +547,7 @@ def unravel_carbonaceous_fuels(n):
             bus2="co2 atmosphere",
             carrier="industry methanol",
             p_nom_extendable=True,
-            efficiency2=n.loads.loc["EU industry methanol", "efficiency2"],
+            efficiency2=n.links.loc["EU industry methanol", "efficiency2"],
         )
 
     # shipping load
@@ -610,7 +610,7 @@ def unravel_carbonaceous_fuels(n):
             bus2="co2 atmosphere",
             carrier="shipping methanol",
             p_nom_extendable=True,
-            efficiency2=n.loads.loc["EU shipping methanol", "efficiency2"],
+            efficiency2=n.links.loc["EU shipping methanol", "efficiency2"],
         )
 
 
