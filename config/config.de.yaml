@@ -1,13 +1,16 @@
-# SPDX-FileCopyrightText: : 2017-2023 The PyPSA-Eur Authors
+# SPDX-FileCopyrightText: : 2017-2026 The PyPSA-Eur Authors
 #
 # SPDX-License-Identifier: CC0-1.0
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20260114_limit_cross_border_flows
+  prefix: 20260219_wy2013
   name:
   # - ExPol
   - KN2045_Mix
+  # - KN2045_Mix_LowDecentralDiscount
+  # - KN2045_Mix_HighDecentralDiscount
+  # - KN2045_Mix_H2plantsEU
   # - KN2045_Elek
   # - KN2045_H2
   # - KN2045_NFniedrig
@@ -38,10 +41,12 @@ pypsa-de:
   ageb_for_mobility: true # In 2020 use AGEB data for final energy demand and KBA for vehicles
   uba_for_mobility: # Available for 2025–2035; uses MWMS scenario from UBA Projektionsbericht 2025
   - 2025
+  - 2030
   uba_for_industry: # Available for 2025–2035; uses MWMS scenario from UBA Projektionsbericht 2025
     scale_non_energy: false # Scale non-energy demand directly proportional to energy demand
     enable: # Allowed values are "false" or a subset of [2025, 2030, 2035]
     - 2025
+    - 2030
   limit_cross_border_flows_ac:  # relevant if only one node per country is used
     2020: 0.4
     2025: 0.4
@@ -66,7 +71,6 @@ scenario:
   sector_opts:
   - none
   planning_horizons:
-  - 2020
   - 2025
   - 2030
   - 2035
@@ -75,8 +79,8 @@ scenario:
   - 2050
 
 existing_capacities:
-  grouping_years_power: [1920, 1950, 1955, 1960, 1965, 1970, 1975, 1980, 1985, 1990, 1995, 2000, 2005, 2010, 2015, 2020]
-  grouping_years_heat: [1980, 1985, 1990, 1995, 2000, 2005, 2010, 2015, 2019] # heat grouping years >= baseyear will be ignored
+  grouping_years_power: [1920, 1950, 1955, 1960, 1965, 1970, 1975, 1980, 1985, 1990, 1995, 2000, 2005, 2010, 2015, 2020, 2025]
+  grouping_years_heat: [1980, 1985, 1990, 1995, 2000, 2005, 2010, 2015, 2020, 2024] # heat grouping years >= baseyear will be ignored
   fill_value_gas_chp_lifetime: 40 # if no explicit lifetime is given use 40 years. The number was chosen s.t. the existing capacities in 2020 match with statistics.
 
 
@@ -86,26 +90,26 @@ countries: ['AT', 'BE', 'CH', 'CZ', 'DE', 'DK', 'FR', 'GB', 'LU', 'NL', 'NO', 'P
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#snapshots
 snapshots:
-  start: "2019-01-01"
-  end: "2020-01-01"
+  start: "2013-01-01"
+  end: "2014-01-01"
   inclusive: 'left'
 
 atlite:
-  default_cutout: europe-2019-sarah3-era5
+  default_cutout: europe-2013-sarah3-era5
   cutouts:
-    europe-2019-sarah3-era5:
+    europe-2013-sarah3-era5:
       module: [sarah, era5] # in priority order
       x: [-12., 42.]
       y: [33., 72]
       dx: 0.3
       dy: 0.3
-      time: ['2019', '2019']
+      time: ['2013', '2013']
 
 
 renewable:
   onwind:
     capacity_per_sqkm: 1.4
-    cutout: europe-2019-sarah3-era5
+    cutout: europe-2013-sarah3-era5
     correction_factor: 0.95
     resource:
       smooth: false  #this is false until correction to onshore wind speeds from GWA implemented
@@ -129,7 +133,7 @@ renewable:
   offwind-ac:
     capacity_per_sqkm: 6
     landfall_length: 30
-    cutout: europe-2019-sarah3-era5
+    cutout: europe-2013-sarah3-era5
     correction_factor: 0.95
     resource:
       smooth: true
@@ -153,7 +157,7 @@ renewable:
   offwind-dc:
     capacity_per_sqkm: 6
     landfall_length: 30
-    cutout: europe-2019-sarah3-era5
+    cutout: europe-2013-sarah3-era5
     correction_factor: 0.95
     resource:
       smooth: true
@@ -177,24 +181,26 @@ renewable:
   offwind-float: # disabled at the moment
     landfall_length: 30
     capacity_per_sqkm: 6
-    cutout: europe-2019-sarah3-era5
+    cutout: europe-2013-sarah3-era5
     correction_factor: 0.95
   solar:
-    cutout: europe-2019-sarah3-era5
+    cutout: europe-2013-sarah3-era5
     correction_factor: 0.9 # scaling to Abbildung 36 of https://www.ise.fraunhofer.de/de/veroeffentlichungen/studien/aktuelle-fakten-zur-photovoltaik-in-deutschland.html
   solar-hsat:
-    cutout: europe-2019-sarah3-era5
+    cutout: europe-2013-sarah3-era5
     correction_factor: 0.9 # scaling to Abbildung 36 of https://www.ise.fraunhofer.de/de/veroeffentlichungen/studien/aktuelle-fakten-zur-photovoltaik-in-deutschland.html
   hydro:
-    cutout: europe-2019-sarah3-era5
+    cutout: europe-2013-sarah3-era5
 
 lines:
   dynamic_line_rating:
-    cutout: europe-2019-sarah3-era5
+    cutout: europe-2013-sarah3-era5
 
 clustering:
-  # simplify_network:
-  #   to_substations: true
+  # mode: administrative
+  # administrative:
+  #   level: 0
+  #   DE: 2
   # Code snippet for editing focus_weights
   # fw = pd.Series(snakemake.config["clustering"]["focus_weights"])
   # fw = fw.div(fw.min()).round()
@@ -202,13 +208,13 @@ clustering:
   # print(fw.div(fw.sum()).subtract(5e-5).round(4).to_dict().__repr__().replace(",","\n"))
   focus_weights:
   # 27 nodes: 8 for Germany, 3 for Italy, 2 each for Denmark, UK and Spain, 1 per each of other 10 "Stromnachbarn"
-    'DE': 0.2966
+    'DE': 0.2965
     'AT': 0.0370
     'BE': 0.0370
     'CH': 0.0370
     'CZ': 0.0370
     'DK': 0.0741
-    'FR': 0.0370
+    'FR': 0.0741
     'GB': 0.0741
     'LU': 0.0370
     'NL': 0.0370
@@ -216,7 +222,7 @@ clustering:
     'PL': 0.0370
     'SE': 0.0370
     'ES': 0.0741
-    'IT': 0.1111
+    'IT': 0.0741
   # high spatial resolution: change clusters to 49
   # 49 nodes: 30 for Germany, 3 for Italy, 2 each for Denmark, UK and Spain, 1 per each of other 10 "Stromnachbarn"
     # 'DE': 0.6124
@@ -225,7 +231,7 @@ clustering:
     # 'CH': 0.0204
     # 'CZ': 0.0204
     # 'DK': 0.0408
-    # 'FR': 0.0204
+    # 'FR': 0.0408
     # 'GB': 0.0408
     # 'LU': 0.0204
     # 'NL': 0.0204
@@ -233,7 +239,7 @@ clustering:
     # 'PL': 0.0204
     # 'SE': 0.0204
     # 'ES': 0.0408
-    # 'IT': 0.0612
+    # 'IT': 0.0408
   temporal:
     resolution_sector: 365H
 
@@ -465,8 +471,8 @@ solving:
         offwind:
           DE:
             2020: 7.8
-            2025: 11.3
-            2030: 24   # very optimistic upper ceiling to "Mittelfristprognose zur deutschlandweiten Stromerzeugung"
+            2025: 12
+            2030: 22   # optimistic upper ceiling to "Mittelfristprognose zur deutschlandweiten Stromerzeugung"
             2035: 50   # Planned projects until 2035 (offshore_connection_points.csv) -1.3 GW for potential delays
             2040: 65   # Planned projects until 2040 -1.5 GW for potential retirments
             2045: 70
@@ -475,21 +481,11 @@ solving:
           DE:
             2020: 53.7
             2025: 119 # Abb. 4_9 https://www.agora-energiewende.de/fileadmin/Projekte/2025/2025-28_DE_JAW25/A-EW_391_Die_Energiewende_in_Deutschland_Stand_der_Dinge_2025_WEB.pdf
-            2030: 235 # PV Ziel 2030 + 20 GW
+            2030: 215 # PV Ziel 2030
             2035: 400
             2040: 800
             2045: 1000
             2050: 1000
-      Store:
-        co2 sequestered:
-          DE:
-            2020: 0
-            2025: 0
-            2030: 10000
-            2035: 20000
-            2040: 50000
-            2045: 80000
-            2050: 80000
         urban central water tanks:
           DE:
             2025: 120 # GWh, https://www.hamburg-institut.com/wp-content/uploads/2023/12/Referenzblatt_SysGF-1.pdf
@@ -522,7 +518,7 @@ solving:
         onwind:
           DE:
             2025: 67    # Abb. 4_9 https://www.agora-energiewende.de/fileadmin/Projekte/2025/2025-28_DE_JAW25/A-EW_391_Die_Energiewende_in_Deutschland_Stand_der_Dinge_2025_WEB.pdf
-            2030: 99    # Wind-an-Land Law 2028
+            2030: 105    # Wind-an-Land Law 2028
             2035: 115   # Wind-an-Land Law 2030
             2040: 157   # target 2035
             2045: 160   # target 2040
@@ -535,10 +531,11 @@ solving:
         solar:
           DE:
             2025: 118 # Abb. 4_9 https://www.agora-energiewende.de/fileadmin/Projekte/2025/2025-28_DE_JAW25/A-EW_391_Die_Energiewende_in_Deutschland_Stand_der_Dinge_2025_WEB.pdf
+            2030: 200
         Link:
           H2 Electrolysis:
             DE:
-              2030: 5
+              2030: 3
   # For reference, this are the values specified in the laws
   # limits_capacity_min:
   #     Generator:
@@ -571,10 +568,10 @@ solving:
       electricity_import:
         DE:
           2020: -20
-          2025: 0
-          2030: 0
-          2035: 40
-          2040: 80
+          2025: 25
+          2030: 50
+          2035: 75
+          2040: 100
           2045: 125
           2050: 125
       electrolysis:
@@ -659,19 +656,17 @@ plotting:
   carrier_groups:
     electricity: [AC, low_voltage]
 
-# overwrite in config.default.yaml
-#powerplants_filter: (DateOut >= 2019 or DateOut != DateOut)
 electricity:
   renewable_carriers: [solar, solar-hsat, onwind, offwind-ac, offwind-dc, hydro] # removed offwind-float
-  powerplants_filter: (DateOut >= 2019 or DateOut != DateOut) and not (Country == "DE" and Set == "CHP")
+  powerplants_filter: (DateOut >= 2024 or DateOut != DateOut) and not (Country == "DE" and Set == "CHP")
   custom_powerplants: true
   custom_file: resources/german_chp.csv
   estimate_renewable_capacities:
-    year: 2019
-  H2_plants_DE:
-    enable: true
+    year: 2024
+  H2_plants:
+    enable: EU # allowed values: false, DE, EU
     start: 2030 # should be < force
-    force: 2035
+    force: 2045
     cost_factor: 0.15 # repurposing cost of OCGT gas to H2 in % investment cost in EUR/MW source: Christidis et al (2023) - H2-Ready-Gaskraftwerke, Table 3 https://reiner-lemoine-institut.de/wp-content/uploads/2023/11/RLI-Studie-H2-ready_DE.pdf
     efficiency_loss: 0.05
 

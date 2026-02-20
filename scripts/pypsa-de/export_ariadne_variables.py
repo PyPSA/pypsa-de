@@ -770,10 +770,20 @@ def _get_capacities(n, region, cap_func, cap_string="Capacity|"):
         capacities_electricity.get("PHS", 0)
     )
 
-    var[cap_string + "Electricity|Storage Converter|Stationary Batteries"] = (
+    var[cap_string + "Electricity|Storage Converter|Stationary Batteries|Utility"] = (
         capacities_electricity.get("battery discharger", 0)
-        + capacities_electricity.get("home battery discharger", 0)
     )
+
+    var[cap_string + "Electricity|Storage Converter|Stationary Batteries|Home"] = (
+        capacities_electricity.get("home battery discharger", 0)
+    )
+
+    var[cap_string + "Electricity|Storage Converter|Stationary Batteries"] = var[
+        [
+            cap_string + "Electricity|Storage Converter|Stationary Batteries|Utility",
+            cap_string + "Electricity|Storage Converter|Stationary Batteries|Home",
+        ]
+    ].sum()
 
     var[cap_string + "Electricity|Storage Converter|Vehicles"] = (
         capacities_electricity.get("V2G", 0)
@@ -820,9 +830,20 @@ def _get_capacities(n, region, cap_func, cap_string="Capacity|"):
         storage_capacities.get("PHS")
     )
 
-    var[cap_string + "Electricity|Storage Reservoir|Stationary Batteries"] = pd.Series(
-        {c: storage_capacities.get(c) for c in ["battery", "home battery"]}
-    ).sum()
+    var[cap_string + "Electricity|Storage Reservoir|Stationary Batteries|Utility"] = (
+        storage_capacities.get("battery", 0)
+    )
+
+    var[cap_string + "Electricity|Storage Reservoir|Stationary Batteries|Home"] = (
+        storage_capacities.get("home battery", 0)
+    )
+
+    var[cap_string + "Electricity|Storage Reservoir|Stationary Batteries"] = var[
+        [
+            cap_string + "Electricity|Storage Reservoir|Stationary Batteries|Utility",
+            cap_string + "Electricity|Storage Reservoir|Stationary Batteries|Home",
+        ]
+    ].sum()
 
     var[cap_string + "Electricity|Storage Reservoir|Vehicles"] = storage_capacities.get(
         "EV battery", 0
@@ -5617,7 +5638,7 @@ if __name__ == "__main__":
 
     if "debug" == "debug":  # For debugging
         var = pd.Series()
-        idx = 6
+        idx = 1
         n = networks[idx]
         c = costs[idx]
         _industry_demand = industry_demands[idx]

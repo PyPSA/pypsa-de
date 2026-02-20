@@ -1,14 +1,7 @@
 planning_horizon,technology,parameter,value,unit,source,further description
-all,home battery inverter,discount rate,0.055,per unit,assuming 50:50 commercial:private,
-all,home battery storage,discount rate,0.055,per unit,assuming 50:50 commercial:private,
-all,solar-rooftop,discount rate,0.055,per unit,assuming 50:50 commercial:private,
-all,biomass boiler,discount rate,0.05,per unit,assuming 50:50 commercial:private,
-all,decentral air-sourced heat pump,discount rate,0.05,per unit,assuming 1:2 commercial:private,
-all,decentral gas boiler,discount rate,0.05,per unit,assuming 1:2 commercial:private,
-all,decentral ground-sourced heat pump,discount rate,0.05,per unit,assuming 1:2 commercial:private,
-all,decentral resistive heater,discount rate,0.05,per unit,assuming 1:2 commercial:private,
-all,decentral solar thermal,discount rate,0.05,per unit,assuming 1:2 commercial:private,
-all,decentral water tank storage,discount rate,0.05,per unit,assuming 1:2 commercial:private,
+all,biomass boiler,discount rate,0.04,per unit,default for decentral, from old pypsa cost assumptions
+all,home battery inverter,discount rate,0.04,per unit,default for decentral, from old pypsa cost assumptions
+all,home battery storage,discount rate,0.04,per unit,default for decentral, from old pypsa cost assumptions
 all,HVAC overhead,investment,772,EUR2020/MW/km,NEP2023,"Assuming High Temperature Low Sag Cables with higher Amperage"
 all,offwind-ac-connection-submarine,investment,2488,EUR2020/MW/km,NEP2023,
 all,offwind-ac-connection-underground,investment,2488,EUR2020/MW/km,NEP2023,
