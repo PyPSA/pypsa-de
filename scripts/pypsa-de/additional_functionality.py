@@ -42,6 +42,12 @@ def add_capacity_limits(n, investment_year, limits_capacity, sense="maximum"):
                     & c.static.active
                 ]
 
+                if extendable_index.empty:
+                    logger.info(
+                        f"No extendable {c.name} with carrier {carrier} found in {ct}. Skipping constraint."
+                    )
+                    continue
+
                 existing_capacity = c.static.loc[existing_index, attr + "_nom"].sum()
 
                 logger.info(
