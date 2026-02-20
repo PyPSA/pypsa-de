@@ -591,6 +591,20 @@ def add_chp_plants(
     # phase out date at the end of the year)
     chp.Fueltype = chp.Fueltype.map(rename_fuel)
 
+    # Fill missing DateIn, drop the remaining missing values afterwards
+    chp["DateIn"] = chp.groupby("Fueltype")["DateIn"].transform(
+        lambda x: x.fillna(x.mean() // 1)
+    )
+    missing_datein = chp.index[chp["DateIn"].isna()]
+    if not missing_datein.empty:
+        logger.info(f"Dropping {len(missing_datein)} CHP plants with missing DateIn.")
+        if len(missing_datein) <= 20:  # log individual plants if not too many
+            logger.info(
+                f"CHPs dropped due to missing DateIn: {missing_datein.to_list()}"
+            )
+
+    chp.dropna(subset="DateIn", inplace=True)
+
     chp["grouping_year"] = np.take(
         grouping_years, np.digitize(chp.DateIn, grouping_years, right=True)
     )
