@@ -927,7 +927,7 @@ rule plot_ariadne_variables:
 
 rule ariadne_all:
     input:
-        expand(RESULTS + "graphs/costs.svg", run=config_provider("run", "name")),
+        expand(RESULTS + "graphs/costs.pdf", run=config_provider("run", "name")),
         # expand(
         #     RESULTS + "ariadne/capacity_detailed.png",
         #     run=config_provider("run", "name"),
