@@ -1,4 +1,14 @@
 # Changelog
+- Switched to weather year 2013
+- in 2030 use UBA data for industry and mobility
+- start myopic optimization in 2025
+- remove national CO2 sequestration limit for DE, because it was causing strange E-Fuel exports
+- enable H2 gas turbines in all countries
+- force H2 retrofit (for DE) only in 2045, instead of in 2035
+- split existing solar 50:50 between rooftop and utility (previously 0:100)
+- increase decentral discount rates to account for mix of residential and commercial sector
+- use ISE cost data for solar (DC costs instead of AC)
+- Minor fix for cluster weights
 - added 2 delay years to the offshore NEP, s.t. capacity in 2030 is ~20GW
 - improved script name `modify_industry_demand` -> `modify_industry_production`
 - excluded international shipping from DE-specific CO2 emisisons
