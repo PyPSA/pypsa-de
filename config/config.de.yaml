@@ -1,10 +1,10 @@
-# SPDX-FileCopyrightText: : 2017-2023 The PyPSA-Eur Authors
+# SPDX-FileCopyrightText: : 2017-2026 The PyPSA-Eur Authors
 #
 # SPDX-License-Identifier: CC0-1.0
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20260213_H2plantsEU
+  prefix: 20260219_wy2013
   name:
   # - ExPol
   - KN2045_Mix
@@ -90,26 +90,26 @@ countries: ['AT', 'BE', 'CH', 'CZ', 'DE', 'DK', 'FR', 'GB', 'LU', 'NL', 'NO', 'P
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#snapshots
 snapshots:
-  start: "2019-01-01"
-  end: "2020-01-01"
+  start: "2013-01-01"
+  end: "2014-01-01"
   inclusive: 'left'
 
 atlite:
-  default_cutout: europe-2019-sarah3-era5
+  default_cutout: europe-2013-sarah3-era5
   cutouts:
-    europe-2019-sarah3-era5:
+    europe-2013-sarah3-era5:
       module: [sarah, era5] # in priority order
       x: [-12., 42.]
       y: [33., 72]
       dx: 0.3
       dy: 0.3
-      time: ['2019', '2019']
+      time: ['2013', '2013']
 
 
 renewable:
   onwind:
     capacity_per_sqkm: 1.4
-    cutout: europe-2019-sarah3-era5
+    cutout: europe-2013-sarah3-era5
     correction_factor: 0.95
     resource:
       smooth: false  #this is false until correction to onshore wind speeds from GWA implemented
@@ -133,7 +133,7 @@ renewable:
   offwind-ac:
     capacity_per_sqkm: 6
     landfall_length: 30
-    cutout: europe-2019-sarah3-era5
+    cutout: europe-2013-sarah3-era5
     correction_factor: 0.95
     resource:
       smooth: true
@@ -157,7 +157,7 @@ renewable:
   offwind-dc:
     capacity_per_sqkm: 6
     landfall_length: 30
-    cutout: europe-2019-sarah3-era5
+    cutout: europe-2013-sarah3-era5
     correction_factor: 0.95
     resource:
       smooth: true
@@ -181,20 +181,20 @@ renewable:
   offwind-float: # disabled at the moment
     landfall_length: 30
     capacity_per_sqkm: 6
-    cutout: europe-2019-sarah3-era5
+    cutout: europe-2013-sarah3-era5
     correction_factor: 0.95
   solar:
-    cutout: europe-2019-sarah3-era5
+    cutout: europe-2013-sarah3-era5
     correction_factor: 0.9 # scaling to Abbildung 36 of https://www.ise.fraunhofer.de/de/veroeffentlichungen/studien/aktuelle-fakten-zur-photovoltaik-in-deutschland.html
   solar-hsat:
-    cutout: europe-2019-sarah3-era5
+    cutout: europe-2013-sarah3-era5
     correction_factor: 0.9 # scaling to Abbildung 36 of https://www.ise.fraunhofer.de/de/veroeffentlichungen/studien/aktuelle-fakten-zur-photovoltaik-in-deutschland.html
   hydro:
-    cutout: europe-2019-sarah3-era5
+    cutout: europe-2013-sarah3-era5
 
 lines:
   dynamic_line_rating:
-    cutout: europe-2019-sarah3-era5
+    cutout: europe-2013-sarah3-era5
 
 clustering:
   # mode: administrative
@@ -656,8 +656,6 @@ plotting:
   carrier_groups:
     electricity: [AC, low_voltage]
 
-# overwrite in config.default.yaml
-#powerplants_filter: (DateOut >= 2019 or DateOut != DateOut)
 electricity:
   renewable_carriers: [solar, solar-hsat, onwind, offwind-ac, offwind-dc, hydro] # removed offwind-float
   powerplants_filter: (DateOut >= 2024 or DateOut != DateOut) and not (Country == "DE" and Set == "CHP")
