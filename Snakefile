@@ -445,19 +445,17 @@ if (OPEN_MASTR := dataset_version("open_mastr"))["source"] in ["primary"]:
 if (EGON := dataset_version("egon"))["source"] in ["primary"]:
 
     rule retrieve_egon_data:
-        input:
-            spatial=storage(
-                f"{EGON['url']}?id_spatial=5&year=2018",
-            ),
-            mapping=storage(
-                f"{EGON['url']}_description?id_spatial=5",
-            ),
+        params:
+            url=EGON["url"],
         output:
             spatial="data/egon/demandregio_spatial_2018.json",
             mapping="data/egon/mapping_technologies.json",
-        run:
-            move(input.spatial, output.spatial)
-            move(input.mapping, output.mapping)
+        shell:
+            """
+            mkdir -p data/egon
+            curl -o {output.spatial} "{params.url}?id_spatial=5&year=2018"
+            curl -o {output.mapping} "{params.url}_description?id_spatial=5"
+            """
 
 
 rule build_exogenous_mobility_data:
