@@ -51,21 +51,25 @@ def add_build_year_to_new_assets(n: pypsa.Network, baseyear: int) -> None:
         Year in which optimized assets are built
     """
     # Give assets with lifetimes and no build year the build year baseyear
-    for c in n.iterate_components(["Link", "Generator", "Store"]):
-        assets = c.df.index[(c.df.lifetime != np.inf) & (c.df.build_year == 0)]
-        c.df.loc[assets, "build_year"] = baseyear
+    for c in n.components[["Link", "Generator", "Store"]]:
+        if c.static.empty:
+            continue
+        assets = c.static.index[
+            (c.static.lifetime != np.inf) & (c.static.build_year == 0)
+        ]
+        c.static.loc[assets, "build_year"] = baseyear
 
         # add -baseyear to name
-        rename = pd.Series(c.df.index, c.df.index)
+        rename = pd.Series(c.static.index, c.static.index)
         rename[assets] += f"-{str(baseyear)}"
-        c.df.rename(index=rename, inplace=True)
+        c.static.rename(index=rename, inplace=True)
 
         # rename time-dependent
         selection = n.component_attrs[c.name].type.str.contains(
             "series"
         ) & n.component_attrs[c.name].status.str.contains("Input")
         for attr in n.component_attrs[c.name].index[selection]:
-            c.pnl[attr] = c.pnl[attr].rename(columns=rename)
+            c.dynamic[attr] = c.dynamic[attr].rename(columns=rename)
 
 
 def add_existing_renewables(
@@ -234,6 +238,8 @@ def add_power_capacities_installed_before_baseyear(
         "Waste",
         "Other",
         "CCGT, Thermal",
+        "Battery",
+        "Heat Storage",
     ]
 
     technology_to_drop = ["Pv", "Storage Technologies"]
@@ -243,17 +249,21 @@ def add_power_capacities_installed_before_baseyear(
     df_agg = df_agg[~df_agg["Technology"].isin(technology_to_drop)]
     df_agg["Fueltype"] = df_agg["Fueltype"].map(rename_fuel)
 
-    # Intermediate fix for DateIn & DateOut
     # Fill missing DateIn
-    biomass_i = df_agg.loc[df_agg.Fueltype == "solid biomass"].index
-    mean = df_agg.loc[biomass_i, "DateIn"].mean()
-    df_agg.loc[biomass_i, "DateIn"] = df_agg.loc[biomass_i, "DateIn"].fillna(int(mean))
-    # Fill missing DateOut
-    dateout = df_agg.loc[biomass_i, "DateIn"] + lifetime_values["lifetime"]
-    df_agg.loc[biomass_i, "DateOut"] = df_agg.loc[biomass_i, "DateOut"].fillna(dateout)
+    df_agg["DateIn"] = df_agg.groupby("Fueltype")["DateIn"].transform(
+        lambda x: x.fillna(x.mean() // 1)
+    )
+    df_agg.dropna(subset="DateIn", inplace=True)
+
+    # Estimate missing DateOut
+    df_agg["DateOut"] = df_agg.DateOut.combine_first(
+        df_agg.DateIn + df_agg.Fueltype.map(costs.lifetime).fillna(30)
+    )
 
     # split biogas and solid biomass
-    biogas_i = biomass_i.intersection(df_agg.loc[df_agg.Capacity < 2].index)
+    biogas_i = df_agg.loc[
+        (df_agg.Fueltype == "solid biomass") & (df_agg.Capacity < 2)
+    ].index
     df_agg.loc[biogas_i, "Fueltype"] = "biogas"
 
     # include renewables in df_agg
@@ -294,9 +304,13 @@ def add_power_capacities_installed_before_baseyear(
         to_drop = df_agg[df_agg.DateIn > max(grouping_years)].index
         df_agg.drop(to_drop, inplace=True)
 
-    df_agg["grouping_year"] = np.take(
-        grouping_years, np.digitize(df_agg.DateIn, grouping_years, right=True)
-    )
+    df_agg["grouping_year"] = pd.cut(
+        df_agg.DateIn,
+        bins=grouping_years,
+        labels=grouping_years[1:],
+        right=True,
+        include_lowest=True,
+    ).astype(int)
 
     # calculate (adjusted) remaining lifetime before phase-out (+1 because assuming
     # phase out date at the end of the year)
