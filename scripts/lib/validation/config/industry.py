@@ -128,7 +128,7 @@ class IndustryConfig(ConfigModel):
         },
         description="The fraction of high value chemicals (HVC) produced using chemical recycling.",
     )
-    HVC_environment_sequestration_fraction: float = Field(
+    HVC_environment_sequestration_fraction: float | dict[int, float] = Field(
         0.0,
         description="The fraction of high value chemicals (HVC) put into landfill resulting in additional carbon sequestration. The default value is 0.",
     )

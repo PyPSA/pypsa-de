@@ -434,7 +434,7 @@ class SectorConfig(BaseModel):
         0.63,
         description="Share increase in energy demand in electric vehicles (EV) for each degree difference between the hot environment and the maximum temperature.",
     )
-    bev_dsm: bool = Field(
+    bev_dsm: bool | int = Field(
         True,
         description="Add the option for battery electric vehicles (BEV) to participate in demand-side management (DSM).",
     )

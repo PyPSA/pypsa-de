@@ -17,7 +17,7 @@ class _WindResourceConfig(ConfigModel):
     """Configuration for wind resource settings."""
 
     method: str = Field("wind", description="A superordinate technology type.")
-    turbine: str | dict[int, str] = Field(
+    turbine: str | dict[int, str] | dict[int, dict] = Field(
         ...,
         description="Specifies the turbine type and its characteristic power curve. Can be a string or a dictionary with years as keys which denote the year another turbine model becomes available.",
     )
