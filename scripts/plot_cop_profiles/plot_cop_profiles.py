@@ -12,7 +12,6 @@ import logging
 import numpy as np
 import pandas as pd
 import xarray as xr
-from _helpers import configure_logging
 from bokeh.io import output_file, save
 from bokeh.layouts import column, row
 from bokeh.models import (
@@ -26,6 +25,7 @@ from bokeh.palettes import Category10
 from bokeh.plotting import figure
 from bokeh.transform import dodge
 
+from scripts._helpers import configure_logging
 from scripts.definitions.heat_system_type import HeatSystemType
 
 logger = logging.getLogger(__name__)

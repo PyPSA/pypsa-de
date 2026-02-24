@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20260219_wy2013
+  prefix: 20260220_merge_v2026.02
   name:
   # - ExPol
   - KN2045_Mix
@@ -423,6 +423,7 @@ solving:
   runtime: 12h
   mem_mb: 70000 #30000 is OK for 22 nodes, 365H; 140000 for 22 nodes 3H; 400000 for 44 nodes 3H
   options:
+    custom_extra_functionality: "../scripts/pypsa-de/additional_functionality.py"
     assign_all_duals: true
     load_shedding: false
     skip_iterations: true # settings for post-discretization: false
@@ -471,7 +472,7 @@ solving:
         offwind:
           DE:
             2020: 7.8
-            2025: 12
+            2025: 9.7  # https://www.offshore-stiftung.de/de/status-quo-offshore-windenergie.php
             2030: 22   # optimistic upper ceiling to "Mittelfristprognose zur deutschlandweiten Stromerzeugung"
             2035: 50   # Planned projects until 2035 (offshore_connection_points.csv) -1.3 GW for potential delays
             2040: 65   # Planned projects until 2040 -1.5 GW for potential retirments
@@ -658,11 +659,9 @@ plotting:
 
 electricity:
   renewable_carriers: [solar, solar-hsat, onwind, offwind-ac, offwind-dc, hydro] # removed offwind-float
-  powerplants_filter: (DateOut >= 2024 or DateOut != DateOut) and not (Country == "DE" and Set == "CHP")
+  powerplants_filter: (DateOut > 2025 or DateOut != DateOut) and not (Country == "DE" and Set == "CHP") and (DateIn < 2026 or DateIn != DateIn)
   custom_powerplants: true
   custom_file: resources/german_chp.csv
-  estimate_renewable_capacities:
-    year: 2024
   H2_plants:
     enable: EU # allowed values: false, DE, EU
     start: 2030 # should be < force
@@ -718,11 +717,11 @@ data:
     source: archive
     version: latest
   ariadne_template:
-    source: primary
+    source: archive
     version: latest
   open_mastr:
-    source: primary
+    source: archive
     version: latest
   egon:
-    source: primary
+    source: archive
     version: latest

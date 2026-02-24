@@ -7,7 +7,10 @@ import yaml
 import sys
 from os.path import normpath, exists, join
 from shutil import copyfile, move, rmtree, unpack_archive
+from dotenv import load_dotenv
 from snakemake.utils import min_version
+
+load_dotenv()
 
 min_version("8.11")
 
@@ -16,13 +19,17 @@ from scripts._helpers import (
     get_scenarios,
     get_shadow,
     path_provider,
+    script_path_provider,
 )
+from scripts.lib.validation.config import validate_config
 
 
 configfile: "config/config.default.yaml"
 configfile: "config/plotting.default.yaml"
 configfile: "config/config.de.yaml"
 
+
+validate_config(config)
 
 run = config["run"]
 scenarios = get_scenarios(run)
@@ -37,6 +44,7 @@ exclude_from_shared = run["shared_resources"]["exclude"]
 logs = path_provider("logs/", RDIR, shared_resources, exclude_from_shared)
 benchmarks = path_provider("benchmarks/", RDIR, shared_resources, exclude_from_shared)
 resources = path_provider("resources/", RDIR, shared_resources, exclude_from_shared)
+scripts = script_path_provider(Path(workflow.snakefile).parent)
 
 RESULTS = "results/" + RDIR
 
@@ -85,7 +93,7 @@ if config["foresight"] == "perfect":
 
 rule all:
     input:
-        expand(RESULTS + "graphs/costs.svg", run=config["run"]["name"]),
+        expand(RESULTS + "graphs/costs.pdf", run=config["run"]["name"]),
         expand(resources("maps/power-network.pdf"), run=config["run"]["name"]),
         expand(
             resources("maps/power-network-s-{clusters}.pdf"),
@@ -282,7 +290,6 @@ rule rulegraph:
 
         # Generate visualizations from the DOT file
         if [ -s {output.dot} ]; then
-            dot -c
 
             echo "[Rule rulegraph] Generating PDF from DOT"
             dot -Tpdf -o {output.pdf} {output.dot} || {{ echo "Error: Failed to generate PDF. Is graphviz installed?" >&2; exit 1; }}
@@ -415,20 +422,19 @@ if (ARIADNE_DATABASE := dataset_version("ariadne_database"))["source"] in ["arch
 
 if (ARIADNE_TEMPLATE := dataset_version("ariadne_template"))["source"] in [
     "primary",
+    "archive",
 ]:
 
     rule retrieve_ariadne_template:
         input:
-            storage(
-                "https://github.com/iiasa/ariadne-intern-workflow/raw/main/attachments/2025-01-27_template_Ariadne.xlsx",
-            ),
+            storage(ARIADNE_TEMPLATE["url"]),
         output:
             "data/template_ariadne_database.xlsx",
         run:
             move(input[0], output[0])
 
 
-if (OPEN_MASTR := dataset_version("open_mastr"))["source"] in ["primary"]:
+if (OPEN_MASTR := dataset_version("open_mastr"))["source"] in ["primary", "archive"]:
 
     rule retrieve_open_mastr:
         input:
@@ -442,22 +448,35 @@ if (OPEN_MASTR := dataset_version("open_mastr"))["source"] in ["primary"]:
             unpack_archive(input[0], params[0])
 
 
-if (EGON := dataset_version("egon"))["source"] in ["primary"]:
+if (EGON := dataset_version("egon"))["source"] in ["build"]:
+
+    rule retrieve_egon_data:
+        params:
+            url=EGON["url"],
+            folder=EGON["folder"],
+        output:
+            spatial=f"{EGON['folder']}/demandregio_spatial_2018.json",
+            mapping=f"{EGON['folder']}/mapping_technologies.json",
+        shell:
+            """
+            mkdir -p {params.folder}
+            curl -o {output.spatial} "{params.url}?id_spatial=5&year=2018"
+            curl -o {output.mapping} "{params.url}_description?id_spatial=5"
+            """
+
+
+if (EGON := dataset_version("egon"))["source"] in ["archive"]:
 
     rule retrieve_egon_data:
         input:
-            spatial=storage(
-                f"{EGON['url']}?id_spatial=5&year=2018",
-            ),
-            mapping=storage(
-                f"{EGON['url']}_description?id_spatial=5",
-            ),
+            spatial=storage(f"{EGON['url']}/demandregio_spatial_2018.json"),
+            mapping=storage(f"{EGON['url']}/mapping_technologies.json"),
         output:
-            spatial="data/egon/demandregio_spatial_2018.json",
-            mapping="data/egon/mapping_technologies.json",
+            spatial=f"{EGON['folder']}/demandregio_spatial_2018.json",
+            mapping=f"{EGON['folder']}/mapping_technologies.json",
         run:
-            move(input.spatial, output.spatial)
-            move(input.mapping, output.mapping)
+            copy2(input["spatial"], output["spatial"])
+            copy2(input["mapping"], output["mapping"])
 
 
 rule build_exogenous_mobility_data:
@@ -487,12 +506,12 @@ rule build_exogenous_mobility_data:
 
 rule build_egon_data:
     input:
-        demandregio_spatial="data/egon/demandregio_spatial_2018.json",
+        demandregio_spatial=f"{EGON['folder']}/demandregio_spatial_2018.json",
         mapping_38_to_4=storage(
             "https://ffeopendatastorage.blob.core.windows.net/opendata/mapping_from_4_to_38.json",
             keep_local=True,
         ),
-        mapping_technologies="data/egon/mapping_technologies.json",
+        mapping_technologies=f"{EGON['folder']}/mapping_technologies.json",
         nuts3=resources("nuts3_shapes.geojson"),
     output:
         heating_technologies_nuts3=resources("heating_technologies_nuts3.geojson"),
@@ -649,7 +668,6 @@ rule modify_prenetwork:
         ),
         shipping_oil_efficiency=config_provider("sector", "shipping_oil_efficiency"),
         shipping_methanol_share=config_provider("sector", "shipping_methanol_share"),
-        mwh_meoh_per_tco2=config_provider("sector", "MWh_MeOH_per_tCO2"),
         scale_capacity=config_provider("scale_capacity"),
         bev_charge_rate=config_provider("sector", "bev_charge_rate"),
         bev_energy=config_provider("sector", "bev_energy"),
@@ -920,7 +938,7 @@ rule plot_ariadne_variables:
 
 rule ariadne_all:
     input:
-        expand(RESULTS + "graphs/costs.svg", run=config_provider("run", "name")),
+        expand(RESULTS + "graphs/costs.pdf", run=config_provider("run", "name")),
         # expand(
         #     RESULTS + "ariadne/capacity_detailed.png",
         #     run=config_provider("run", "name"),

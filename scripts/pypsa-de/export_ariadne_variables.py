@@ -4733,15 +4733,16 @@ def get_export_import(n, region, carriers, aggregate=True, unit="MWh"):
         .multiply(n.snapshot_weightings.generators, axis=0)
     )
     if unit == "€":
-        # bus0 is DE for outgoing links
-        domestic_prices = pd.concat(
-            [
-                n.buses_t.marginal_price[bus].rename(link)
-                for link, bus in outgoing.bus0.items()
-            ],
-            axis=1,
-        )
-        export_outgoing *= domestic_prices
+        if not outgoing.empty:
+            # bus0 is DE for outgoing links
+            domestic_prices = pd.concat(
+                [
+                    n.buses_t.marginal_price[bus].rename(link)
+                    for link, bus in outgoing.bus0.items()
+                ],
+                axis=1,
+            )
+            export_outgoing *= domestic_prices
 
     # if p1 > 0 system is withdrawing from bus1 (DE) and feeding into bus0 (non-DE) -> export
     export_incoming = (
@@ -4751,14 +4752,15 @@ def get_export_import(n, region, carriers, aggregate=True, unit="MWh"):
     )
     if unit == "€":
         # bus1 is DE for incoming links
-        domestic_prices = pd.concat(
-            [
-                n.buses_t.marginal_price[bus].rename(link)
-                for link, bus in incoming.bus1.items()
-            ],
-            axis=1,
-        )
-        export_incoming *= domestic_prices
+        if not incoming.empty:
+            domestic_prices = pd.concat(
+                [
+                    n.buses_t.marginal_price[bus].rename(link)
+                    for link, bus in incoming.bus1.items()
+                ],
+                axis=1,
+            )
+            export_incoming *= domestic_prices
 
     exporting_p = pd.concat([export_outgoing, export_incoming], axis=1)
     if aggregate:
@@ -4773,14 +4775,15 @@ def get_export_import(n, region, carriers, aggregate=True, unit="MWh"):
     )
     if unit == "€":
         # bus1 is DE for incoming links
-        domestic_prices = pd.concat(
-            [
-                n.buses_t.marginal_price[bus].rename(link)
-                for link, bus in incoming.bus1.items()
-            ],
-            axis=1,
-        )
-        import_incoming *= domestic_prices
+        if not incoming.empty:
+            domestic_prices = pd.concat(
+                [
+                    n.buses_t.marginal_price[bus].rename(link)
+                    for link, bus in incoming.bus1.items()
+                ],
+                axis=1,
+            )
+            import_incoming *= domestic_prices
 
     # if p0 < 0 (=clip(upper=0)) system is feeding into bus0 (DE) and withdrawing from bus1 (non-DE) -> import (with negative sign here)
     import_outgoing = (
@@ -4791,14 +4794,15 @@ def get_export_import(n, region, carriers, aggregate=True, unit="MWh"):
     )
     if unit == "€":
         # bus0 is DE for outgoing links
-        domestic_prices = pd.concat(
-            [
-                n.buses_t.marginal_price[bus].rename(link)
-                for link, bus in outgoing.bus0.items()
-            ],
-            axis=1,
-        )
-        import_outgoing *= domestic_prices
+        if not outgoing.empty:
+            domestic_prices = pd.concat(
+                [
+                    n.buses_t.marginal_price[bus].rename(link)
+                    for link, bus in outgoing.bus0.items()
+                ],
+                axis=1,
+            )
+            import_outgoing *= domestic_prices
 
     importing_p = pd.concat([import_outgoing, import_incoming], axis=1)
     if aggregate:

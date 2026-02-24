@@ -4,6 +4,8 @@
 
 
 rule add_existing_baseyear:
+    message:
+        "Adding existing infrastructure for base year for {wildcards.clusters} clusters, {wildcards.planning_horizons} planning horizons, {wildcards.opts} electric options and {wildcards.sector_opts} sector options"
     params:
         baseyear=config_provider("scenario", "planning_horizons", 0),
         sector=config_provider("sector"),
@@ -27,7 +29,7 @@ rule add_existing_baseyear:
         ),
         powerplants=resources("powerplants_s_{clusters}.csv"),
         costs=lambda w: resources(
-            f"costs_{config_provider("scenario", "planning_horizons",0)(w)}_processed.csv"
+            f"costs_{config_provider('scenario', 'planning_horizons',0)(w)}_processed.csv"
         ),
         cop_profiles=resources("cop_profiles_base_s_{clusters}_{planning_horizons}.nc"),
         existing_heating_distribution=lambda w: (
@@ -62,7 +64,7 @@ rule add_existing_baseyear:
             "add_existing_baseyear/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}"
         )
     script:
-        "../scripts/add_existing_baseyear.py"
+        scripts("add_existing_baseyear.py")
 
 
 def input_profile_tech_brownfield(w):
@@ -74,6 +76,8 @@ def input_profile_tech_brownfield(w):
 
 
 rule add_brownfield:
+    message:
+        "Adding brownfield constraints for existing infrastructure for {wildcards.clusters} clusters, {wildcards.planning_horizons} planning horizons, {wildcards.opts} electric options and {wildcards.sector_opts} sector options"
     params:
         H2_retrofit=config_provider("sector", "H2_retrofit"),
         H2_retrofit_capacity_per_CH4=config_provider(
@@ -118,13 +122,15 @@ rule add_brownfield:
             "add_brownfield/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}"
         )
     script:
-        "../scripts/add_brownfield.py"
+        scripts("add_brownfield.py")
 
 
 ruleorder: add_existing_baseyear > add_brownfield
 
 
 rule solve_sector_network_myopic:
+    message:
+        "Solving sector-coupled network with myopic foresight for {wildcards.clusters} clusters, {wildcards.planning_horizons} planning horizons, {wildcards.opts} electric options and {wildcards.sector_opts} sector options"
     params:
         solving=config_provider("solving"),
         foresight=config_provider("foresight"),
@@ -144,6 +150,12 @@ rule solve_sector_network_myopic:
         + "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
         config=RESULTS
         + "configs/config.base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.yaml",
+        model=(
+            RESULTS
+            + "models/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc"
+            if config["solving"]["options"]["store_model"]
+            else []
+        ),
     shadow:
         shadow_config
     log:
@@ -163,4 +175,4 @@ rule solve_sector_network_myopic:
             + "benchmarks/solve_sector_network/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}"
         )
     script:
-        "../scripts/solve_network.py"
+        scripts("solve_network.py")

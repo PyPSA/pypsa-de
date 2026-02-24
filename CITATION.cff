@@ -28,7 +28,7 @@ preferred-citation:
 references:
   - title: "PyPSA-Eur: An open sector-coupled optimisation model of the European energy system"
     repository: https://github.com/pypsa/pypsa-eur
-    version: v2025.07.0
+    version: v2026.02.0
     license: MIT
     authors:
     - family-names: Brown
