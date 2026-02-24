@@ -1,7 +1,6 @@
 import logging
 
 import pandas as pd
-import pyam
 
 from scripts._helpers import configure_logging, mock_snakemake
 
@@ -13,6 +12,7 @@ if __name__ == "__main__":
 
     configure_logging(snakemake)
     if snakemake.params.get("source") == "primary":
+        import pyam
         logger.info("Retrieving from IIASA database 'ariadne2'.")
 
         db = pyam.read_iiasa("ariadne2")
