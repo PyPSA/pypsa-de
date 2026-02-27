@@ -725,3 +725,6 @@ data:
   egon:
     source: archive
     version: latest
+  costs:
+    source: primary
+    version: latest
