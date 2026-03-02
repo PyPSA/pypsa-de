@@ -1122,12 +1122,12 @@ clustering:
       ramp_limit_up: max
       ramp_limit_down: max
       investment: mean
-      overnight_cost: mean
-      connection_overnight_cost: mean
+      onight_cost: mean
+      connection_onight_cost: mean
     lines:
-      overnight_cost: mean
+      onight_cost: mean
     one_ports:
-      overnight_cost: mean
+      onight_cost: mean
     buses: {}
   temporal:
     resolution_elec: false

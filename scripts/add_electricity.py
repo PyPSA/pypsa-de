@@ -442,7 +442,7 @@ def set_transmission_costs(
         * line_length_factor
         * costs.at["HVAC overhead", "capital_cost"]
     )
-    n.lines["overnight_cost"] = (
+    n.lines["onight_cost"] = (
         n.lines["length"] * line_length_factor * costs.at["HVAC overhead", "investment"]
     )
 
@@ -467,7 +467,7 @@ def set_transmission_costs(
         )
         + costs.at["HVDC inverter pair", "capital_cost"]
     )
-    overnight_cost = (
+    onight_cost = (
         n.links.loc[dc_b, "length"]
         * line_length_factor
         * (
@@ -480,7 +480,7 @@ def set_transmission_costs(
     )
 
     n.links.loc[dc_b, "capital_cost"] = capital_cost
-    n.links.loc[dc_b, "overnight_cost"] = overnight_cost
+    n.links.loc[dc_b, "onight_cost"] = onight_cost
 
 
 def attach_wind_and_solar(
@@ -550,7 +550,7 @@ def attach_wind_and_solar(
                 underground_investment = costs.at[
                     car + "-connection-underground", "investment"
                 ]
-                connection_overnight_cost = line_length_factor * (
+                connection_onight_cost = line_length_factor * (
                     distance * submarine_investment
                     + landfall_length * underground_investment
                 )
@@ -563,22 +563,22 @@ def attach_wind_and_solar(
                         + costs.at[car + "-station", "capital_cost"]
                         + connection_cost
                     )
-                    overnight_cost = costs.at[car, "investment"]
+                    onight_cost = costs.at[car, "investment"]
                 else:
                     capital_cost = (
                         costs.at["offwind", "capital_cost"]
                         + costs.at[car + "-station", "capital_cost"]
                         + connection_cost
                     )
-                    overnight_cost = costs.at["offwind", "investment"]
-                connection_overnight_cost += costs.at[car + "-station", "investment"]
+                    onight_cost = costs.at["offwind", "investment"]
+                connection_onight_cost += costs.at[car + "-station", "investment"]
                 logger.info(
                     f"Added connection cost of {connection_cost.min():0.0f}-{connection_cost.max():0.0f} Eur/MW/a to {car}"
                 )
             else:
                 capital_cost = costs.at[car, "capital_cost"]
-                overnight_cost = costs.at[car, "investment"]
-                connection_overnight_cost = pd.NA
+                onight_cost = costs.at[car, "investment"]
+                connection_onight_cost = pd.NA
 
             buses = ds.indexes["bus_bin"].get_level_values("bus")
             bus_bins = ds.indexes["bus_bin"].map(flatten)
@@ -599,8 +599,8 @@ def attach_wind_and_solar(
                 p_nom_max=p_nom_max,
                 marginal_cost=costs.at[supcar, "marginal_cost"],
                 capital_cost=capital_cost,
-                overnight_cost=overnight_cost,
-                connection_overnight_cost=connection_overnight_cost,
+                onight_cost=onight_cost,
+                connection_onight_cost=connection_onight_cost,
                 efficiency=costs.at[supcar, "efficiency"],
                 p_max_pu=p_max_pu,
                 lifetime=costs.at[supcar, "lifetime"],
@@ -697,7 +697,7 @@ def attach_conventional_generators(
         efficiency=ppl.efficiency,
         marginal_cost=marginal_cost,
         capital_cost=ppl.capital_cost,
-        overnight_cost=ppl.investment,
+        onight_cost=ppl.investment,
         build_year=ppl.build_year,
         lifetime=ppl.lifetime,
         **committable_attrs,
@@ -838,7 +838,7 @@ def attach_hydro(
             p_nom=ror["p_nom"],
             efficiency=costs.at["ror", "efficiency"],
             capital_cost=costs.at["ror", "capital_cost"],
-            overnight_cost=costs.at["ror", "investment"],
+            onight_cost=costs.at["ror", "investment"],
             weight=ror["p_nom"],
             p_max_pu=(
                 inflow_t[ror.index]  # pylint: disable=E0606
@@ -859,7 +859,7 @@ def attach_hydro(
             bus=phs["bus"],
             p_nom=phs["p_nom"],
             capital_cost=costs.at["PHS", "capital_cost"],
-            overnight_cost=costs.at["PHS", "investment"],
+            onight_cost=costs.at["PHS", "investment"],
             max_hours=phs["max_hours"],
             efficiency_store=np.sqrt(costs.at["PHS", "efficiency"]),
             efficiency_dispatch=np.sqrt(costs.at["PHS", "efficiency"]),
@@ -927,7 +927,7 @@ def attach_hydro(
             p_nom=hydro["p_nom"],
             max_hours=hydro_max_hours,
             capital_cost=costs.at["hydro", "capital_cost"],
-            overnight_cost=costs.at["hydro", "investment"],
+            onight_cost=costs.at["hydro", "investment"],
             marginal_cost=costs.at["hydro", "marginal_cost"],
             p_max_pu=p_max_pu,  # dispatch
             p_min_pu=0.0,  # store
@@ -1112,7 +1112,7 @@ def attach_storageunits(
             carrier=carrier,
             p_nom_extendable=True,
             capital_cost=costs.at[carrier, "capital_cost"],
-            overnight_costs=costs.at[carrier, "investment"],
+            onight_costs=costs.at[carrier, "investment"],
             marginal_cost=costs.at[carrier, "marginal_cost"],
             efficiency_store=costs.at[lookup_charge, "efficiency"]
             ** roundtrip_correction,
@@ -1186,7 +1186,7 @@ def attach_stores(
             e_nom_extendable=True,
             carrier=carrier,
             capital_cost=costs.at[lookup_store, "capital_cost"],
-            overnight_cost=costs.at[lookup_store, "investment"],
+            onight_cost=costs.at[lookup_store, "investment"],
             lifetime=costs.at[lookup_store, "lifetime"],
         )
 
@@ -1201,7 +1201,7 @@ def attach_stores(
             carrier=f"{carrier} {charge_name}",
             efficiency=costs.at[lookup_charge, "efficiency"] ** roundtrip_correction,
             capital_cost=costs.at[lookup_charge, "capital_cost"],
-            overnight_cost=costs.at[lookup_charge, "investment"],
+            onight_cost=costs.at[lookup_charge, "investment"],
             p_nom_extendable=True,
             marginal_cost=costs.at[lookup_charge, "marginal_cost"],
             lifetime=costs.at[lookup_charge, "lifetime"],

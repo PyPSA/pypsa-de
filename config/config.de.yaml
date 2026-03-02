@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20260220_merge_v2026.02
+  prefix: 20260227_compat_pypsa1.1
   name:
   # - ExPol
   - KN2045_Mix
