@@ -950,25 +950,6 @@ rule plot_scenario_comparison:
         "scripts/pypsa-de/plot_scenario_comparison.py"
 
 
-rule ariadne_all:
-    input:
-        expand(RESULTS + "graphs/costs.pdf", run=config_provider("run", "name")),
-        # expand(
-        #     RESULTS + "ariadne/capacity_detailed.png",
-        #     run=config_provider("run", "name"),
-        # ),
-        expand(
-            RESULTS
-            + "maps/base_s_{clusters}_{opts}_{sector_opts}-h2_network_incl_kernnetz_{planning_horizons}.pdf",
-            run=config_provider("run", "name"),
-            **config["scenario"],
-            allow_missing=True,
-        ),
-        price_carbon="results/"
-        + config["run"]["prefix"]
-        + "/scenario_comparison/Price-Carbon.png",
-
-
 rule build_scenarios:
     params:
         scenarios=config["run"]["name"],
@@ -1066,3 +1047,36 @@ rule ariadne_report_only:
             RESULTS + "ariadne/report/elec_price_duration_curve.pdf",
             run=config_provider("run", "name"),
         ),
+
+
+rule compare_scenarios:
+    input:
+        price_carbon="results/"
+        + config["run"]["prefix"]
+        + "/scenario_comparison/Price-Carbon.png",
+        # expand(
+        #     RESULTS + "ariadne/capacity_detailed.png",
+        #     run=config_provider("run", "name"),
+        # ),
+
+
+rule ariadne_all:
+    input:
+        expand(
+            RESULTS + "ariadne/report/elec_price_duration_curve.pdf",
+            run=config_provider("run", "name"),
+        ),
+        # expand(
+        #     RESULTS + "ariadne/capacity_detailed.png",
+        #     run=config_provider("run", "name"),
+        # ),
+        expand(
+            RESULTS
+            + "maps/base_s_{clusters}_{opts}_{sector_opts}-h2_network_incl_kernnetz_{planning_horizons}.pdf",
+            run=config_provider("run", "name"),
+            **config["scenario"],
+            allow_missing=True,
+        ),
+        price_carbon="results/"
+        + config["run"]["prefix"]
+        + "/scenario_comparison/Price-Carbon.png",
