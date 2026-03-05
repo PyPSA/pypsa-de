@@ -33,7 +33,6 @@ run:
 pypsa-de:
   leitmodelle: # Model data downloaded from public IIASA database 'ariadne2'
     general: REMIND-EU v1.1
-    buildings: REMod v1.0
     transport: Aladin v1
     industry: FORECAST v1.0
   reference_scenario: KN2045_Mix
