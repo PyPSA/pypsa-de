@@ -936,6 +936,20 @@ rule plot_ariadne_variables:
         "scripts/pypsa-de/plot_ariadne_variables.py"
 
 
+rule plot_scenario_comparison:
+    input:
+        exported_variables=expand(
+            RESULTS + "ariadne/exported_variables_full.xlsx",
+            run=config_provider("run", "name"),
+        ),
+    output:
+        price_carbon="results/"
+        + config["run"]["prefix"]
+        + "/scenario_comparison/Price-Carbon.png",
+    script:
+        "scripts/pypsa-de/plot_scenario_comparison.py"
+
+
 rule ariadne_all:
     input:
         expand(RESULTS + "graphs/costs.pdf", run=config_provider("run", "name")),
@@ -950,12 +964,9 @@ rule ariadne_all:
             **config["scenario"],
             allow_missing=True,
         ),
-        exported_variables=expand(
-            RESULTS + "ariadne/exported_variables_full.xlsx",
-            run=config_provider("run", "name"),
-        ),
-    script:
-        "scripts/pypsa-de/plot_ariadne_scenario_comparison.py"
+        price_carbon="results/"
+        + config["run"]["prefix"]
+        + "/scenario_comparison/Price-Carbon.png",
 
 
 rule build_scenarios:
