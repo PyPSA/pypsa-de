@@ -68,7 +68,7 @@ PyPSA-DE is a softfork of PyPSA-EUR. As such, large parts of the functionality a
 - Additional constraints that limit maximum capacity of specific technologies
 - Import constraints on Efuels, hydrogen and electricity
 - Renewable build out according to the Wind-an-Land, Wind-auf-See and Solarstrategie laws
-- A comprehensive reporting  module that exports Capacity Expansion, Primary/Secondary/Final Energy, CO2 Emissions per Sector, Trade, Investments, and more.
+- A comprehensive reporting  module that exports Capacity Expansion, Primary/Secondary/Final Energy, CO2 Emissions per Sector, Trade, Investments, and more. Including a new `STRANSIENT` utility script for power systems stability exports.
 - Plotting functionality to compare different scenarios
 - Electricity Network development until 2030 (and for AC beyond) according to the NEP23
 - Offshore development until 2030 according to the Offshore NEP23

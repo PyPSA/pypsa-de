@@ -446,7 +446,10 @@ solving:
         gas pipeline new: 0.3
         H2 pipeline: 0.05
         H2 pipeline retrofitted: 0.05
-      fractional_last_unit_size: true
+    fractional_last_unit_size: true
+  solver:
+    name: highs
+    options: highs-default
   constraints:
     # The default CO2 budget uses the KSG targets, and the non CO2 emissions from the REMIND model in the KN2045_Mix scenario
     co2_budget_national:
