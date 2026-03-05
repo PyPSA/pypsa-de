@@ -396,7 +396,7 @@ def add_system_cost_rows(n):
         for idx, discount_rate in zip([decentral_idx, not_decentral_idx], [0.04, 0.07]):
             df.loc[idx, "annuity"] = (
                 calculate_annuity(df.loc[idx, "lifetime"], discount_rate)
-                * df.loc[idx, "overnight_cost"]
+                * df.loc[idx, "onight_cost"]
             )
 
         df["FOM"] = df["capital_cost"] - df["annuity"]
@@ -409,7 +409,7 @@ def add_system_cost_rows(n):
                 0.023185
                 * df.loc[
                     df.carrier.str.contains("offwind"),
-                    "overnight_cost",
+                    "onight_cost",
                 ]
             )
         if df["FOM"].min() < 0:
@@ -432,7 +432,7 @@ def get_system_cost(n, region):
         n,
         region,
         lambda **kwargs: n.statistics.expanded_capex(
-            **kwargs, cost_attribute="overnight_cost"
+            **kwargs, cost_attribute="onight_cost"
         ),
         cap_string="Investment|Energy Supply|",
     )
@@ -4134,11 +4134,11 @@ def get_grid_investments(
         )
         common_index = offwind.index.intersection(offwind2020.index)
         offwind_capacity.loc[common_index] -= offwind2020.loc[common_index]
-    offwind_connection_overnight_cost = (
-        offwind_capacity * offwind.connection_overnight_cost
+    offwind_connection_onight_cost = (
+        offwind_capacity * offwind.connection_onight_cost
     ) * 1e-9
-    offwind_connection_ac = offwind_connection_overnight_cost.filter(like="ac")
-    offwind_connection_dc = offwind_connection_overnight_cost.filter(regex="dc|float")
+    offwind_connection_ac = offwind_connection_onight_cost.filter(like="ac")
+    offwind_connection_dc = offwind_connection_onight_cost.filter(regex="dc|float")
 
     var[var_name + "AC|Offshore"] = offwind_connection_ac.sum() / 5
     var[var_name + "AC|NEP|Offshore"] = (
@@ -4168,7 +4168,7 @@ def get_grid_investments(
         # Subtracting 2020 capacity
         dc_capacity -= networks[0].links.loc[dc_links.index].p_nom_min
 
-    dc_investments = dc_capacity * dc_links.overnight_cost * 1e-9
+    dc_investments = dc_capacity * dc_links.onight_cost * 1e-9
     # International dc_projects are only accounted with half the costs
     dc_investments[
         ~(dc_links.bus0.str.contains(region) & dc_links.bus1.str.contains(region))
@@ -4187,7 +4187,7 @@ def get_grid_investments(
         # Subtracting 2020 capacity
         ac_capacity -= networks[0].lines.loc[ac_lines.index].s_nom_min
 
-    ac_investments = ac_capacity * ac_lines.overnight_cost * 1e-9
+    ac_investments = ac_capacity * ac_lines.onight_cost * 1e-9
     # International ac_projects are only accounted with half the costs
     ac_investments[
         ~(ac_lines.bus0.str.contains(region) & ac_lines.bus1.str.contains(region))
@@ -4263,9 +4263,7 @@ def get_grid_investments(
             distribution_grid.build_year <= 2020
         ].p_nom_opt.sum()
 
-    dg_investment = (
-        dg_capacity * distribution_grid.overnight_cost.unique().item() * 1e-9
-    )
+    dg_investment = dg_capacity * distribution_grid.onight_cost.unique().item() * 1e-9
     var["Investment|Energy Supply|Electricity|Distribution"] = dg_investment / 5
 
     var["Investment|Energy Supply|Electricity|Transmission and Distribution"] = (
@@ -4288,7 +4286,7 @@ def get_grid_investments(
         new_h2_links = h2_links.copy()
 
     h2_expansion = new_h2_links.p_nom_opt
-    h2_investments = h2_expansion * new_h2_links.overnight_cost * 1e-9
+    h2_investments = h2_expansion * new_h2_links.onight_cost * 1e-9
     # International h2_projects are only accounted with domestic_length_factor * costs
     if len(h2_links.carrier.unique()) == 1:
         dlf = domestic_length_factor(n, h2_links.carrier.unique().tolist(), region)
@@ -5288,7 +5286,7 @@ def hack_DC_projects(n, p_nom_start, p_nom_planned, model_year, snakemake, costs
             snakemake.params.NEP_transmission == "overhead"
         ):
             logger.warning("Switching DC projects to NEP23 and underground costs.")
-            n.links.loc[current_projects, "overnight_cost"] = (
+            n.links.loc[current_projects, "onight_cost"] = (
                 n.links.loc[current_projects, "length"]
                 * (
                     (1.0 - n.links.loc[current_projects, "underwater_fraction"])
@@ -5336,7 +5334,7 @@ def hack_AC_projects(n, s_nom_start, model_year, snakemake):
 
     if snakemake.params.NEP_year == 2021:
         logger.warning("Switching AC projects to NEP23 costs post-optimization")
-        n.lines.loc[current_projects, "overnight_cost"] *= 772 / 472
+        n.lines.loc[current_projects, "onight_cost"] *= 772 / 472
 
     # Even though the lines are available to the model from the start,
     # we pretend that the lines were expanded in the current year
@@ -5372,12 +5370,12 @@ def process_postnetworks(n, n_start, model_year, snakemake, costs):
         0.7 * costs.at["H2 (g) pipeline", "capital_cost"]
         + 0.3 * costs.at["H2 (g) pipeline repurposed", "capital_cost"]
     ) * n.links.loc[h2_links_kern, "length"]
-    overnight_costs = (
+    onight_costs = (
         0.7 * costs.at["H2 (g) pipeline", "investment"]
         + 0.3 * costs.at["H2 (g) pipeline repurposed", "investment"]
     ) * n.links.loc[h2_links_kern, "length"]
     n.links.loc[h2_links_kern, "capital_cost"] = capital_costs
-    n.links.loc[h2_links_kern, "overnight_cost"] = overnight_costs
+    n.links.loc[h2_links_kern, "onight_cost"] = onight_costs
 
     logger.info("Post-Discretizing DC links")
 

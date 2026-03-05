@@ -391,8 +391,8 @@ def add_power_capacities_installed_before_baseyear(
             capital_cost = n.generators.loc[
                 n.generators.carrier == generator + suffix, "capital_cost"
             ].mean()
-            overnight_cost = n.generators.loc[
-                n.generators.carrier == generator + suffix, "overnight_cost"
+            onight_cost = n.generators.loc[
+                n.generators.carrier == generator + suffix, "onight_cost"
             ].mean()
             marginal_cost = n.generators.loc[
                 n.generators.carrier == generator + suffix, "marginal_cost"
@@ -421,7 +421,7 @@ def add_power_capacities_installed_before_baseyear(
                     p_nom=new_capacity,
                     marginal_cost=marginal_cost,
                     capital_cost=capital_cost,
-                    overnight_cost=overnight_cost,
+                    onight_cost=onight_cost,
                     efficiency=costs.at[cost_key, "efficiency"],
                     p_max_pu=p_max_pu.values,
                     build_year=grouping_year,
@@ -487,7 +487,7 @@ def add_power_capacities_installed_before_baseyear(
                         * costs.at[
                             generator, "capital_cost"
                         ],  # NB: fixed cost is per MWel
-                        overnight_cost=costs.at[generator, "efficiency"]
+                        onight_cost=costs.at[generator, "efficiency"]
                         * costs.at[
                             generator, "investment"
                         ],  # NB: investment is per MWel
@@ -527,7 +527,7 @@ def add_power_capacities_installed_before_baseyear(
                         p_nom=new_capacity / costs.at[key, "efficiency"],
                         capital_cost=costs.at[key, "capital_cost"]
                         * costs.at[key, "efficiency"],
-                        overnight_cost=costs.at[key, "investment"]
+                        onight_cost=costs.at[key, "investment"]
                         * costs.at[key, "efficiency"],
                         marginal_cost=costs.at[key, "VOM"],
                         efficiency=costs.at[key, "efficiency"],
@@ -745,7 +745,7 @@ def add_chp_plants(
                         p_nom=p_nom[bus],
                         capital_cost=costs.at[key, "capital_cost"]
                         * costs.at[key, "efficiency"],
-                        overnight_cost=costs.at[key, "investment"]
+                        onight_cost=costs.at[key, "investment"]
                         * costs.at[key, "efficiency"],
                         marginal_cost=costs.at[key, "VOM"],
                         efficiency=efficiency_power.loc[bus],
@@ -767,7 +767,7 @@ def add_chp_plants(
                         p_nom=p_nom[bus],
                         capital_cost=costs.at[key, "capital_cost"]
                         * costs.at[key, "efficiency"],
-                        overnight_cost=costs.at[key, "investment"]
+                        onight_cost=costs.at[key, "investment"]
                         * costs.at[key, "efficiency"],
                         marginal_cost=costs.at[key, "VOM"],
                         efficiency=efficiency_power.loc[bus],
@@ -838,7 +838,7 @@ def add_chp_plants(
                     p_nom=p_nom[bus] / costs.at[key, "efficiency"],
                     capital_cost=costs.at[key, "capital_cost"]
                     * costs.at[key, "efficiency"],
-                    overnight_cost=costs.at[key, "investment"]
+                    onight_cost=costs.at[key, "investment"]
                     * costs.at[key, "efficiency"],
                     marginal_cost=costs.at[key, "VOM"],
                     efficiency=costs.at[key, "efficiency"],
@@ -860,7 +860,7 @@ def add_chp_plants(
                     p_nom=p_nom[bus] / costs.at[key, "efficiency"],
                     capital_cost=costs.at[key, "capital_cost"]
                     * costs.at[key, "efficiency"],
-                    overnight_cost=costs.at[key, "investment"]
+                    onight_cost=costs.at[key, "investment"]
                     * costs.at[key, "efficiency"],
                     marginal_cost=costs.at[key, "VOM"],
                     efficiency=costs.at[key, "efficiency"],
@@ -1048,7 +1048,7 @@ def add_heating_capacities_installed_before_baseyear(
                     carrier=f"{heat_system} {heat_source} heat pump",
                     efficiency=1 / efficiency.clip(lower=0.001),
                     capital_cost=costs.at[costs_name, "capital_cost"],
-                    overnight_cost=costs.at[costs_name, "investment"],
+                    onight_cost=costs.at[costs_name, "investment"],
                     p_nom=existing_capacities.loc[
                         nodes, (heat_system.value, f"{heat_source} heat pump")
                     ]
@@ -1074,7 +1074,7 @@ def add_heating_capacities_installed_before_baseyear(
                     costs.at[heat_system.resistive_heater_costs_name, "efficiency"]
                     * costs.at[heat_system.resistive_heater_costs_name, "capital_cost"]
                 ),
-                overnight_cost=(
+                onight_cost=(
                     costs.at[heat_system.resistive_heater_costs_name, "efficiency"]
                     * costs.at[heat_system.resistive_heater_costs_name, "investment"]
                 ),
@@ -1107,7 +1107,7 @@ def add_heating_capacities_installed_before_baseyear(
                     costs.at[heat_system.gas_boiler_costs_name, "efficiency"]
                     * costs.at[heat_system.gas_boiler_costs_name, "capital_cost"]
                 ),
-                overnight_cost=(
+                onight_cost=(
                     costs.at[heat_system.gas_boiler_costs_name, "efficiency"]
                     * costs.at[heat_system.gas_boiler_costs_name, "investment"]
                 ),
@@ -1136,7 +1136,7 @@ def add_heating_capacities_installed_before_baseyear(
                 efficiency2=costs.at["oil", "CO2 intensity"],
                 capital_cost=costs.at[heat_system.oil_boiler_costs_name, "efficiency"]
                 * costs.at[heat_system.oil_boiler_costs_name, "capital_cost"],
-                overnight_cost=costs.at[heat_system.oil_boiler_costs_name, "efficiency"]
+                onight_cost=costs.at[heat_system.oil_boiler_costs_name, "efficiency"]
                 * costs.at[heat_system.oil_boiler_costs_name, "investment"],
                 p_nom=(
                     existing_capacities.loc[nodes, (heat_system.value, "oil boiler")]
@@ -1170,8 +1170,7 @@ def add_heating_capacities_installed_before_baseyear(
                     efficiency=efficiency,
                     capital_cost=efficiency
                     * costs.at["biomass boiler", "capital_cost"],
-                    overnight_cost=efficiency
-                    * costs.at["biomass boiler", "investment"],
+                    onight_cost=efficiency * costs.at["biomass boiler", "investment"],
                     p_nom=(
                         existing_capacities.loc[
                             nodes, (heat_system.value, "biomass boiler")

@@ -1,4 +1,5 @@
 # Changelog
+- Switched to new secant based transmission losses from pypsa 1.1
 - Switched to weather year 2013
 - in 2030 use UBA data for industry and mobility
 - start myopic optimization in 2025
