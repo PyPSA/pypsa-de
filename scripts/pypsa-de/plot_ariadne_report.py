@@ -745,11 +745,6 @@ def plot_nodal_heat_balance(
     start_date = str(network.generators_t.p.index[0])[:4] + "-" + start_date
     end_date = str(network.generators_t.p.index[-1])[:4] + "-" + end_date
 
-    carriers = carriers
-    loads = loads
-    start_date = start_date
-    end_date = end_date
-    regions = regions
     period = network.generators_t.p.index[
         (network.generators_t.p.index >= start_date)
         & (network.generators_t.p.index <= end_date)
@@ -849,7 +844,6 @@ def plot_nodal_heat_balance(
         labels = [nice_names_dict.get(l, l) for l in labels]
 
     if german_carriers:
-        german_carriers
         labels = [carriers_in_german.get(l, l) for l in labels]
 
     # rescale the y-axis
