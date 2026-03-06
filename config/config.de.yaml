@@ -35,7 +35,8 @@ pypsa-de:
     general: REMIND-EU v1.1
     transport: Aladin v1
     industry: FORECAST v1.0
-  reference_scenario: KN2045_Mix
+  use_internal_db: false
+  reference_scenario: KN2045_Mix  # KN2045_Bal_v4
   region: Deutschland
   ageb_for_mobility: true # In 2020 use AGEB data for final energy demand and KBA for vehicles
   uba_for_mobility: # Available for 2025–2035; uses MWMS scenario from UBA Projektionsbericht 2025
@@ -716,6 +717,9 @@ scale_capacity:
 data:
   ariadne_database:
     source: archive
+    version: latest
+  ariadne_database_internal:
+    source: primary
     version: latest
   ariadne_template:
     source: archive

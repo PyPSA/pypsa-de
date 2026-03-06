@@ -2,37 +2,58 @@
 #
 # SPDX-License-Identifier: CC BY 4.0
 
+if config["pypsa-de"]["use_internal_db"]:
+    if (ARIADNE_DATABASE_INTERNAL := dataset_version("ariadne_database_internal"))[
+        "source"
+    ] in ["primary"]:
 
-if (ARIADNE_DATABASE := dataset_version("ariadne_database"))["source"] in ["primary"]:
+        rule retrieve_ariadne_database_internal:
+            params:
+                source="internal",
+            output:
+                data="data/ariadne_database.csv",
+            log:
+                "logs/retrieve_ariadne_database_internal_primary.log",
+            resources:
+                mem_mb=1000,
+            script:
+                scripts("pypsa-de/retrieve_ariadne_database.py")
 
-    rule retrieve_ariadne_database:
-        params:
-            source="primary",
-        output:
-            data="data/ariadne_database.csv",
-        log:
-            "logs/retrieve_ariadne_database_primary.log",
-        resources:
-            mem_mb=1000,
-        script:
-            scripts("pypsa-de/retrieve_ariadne_database.py")
+else:
+    if (ARIADNE_DATABASE := dataset_version("ariadne_database"))["source"] in [
+        "primary"
+    ]:
 
+        rule retrieve_ariadne_database:
+            params:
+                source="primary",
+            output:
+                data="data/ariadne_database.csv",
+            log:
+                "logs/retrieve_ariadne_database_primary.log",
+            resources:
+                mem_mb=1000,
+            script:
+                scripts("pypsa-de/retrieve_ariadne_database.py")
 
-if (ARIADNE_DATABASE := dataset_version("ariadne_database"))["source"] in ["archive"]:
+    if (ARIADNE_DATABASE := dataset_version("ariadne_database"))["source"] in [
+        "archive"
+    ]:
 
-    rule retrieve_ariadne_database:
-        params:
-            source="archive",
-        input:
-            raw_xlsx=storage(ARIADNE_DATABASE["url"]),
-        output:
-            data="data/ariadne_database.csv",
-        log:
-            "logs/retrieve_ariadne_database_archive.log",
-        resources:
-            mem_mb=1000,
-        script:
-            scripts("pypsa-de/retrieve_ariadne_database.py")
+        rule retrieve_ariadne_database:
+            params:
+                source="archive",
+                version=ARIADNE_DATABASE["version"],
+            input:
+                raw_xlsx=storage(ARIADNE_DATABASE["url"]),
+            output:
+                data="data/ariadne_database.csv",
+            log:
+                "logs/retrieve_ariadne_database_archive.log",
+            resources:
+                mem_mb=1000,
+            script:
+                scripts("pypsa-de/retrieve_ariadne_database.py")
 
 
 if (ARIADNE_TEMPLATE := dataset_version("ariadne_template"))["source"] in [
