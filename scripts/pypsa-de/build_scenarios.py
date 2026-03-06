@@ -15,9 +15,14 @@ logger = logging.getLogger(__name__)
 
 
 def get_transport_growth(df, planning_horizons):
-    aviation = df.xs(
-        ("Final Energy|Bunkers|Aviation", "TWh/yr"), level=("variable", "unit")
-    ).squeeze()
+    aviation = df.xs("Final Energy|Bunkers|Aviation", level="variable")
+    unit = aviation.index.get_level_values("unit").item()
+    aviation = aviation.squeeze()
+
+    if unit == "PJ/yr":
+        aviation /= 3.6  # convert PJ to TWh
+    elif unit != "TWh/yr":
+        raise ValueError("Unexpected unit for aviation energy demand.")
 
     aviation[2020] = 111.25  # Ariadne2-internal DB, Aladin model
     aviation_growth_factor = aviation / aviation[2020]

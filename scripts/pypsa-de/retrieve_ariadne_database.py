@@ -21,6 +21,16 @@ if __name__ == "__main__":
         logger.info("Successfully retrieved database.")
         db.timeseries().to_csv(snakemake.output.data)
 
+    elif snakemake.params.get("source") == "internal":
+        import pyam
+
+        logger.info("Retrieving from IIASA internal database 'ariadne2_intern'.")
+
+        db = pyam.read_iiasa("ariadne2_intern")
+
+        logger.info("Successfully retrieved database.")
+        db.timeseries().to_csv(snakemake.output.data)
+
     elif snakemake.params.get("source") == "archive":
         # Read all sheets first; then select the one called "data".
         sheets = pd.read_excel(snakemake.input.raw_xlsx, sheet_name=None)
