@@ -42,7 +42,7 @@ to generate the solved networks, or
 
     snakemake -c1 ariadne_all 
 
-which will generators additional outputs related to the Ariadne project. If computational resources on your local machine are limited you may decrease the number of cores by adding, e.g. `-c4` to the call to get only 4 cores. For more option please refer to the [snakemake](https://snakemake.readthedocs.io/en/stable/) documentation.
+which will generators additional outputs related to the Ariadne project. If you would like to use more computational resources you may increase the number of cores by adding, e.g. `-c4` to the call to get only 4 cores, or `-call` to use all cores. For more option please refer to the [snakemake](https://snakemake.readthedocs.io/en/stable/) documentation.
 
 ## Repo structure
 
