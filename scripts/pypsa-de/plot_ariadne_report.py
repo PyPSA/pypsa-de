@@ -745,11 +745,6 @@ def plot_nodal_heat_balance(
     start_date = str(network.generators_t.p.index[0])[:4] + "-" + start_date
     end_date = str(network.generators_t.p.index[-1])[:4] + "-" + end_date
 
-    carriers = carriers
-    loads = loads
-    start_date = start_date
-    end_date = end_date
-    regions = regions
     period = network.generators_t.p.index[
         (network.generators_t.p.index >= start_date)
         & (network.generators_t.p.index <= end_date)
@@ -849,7 +844,6 @@ def plot_nodal_heat_balance(
         labels = [nice_names_dict.get(l, l) for l in labels]
 
     if german_carriers:
-        german_carriers
         labels = [carriers_in_german.get(l, l) for l in labels]
 
     # rescale the y-axis
@@ -1272,7 +1266,7 @@ def plot_backup_capacity(
 
     df_all = pd.DataFrame()
 
-    for year in np.arange(2020, 2050, 5):
+    for year in networks.keys():
         n = networks[year]
 
         electricity_cap = (
@@ -1293,7 +1287,7 @@ def plot_backup_capacity(
 
         df_all = pd.concat([df_all, df], axis=1)
 
-    df_all.columns = np.arange(2020, 2050, 5)
+    df_all.columns = list(networks.keys())
 
     tech_colors["coal"] = "black"
 
@@ -1392,7 +1386,7 @@ def plot_backup_generation(
 
     df_all = pd.DataFrame()
 
-    for year in np.arange(2020, 2050, 5):
+    for year in networks.keys():
         n = networks[year]
 
         electricity_supply_de = (
@@ -1412,7 +1406,7 @@ def plot_backup_generation(
         df = df[df > 0.01]
         df_all = pd.concat([df_all, df], axis=1)
 
-    df_all.columns = np.arange(2020, 2050, 5)
+    df_all.columns = list(networks.keys())
 
     # Create figure
     plt.figure(figsize=(18, 5))
@@ -3147,7 +3141,7 @@ if __name__ == "__main__":
         for s in scenarios:
             plot_elec_map_de(
                 networks[planning_horizons.index(year)],
-                networks[planning_horizons.index(2020)],
+                networks[0],
                 tech_colors,
                 regions_de,
                 savepath=f"{snakemake.output.elec_transmission}/elec-transmission-DE-{s}-{year}.pdf",
@@ -3156,7 +3150,7 @@ if __name__ == "__main__":
         s = "total-expansion"
         plot_elec_map_de(
             networks[planning_horizons.index(year)],
-            networks[planning_horizons.index(2020)],
+            networks[0],
             tech_colors,
             regions_de,
             savepath=f"{snakemake.output.elec_transmission}/elec-transmission-DE-{s}-{year}_eng.png",

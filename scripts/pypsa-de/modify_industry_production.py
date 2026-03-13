@@ -66,7 +66,7 @@ if __name__ == "__main__":
             index=[year],
         ).T.multiply(1000)
     else:
-        # leitmodell for industry demand
+        # leitmodell for industry production
         leitmodell = "FORECAST v1.0"
         ariadne = (
             pd.read_csv(
