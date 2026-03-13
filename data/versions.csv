@@ -3,6 +3,7 @@ aquifer_data,v1.2,primary,latest supported,2025-12-02,,https://download.bgr.de/b
 aquifer_data,v1.2,archive,latest supported,2026-01-13,,https://data.pypsa.org/workflows/eur/aquifer_data/v1.2/IHME1500_v12.zip
 ariadne_database,v1.0,primary,latest supported,2026-01-15,Public facing database of the second Ariadne Szenarienbericht,https://zenodo.org/records/15174592/files/250505_Ariadne2_Data_v1.0.xlsx
 ariadne_database,v1.0,archive,latest supported,2026-02-23,Public facing database of the second Ariadne Szenarienbericht,https://data.pypsa.org/workflows/de/ariadne_database/v1.0/250505_Ariadne2_Data_v1.0.xlsx
+ariadne_database_internal,rolling,primary,latest supported,2026-03-06,Internal database of the second Ariadne Szenarienbericht,https://data.ene.iiasa.ac.at/ariadne2-intern
 ariadne_template,2025-11-20,primary,latest supported,2026-01-15,,https://github.com/iiasa/ariadne-intern-workflow/raw/7caa948ad6aa71cf8d17e69a64dd29f01306a9ff/attachments/2025-11-20_template_Ariadne.xlsx
 ariadne_template,2025-11-20,archive,latest supported,2026-02-23,,https://data.pypsa.org/workflows/de/ariadne_template/2025-11-20/2025-11-20_template_Ariadne.xlsx
 attributed_ports,2020-07-10,primary,latest supported,2025-12-02,,https://datacatalogfiles.worldbank.org/ddh-published/0038118/1/DR0046414/attributed_ports.geojson

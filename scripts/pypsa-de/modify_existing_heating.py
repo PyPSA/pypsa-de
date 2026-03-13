@@ -35,11 +35,16 @@ if __name__ == "__main__":
         "Adjusting heating stock towards hard coded values from a\nprevious REMod run. This is only a hotfix."
     )  # Because REMod is not consistent and a better solution takes too long.
 
-    new_values["gas boiler"] = 11.44  # million
-    new_values["oil boiler"] = 5.99
-    new_values["air heat pump"] = 0.38
-    new_values["ground heat pump"] = 0.38
-    new_values["biomass boiler"] = 2.8
+    new_values["gas boiler"] = (
+        11.44  # million # Schornsteinfeger: 7.78 + 0.725 + 0.866 + 0.442 + 4.130
+    )
+    # Schornsteinfeger Kohle: 0.08
+    new_values["oil boiler"] = 5.99  # Schornsteinfeger: 3.86 + 0.965
+    new_values["biomass boiler"] = 2.8  # Schornsteinfeger: 1.16 - 0.08 (Zentral) +
+    new_values["air heat pump"] = (
+        1.7  # Heat pumps approximated based on https://www.waermepumpe.de/fileadmin/user_upload/Mediengalerie/Zahlen_und_Daten/Absatzzahlen_Marktanteile/Diagramm_Absatz_WP_2006-2025.png
+    )
+    new_values["ground heat pump"] = 0.5
 
     total_stock = new_values.sum()
     existing_factor = existing_heating.loc["Germany"].sum() / total_stock

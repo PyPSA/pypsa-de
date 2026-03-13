@@ -12,37 +12,43 @@ This repository contains the entire scientific project, including data sources a
 
 ## Getting ready
 
-You need `conda` or `mamba` to run the analysis. Using conda, you can create an environment from within which you can run the analysis:
+First of all, clone the PyPSA-DE repository using the version control system git in the command line.
+```
+git clone https://github.com/PyPSA/pypsa-de.git
+```
 
+PyPSA-DE relies on a set of other Python packages to function. We manage these using [`pixi`](https://pixi.prefix.dev/latest/). Once pixi is installed, you can activate the project environment for your operating system and have access to all the PyPSA-DE dependencies from the command line:
 ```
-conda env create -f envs/{os}.lock.yaml
+pixi shell
 ```
 
-Where `{os}` should be replaced with your operating system, e.g. for linux the command would be:
+Tip: You can also set up automatic shell activation in several popular editors (e.g. in VSCode or Zed). Refer to the pixi documentation for the most up-to-date options.
 
-```
-conda env create -f envs/linux-64.lock.yaml
-```
+If you cannot access pixi on your machine, you can also install using `conda`. For more details see the corresponding section in the [documentation](https://pypsa-eur.readthedocs.io/en/latest/installation.html#legacy-method-conda) of PyPSA-Eur
 
 ## Run the analysis
 
 Before running any analysis with scenarios, the rule `build_scenarios` must be executed. This will create the file `config/scenarios.automated.yaml` which includes input data and CO2 targets from the IIASA Ariadne database as well as the specifications from the manual scenario file. [This file is specified in the  config.de.yaml via they key `run:scenarios:manual_file` and located at `config/scenarios.manual.yaml` by default].
 
-    snakemake build_scenarios -f
+    snakemake -c1 build_scenarios
 
 Note that the hierarchy of scenario files is the following: `scenarios.automated.yaml` > (any `explicitly specified --configfiles`) > `config.de.yaml `> `config.default.yaml `Changes in the file `scenarios.manual.yaml `are only taken into account if the rule `build_scenarios` is executed.
 
-To run the analysis use
+To run the analysis use, either
 
-    snakemake ariadne_all
+    snakemake -call  # The flag -cN specifies the number N of CPU cores available to snakemake
 
-This will run all analysis steps to reproduce results. If computational resources on your local machine are limited you may decrease the number of cores by adding, e.g. `-c4` to the call to get only 4 cores. For more option please refer to the [snakemake](https://snakemake.readthedocs.io/en/stable/) documentation.
+to generate the solved networks, or
+
+    snakemake -c1 ariadne_all 
+
+which will generators additional outputs related to the Ariadne project. If you would like to use more computational resources you may increase the number of cores by adding, e.g. `-c4` to the call to get only 4 cores, or `-call` to use all cores. For more option please refer to the [snakemake](https://snakemake.readthedocs.io/en/stable/) documentation.
 
 ## Repo structure
 
-* `config`: configuration files
-* `data/pypsa-de`: Germany specific data from the Ariadne project
-* `scripts`: contains the Python scripts for the workflow, the Germany specific code needed to run this repo is contained in `scripts/pypsa-de`
+* `config`: configuration files, most importantly `config.de.yaml` and `scenarios.manual.yaml`
+* `data/pypsa-de`: Germany specific data
+* `scripts`: contains the Python scripts for the workflow, the pypsa-de specific code needed to run this repo is contained in `scripts/pypsa-de`
 * `cutouts`: very large weather data cutouts supplied by atlite library (does not exist initially)
 * `data`: place for raw data (does not exist initially)
 * `resources`: place for intermediate/processing data for the workflow (does not exist initially)
