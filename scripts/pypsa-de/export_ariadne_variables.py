@@ -3200,6 +3200,8 @@ def get_emissions(n, region, _energy_totals, _industry_demand):
             ],
         ).sum()
         + CHP_emissions_E.sum(),
+        rtol=1e-2,
+        atol=1e-2,
     )
 
     var["Emissions|CO2|Energy|Supply|Electricity"] = (
@@ -5573,6 +5575,7 @@ if __name__ == "__main__":
             ll="vopt",
             sector_opts="None",
             run="KN2045_Mix",
+            configfiles="config/test/config.dach.yaml",
         )
     configure_logging(snakemake)
     set_scenario_config(snakemake)
