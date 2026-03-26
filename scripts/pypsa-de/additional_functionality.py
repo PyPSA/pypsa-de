@@ -9,6 +9,33 @@ from scripts.prepare_sector_network import determine_emission_sectors
 logger = logging.getLogger(__name__)
 
 
+def h2_import_limits_enabled(config):
+    return config.get("pypsa-de", {}).get("h2_import_limits", {}).get("enable", True)
+
+
+def safe_add_constraint(model, expr, rhs, sense, name):
+    """Wrap solver call to skip constant-constant constraints."""
+    try:
+        if sense == "<=":
+            model.add_constraints(expr <= rhs, name=name)
+        elif sense == ">=":
+            model.add_constraints(expr >= rhs, name=name)
+        else:
+            raise ValueError(f"Unsupported sense '{sense}'")
+        return True
+    except ValueError as exc:
+        if "Both sides of the constraint are constant" in str(exc):
+            logger.debug(
+                "Skipping constraint %s because both sides are constant (%s %s %s)",
+                name,
+                expr,
+                sense,
+                rhs,
+            )
+            return False
+        raise
+
+
 def add_capacity_limits(n, investment_year, limits_capacity, sense="maximum"):
     for c in n.iterate_components(limits_capacity):
         logger.info(f"Adding {sense} constraints for {c.list_name}")
@@ -208,6 +235,12 @@ def add_power_limits(n, investment_year, limits_power_max):
 
 
 def h2_import_limits(n, investment_year, limits_volume_max):
+    if not h2_import_limits_enabled(n.config):
+        logger.info(
+            "Skipping H2 import limit constraints because pypsa-de.h2_import_limits.enable is False."
+        )
+        return
+
     for ct in limits_volume_max["h2_import"]:
         limit = limits_volume_max["h2_import"][ct][investment_year] * 1e6
 
@@ -228,6 +261,18 @@ def h2_import_limits(n, investment_year, limits_volume_max):
             & (n.links.bus1.str[:2] != ct)
         ]
 
+        if incoming.empty and outgoing.empty:
+            logger.warning(
+                f"No hydrogen import/export links found for {ct}; skipping limit enforcement."
+            )
+            continue
+
+        if incoming.empty and outgoing.empty:
+            logger.warning(
+                f"No hydrogen import/export links found for {ct}; skipping limit enforcement."
+            )
+            continue
+
         incoming_p = (
             n.model["Link-p"].loc[:, incoming] * n.snapshot_weightings.generators
         ).sum()
@@ -239,7 +284,13 @@ def h2_import_limits(n, investment_year, limits_volume_max):
 
         cname = f"H2_import_limit-{ct}"
 
-        n.model.add_constraints(lhs <= limit, name=f"GlobalConstraint-{cname}")
+        added = safe_add_constraint(
+            n.model,
+            lhs,
+            limit,
+            "<=",
+            name=f"GlobalConstraint-{cname}",
+        )
 
         if cname in n.global_constraints.index:
             logger.warning(
@@ -247,20 +298,27 @@ def h2_import_limits(n, investment_year, limits_volume_max):
             )
             n.global_constraints.drop(cname, inplace=True)
 
-        n.add(
-            "GlobalConstraint",
-            cname,
-            constant=limit,
-            sense="<=",
-            type="",
-            carrier_attribute="",
-        )
+        if added:
+            n.add(
+                "GlobalConstraint",
+                cname,
+                constant=limit,
+                sense="<=",
+                type="",
+                carrier_attribute="",
+            )
 
         logger.info("Adding H2 export ban")
 
         cname = f"H2_export_ban-{ct}"
 
-        n.model.add_constraints(lhs >= 0, name=f"GlobalConstraint-{cname}")
+        added_export = safe_add_constraint(
+            n.model,
+            lhs,
+            0,
+            ">=",
+            name=f"GlobalConstraint-{cname}",
+        )
 
         if cname in n.global_constraints.index:
             logger.warning(
@@ -268,14 +326,15 @@ def h2_import_limits(n, investment_year, limits_volume_max):
             )
             n.global_constraints.drop(cname, inplace=True)
 
-        n.add(
-            "GlobalConstraint",
-            cname,
-            constant=0,
-            sense=">=",
-            type="",
-            carrier_attribute="",
-        )
+        if added_export:
+            n.add(
+                "GlobalConstraint",
+                cname,
+                constant=0,
+                sense=">=",
+                type="",
+                carrier_attribute="",
+            )
 
 
 def h2_production_limits(n, investment_year, limits_volume_min, limits_volume_max):
