@@ -203,25 +203,25 @@ rule plot_scenario_comparison:
 
 rule compare_scenarios:
     input:
-        price_carbon="results/"
-        + config["run"]["prefix"]
-        + "/scenario_comparison/Price-Carbon.png",
         # expand(
         #     RESULTS + "ariadne/capacity_detailed.png",
         #     run=config_provider("run", "name"),
         # ),
+        price_carbon="results/"
+        + config["run"]["prefix"]
+        + "/scenario_comparison/Price-Carbon.png",
 
 
 rule ariadne_all:
     input:
-        expand(
-            RESULTS + "ariadne/report/elec_price_duration_curve.pdf",
-            run=config_provider("run", "name"),
-        ),
         # expand(
         #     RESULTS + "ariadne/capacity_detailed.png",
         #     run=config_provider("run", "name"),
         # ),
+        expand(
+            RESULTS + "ariadne/report/elec_price_duration_curve.pdf",
+            run=config_provider("run", "name"),
+        ),
         expand(
             RESULTS
             + "maps/base_s_{clusters}_{opts}_{sector_opts}-h2_network_incl_kernnetz_{planning_horizons}.pdf",

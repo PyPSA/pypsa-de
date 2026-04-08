@@ -277,6 +277,7 @@ rule dump_graph_config:
 
 
 rule rulegraph:
+    """Generates Rule DAG in DOT, PDF, PNG, and SVG formats using the final configuration."""
     input:
         config_file=rules.dump_graph_config.output.config_file,
     output:
@@ -284,7 +285,6 @@ rule rulegraph:
         pdf=resources("dag_rulegraph.pdf"),
         png=resources("dag_rulegraph.png"),
         svg=resources("dag_rulegraph.svg"),
-    """Generates Rule DAG in DOT, PDF, PNG, and SVG formats using the final configuration."""
     message:
         "Creating RULEGRAPH dag in multiple formats using the final configuration."
     shell:
@@ -314,6 +314,7 @@ rule rulegraph:
 
 
 rule filegraph:
+    """Generates File DAG in DOT, PDF, PNG, and SVG formats using the final configuration."""
     input:
         config_file=rules.dump_graph_config.output.config_file,
     output:
@@ -321,7 +322,6 @@ rule filegraph:
         pdf=resources("dag_filegraph.pdf"),
         png=resources("dag_filegraph.png"),
         svg=resources("dag_filegraph.svg"),
-    """Generates File DAG in DOT, PDF, PNG, and SVG formats using the final configuration."""
     message:
         "Creating FILEGRAPH dag in multiple formats using the final configuration."
     shell:
