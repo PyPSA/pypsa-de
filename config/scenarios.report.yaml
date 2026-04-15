@@ -8,9 +8,8 @@ CurrentPolicies:
 # Kernnetz is not assumed to be built
 # Not forcing renewables after 2030
 
-  iiasa_database:
+  pypsa-de:
     reference_scenario: CurrentPolicies
-    fallback_reference_scenario: CurrentPolicies # if the reference scenario is not available (due to late uploads)
 
   co2_budget_DE_source: UBA
 
@@ -24,8 +23,6 @@ CurrentPolicies:
     2050: 0.419
 
   costs:
-    horizon: "mean"
-    NEP: 2023
     transmission: "underground" # either overhead line ("overhead") or underground cable ("underground")
   solving:
     constraints:
@@ -34,21 +31,13 @@ CurrentPolicies:
           onwind:
             DE:
               2030: 86.5   # 75 % Wind-an-Land Law
-              2035: 86.5
-              2040: 86.5
-              2045: 86.5
           offwind:
             DE:
               2030: 17.3
               2035: 29.3
-              2040: 29.3
-              2045: 29.3
           solar:
             DE:
               2030: 161.25   # 75 % PV strategy
-              2035: 161.25
-              2040: 161.25
-              2045: 161.25
       # boundary condition of maximum volumes
       limits_capacity_max:
         Generator:
@@ -64,66 +53,11 @@ CurrentPolicies:
           solar:
             DE:
               2030: 215 # uba Projektionsbericht
-      limits_volume_max:
-        # constrain electricity import in TWh
-        electricity_import:
-          DE:
-            2020: -20
-            2025: 0
-            2030: 0
-            2035: 40
-            2040: 80
-            2045: 125
-        electrolysis:
-        # boundary condition lower?
-          DE:
-            2020: 0
-            2025: 5
-            2030: 45
-            2035: 130
-            2040: 215
-            2045: 300
-        h2_derivate_import:
-        # boundary condition lower?
-          DE:
-            2020: 0
-            2025: 0
-            2030: 10
-            2035: 105
-            2040: 200
-            2045: 300
-        h2_import:
-        # boundary condition lower?
-          DE:
-            2020: 0
-            2025: 5
-            2030: 15
-            2035: 115
-            2040: 220
-            2045: 325
-      limits_volume_min:
-        electrolysis:
-          DE:
-            2020: 0
-            2025: 0
-            2030: 0
-            2035: 0
-            2040: 0
-            2045: 0
-
-  industry:
-    steam_biomass_fraction: 0.4
-    steam_hydrogen_fraction: 0.3
-    steam_electricity_fraction: 0.3
 
   sector:
     district_heating:
       potential: 0.1
 
-  offshore_nep_force:
-    cutin_year: 2025
-    cutout_year: 2035 # Hackily reduced to 2030 if delay_years: 1
-    delay_years: 1
 
 
 KN2045_Bal_v4:
@@ -132,72 +66,8 @@ KN2045_Bal_v4:
 # Ausbau der erneuerbare Stromerzeugung erreicht politisch gesetzte Ziele
 # Importe erneuerbar erzeugter Energien auf mittlerem Niveau
 # dient als Referenzszenario in der Familie der Ariadne-Szenarien
-
   iiasa_database:
     reference_scenario: KN2045_Bal_v4
-    fallback_reference_scenario: KN2045_Bal_v4
-  co2_budget_DE_source: KSG
-
-  costs:
-    horizon: "mean"
-    NEP: 2023
-    transmission: "overhead" # either overhead line ("overhead") or underground cable ("underground")
-  solving:
-    constraints:
-      # boundary condition of maximum volumes
-      limits_volume_max:
-        # constrain electricity import in TWh
-        electricity_import:
-          DE:
-            2020: -20
-            2025: 0
-            2030: 0
-            2035: 40
-            2040: 80
-            2045: 125
-        electrolysis:
-          DE:
-            2020: 0
-            2025: 5
-            2030: 45
-            2035: 130
-            2040: 215
-            2045: 300
-        h2_derivate_import:
-          DE:
-            2020: 0
-            2025: 0
-            2030: 10
-            2035: 105
-            2040: 200
-            2045: 300
-        h2_import:
-          DE:
-            2020: 0
-            2025: 5
-            2030: 15
-            2035: 115
-            2040: 220
-            2045: 325
-      limits_volume_min:
-        electrolysis:
-          DE:
-            2020: 0
-            2025: 0
-            2030: 0
-            2035: 0
-            2040: 0
-            2045: 0
-      limits_capacity_min:
-        Link:
-          H2 Electrolysis:
-            DE:
-              2030: 5
-
-  industry:
-    steam_biomass_fraction: 0.4
-    steam_hydrogen_fraction: 0.3
-    steam_electricity_fraction: 0.3
 
 KN2045_Elec_v4:
 # Fokus auf dem Hochlauf von Technologien zur direkten Elektrifizierung der Sektoren
@@ -207,13 +77,7 @@ KN2045_Elec_v4:
 
   iiasa_database:
     reference_scenario: KN2045_Elec_v4
-    fallback_reference_scenario: KN2045_Elec_v4
-  co2_budget_DE_source: KSG
 
-  costs:
-    horizon: "mean"
-    NEP: 2023
-    transmission: "overhead" # either overhead line ("overhead") or underground cable ("underground")
   solving:
     constraints:
       limits_volume_max:
@@ -226,6 +90,7 @@ KN2045_Elec_v4:
             2035: 50
             2040: 100
             2045: 150
+            2050: 150
         electrolysis:
           DE:
             2020: 0
@@ -234,6 +99,7 @@ KN2045_Elec_v4:
             2035: 95
             2040: 145
             2045: 200
+            2050: 200
         h2_derivate_import:
           DE:
             2020: 0
@@ -242,6 +108,7 @@ KN2045_Elec_v4:
             2035: 70
             2040: 130
             2045: 200
+            2050: 200
         h2_import:
           DE:
             2020: 0
@@ -250,20 +117,7 @@ KN2045_Elec_v4:
             2035: 90
             2040: 170
             2045: 250
-      limits_volume_min:
-        electrolysis:
-          DE:
-            2020: 0
-            2025: 0
-            2030: 0
-            2035: 0
-            2040: 0
-            2045: 0
-      limits_capacity_min:
-        Link:
-          H2 Electrolysis:
-            DE:
-              2030: 5
+            2050: 250
 
   industry:
     steam_biomass_fraction: 0.4
@@ -278,13 +132,7 @@ KN2045_H2_v4:
 
   iiasa_database:
     reference_scenario: KN2045_H2_v4
-    fallback_reference_scenario: KN2045_H2_v4
-  co2_budget_DE_source: KSG
 
-  costs:
-    horizon: "mean"
-    NEP: 2023
-    transmission: "overhead" # either overhead line ("overhead") or underground cable ("underground")
   solving:
     constraints:
       limits_volume_max:
@@ -297,6 +145,7 @@ KN2045_H2_v4:
             2035: 30
             2040: 70
             2045: 100 # scenario guidelines
+            2050: 100
 
         # constrain hydrogen import in TWh
         h2_import:
@@ -307,6 +156,7 @@ KN2045_H2_v4:
             2035: 155
             2040: 265
             2045: 400 # scenario guidelines
+            2050: 400
         # import of h2 derivatives in TWh
         h2_derivate_import:
           DE:
@@ -316,6 +166,7 @@ KN2045_H2_v4:
             2035: 140
             2040: 270
             2045: 400 # scenario guidelines
+            2050: 400
         electrolysis:
           DE:
             2020: 0
@@ -324,6 +175,7 @@ KN2045_H2_v4:
             2035: 160
             2040: 275
             2045: 400 # scenario guidelines
+            2050: 400
 
       limits_volume_min:
         electrolysis:
@@ -333,11 +185,7 @@ KN2045_H2_v4:
             2035: 0
             2040: 0
             2045: 200
-      limits_capacity_min:
-        Link:
-          H2 Electrolysis:
-            DE:
-              2030: 5
+            2050: 200
 
   industry:
     steam_biomass_fraction: 0.4
