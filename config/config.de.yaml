@@ -4,13 +4,13 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20260415_report_2.1
+  prefix: 20260415_report_2026
   name:
   - KN2045_Bal_v5
   - KN2045_Elec_plus_v5
   scenarios:
     enable: true
-    manual_file: config/scenarios.report.yaml
+    manual_file: config/scenarios.report.2026.yaml
     file: config/scenarios.automated.yaml
   shared_resources:
     policy: base #stops recalculating
