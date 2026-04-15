@@ -255,7 +255,8 @@ def write_to_scenario_yaml(input, output, scenarios, df):
             co2_budget_source = config[scenario]["co2_budget_DE_source"]
 
         general_df = df.xs(snakemake.params.leitmodelle["general"], level="model")
-        general_df = general_df.xs(reference_scenario, level="scenario")
+        # general_df = general_df.xs(reference_scenario, level="scenario")
+        general_df = general_df.xs("KN2045_Bal_v4", level="scenario")
         co2_budget_fractions = get_co2_budget(general_df, co2_budget_source)
 
         if not config[scenario].get("sector"):
