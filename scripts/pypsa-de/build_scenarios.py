@@ -211,7 +211,9 @@ def write_to_scenario_yaml(input, output, scenarios, df):
     yaml = ruamel.yaml.YAML()
     file_path = Path(input)
     config = yaml.load(file_path)
+
     for scenario in scenarios:
+        print("Writing scenario config for scenario:", scenario)
         if config.get(scenario) is None:
             logger.warning(
                 f"Found an empty scenario config for {scenario}. Using default config `pypsa.de.yaml`."
@@ -230,13 +232,13 @@ def write_to_scenario_yaml(input, output, scenarios, df):
             write_weather_dependent_config(config, scenario, weather_year)
 
         reference_scenario = (
-            config[scenario]
-            .get("pypsa-de", {})
-            .get(
-                "reference_scenario",
-                snakemake.config["pypsa-de"]["reference_scenario"],
-            )  # Using the default reference scenario from pypsa.de.yaml
+            config[scenario].get("pypsa-de", {}).get("reference_scenario")
         )
+        if reference_scenario is None:
+            reference_scenario = snakemake.config["pypsa-de"]["reference_scenario"]
+            logger.warning(
+                f"No reference scenario specified for {scenario}. Using default reference scenario {reference_scenario} from pypsa.de.yaml."
+            )
 
         planning_horizons = [
             2020,
@@ -326,6 +328,10 @@ def write_to_scenario_yaml(input, output, scenarios, df):
                 year
             ] = target
 
+    # remove all other keys that are not in the scenarios list
+    for key in list(config.keys()):
+        if key not in scenarios:
+            del config[key]
     # write back to yaml file
     yaml.dump(config, Path(output))
 
