@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 def get_transport_growth(df, planning_horizons):
-    aviation = df.xs("Final Energy|Bunkers|Aviation", level="variable")
+    aviation = df.xs("Final Energy|Bunkers|Aviation", level="variable").copy()
     unit = aviation.index.get_level_values("unit").item()
     aviation = aviation.squeeze()
 
@@ -34,8 +34,10 @@ def get_primary_steel_share(df, planning_horizons):
     # Get share of primary steel production
     model = snakemake.params.leitmodelle["industry"]
     model_df = df.xs(model, level="model")
-    total_steel = model_df.xs("Production|Steel", level="variable").squeeze()
-    primary_steel = model_df.xs("Production|Steel|Primary", level="variable").squeeze()
+    total_steel = model_df.xs("Production|Steel", level="variable").squeeze().copy()
+    primary_steel = (
+        model_df.xs("Production|Steel|Primary", level="variable").squeeze().copy()
+    )
 
     total_steel[2020] = 40.621  # Ariadne2-internal DB, FORECAST, 2021
     primary_steel[2020] = 28.53  # Ariadne2-internal DB, FORECAST, 2021
@@ -50,11 +52,17 @@ def get_DRI_share(df, planning_horizons):
     # Get share of DRI steel production
     model = "FORECAST v1.0"
     model_df = df.xs(model, level="model")
-    total_steel = model_df.xs("Production|Steel|Primary", level="variable").squeeze()
+    total_steel = (
+        model_df.xs("Production|Steel|Primary", level="variable").squeeze().copy()
+    )
     # Assuming that only hydrogen DRI steel is sustainable and DRI using natural gas is phased out
-    DRI_steel = model_df.xs(
-        "Production|Steel|Primary|Direct Reduction Hydrogen", level="variable"
-    ).squeeze()
+    DRI_steel = (
+        model_df.xs(
+            "Production|Steel|Primary|Direct Reduction Hydrogen", level="variable"
+        )
+        .squeeze()
+        .copy()
+    )
 
     total_steel[2020] = 40.621  # Ariadne2-internal DB, FORECAST, 2021
     DRI_steel[2020] = 0  # Ariadne2-internal DB, FORECAST, 2021
