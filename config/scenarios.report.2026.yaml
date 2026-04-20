@@ -66,7 +66,7 @@ KN2045_Bal_v5:
 # Ausbau der erneuerbare Stromerzeugung erreicht politisch gesetzte Ziele
 # Importe erneuerbar erzeugter Energien auf mittlerem Niveau
 # dient als Referenzszenario in der Familie der Ariadne-Szenarien
-  iiasa_database:
+  pypsa-de:
     reference_scenario: KN2045_Bal_v5
 
 KN2045_Elec_v5:
@@ -75,7 +75,7 @@ KN2045_Elec_v5:
 # Ausbau der erneuerbaren Stromerzeugung erreicht politisch gesetzte Ziele
 # Importe erneuerbar erzeugter Energien auf mittlerem Niveau
 
-  iiasa_database:
+  pypsa-de:
     reference_scenario: KN2045_Elec_v5
 
   solving:
@@ -132,7 +132,7 @@ KN2045_Elec_plus_v5:
 # Ausbau der erneuerbaren Stromerzeugung erreicht politisch gesetzte Ziele
 # Importe erneuerbar erzeugter Energien auf mittlerem Niveau
 
-  iiasa_database:
+  pypsa-de:
     reference_scenario: KN2045_Elec_plus_v5
 
   solving:
@@ -191,7 +191,7 @@ KN2045_H2_v5:
 # Direkte Elektrifizierung spielt dennoch wesentliche Rolle bei der Dekarbonisierung der Endenergie
 # Ausbau der erneuerbaren Stromerzeugung erreicht politisch gesetzte Ziele
 
-  iiasa_database:
+  pypsa-de:
     reference_scenario: KN2045_H2_v5
 
   solving:
