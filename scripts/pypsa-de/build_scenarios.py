@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 def get_transport_growth(df, planning_horizons):
-    aviation = df.xs("Final Energy|Bunkers|Aviation", level="variable")
+    aviation = df.xs("Final Energy|Bunkers|Aviation", level="variable").copy()
     unit = aviation.index.get_level_values("unit").item()
     aviation = aviation.squeeze()
 
@@ -34,8 +34,10 @@ def get_primary_steel_share(df, planning_horizons):
     # Get share of primary steel production
     model = snakemake.params.leitmodelle["industry"]
     model_df = df.xs(model, level="model")
-    total_steel = model_df.xs("Production|Steel", level="variable").squeeze()
-    primary_steel = model_df.xs("Production|Steel|Primary", level="variable").squeeze()
+    total_steel = model_df.xs("Production|Steel", level="variable").squeeze().copy()
+    primary_steel = (
+        model_df.xs("Production|Steel|Primary", level="variable").squeeze().copy()
+    )
 
     total_steel[2020] = 40.621  # Ariadne2-internal DB, FORECAST, 2021
     primary_steel[2020] = 28.53  # Ariadne2-internal DB, FORECAST, 2021
@@ -50,11 +52,17 @@ def get_DRI_share(df, planning_horizons):
     # Get share of DRI steel production
     model = "FORECAST v1.0"
     model_df = df.xs(model, level="model")
-    total_steel = model_df.xs("Production|Steel|Primary", level="variable").squeeze()
+    total_steel = (
+        model_df.xs("Production|Steel|Primary", level="variable").squeeze().copy()
+    )
     # Assuming that only hydrogen DRI steel is sustainable and DRI using natural gas is phased out
-    DRI_steel = model_df.xs(
-        "Production|Steel|Primary|Direct Reduction Hydrogen", level="variable"
-    ).squeeze()
+    DRI_steel = (
+        model_df.xs(
+            "Production|Steel|Primary|Direct Reduction Hydrogen", level="variable"
+        )
+        .squeeze()
+        .copy()
+    )
 
     total_steel[2020] = 40.621  # Ariadne2-internal DB, FORECAST, 2021
     DRI_steel[2020] = 0  # Ariadne2-internal DB, FORECAST, 2021
@@ -203,7 +211,9 @@ def write_to_scenario_yaml(input, output, scenarios, df):
     yaml = ruamel.yaml.YAML()
     file_path = Path(input)
     config = yaml.load(file_path)
+
     for scenario in scenarios:
+        print("Writing scenario config for scenario:", scenario)
         if config.get(scenario) is None:
             logger.warning(
                 f"Found an empty scenario config for {scenario}. Using default config `pypsa.de.yaml`."
@@ -222,13 +232,13 @@ def write_to_scenario_yaml(input, output, scenarios, df):
             write_weather_dependent_config(config, scenario, weather_year)
 
         reference_scenario = (
-            config[scenario]
-            .get("pypsa-de", {})
-            .get(
-                "reference_scenario",
-                snakemake.config["pypsa-de"]["reference_scenario"],
-            )  # Using the default reference scenario from pypsa.de.yaml
+            config[scenario].get("pypsa-de", {}).get("reference_scenario")
         )
+        if reference_scenario is None:
+            reference_scenario = snakemake.config["pypsa-de"]["reference_scenario"]
+            logger.warning(
+                f"No reference scenario specified for {scenario}. Using default reference scenario {reference_scenario} from pypsa.de.yaml."
+            )
 
         planning_horizons = [
             2020,
@@ -318,6 +328,10 @@ def write_to_scenario_yaml(input, output, scenarios, df):
                 year
             ] = target
 
+    # remove all other keys that are not in the scenarios list
+    for key in list(config.keys()):
+        if key not in scenarios:
+            del config[key]
     # write back to yaml file
     yaml.dump(config, Path(output))
 
