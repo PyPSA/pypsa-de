@@ -242,6 +242,7 @@ carriers_in_german = {
     "oil primary": "Primäröl",
     "solar rooftop": "Solar-Dach",
     "urban central heat vent": "Zentrale städtische Wärmeentlüftung",
+    "urban decentral heat vent": "Dezentrale städtische Wärmeentlüftung",
     "gas primary": "Primärgas",
     "solid biomass for industry": "Biomasse (Industrie)",
     "shipping oil": "Schiffsöl",
@@ -2874,6 +2875,9 @@ if __name__ == "__main__":
     tech_colors["H2 retrofit OCGT"] = "#9abbff"
     tech_colors["urban central H2 CHP"] = "#c9d7f0"
     tech_colors["urban central H2 retrofit CHP"] = "#edd1c2"
+    tech_colors["urban central heat vent"] = "#fdb462"
+    tech_colors["urban decentral heat vent"] = "#fdb462"
+    tech_colors["rural heat vent"] = "#fdb462"
 
     ### plotting
     for year in planning_horizons:
