@@ -980,13 +980,29 @@ def _get_capacities(n, region, cap_func, cap_string="Capacity|"):
         like="oil boiler"
     ).sum()
 
-    var[cap_string + "Heat|Storage Converter"] = capacities_central_heat[
-        capacities_central_heat.index.str.contains("water (?:tanks|pits) discharger")
+    var[cap_string + "Heat|Storage Converter|Tanks"] = capacities_central_heat[
+        capacities_central_heat.index.str.contains("water tanks discharger")
     ].sum()
 
-    var[cap_string + "Heat|Storage Reservoir"] = storage_capacities[
-        storage_capacities.index.str.contains("water (?:tanks|pits)")
+    var[cap_string + "Heat|Storage Converter|Pits"] = capacities_central_heat[
+        capacities_central_heat.index.str.contains("water pits discharger")
     ].sum()
+
+    var[cap_string + "Heat|Storage Converter"] = (
+        var[cap_string + "Heat|Storage Converter|Tanks"]
+        + var[cap_string + "Heat|Storage Converter|Pits"]
+    )
+    var[cap_string + "Heat|Storage Reservoir|Tanks"] = storage_capacities[
+        storage_capacities.index.str.contains("urban central water tanks")
+    ].sum()
+
+    var[cap_string + "Heat|Storage Reservoir|Pits"] = storage_capacities[
+        storage_capacities.index.str.contains("urban central water pits")
+    ].sum()
+    var[cap_string + "Heat|Storage Reservoir"] = (
+        var[cap_string + "Heat|Storage Reservoir|Tanks"]
+        + var[cap_string + "Heat|Storage Reservoir|Pits"]
+    )
 
     var[cap_string + "Heat"] = (
         var[cap_string + "Heat|Solar thermal"]
