@@ -102,11 +102,6 @@ KN2045_Elec_v5:
         # constrain electricity import in TWh
         electricity_import:
           DE:
-            2020: -20
-            2025: 0
-            2030: 0
-            2035: 50
-            2040: 100
             2045: 150
             2050: 150
         electrolysis:
@@ -120,9 +115,6 @@ KN2045_Elec_v5:
             2050: 200
         h2_derivate_import:
           DE:
-            2020: 0
-            2025: 0
-            2030: 10
             2035: 70
             2040: 130
             2045: 200
@@ -159,11 +151,6 @@ KN2045_Elec_plus_v5:
         # constrain electricity import in TWh
         electricity_import:
           DE:
-            2020: -20
-            2025: 0
-            2030: 0
-            2035: 50
-            2040: 100
             2045: 150
             2050: 150
         electrolysis:
@@ -177,9 +164,6 @@ KN2045_Elec_plus_v5:
             2050: 200
         h2_derivate_import:
           DE:
-            2020: 0
-            2025: 0
-            2030: 10
             2035: 70
             2040: 130
             2045: 200
@@ -218,10 +202,7 @@ KN2045_H2_v5:
         # constrain electricity import in TWh
         electricity_import:
           DE:
-            2020: -20
-            2025: 0
-            2030: 0
-            2035: 30
+            2035: 50
             2040: 70
             2045: 100 # scenario guidelines
             2050: 100
@@ -239,9 +220,6 @@ KN2045_H2_v5:
         # import of h2 derivatives in TWh
         h2_derivate_import:
           DE:
-            2020: 0
-            2025: 0
-            2030: 10 # scenario guidelines
             2035: 140
             2040: 270
             2045: 400 # scenario guidelines
