@@ -254,9 +254,9 @@ def prepare_subnodes(
         axis=1,
     )
     subnodes["lau_shape"] = subnodes.apply(
-        lambda x: lau.loc[
-            lau.geometry.contains(x.point_coords).idxmax(), "geometry"
-        ].wkt,
+        lambda x: (
+            lau.loc[lau.geometry.contains(x.point_coords).idxmax(), "geometry"].wkt
+        ),
         axis=1,
     )
     subnodes["nuts3"] = subnodes.apply(
@@ -264,9 +264,11 @@ def prepare_subnodes(
         axis=1,
     )
     subnodes["nuts3_shape"] = subnodes.apply(
-        lambda x: heat_techs.loc[
-            heat_techs.geometry.contains(x.point_coords).idxmax(), "geometry"
-        ].wkt,
+        lambda x: (
+            heat_techs.loc[
+                heat_techs.geometry.contains(x.point_coords).idxmax(), "geometry"
+            ].wkt
+        ),
         axis=1,
     )
 

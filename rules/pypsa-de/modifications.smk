@@ -4,9 +4,6 @@
 
 
 rule build_scenarios:
-    params:
-        scenarios=config["run"]["name"],
-        leitmodelle=config["pypsa-de"]["leitmodelle"],
     input:
         ariadne_database="data/ariadne_database.csv",
         scenario_yaml=config["run"]["scenarios"]["manual_file"],
@@ -14,11 +11,25 @@ rule build_scenarios:
         scenario_yaml=config["run"]["scenarios"]["file"],
     log:
         "logs/build_scenarios.log",
+    params:
+        scenarios=config["run"]["name"],
+        leitmodelle=config["pypsa-de"]["leitmodelle"],
     script:
         scripts("pypsa-de/build_scenarios.py")
 
 
 rule build_exogenous_mobility_data:
+    input:
+        ariadne="data/ariadne_database.csv",
+        energy_totals=resources("energy_totals.csv"),
+    output:
+        mobility_data=resources(
+            "modified_mobility_data_{clusters}_{planning_horizons}.csv"
+        ),
+    log:
+        logs("build_exogenous_mobility_data_{clusters}_{planning_horizons}.log"),
+    resources:
+        mem_mb=1000,
     params:
         reference_scenario=config_provider("pypsa-de", "reference_scenario"),
         planning_horizons=config_provider("scenario", "planning_horizons"),
@@ -28,17 +39,6 @@ rule build_exogenous_mobility_data:
         shipping_oil_share=config_provider("sector", "shipping_oil_share"),
         aviation_demand_factor=config_provider("sector", "aviation_demand_factor"),
         energy_totals_year=config_provider("energy", "energy_totals_year"),
-    input:
-        ariadne="data/ariadne_database.csv",
-        energy_totals=resources("energy_totals.csv"),
-    output:
-        mobility_data=resources(
-            "modified_mobility_data_{clusters}_{planning_horizons}.csv"
-        ),
-    resources:
-        mem_mb=1000,
-    log:
-        logs("build_exogenous_mobility_data_{clusters}_{planning_horizons}.log"),
     script:
         scripts("pypsa-de/build_exogenous_mobility_data.py")
 
@@ -61,9 +61,6 @@ rule build_egon_data:
 
 
 rule prepare_district_heating_subnodes:
-    params:
-        district_heating=config_provider("sector", "district_heating"),
-        baseyear=config_provider("scenario", "planning_horizons", 0),
     input:
         heating_technologies_nuts3=resources("heating_technologies_nuts3.geojson"),
         regions_onshore=resources("regions_onshore_base_s_{clusters}.geojson"),
@@ -95,6 +92,9 @@ rule prepare_district_heating_subnodes:
         ),
     resources:
         mem_mb=20000,
+    params:
+        district_heating=config_provider("sector", "district_heating"),
+        baseyear=config_provider("scenario", "planning_horizons", 0),
     script:
         scripts("pypsa-de/prepare_district_heating_subnodes.py")
 
@@ -104,20 +104,6 @@ def baseyear_value(wildcards):
 
 
 rule add_district_heating_subnodes:
-    params:
-        district_heating=config_provider("sector", "district_heating"),
-        baseyear=config_provider("scenario", "planning_horizons", 0),
-        sector=config_provider("sector"),
-        heat_pump_sources=config_provider(
-            "sector", "heat_pump_sources", "urban central"
-        ),
-        heat_utilisation_potentials=config_provider(
-            "sector", "district_heating", "heat_utilisation_potentials"
-        ),
-        direct_utilisation_heat_sources=config_provider(
-            "sector", "district_heating", "direct_utilisation_heat_sources"
-        ),
-        adjustments=config_provider("adjustments", "sector"),
     input:
         unpack(input_heat_source_power),
         network=resources(
@@ -152,6 +138,20 @@ rule add_district_heating_subnodes:
         ),
     resources:
         mem_mb=10000,
+    params:
+        district_heating=config_provider("sector", "district_heating"),
+        baseyear=config_provider("scenario", "planning_horizons", 0),
+        sector=config_provider("sector"),
+        heat_pump_sources=config_provider(
+            "sector", "heat_pump_sources", "urban central"
+        ),
+        heat_utilisation_potentials=config_provider(
+            "sector", "district_heating", "heat_utilisation_potentials"
+        ),
+        direct_utilisation_heat_sources=config_provider(
+            "sector", "district_heating", "direct_utilisation_heat_sources"
+        ),
+        adjustments=config_provider("adjustments", "sector"),
     script:
         scripts("pypsa-de/add_district_heating_subnodes.py")
 
@@ -160,8 +160,6 @@ ruleorder: modify_district_heat_share > build_district_heat_share
 
 
 rule modify_district_heat_share:
-    params:
-        district_heating=config_provider("sector", "district_heating"),
     input:
         heating_technologies_nuts3=resources("heating_technologies_nuts3.geojson"),
         regions_onshore=resources("regions_onshore_base_s_{clusters}.geojson"),
@@ -172,52 +170,17 @@ rule modify_district_heat_share:
         district_heat_share=resources(
             "district_heat_share_base_s_{clusters}_{planning_horizons}-modified.csv"
         ),
-    resources:
-        mem_mb=1000,
     log:
         logs("modify_district_heat_share_{clusters}_{planning_horizons}.log"),
+    resources:
+        mem_mb=1000,
+    params:
+        district_heating=config_provider("sector", "district_heating"),
     script:
         scripts("pypsa-de/modify_district_heat_share.py")
 
 
 rule modify_prenetwork:
-    params:
-        efuel_export_ban=config_provider("solving", "constraints", "efuel_export_ban"),
-        enable_kernnetz=config_provider("wasserstoff_kernnetz", "enable"),
-        technology_occurrence=config_provider("first_technology_occurrence"),
-        fossil_boiler_ban=config_provider("new_decentral_fossil_boiler_ban"),
-        coal_ban=config_provider("coal_generation_ban"),
-        nuclear_ban=config_provider("nuclear_generation_ban"),
-        planning_horizons=config_provider("scenario", "planning_horizons"),
-        H2_transmission_efficiency=config_provider(
-            "sector", "transmission_efficiency", "H2 pipeline"
-        ),
-        H2_retrofit=config_provider("sector", "H2_retrofit"),
-        H2_retrofit_capacity_per_CH4=config_provider(
-            "sector", "H2_retrofit_capacity_per_CH4"
-        ),
-        transmission_costs=config_provider("costs", "transmission"),
-        must_run=config_provider("must_run"),
-        clustering=config_provider("clustering", "temporal", "resolution_sector"),
-        H2_plants=config_provider("electricity", "H2_plants"),
-        onshore_nep_force=config_provider("onshore_nep_force"),
-        offshore_nep_force=config_provider("offshore_nep_force"),
-        shipping_methanol_efficiency=config_provider(
-            "sector", "shipping_methanol_efficiency"
-        ),
-        shipping_oil_efficiency=config_provider("sector", "shipping_oil_efficiency"),
-        shipping_methanol_share=config_provider("sector", "shipping_methanol_share"),
-        scale_capacity=config_provider("scale_capacity"),
-        bev_charge_rate=config_provider("sector", "bev_charge_rate"),
-        bev_energy=config_provider("sector", "bev_energy"),
-        bev_dsm_availability=config_provider("sector", "bev_dsm_availability"),
-        uba_for_industry=config_provider("pypsa-de", "uba_for_industry", "enable"),
-        scale_industry_non_energy=config_provider(
-            "pypsa-de", "uba_for_industry", "scale_industry_non_energy"
-        ),
-        limit_cross_border_flows_ac=config_provider(
-            "pypsa-de", "limit_cross_border_flows_ac"
-        ),
     input:
         network=resources(
             "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_brownfield.nc"
@@ -255,11 +218,48 @@ rule modify_prenetwork:
         network=resources(
             "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_final.nc"
         ),
-    resources:
-        mem_mb=4000,
     log:
         RESULTS
         + "logs/modify_prenetwork_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.log",
+    resources:
+        mem_mb=4000,
+    params:
+        efuel_export_ban=config_provider("solving", "constraints", "efuel_export_ban"),
+        enable_kernnetz=config_provider("wasserstoff_kernnetz", "enable"),
+        technology_occurrence=config_provider("first_technology_occurrence"),
+        fossil_boiler_ban=config_provider("new_decentral_fossil_boiler_ban"),
+        coal_ban=config_provider("coal_generation_ban"),
+        nuclear_ban=config_provider("nuclear_generation_ban"),
+        planning_horizons=config_provider("scenario", "planning_horizons"),
+        H2_transmission_efficiency=config_provider(
+            "sector", "transmission_efficiency", "H2 pipeline"
+        ),
+        H2_retrofit=config_provider("sector", "H2_retrofit"),
+        H2_retrofit_capacity_per_CH4=config_provider(
+            "sector", "H2_retrofit_capacity_per_CH4"
+        ),
+        transmission_costs=config_provider("costs", "transmission"),
+        must_run=config_provider("must_run"),
+        clustering=config_provider("clustering", "temporal", "resolution_sector"),
+        H2_plants=config_provider("electricity", "H2_plants"),
+        onshore_nep_force=config_provider("onshore_nep_force"),
+        offshore_nep_force=config_provider("offshore_nep_force"),
+        shipping_methanol_efficiency=config_provider(
+            "sector", "shipping_methanol_efficiency"
+        ),
+        shipping_oil_efficiency=config_provider("sector", "shipping_oil_efficiency"),
+        shipping_methanol_share=config_provider("sector", "shipping_methanol_share"),
+        scale_capacity=config_provider("scale_capacity"),
+        bev_charge_rate=config_provider("sector", "bev_charge_rate"),
+        bev_energy=config_provider("sector", "bev_energy"),
+        bev_dsm_availability=config_provider("sector", "bev_dsm_availability"),
+        uba_for_industry=config_provider("pypsa-de", "uba_for_industry", "enable"),
+        scale_industry_non_energy=config_provider(
+            "pypsa-de", "uba_for_industry", "scale_industry_non_energy"
+        ),
+        limit_cross_border_flows_ac=config_provider(
+            "pypsa-de", "limit_cross_border_flows_ac"
+        ),
     script:
         scripts("pypsa-de/modify_prenetwork.py")
 
@@ -273,19 +273,15 @@ rule modify_existing_heating:
         existing_heating="data/existing_infrastructure/existing_heating_raw.csv",
     output:
         existing_heating=resources("existing_heating.csv"),
-    resources:
-        mem_mb=1000,
     log:
         logs("modify_existing_heating.log"),
+    resources:
+        mem_mb=1000,
     script:
         scripts("pypsa-de/modify_existing_heating.py")
 
 
 rule build_existing_chp_de:
-    params:
-        district_heating_subnodes=config_provider(
-            "sector", "district_heating", "subnodes"
-        ),
     input:
         mastr_biomass="data/mastr/bnetza_open_mastr_2023-08-08_B_biomass.csv",
         mastr_combustion="data/mastr/bnetza_open_mastr_2023-08-08_B_combustion.csv",
@@ -301,17 +297,19 @@ rule build_existing_chp_de:
         ),
     output:
         german_chp=resources("german_chp_base_s_{clusters}.csv"),
-    resources:
-        mem_mb=4000,
     log:
         logs("build_existing_chp_de_{clusters}.log"),
+    resources:
+        mem_mb=4000,
+    params:
+        district_heating_subnodes=config_provider(
+            "sector", "district_heating", "subnodes"
+        ),
     script:
         scripts("pypsa-de/build_existing_chp_de.py")
 
 
 rule modify_industry_production:
-    params:
-        reference_scenario=config_provider("pypsa-de", "reference_scenario"),
     input:
         ariadne="data/ariadne_database.csv",
         industrial_production_per_country_tomorrow=resources(
@@ -321,17 +319,17 @@ rule modify_industry_production:
         industrial_production_per_country_tomorrow=resources(
             "industrial_production_per_country_tomorrow_{planning_horizons}-modified.csv"
         ),
-    resources:
-        mem_mb=1000,
     log:
         logs("modify_industry_production_{planning_horizons}.log"),
+    resources:
+        mem_mb=1000,
+    params:
+        reference_scenario=config_provider("pypsa-de", "reference_scenario"),
     script:
         scripts("pypsa-de/modify_industry_production.py")
 
 
 rule build_wasserstoff_kernnetz:
-    params:
-        kernnetz=config_provider("wasserstoff_kernnetz"),
     input:
         wasserstoff_kernnetz_1=storage(
             "https://fnb-gas.de/wp-content/uploads/2024/07/2024_07_22_Anlage2_Leitungsmeldungen_weiterer_potenzieller_Wasserstoffnetzbetreiber.xlsx",
@@ -356,13 +354,13 @@ rule build_wasserstoff_kernnetz:
         cleaned_wasserstoff_kernnetz=resources("wasserstoff_kernnetz.csv"),
     log:
         logs("build_wasserstoff_kernnetz.log"),
+    params:
+        kernnetz=config_provider("wasserstoff_kernnetz"),
     script:
         scripts("pypsa-de/build_wasserstoff_kernnetz.py")
 
 
 rule cluster_wasserstoff_kernnetz:
-    params:
-        kernnetz=config_provider("wasserstoff_kernnetz"),
     input:
         cleaned_h2_network=resources("wasserstoff_kernnetz.csv"),
         regions_onshore=resources("regions_onshore_base_s_{clusters}.geojson"),
@@ -371,5 +369,7 @@ rule cluster_wasserstoff_kernnetz:
         clustered_h2_network=resources("wasserstoff_kernnetz_base_s_{clusters}.csv"),
     log:
         logs("cluster_wasserstoff_kernnetz_{clusters}.log"),
+    params:
+        kernnetz=config_provider("wasserstoff_kernnetz"),
     script:
         scripts("pypsa-de/cluster_wasserstoff_kernnetz.py")
