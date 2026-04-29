@@ -807,7 +807,7 @@ rule build_eurostat_balances:
         benchmarks("build_eurostat_balances")
     threads: 1
     resources:
-        mem_mb=4000,
+        mem_mb=8000,
     message:
         "Building Eurostat energy balances"
     script:
@@ -1108,7 +1108,7 @@ rule build_industrial_production_per_country:
         benchmarks("build_industrial_production_per_country")
     threads: 8
     resources:
-        mem_mb=2000,
+        mem_mb=8000,
     params:
         industry=config_provider("industry"),
         countries=config_provider("countries"),
