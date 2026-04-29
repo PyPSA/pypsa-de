@@ -402,7 +402,7 @@ rule build_co2_prices:
     message:
         "Building CO2 price time series"
     script:
-        "../scripts/build_co2_prices.py"
+        scripts("build_co2_prices.py")
 
 
 rule build_fossil_fuel_prices:
@@ -922,7 +922,7 @@ rule clean_osm_data:
     message:
         "Cleaning raw OSM data for countries: " + ", ".join(config["countries"])
     script:
-        "../scripts/clean_osm_data.py"
+        scripts("clean_osm_data.py")
 
 
 rule build_osm_network:
@@ -964,7 +964,7 @@ rule build_osm_network:
     message:
         "Building OSM network"
     script:
-        "../scripts/build_osm_network.py"
+        scripts("build_osm_network.py")
 
 
 rule build_tyndp_network:
@@ -997,4 +997,4 @@ rule build_tyndp_network:
     message:
         "Building TYNDP network"
     script:
-        "../scripts/build_tyndp_network.py"
+        scripts("build_tyndp_network.py")

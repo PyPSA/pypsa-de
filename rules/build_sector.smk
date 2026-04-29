@@ -811,7 +811,7 @@ rule build_eurostat_balances:
     message:
         "Building Eurostat energy balances"
     script:
-        "../scripts/build_eurostat_balances.py"
+        scripts("build_eurostat_balances.py")
 
 
 rule build_swiss_energy_balances:

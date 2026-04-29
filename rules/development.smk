@@ -34,7 +34,7 @@ rule base_network_incumbent:
     message:
         "Building base network to which to compare against."
     script:
-        "../scripts/base_network.py"
+        scripts("base_network.py")
 
 
 rule make_network_comparison:
@@ -62,7 +62,7 @@ rule make_network_comparison:
     message:
         "Create network comparison between two PyPSA networks."
     script:
-        "../scripts/make_network_comparison.py"
+        scripts("make_network_comparison.py")
 
 
 rule prepare_osm_network_release:
@@ -92,7 +92,7 @@ rule prepare_osm_network_release:
     message:
         "Preparing OSM network release files and map."
     script:
-        "../scripts/prepare_osm_network_release.py"
+        scripts("prepare_osm_network_release.py")
 
 
 rule map_incumbent:
@@ -115,7 +115,7 @@ rule map_incumbent:
     message:
         "Preparing map of incumbent network for comparison with OSM release."
     script:
-        "../scripts/prepare_osm_network_release.py"
+        scripts("prepare_osm_network_release.py")
 
 
 rule osm_release:

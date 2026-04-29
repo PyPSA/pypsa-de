@@ -373,6 +373,13 @@ def add_power_capacities_installed_before_baseyear(
         "offwind-ac": "offwind",
     }
 
+    cost_key_dict = {
+        "solar": "solar",
+        "solar rooftop": "solar-rooftop",
+        "onwind": "onwind",
+        "offwind-ac": "offwind",
+    }
+
     for grouping_year, generator, resource_class in df.index:
         # capacity is the capacity in MW at each node for this
         capacity = df.loc[grouping_year, generator, resource_class]
