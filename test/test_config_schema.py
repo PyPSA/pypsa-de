@@ -13,7 +13,22 @@ import pytest
 from scripts.lib.validation.config import (
     generate_config_defaults,
     generate_config_schema,
+    validate_config,
 )
+
+
+@pytest.fixture(scope="module")
+def config_file():
+    config = validate_config({})
+    config_filename = Path(f"config/config.{config._name}.yaml")
+    return config_filename
+
+
+@pytest.fixture(scope="module")
+def schema_file():
+    config = validate_config({})
+    schema_filename = Path(f"config/schema.{config._name}.json")
+    return schema_filename
 
 
 def _check_file_in_sync(existing_path: Path, generate_func, file_type: str):
@@ -57,7 +72,7 @@ def test_config_default_yaml_in_sync():
     """Test that config/config.default.yaml is in sync with Pydantic schema."""
 
     _check_file_in_sync(
-        Path("config/config.default.yaml"),
+        config_file,
         generate_config_defaults,
         "yaml",
     )
@@ -68,7 +83,7 @@ def test_config_schema_json_in_sync():
     """Test that config/schema.default.json is in sync with Pydantic schema."""
 
     _check_file_in_sync(
-        Path("config/schema.default.json"),
+        schema_file,
         generate_config_schema,
         "json",
     )

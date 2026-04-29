@@ -154,8 +154,10 @@ def build_clustered_h2_network(
         logger.info("Recalculating pipe lengths as center to center * length factor")
         # recalculate lengths as center to center * length factor
         df["length"] = df.apply(
-            lambda p: length_factor
-            * haversine_pts([p.point0.x, p.point0.y], [p.point1.x, p.point1.y]),
+            lambda p: (
+                length_factor
+                * haversine_pts([p.point0.x, p.point0.y], [p.point1.x, p.point1.y])
+            ),
             axis=1,
         )
 
@@ -182,8 +184,9 @@ def aggregate_parallel_pipes(df, aggregate_build_years="mean"):
         "removed_gas_cap": "sum",
         "ipcei": " ".join,
         "pci": " ".join,
-        "retrofitted": lambda x: (x.sum() / len(x))
-        > 0.6,  # consider as retrofit if more than 60% of pipes are retrofitted (relevant for costs)
+        "retrofitted": lambda x: (
+            (x.sum() / len(x)) > 0.6
+        ),  # consider as retrofit if more than 60% of pipes are retrofitted (relevant for costs)
     }
     return df.groupby(df.index).agg(strategies)
 
