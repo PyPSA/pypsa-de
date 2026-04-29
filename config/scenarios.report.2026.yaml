@@ -14,8 +14,6 @@ CurrentPolicies:
   co2_budget_DE_source: UBA
 
   co2_budget:
-    2020: 0.720 # average emissions of 2019 to 2021 relative to 1990, excl LULUCF, EEA data, European Environment Agency. (2023a). Annual European Union greenhouse gas inventory 1990–2021 and inventory report 2023 - CRF Table. https://unfccc.int/documents/627830
-    2025: 0.675 # With existing measures (WEM) projection, CO2 excl LULUCF, European Environment Agency. (2023e). Member States’ greenhouse gas (GHG) emission projections 2023. https://www.eea.europa.eu/en/datahub/datahubitem-view/4b8d94a4-aed7-4e67-a54c-0623a50f48e8
     2030: 0.569
     2035: 0.502
     2040: 0.452
@@ -31,13 +29,21 @@ CurrentPolicies:
           onwind:
             DE:
               2030: 86.5   # 75 % Wind-an-Land Law
+              2035: 86.5   # 75 % Wind-an-Land Law
+              2040: 86.5   # 75 % Wind-an-Land Law
+              2045: 86.5   # 75 % Wind-an-Land Law
           offwind:
             DE:
               2030: 17.3
               2035: 29.3
+              2040: 29.3
+              2045: 29.3
           solar:
             DE:
               2030: 161.25   # 75 % PV strategy
+              2035: 161.25   # 75 % PV strategy
+              2040: 161.25   # 75 % PV strategy
+              2045: 161.25   # 75 % PV strategy
       # boundary condition of maximum volumes
       limits_capacity_max:
         Generator:
@@ -70,23 +76,6 @@ KN2045_Bal_v5:
     reference_scenario: KN2045_Bal_v5
 
 
-KN2045_Bal_85:
-# Ausgewogener Mix an Technologien zur Dekarbonisierung der Sektoren
-# Breites Energieträgerportfolio in der Endenergie (Strom, Wasserstoff, synthetische Kraftstoffe)
-# Ausbau der erneuerbare Stromerzeugung erreicht politisch gesetzte Ziele
-# Importe erneuerbar erzeugter Energien auf mittlerem Niveau
-# dient als Referenzszenario in der Familie der Ariadne-Szenarien
-  pypsa-de:
-    reference_scenario: KN2045_Bal_v5
-  co2_budget:
-    2020: 0.720 # average emissions of 2019 to 2021 relative to 1990, excl LULUCF, EEA data, European Environment Agency. (2023a). Annual European Union greenhouse gas inventory 1990–2021 and inventory report 2023 - CRF Table. https://unfccc.int/documents/627830
-    2025: 0.648 # With additional measures (WAM) projection, CO2 excl LULUCF, European Environment Agency. (2023e). Member States’ greenhouse gas (GHG) emission projections 2023. https://www.eea.europa.eu/en/datahub/datahubitem-view/4b8d94a4-aed7-4e67-a54c-0623a50f48e8
-    2030: 0.450 # 55% reduction by 2030 (Ff55)
-    2035: 0.250
-    2040: 0.150 # 90% by 2040
-    2045: 0.050
-    2050: 0.000 # climate-neutral by 2050
-
 KN2045_Elec_v5:
 # Fokus auf dem Hochlauf von Technologien zur direkten Elektrifizierung der Sektoren
 # Strom als präferierter Energieträger in der Endenergie, andere Energieträger ergänzend, wo nötig (Wasserstoff, synthetische Kraftstoffe)
@@ -106,9 +95,6 @@ KN2045_Elec_v5:
             2050: 150
         electrolysis:
           DE:
-            2020: 0
-            2025: 5
-            2030: 45
             2035: 95
             2040: 145
             2045: 200
@@ -121,8 +107,6 @@ KN2045_Elec_v5:
             2050: 200
         h2_import:
           DE:
-            2020: 0
-            2025: 5
             2030: 10
             2035: 90
             2040: 170
@@ -155,9 +139,6 @@ KN2045_Elec_plus_v5:
             2050: 150
         electrolysis:
           DE:
-            2020: 0
-            2025: 5
-            2030: 45
             2035: 95
             2040: 145
             2045: 200
@@ -170,8 +151,6 @@ KN2045_Elec_plus_v5:
             2050: 200
         h2_import:
           DE:
-            2020: 0
-            2025: 5
             2030: 10
             2035: 90
             2040: 170
@@ -206,12 +185,8 @@ KN2045_H2_v5:
             2040: 70
             2045: 100 # scenario guidelines
             2050: 100
-
-        # constrain hydrogen import in TWh
         h2_import:
           DE:
-            2020: 0
-            2025: 5
             2030: 45 # scenario guidelines
             2035: 155
             2040: 265
@@ -226,9 +201,6 @@ KN2045_H2_v5:
             2050: 400
         electrolysis:
           DE:
-            2020: 0
-            2025: 5
-            2030: 45 # scenario guidelines
             2035: 160
             2040: 275
             2045: 400 # scenario guidelines
@@ -237,10 +209,6 @@ KN2045_H2_v5:
       limits_volume_min:
         electrolysis:
           DE:
-            2025: 0
-            2030: 0
-            2035: 0
-            2040: 0
             2045: 200
             2050: 200
 
