@@ -425,7 +425,6 @@ solving:
     transmission_losses: true
     custom_extra_functionality: "../scripts/pypsa-de/additional_functionality.py"
     assign_all_duals: true
-    load_shedding: false
     skip_iterations: true # settings for post-discretization: false
     min_iterations: 1 # settings for post-discretization: 1
     max_iterations: 1 # settings for post-discretization: 1
