@@ -579,7 +579,7 @@ class SectorConfig(BaseModel):
         description="The efficiency of oil-powered ships in the conversion of oil to meet shipping needs (propulsion). Base value derived from 2011.",
     )
 
-    aviation_demand_factor: float = Field(
+    aviation_demand_factor: dict[int, float] | float = Field(
         1.0,
         description="The proportion of demand for aviation compared to today's consumption.",
     )
