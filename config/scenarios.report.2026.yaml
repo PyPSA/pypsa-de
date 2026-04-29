@@ -1,0 +1,218 @@
+# -*- coding: utf-8 -*-
+# SPDX-FileCopyrightText: : 2017-2023 The PyPSA-Eur Authors
+#
+# SPDX-License-Identifier: MIT
+CurrentPolicies:
+# UBA CO2 pathway instead of KSG targets
+# Europen CO2 pathway fixed at 2030 for 2035-2050
+# Kernnetz is not assumed to be built
+# Not forcing renewables after 2030
+
+  pypsa-de:
+    reference_scenario: CurrentPolicies
+
+  co2_budget_DE_source: UBA
+
+  co2_budget:
+    2030: 0.569
+    2035: 0.502
+    2040: 0.452
+    2045: 0.431
+    2050: 0.419
+
+  costs:
+    transmission: "underground" # either overhead line ("overhead") or underground cable ("underground")
+  solving:
+    constraints:
+      limits_capacity_min:
+        Generator:
+          onwind:
+            DE:
+              2030: 86.5   # 75 % Wind-an-Land Law
+              2035: 86.5   # 75 % Wind-an-Land Law
+              2040: 86.5   # 75 % Wind-an-Land Law
+              2045: 86.5   # 75 % Wind-an-Land Law
+          offwind:
+            DE:
+              2030: 17.3
+              2035: 29.3
+              2040: 29.3
+              2045: 29.3
+          solar:
+            DE:
+              2030: 161.25   # 75 % PV strategy
+              2035: 161.25   # 75 % PV strategy
+              2040: 161.25   # 75 % PV strategy
+              2045: 161.25   # 75 % PV strategy
+      # boundary condition of maximum volumes
+      limits_capacity_max:
+        Generator:
+          offwind:
+            DE:
+              2020: 7.8
+              2025: 11.3
+              2030: 17.3 # 12 less than NEP, because of 1 year delay
+              2035: 40 # 29.3 + half of extra projects
+          onwind:
+            DE:
+              2030: 94.5 # uba Projektionsbericht
+          solar:
+            DE:
+              2030: 215 # uba Projektionsbericht
+
+  sector:
+    district_heating:
+      potential: 0.1
+
+
+
+KN2045_Bal_v5:
+# Ausgewogener Mix an Technologien zur Dekarbonisierung der Sektoren
+# Breites Energieträgerportfolio in der Endenergie (Strom, Wasserstoff, synthetische Kraftstoffe)
+# Ausbau der erneuerbare Stromerzeugung erreicht politisch gesetzte Ziele
+# Importe erneuerbar erzeugter Energien auf mittlerem Niveau
+# dient als Referenzszenario in der Familie der Ariadne-Szenarien
+  pypsa-de:
+    reference_scenario: KN2045_Bal_v5
+
+
+KN2045_Elec_v5:
+# Fokus auf dem Hochlauf von Technologien zur direkten Elektrifizierung der Sektoren
+# Strom als präferierter Energieträger in der Endenergie, andere Energieträger ergänzend, wo nötig (Wasserstoff, synthetische Kraftstoffe)
+# Ausbau der erneuerbaren Stromerzeugung erreicht politisch gesetzte Ziele
+# Importe erneuerbar erzeugter Energien auf mittlerem Niveau
+
+  pypsa-de:
+    reference_scenario: KN2045_Elec_v5
+
+  solving:
+    constraints:
+      limits_volume_max:
+        # constrain electricity import in TWh
+        electricity_import:
+          DE:
+            2045: 150
+            2050: 150
+        electrolysis:
+          DE:
+            2035: 95
+            2040: 145
+            2045: 200
+            2050: 200
+        h2_derivate_import:
+          DE:
+            2035: 70
+            2040: 130
+            2045: 200
+            2050: 200
+        h2_import:
+          DE:
+            2030: 10
+            2035: 90
+            2040: 170
+            2045: 250
+            2050: 250
+
+  industry:
+    steam_biomass_fraction: 0.4
+    steam_hydrogen_fraction: 0.1
+    steam_electricity_fraction: 0.5
+
+
+
+KN2045_Elec_plus_v5:
+# Fokus auf dem Hochlauf von Technologien zur direkten Elektrifizierung der Sektoren
+# Strom als präferierter Energieträger in der Endenergie, andere Energieträger ergänzend, wo nötig (Wasserstoff, synthetische Kraftstoffe)
+# Ausbau der erneuerbaren Stromerzeugung erreicht politisch gesetzte Ziele
+# Importe erneuerbar erzeugter Energien auf mittlerem Niveau
+
+  pypsa-de:
+    reference_scenario: KN2045_Elec_plus_v5
+
+  solving:
+    constraints:
+      limits_volume_max:
+        # constrain electricity import in TWh
+        electricity_import:
+          DE:
+            2045: 150
+            2050: 150
+        electrolysis:
+          DE:
+            2035: 95
+            2040: 145
+            2045: 200
+            2050: 200
+        h2_derivate_import:
+          DE:
+            2035: 70
+            2040: 130
+            2045: 200
+            2050: 200
+        h2_import:
+          DE:
+            2030: 10
+            2035: 90
+            2040: 170
+            2045: 250
+            2050: 250
+  electricity:
+    H2_plants: # do not force retrofit of gas plants to H2
+      force: 2055
+  sector:
+    v2g: true
+  industry:
+    steam_biomass_fraction: 0.4
+    steam_hydrogen_fraction: 0.1
+    steam_electricity_fraction: 0.5
+
+KN2045_H2_v5:
+# Fokus stärker auf dem Hochlauf von Technologien zur indirekten Elektrifizierung der Sektoren
+# Verstärkter Einsatz von Wasserstoff und synthetischen Kraftstoffen - erneuerbar erzeugt und auch importiert
+# Direkte Elektrifizierung spielt dennoch wesentliche Rolle bei der Dekarbonisierung der Endenergie
+# Ausbau der erneuerbaren Stromerzeugung erreicht politisch gesetzte Ziele
+
+  pypsa-de:
+    reference_scenario: KN2045_H2_v5
+
+  solving:
+    constraints:
+      limits_volume_max:
+        # constrain electricity import in TWh
+        electricity_import:
+          DE:
+            2035: 50
+            2040: 70
+            2045: 100 # scenario guidelines
+            2050: 100
+        h2_import:
+          DE:
+            2030: 45 # scenario guidelines
+            2035: 155
+            2040: 265
+            2045: 400 # scenario guidelines
+            2050: 400
+        # import of h2 derivatives in TWh
+        h2_derivate_import:
+          DE:
+            2035: 140
+            2040: 270
+            2045: 400 # scenario guidelines
+            2050: 400
+        electrolysis:
+          DE:
+            2035: 160
+            2040: 275
+            2045: 400 # scenario guidelines
+            2050: 400
+
+      limits_volume_min:
+        electrolysis:
+          DE:
+            2045: 200
+            2050: 200
+
+  industry:
+    steam_biomass_fraction: 0.4
+    steam_hydrogen_fraction: 0.5
+    steam_electricity_fraction: 0.1

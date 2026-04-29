@@ -4,20 +4,14 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20260422_small_changes
+  prefix: 20260415_report_2026
   name:
-  # - ExPol
-  - KN2045_Mix
-  # - KN2045_Mix_LowDecentralDiscount
-  # - KN2045_Mix_HighDecentralDiscount
-  # - KN2045_Mix_H2plantsEU
-  # - KN2045_Elek
-  # - KN2045_H2
-  # - KN2045_NFniedrig
-  # - KN2045_NFhoch
+  - KN2045_Bal_v5
+  - KN2045_Bal_85
+  - KN2045_Elec_plus_v5
   scenarios:
     enable: true
-    manual_file: config/scenarios.manual.yaml
+    manual_file: config/scenarios.report.2026.yaml
     file: config/scenarios.automated.yaml
   shared_resources:
     policy: base #stops recalculating
@@ -35,8 +29,8 @@ pypsa-de:
     general: REMIND-EU v1.1
     transport: Aladin v1
     industry: FORECAST v1.0
-  use_internal_db: false
-  reference_scenario: KN2045_Mix  # KN2045_Bal_v4
+  use_internal_db: true
+  reference_scenario: KN2045_Bal_v5
   region: Deutschland
   ageb_for_mobility: true # In 2020 use AGEB data for final energy demand and KBA for vehicles
   uba_for_mobility: # Available for 2025–2035; uses MWMS scenario from UBA Projektionsbericht 2025
@@ -45,7 +39,6 @@ pypsa-de:
     scale_non_energy: false # Scale non-energy demand directly proportional to energy demand
     enable: # Allowed values are "false" or a subset of [2025, 2030, 2035]
     - 2025
-    - 2030
   limit_cross_border_flows_ac:  # relevant if only one node per country is used
     2020: 0.4
     2025: 0.4
@@ -247,8 +240,8 @@ co2_budget:
   2020: 0.720 # average emissions of 2019 to 2021 relative to 1990, excl LULUCF, EEA data, European Environment Agency. (2023a). Annual European Union greenhouse gas inventory 1990–2021 and inventory report 2023 - CRF Table. https://unfccc.int/documents/627830
   2025: 0.648 # With additional measures (WAM) projection, CO2 excl LULUCF, European Environment Agency. (2023e). Member States’ greenhouse gas (GHG) emission projections 2023. https://www.eea.europa.eu/en/datahub/datahubitem-view/4b8d94a4-aed7-4e67-a54c-0623a50f48e8
   2030: 0.450 # 55% reduction by 2030 (Ff55)
-  2035: 0.250
-  2040: 0.100 # 90% by 2040
+  2035: 0.300 # ~middle of 66.25% to 72.5%. https://www.consilium.europa.eu/en/press/press-releases/2025/11/05/paris-agreement-the-eu-submits-its-updated-ndc-with-an-indicative-target-for-2035-to-the-un-ahead-of-cop30/
+  2040: 0.150 # 85% reduction by 2040 + 5% offsets (not modelled, but assuming cheaper than domestic reducitons)
   2045: 0.050
   2050: 0.000 # climate-neutral by 2050
 
