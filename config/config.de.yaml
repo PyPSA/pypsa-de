@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20260428_nuts_26
+  prefix: 20260415_report_2026
   name:
   - KN2045_Bal_v5
   - KN2045_Elec_plus_v5
@@ -56,7 +56,7 @@ scenario:
   ll:
   - vopt
   clusters:
-  - adm #current options: 27, 49
+  - 49 #current options: 27, 49
   opts:
   - ''
   sector_opts:
@@ -188,16 +188,16 @@ lines:
     cutout: europe-2013-sarah3-era5
 
 clustering:
-  mode: administrative
-  administrative:
-    level: 0
-    DE: 2
+  # mode: administrative
+  # administrative:
+  #   level: 0
+  #   DE: 2
   # Code snippet for editing focus_weights
   # fw = pd.Series(snakemake.config["clustering"]["focus_weights"])
   # fw = fw.div(fw.min()).round()
   # fw["ES"] = 1
   # print(fw.div(fw.sum()).subtract(5e-5).round(4).to_dict().__repr__().replace(",","\n"))
-  # focus_weights:
+  focus_weights:
   # # 27 nodes: 8 for Germany, 3 for Italy, 2 each for Denmark, UK and Spain, 1 per each of other 10 "Stromnachbarn"
   #   'DE': 0.2965
   #   'AT': 0.0370
@@ -216,21 +216,21 @@ clustering:
   #   'IT': 0.0741
   # high spatial resolution: change clusters to 49
   # 49 nodes: 30 for Germany, 3 for Italy, 2 each for Denmark, UK and Spain, 1 per each of other 10 "Stromnachbarn"
-    # 'DE': 0.6124
-    # 'AT': 0.0204
-    # 'BE': 0.0204
-    # 'CH': 0.0204
-    # 'CZ': 0.0204
-    # 'DK': 0.0408
-    # 'FR': 0.0408
-    # 'GB': 0.0408
-    # 'LU': 0.0204
-    # 'NL': 0.0204
-    # 'NO': 0.0204
-    # 'PL': 0.0204
-    # 'SE': 0.0204
-    # 'ES': 0.0408
-    # 'IT': 0.0408
+    'DE': 0.6124
+    'AT': 0.0204
+    'BE': 0.0204
+    'CH': 0.0204
+    'CZ': 0.0204
+    'DK': 0.0408
+    'FR': 0.0408
+    'GB': 0.0408
+    'LU': 0.0204
+    'NL': 0.0204
+    'NO': 0.0204
+    'PL': 0.0204
+    'SE': 0.0204
+    'ES': 0.0408
+    'IT': 0.0408
   temporal:
     resolution_sector: 365H
 

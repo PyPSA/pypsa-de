@@ -167,7 +167,7 @@ class _SolvingOptionsConfig(BaseModel):
         3,
         description="Maximum number of solving iterations in between which resistance and reactence (`x/r`) are updated for branches according to `s_nom_opt` of the previous run.",
     )
-    transmission_losses: int = Field(
+    transmission_losses: dict | bool | int = Field(
         2,
         description="Add piecewise linear approximation of transmission losses based on n tangents. Defaults to 0, which means losses are ignored.",
     )
