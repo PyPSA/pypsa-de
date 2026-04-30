@@ -423,7 +423,7 @@ solving:
     post_discretization:
       enable: true
       line_unit_size: 1698
-      line_threshold: 0.3
+      line_threshold: 0.25
       link_unit_size:
         DC: 1000
         gas pipeline: 1500
