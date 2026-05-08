@@ -1431,7 +1431,7 @@ if __name__ == "__main__":
 
     modify_mobility_demand(n, snakemake.input.modified_mobility_data)
 
-    new_boiler_ban(n)
+    new_boiler_ban(n, planning_horizon)
 
     fix_new_boiler_profiles(n)
 
@@ -1443,7 +1443,7 @@ if __name__ == "__main__":
 
     first_technology_occurrence(n, planning_horizon)
 
-    unravel_carbonaceous_fuels(n)
+    unravel_carbonaceous_fuels(n, planning_horizon)
 
     unravel_gasbus(n, costs)
 
