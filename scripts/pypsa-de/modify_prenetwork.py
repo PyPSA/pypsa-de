@@ -1410,12 +1410,12 @@ if __name__ == "__main__":
         snakemake = mock_snakemake(
             "modify_prenetwork",
             simpl="",
-            clusters=89,
+            clusters=27,
             opts="",
             ll="vopt",
             sector_opts="none",
             planning_horizons="2025",
-            run="endogenous",
+            run="KN2045_Mix",
         )
 
     configure_logging(snakemake)
@@ -1437,9 +1437,9 @@ if __name__ == "__main__":
 
     remove_old_boiler_profiles(n)
 
-    coal_generation_ban(n)
+    coal_generation_ban(n, planning_horizon)
 
-    nuclear_generation_ban(n)
+    nuclear_generation_ban(n, planning_horizon)
 
     first_technology_occurrence(n, planning_horizon)
 
