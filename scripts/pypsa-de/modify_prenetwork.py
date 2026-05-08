@@ -188,7 +188,7 @@ def add_wasserstoff_kernnetz(n, wkn, costs, planning_horizon):
 
     # use only pipes added since the previous investment period
     wkn_new = wkn.query(
-        "build_year > @previous_investment_year & build_year <= @planning_horizon"
+        "(build_year > @previous_investment_year) & (build_year <= @planning_horizon)"
     )
 
     if not wkn_new.empty:
