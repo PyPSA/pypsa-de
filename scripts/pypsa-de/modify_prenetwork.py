@@ -572,9 +572,7 @@ def unravel_carbonaceous_fuels(n, planning_horizon):
         )
         # get share of shipping done with methanol
         p_set = (
-            snakemake.params.shipping_methanol_share[
-                planning_horizon
-            ]
+            snakemake.params.shipping_methanol_share[planning_horizon]
             * p_set
             * efficiency
         )
@@ -1469,7 +1467,6 @@ if __name__ == "__main__":
             add_hydrogen_turbines(n, snakemake.params.H2_plants)
         if snakemake.params.H2_plants["force"] <= planning_horizon:
             force_retrofit(n, snakemake.params.H2_plants)
-
 
     enforce_transmission_project_build_years(n, planning_horizon)
 
