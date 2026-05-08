@@ -19,14 +19,14 @@ from scripts.prepare_sector_network import lossy_bidirectional_links
 logger = logging.getLogger(__name__)
 
 
-def first_technology_occurrence(n):
+def first_technology_occurrence(n, planning_horizon):
     """
     Drop configured technologies before configured year.
     """
 
     for c, carriers in snakemake.params.technology_occurrence.items():
         for carrier, first_year in carriers.items():
-            if int(snakemake.wildcards.planning_horizons) < first_year:
+            if planning_horizon < first_year:
                 to_drop = n.df(c).query(f"carrier == '{carrier}'").index
                 if to_drop.empty:
                     continue
@@ -79,14 +79,13 @@ def remove_old_boiler_profiles(n):
         n.links_t[attr].drop(to_drop, axis=1, inplace=True)
 
 
-def new_boiler_ban(n):
-    year = int(snakemake.wildcards.planning_horizons)
+def new_boiler_ban(n, planning_horizon):
 
     for ct in snakemake.params.fossil_boiler_ban:
         ban_year = int(snakemake.params.fossil_boiler_ban[ct])
-        if ban_year < year:
+        if ban_year < planning_horizon:
             logger.info(
-                f"For year {year} in {ct} implementing ban on new decentral oil & gas boilers from {ban_year}"
+                f"For year {planning_horizon} in {ct} implementing ban on new decentral oil & gas boilers from {ban_year}"
             )
             links = n.links.index[
                 (n.links.index.str[:2] == ct)
@@ -101,14 +100,12 @@ def new_boiler_ban(n):
             n.links.drop(links, inplace=True)
 
 
-def coal_generation_ban(n):
-    year = int(snakemake.wildcards.planning_horizons)
-
+def coal_generation_ban(n, planning_horizon):
     for ct in snakemake.params.coal_ban:
         ban_year = int(snakemake.params.coal_ban[ct])
-        if ban_year < year:
+        if ban_year < planning_horizon:
             logger.info(
-                f"For year {year} in {ct} implementing coal and lignite ban from {ban_year}"
+                f"For year {planning_horizon} in {ct} implementing coal and lignite ban from {ban_year}"
             )
             links = n.links.index[
                 (n.links.index.str[:2] == ct)
@@ -118,14 +115,12 @@ def coal_generation_ban(n):
             n.links.drop(links, inplace=True)
 
 
-def nuclear_generation_ban(n):
-    year = int(snakemake.wildcards.planning_horizons)
-
+def nuclear_generation_ban(n, planning_horizon):
     for ct in snakemake.params.nuclear_ban:
         ban_year = int(snakemake.params.nuclear_ban[ct])
-        if ban_year < year:
+        if ban_year < planning_horizon:
             logger.info(
-                f"For year {year} in {ct} implementing nuclear ban from {ban_year}"
+                f"For year {planning_horizon} in {ct} implementing nuclear ban from {ban_year}"
             )
             links = n.links.index[
                 (n.links.index.str[:2] == ct) & n.links.carrier.isin(["nuclear"])
@@ -183,23 +178,21 @@ def reduce_capacity(
     return targets
 
 
-def add_wasserstoff_kernnetz(n, wkn, costs):
+def add_wasserstoff_kernnetz(n, wkn, costs, planning_horizon):
     logger.info("adding wasserstoff kernnetz")
-
-    investment_year = int(snakemake.wildcards.planning_horizons)
 
     # get previous planning horizon
     planning_horizons = snakemake.params.planning_horizons
-    i = planning_horizons.index(int(snakemake.wildcards.planning_horizons))
+    i = planning_horizons.index(planning_horizon)
     previous_investment_year = int(planning_horizons[i - 1]) if i != 0 else 2015  # noqa
 
     # use only pipes added since the previous investment period
     wkn_new = wkn.query(
-        "build_year > @previous_investment_year & build_year <= @investment_year"
+        "build_year > @previous_investment_year & build_year <= @planning_horizon"
     )
 
     if not wkn_new.empty:
-        names = wkn_new.index + f"-kernnetz-{investment_year}"
+        names = wkn_new.index + f"-kernnetz-{planning_horizon}"
 
         # capital_costs = np.where(
         #     wkn_new.retrofitted == False,
@@ -284,7 +277,7 @@ def add_wasserstoff_kernnetz(n, wkn, costs):
     if not wkn.empty and snakemake.params.H2_retrofit:
         retrofitted_b = (
             n.links.carrier == "H2 pipeline retrofitted"
-        ) & n.links.index.str.contains(str(investment_year))
+        ) & n.links.index.str.contains(str(planning_horizon))
         h2_pipes_retrofitted = n.links.loc[retrofitted_b]
 
         if not h2_pipes_retrofitted.empty:
@@ -298,7 +291,7 @@ def add_wasserstoff_kernnetz(n, wkn, costs):
                 "p_nom_max"
             ]
 
-    if investment_year <= 2030:
+    if planning_horizon <= 2030:
         # assume that only pipelines from kernnetz are built (within Germany):
         # make pipes within Germany not extendable and all others extendable (but only from current year)
         to_fix = (
@@ -311,7 +304,7 @@ def add_wasserstoff_kernnetz(n, wkn, costs):
     # from 2030 onwards all pipes are extendable (except from the ones the model build up before and the kernnetz lines)
 
 
-def unravel_carbonaceous_fuels(n):
+def unravel_carbonaceous_fuels(n, planning_horizon):
     """
     Unravel European carbonaceous buses and if necessary their loads to enable
     energy balances for import and export of carbonaceous fuels.
@@ -580,7 +573,7 @@ def unravel_carbonaceous_fuels(n):
         # get share of shipping done with methanol
         p_set = (
             snakemake.params.shipping_methanol_share[
-                int(snakemake.wildcards.planning_horizons)
+                planning_horizon
             ]
             * p_set
             * efficiency
@@ -798,18 +791,17 @@ def transmission_costs_from_modified_cost_data(n, costs, transmission):
     n.links.loc[dc_b, "onight_cost"] = onight_cost
 
 
-def must_run(n, params):
+def must_run(n, params, planning_horizon):
     """
     Set p_min_pu for links to the specified value or reset to 0 if not specified.
     """
 
-    investment_year = int(snakemake.wildcards.planning_horizons)
     planning_horizons = snakemake.params.planning_horizons
-    i = planning_horizons.index(int(snakemake.wildcards.planning_horizons))
+    i = planning_horizons.index(planning_horizon)
     previous_investment_year = int(planning_horizons[i - 1]) if i != 0 else np.nan
 
     # Get params for the current and previous years
-    current_params = params.get(investment_year, {})
+    current_params = params.get(planning_horizon, {})
     previous_params = params.get(previous_investment_year, {})
 
     # Collect all carriers and regions from the previous period
@@ -822,7 +814,7 @@ def must_run(n, params):
                 # Reset p_min_pu to 0 for this carrier in the previous region
                 logger.info(
                     f"Must-run condition disabled: Resetting p_min_pu to 0 for {carrier} "
-                    f"in region {region} (was specified in {previous_investment_year}, but not in {investment_year})."
+                    f"in region {region} (was specified in {previous_investment_year}, but not in {planning_horizon})."
                 )
                 links_i = n.links[
                     (n.links.carrier == carrier) & n.links.index.str.contains(region)
@@ -835,7 +827,7 @@ def must_run(n, params):
             p_min_pu = current_params[region][carrier]
             logger.info(
                 f"Must-run condition enabled: Setting p_min_pu = {p_min_pu} for {carrier} "
-                f"in year {investment_year} and region {region}."
+                f"in year {planning_horizon} and region {region}."
             )
             links_i = n.links[
                 (n.links.carrier == carrier) & n.links.index.str.contains(region)
@@ -1349,7 +1341,7 @@ def drop_duplicate_transmission_projects(n):
     n.remove("Line", to_drop)
 
 
-def scale_capacity(n, scaling):
+def scale_capacity(n, scaling, planning_horizon):
     """
     Scale the output capacity of energy system links based on predefined scaling limits.
 
@@ -1359,11 +1351,11 @@ def scale_capacity(n, scaling):
     - scaling: A dictionary with scaling limits structured as
                {year: {region: {carrier: limit}}}.
     """
-    investment_year = int(snakemake.wildcards.planning_horizons)
-    if investment_year in scaling.keys():
-        for region in scaling[investment_year].keys():
-            for carrier in scaling[investment_year][region].keys():
-                limit = scaling[investment_year][region][carrier]
+
+    if planning_horizon in scaling.keys():
+        for region in scaling[planning_horizon].keys():
+            for carrier in scaling[planning_horizon][region].keys():
+                limit = scaling[planning_horizon][region][carrier]
                 logger.info(
                     f"Scaling output capacity (bus1) of {carrier} in region {region} to {limit} MW"
                 )
@@ -1420,12 +1412,12 @@ if __name__ == "__main__":
         snakemake = mock_snakemake(
             "modify_prenetwork",
             simpl="",
-            clusters=27,
+            clusters=89,
             opts="",
             ll="vopt",
             sector_opts="none",
             planning_horizons="2025",
-            run="KN2045_Mix",
+            run="endogenous",
         )
 
     configure_logging(snakemake)
@@ -1436,6 +1428,8 @@ if __name__ == "__main__":
     n = pypsa.Network(snakemake.input.network)
 
     costs = load_costs(snakemake.input.costs)
+
+    planning_horizon = int(snakemake.wildcards.planning_horizons)
 
     modify_mobility_demand(n, snakemake.input.modified_mobility_data)
 
@@ -1449,7 +1443,7 @@ if __name__ == "__main__":
 
     nuclear_generation_ban(n)
 
-    first_technology_occurrence(n)
+    first_technology_occurrence(n, planning_horizon)
 
     unravel_carbonaceous_fuels(n)
 
@@ -1458,7 +1452,7 @@ if __name__ == "__main__":
     if snakemake.params.enable_kernnetz:
         fn = snakemake.input.wkn
         wkn = pd.read_csv(fn, index_col=0)
-        add_wasserstoff_kernnetz(n, wkn, costs)
+        add_wasserstoff_kernnetz(n, wkn, costs, planning_horizon)
 
     # change to NEP21 costs
     transmission_costs_from_modified_cost_data(
@@ -1468,47 +1462,42 @@ if __name__ == "__main__":
     )
 
     if snakemake.params.must_run is not None:
-        must_run(n, snakemake.params.must_run)
+        must_run(n, snakemake.params.must_run, planning_horizon)
 
     if snakemake.params.H2_plants["enable"]:
-        if snakemake.params.H2_plants["start"] <= int(
-            snakemake.wildcards.planning_horizons
-        ):
+        if snakemake.params.H2_plants["start"] <= planning_horizon:
             add_hydrogen_turbines(n, snakemake.params.H2_plants)
-        if snakemake.params.H2_plants["force"] <= int(
-            snakemake.wildcards.planning_horizons
-        ):
+        if snakemake.params.H2_plants["force"] <= planning_horizon:
             force_retrofit(n, snakemake.params.H2_plants)
 
-    current_year = int(snakemake.wildcards.planning_horizons)
 
-    enforce_transmission_project_build_years(n, current_year)
+    enforce_transmission_project_build_years(n, planning_horizon)
 
     drop_duplicate_transmission_projects(n)
 
-    force_connection_nep_offshore(n, current_year, costs)
+    force_connection_nep_offshore(n, planning_horizon, costs)
 
-    scale_capacity(n, snakemake.params.scale_capacity)
+    scale_capacity(n, snakemake.params.scale_capacity, planning_horizon)
 
     sanitize_custom_columns(n)
 
-    if current_year in snakemake.params.uba_for_industry:
-        if current_year not in [2025, 2030, 2035]:
+    if planning_horizon in snakemake.params.uba_for_industry:
+        if planning_horizon not in [2025, 2030, 2035]:
             logger.error(
                 "The UBA for industry data is only available for 2025, 2030 and 2035. Please check your config."
             )
         modify_industry_demand(
             n,
-            current_year,
+            planning_horizon,
             snakemake.input.new_industrial_energy_demand,
             snakemake.input.industrial_production_per_country_tomorrow,
             snakemake.input.industry_sector_ratios,
             scale_non_energy=snakemake.params.scale_industry_non_energy,
         )
 
-    if current_year in snakemake.params.limit_cross_border_flows_ac:
+    if planning_horizon in snakemake.params.limit_cross_border_flows_ac:
         limit_cross_border_flows_ac(
-            n, snakemake.params.limit_cross_border_flows_ac[current_year]
+            n, snakemake.params.limit_cross_border_flows_ac[planning_horizon]
         )
 
     n.export_to_netcdf(snakemake.output.network)
