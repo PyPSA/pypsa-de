@@ -1348,6 +1348,9 @@ def scale_capacity(n, scaling, planning_horizon):
     - n: The network/model object representing the energy system.
     - scaling: A dictionary with scaling limits structured as
                {year: {region: {carrier: limit}}}.
+    - planning_horizon: The planning year used to select the scaling limits
+                        from ``scaling``. Must be an ``int`` matching one of
+                        the year keys in ``scaling``.
     """
 
     if planning_horizon in scaling.keys():
