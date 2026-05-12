@@ -1880,7 +1880,7 @@ def insert_gas_distribution_costs(
 
 
 def add_electricity_grid_connection(n, costs):
-    carriers = ["onwind", "solar", "solar-hsat", "solar rooftop"]
+    carriers = ["onwind", "solar", "solar-hsat"]
 
     gens = n.generators.index[n.generators.carrier.isin(carriers)]
 
