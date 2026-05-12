@@ -170,13 +170,10 @@ renewable:
     landfall_length: 30
     capacity_per_sqkm: 6
     cutout: europe-2013-sarah3-era5
-    correction_factor: 0.95
   solar:
     cutout: europe-2013-sarah3-era5
-    correction_factor: 0.9 # scaling to Abbildung 36 of https://www.ise.fraunhofer.de/de/veroeffentlichungen/studien/aktuelle-fakten-zur-photovoltaik-in-deutschland.html
   solar-hsat:
     cutout: europe-2013-sarah3-era5
-    correction_factor: 0.9 # scaling to Abbildung 36 of https://www.ise.fraunhofer.de/de/veroeffentlichungen/studien/aktuelle-fakten-zur-photovoltaik-in-deutschland.html
   hydro:
     cutout: europe-2013-sarah3-era5
 
