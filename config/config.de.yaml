@@ -267,8 +267,6 @@ first_technology_occurrence:
     H2 pipeline retrofitted: 2025
     urban central water pits charger: 2035
     urban central water pits discharger: 2035
-  Generator:
-    solar-hsat: 2030
   Store:
     urban central water pits: 2035
   Bus:
@@ -474,6 +472,10 @@ solving:
             2040: 800
             2045: 1000
             2050: 1000
+        solar-hsat:
+          DE:
+            2020: 0
+            2025: 1
       Store:
         urban central water tanks:
           DE:
