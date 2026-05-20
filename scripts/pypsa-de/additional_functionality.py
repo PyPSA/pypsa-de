@@ -827,6 +827,86 @@ def adapt_nuclear_output(n):
     )
 
 
+def add_decentral_heat_budgets(n, decentral_heat_budgets, investment_year):
+    carrier_dict = {
+        "heat_pump": [
+            "rural air heat pump",
+            "rural ground heat pump",
+            "urban decentral air heat pump",
+        ],
+        "resistive_heater": [
+            "rural resistive heater",
+            "urban decentral resistive heater",
+        ],
+        "biomass_boiler": [
+            "rural biomass boiler",
+            "urban decentral biomass boiler",
+        ],
+    }
+
+    for asset_type, budget_dict in decentral_heat_budgets.items():
+        assets = n.links.index[n.links.carrier.isin(carrier_dict[asset_type])]
+
+        if assets.empty:
+            logger.warning(
+                f"No {asset_type}s found in the network. Skipping decentral {asset_type} budgets."
+            )
+            return
+
+        if investment_year not in budget_dict["DE"].keys():
+            logger.warning(
+                f"No decentral {asset_type} budget for {investment_year} found in the config file. Skipping."
+            )
+            return
+
+        logger.info(f"Adding decentral {asset_type} budgets")
+
+        for ct in budget_dict:
+            if ct != "DE":
+                logger.error(
+                    f"{asset_type.capitalize()} budget for countries other than `DE` is not yet supported. Found country {ct}. Please check the config file."
+                )
+
+            limit = budget_dict[ct][investment_year] * 1e6
+
+            logger.info(
+                f"Limiting decentral {asset_type} electricity consumption in country {ct} to {limit} MWh.",
+            )
+            assets = assets[assets.str.startswith(ct)]
+
+            lhs = []
+            # For heatpumps the bus0 is heat and bus1 is electricity -> multiply by efficiency and by -1
+            lhs.append(
+                (
+                    -1
+                    * n.model["Link-p"].loc[:, assets]
+                    * n.links_t.efficiency[assets]
+                    * n.snapshot_weightings.generators
+                ).sum()
+            )
+
+            lhs = sum(lhs)
+            cname = f"decentral_{asset_type}_limit-{ct}"
+            if cname in n.global_constraints.index:
+                logger.warning(
+                    f"Global constraint {cname} already exists. Dropping and adding it again."
+                )
+                n.global_constraints.drop(cname, inplace=True)
+
+            n.model.add_constraints(
+                lhs <= limit,
+                name=f"GlobalConstraint-{cname}",
+            )
+            n.add(
+                "GlobalConstraint",
+                cname,
+                constant=limit,
+                sense="<=",
+                type="",
+                carrier_attribute="",
+            )
+
+
 def additional_functionality(n, snapshots, snakemake):
     logger.info("Adding Ariadne-specific functionality")
 
@@ -870,6 +950,13 @@ def additional_functionality(n, snapshots, snakemake):
         )
     else:
         logger.warning("No national CO2 budget specified!")
+
+    if isinstance(constraints.get("decentral_heat_budgets"), dict):
+        add_decentral_heat_budgets(
+            n,
+            constraints["decentral_heat_budgets"],
+            investment_year,
+        )
 
     if investment_year == 2020:
         adapt_nuclear_output(n)

@@ -442,6 +442,12 @@ solving:
         2040: 0.09
         2045: -0.05
         2050: -0.048
+    decentral_heat_budgets:  # UBA MMS, Projektionsbericht 2025, Abbildung 48
+      heat_pump:
+        DE:
+          2025: 12.0
+          2030: 28.0
+          # 2035: 38.0
     efuel_export_ban: false
     limits_capacity_max:
       Generator:
