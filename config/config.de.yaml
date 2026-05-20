@@ -369,6 +369,14 @@ industry:
   steam_biomass_fraction: 0.4
   steam_hydrogen_fraction: 0.3
   steam_electricity_fraction: 0.3
+  sector_ratios_fraction_future:
+    2020: 0.0
+    2025: 0.01
+    2030: 0.15
+    2035: 0.35
+    2040: 0.65
+    2045: 0.85
+    2050: 1.0
   DRI_fraction:
     2020: 0
     2025: 0
