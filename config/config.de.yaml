@@ -47,6 +47,9 @@ pypsa-de:
     2045: 0.49
     2050: 0.49
 
+load:
+  scaling_factor: 0.925
+
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#foresight
 foresight: myopic
 
