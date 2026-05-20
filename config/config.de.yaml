@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20260513_recalibrating_res
+  prefix: 20260519_recalibrating_load
   name:
   - KN2045_Bal_v5
   # - KN2045_Elec_plus_v5
