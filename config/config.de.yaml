@@ -385,18 +385,6 @@ industry:
     2040: 0.6
     2045: 1
     2050: 1
-#HVC primary/recycling based on values used in Neumann et al https://doi.org/10.1016/j.joule.2023.06.016, linearly interpolated between 2020 and 2050
-#2020 recycling rates based on Agora https://static.agora-energiewende.de/fileadmin/Projekte/2021/2021_02_EU_CEAP/A-EW_254_Mobilising-circular-economy_study_WEB.pdf
-#fractions refer to the total primary HVC production in 2020
-#assumes 6.7 Mtplastics produced from recycling in 2020
-  HVC_primary_fraction:
-    2020: 1.0
-    2025: 0.9
-    2030: 0.8
-    2035: 0.7
-    2040: 0.6
-    2045: 0.5
-    2050: 0.4
   # 15 Mt HVC production (from IDEES) -> 6 Mt Plastikabfälle,
   # To substitute for other waste, assume all Plastikabfall is used energetically whereas in reality ~40% is recycled
   # see https://github.com/PyPSA/pypsa-ariadne/pull/292
