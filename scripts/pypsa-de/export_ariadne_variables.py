@@ -2450,9 +2450,9 @@ def get_final_energy(
 
     # var["Final Energy|Transportation|Other"] = \
 
-    var["Final Energy|Transportation|Electricity"] = low_voltage_electricity.get(
-        "BEV charger", 0
-    )
+    var["Final Energy|Transportation|Electricity"] = (
+        sum_load(n, "land transport EV", region) / 0.9
+    )  # Account for 90% efficiency of BEV chargers, to convert back to final energy demand
 
     # var["Final Energy|Transportation|Gases"] = \
     # var["Final Energy|Transportation|Gases|Natural Gas"] = \

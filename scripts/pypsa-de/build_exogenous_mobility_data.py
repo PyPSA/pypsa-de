@@ -198,4 +198,8 @@ if __name__ == "__main__":
         uba_for_mobility=snakemake.params.uba_for_mobility,
     )
 
+    # since these numbers are given in final energy not useful energy, account for the efficiency of BEV charger links, which is 0.9 in the current model
+
+    mobility_data["Electricity"] *= 0.9
+
     mobility_data.to_csv(snakemake.output.mobility_data, header=False)
