@@ -160,7 +160,7 @@ def add_power_capacities_installed_before_baseyear(
     grouping_years: list[int],
     baseyear: int,
     powerplants_file: str,
-    custom_powerplants_file: str,
+    german_chps_file: str,
     countries: list[str],
     capacity_threshold: float,
     lifetime_values: dict[str, float],
@@ -184,7 +184,7 @@ def add_power_capacities_installed_before_baseyear(
         Base year for analysis
     powerplants_file : str
         Path to powerplants CSV file
-    custom_powerplants_file : str
+    german_chps_file : str
         Path to custom powerplants CSV file
     countries : list
         List of countries to consider
@@ -203,8 +203,8 @@ def add_power_capacities_installed_before_baseyear(
     logger.debug(f"Adding power capacities installed before {baseyear}")
 
     df_agg = pd.read_csv(powerplants_file, index_col=0)
-    if custom_powerplants_file:
-        df_agg = add_custom_powerplants(df_agg, custom_powerplants_file, True)
+    if german_chps_file:
+        df_agg = add_custom_powerplants(df_agg, german_chps_file, True)
 
     rename_fuel = {
         "Hard Coal": "coal",
@@ -253,6 +253,15 @@ def add_power_capacities_installed_before_baseyear(
     df_agg["DateIn"] = df_agg.groupby("Fueltype")["DateIn"].transform(
         lambda x: x.fillna(x.mean() // 1)
     )
+
+    missing_datein = df_agg.index[df_agg["DateIn"].isna()]
+    if not missing_datein.empty:
+        logger.info(f"Dropping {len(missing_datein)} power plants with missing DateIn.")
+        if len(missing_datein) <= 100:  # log individual plants if not too many
+            logger.info(
+                f"Power plants dropped due to missing DateIn: {missing_datein.to_list()}"
+            )
+
     df_agg.dropna(subset="DateIn", inplace=True)
 
     # Estimate missing DateOut
@@ -282,7 +291,7 @@ def add_power_capacities_installed_before_baseyear(
         costs,
         baseyear,
         powerplants_file,
-        custom_powerplants_file,
+        german_chps_file,
         lifetime_values,
         lifetime_gas_chp,
         capacity_threshold,
@@ -562,7 +571,7 @@ def add_chp_plants(
     costs,
     baseyear,
     powerplants_file,
-    custom_powerplants_file,
+    german_chps_file,
     lifetime_values,
     lifetime_gas_chp,
     capacity_threshold,
@@ -580,11 +589,11 @@ def add_chp_plants(
 
     ppl = pd.read_csv(powerplants_file, index_col=0)
 
-    if custom_powerplants_file:
-        if custom_powerplants_file.endswith("german_chp_{clusters}.csv"):
-            logger.info("Supersedeing default German CHPs with custom_powerplants.")
+    if german_chps_file:
+        if german_chps_file.endswith("german_chp_{clusters}.csv"):
+            logger.info("Supersedeing default German CHPs with custom ones from MASTR.")
             ppl = ppl.query("~(Set == 'CHP' and Country == 'DE')")
-        ppl = add_custom_powerplants(ppl, custom_powerplants_file, True)
+        ppl = add_custom_powerplants(ppl, german_chps_file, True)
 
     # drop assets which are already phased out / decommissioned
     # drop hydro, waste and oil fueltypes for CHP
@@ -1252,7 +1261,7 @@ if __name__ == "__main__":
         grouping_years=grouping_years_power,
         baseyear=baseyear,
         powerplants_file=snakemake.input.powerplants,
-        custom_powerplants_file=snakemake.input.get("custom_powerplants", ""),
+        german_chps_file=snakemake.input.get("german_chps", ""),
         countries=snakemake.config["countries"],
         capacity_threshold=snakemake.params.existing_capacities["threshold_capacity"],
         lifetime_values=snakemake.params.costs["fill_values"],
