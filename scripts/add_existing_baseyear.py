@@ -1217,12 +1217,12 @@ if __name__ == "__main__":
 
         snakemake = mock_snakemake(
             "add_existing_baseyear",
-            clusters="27",
+            clusters="49",
             ll="vopt",
             opts="",
             sector_opts="none",
-            planning_horizons="2020",
-            run="KN2045_Mix",
+            planning_horizons="2025",
+            run="KN2045_Bal_v5",
         )
 
     configure_logging(snakemake)  # pylint: disable=E0606

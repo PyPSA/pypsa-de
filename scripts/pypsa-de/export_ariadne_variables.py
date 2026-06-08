@@ -5590,8 +5590,7 @@ if __name__ == "__main__":
             opts="",
             ll="vopt",
             sector_opts="None",
-            run="KN2045_Mix",
-            configfiles="config/test/config.dach.yaml",
+            run="KN2045_Bal_v5",
         )
     configure_logging(snakemake)
     set_scenario_config(snakemake)
