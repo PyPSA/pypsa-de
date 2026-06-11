@@ -1627,6 +1627,7 @@ def get_secondary_energy(n, region, _industry_demand):
     ).sum()
     var["Secondary Energy|Electricity|Biomass|Gaseous and Liquid"] = (
         electricity_supply.get("biogas", 0)
+        + var["Secondary Energy|Electricity|Gas|Biomass"]
     )
     var["Secondary Energy|Electricity|Biomass"] = (
         var["Secondary Energy|Electricity|Biomass|w/o CCS"]
