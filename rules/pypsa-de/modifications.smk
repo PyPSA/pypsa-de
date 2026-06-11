@@ -200,6 +200,9 @@ rule modify_prenetwork:
         industrial_demand=resources(
             "industrial_energy_demand_base_s_{clusters}_{planning_horizons}.csv"
         ),
+        industrial_demand_2025=resources(
+            "industrial_energy_demand_base_s_{clusters}_2025.csv"
+        ),
         industrial_production_per_country_tomorrow=resources(
             "industrial_production_per_country_tomorrow_{planning_horizons}-modified.csv"
         ),

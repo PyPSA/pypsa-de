@@ -1415,17 +1415,55 @@ def limit_cross_border_flows_ac(n, s_max_pu):
     n.lines.loc[cross_border_lines, "s_max_pu"] = s_max_pu
 
 
+def scale_industry_elec_to_2025(n, industrial_energy_demand_2025):
+    """
+    Scale the electricity demand of industry in Germany to match the 2025 value from UBA.
+
+    This is necessary because the scaling of industry demand to UBA values is only applied to the total demand, but not to the individual carriers. This can lead to unrealistic electricity demand for industry in 2025 if the original PyPSA-DE network has a different split between electricity and other carriers than the UBA data.
+    """
+    ageb = 663868 / 3.6e-3
+
+    logger.info(
+        f"Scaling electricity demand of industry in Germany to respect 2025 AGEB value of {ageb} MWh."
+    )
+
+    model_demand_2025 = (
+        (pd.read_csv(industrial_energy_demand_2025, index_col=0) * 1e6)
+        .filter(like="DE", axis=0)
+        .sum()["electricity"]
+    )
+
+    delta = ageb - model_demand_2025
+
+    loads = n.loads.query(
+        "bus.str.startswith('DE') and carrier=='industry electricity'"
+    )
+
+    logger.info(
+        "Industry electricity demand in Germany before scaling: "
+        + str(loads.p_set.sum() * 8760)
+        + " MWh/a"
+    )
+    scaling_factor = 1 + (delta / (loads.p_set.sum() * 8760))
+    n.loads.loc[loads.index, "p_set"] *= scaling_factor
+    logger.info(
+        "Industry electricity demand in Germany after scaling: "
+        + str(n.loads.loc[loads.index, "p_set"].sum() * 8760)
+        + " MWh/a"
+    )
+
+
 if __name__ == "__main__":
     if "snakemake" not in globals():
         snakemake = mock_snakemake(
             "modify_prenetwork",
             simpl="",
-            clusters=27,
+            clusters=49,
             opts="",
             ll="vopt",
             sector_opts="none",
-            planning_horizons="2025",
-            run="KN2045_Mix",
+            planning_horizons="2030",
+            run="KN2045_Bal_v5",
         )
 
     configure_logging(snakemake)
@@ -1505,6 +1543,8 @@ if __name__ == "__main__":
             snakemake.input.industry_sector_ratios,
             scale_non_energy=snakemake.params.scale_industry_non_energy,
         )
+
+    scale_industry_elec_to_2025(n, snakemake.input.industrial_demand_2025)
 
     if current_year in snakemake.params.limit_cross_border_flows_ac:
         limit_cross_border_flows_ac(
