@@ -1887,7 +1887,7 @@ def add_electricity_grid_connection(n, costs):
     n.generators.loc[gens, "capital_cost"] += costs.at[
         "electricity grid connection", "capital_cost"
     ]
-    n.generators.loc[gens, "onight_cost"] += costs.at[
+    n.generators.loc[gens, "connection_onight_cost"] = costs.at[
         "electricity grid connection", "investment"
     ]
 
