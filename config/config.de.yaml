@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20260608_missing_powerplants
+  prefix: 20260612_offwind_cost
   name:
   - KN2045_Bal_v5
   # - KN2045_Elec_plus_v5
