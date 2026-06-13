@@ -57,7 +57,8 @@ all,hydrogen storage underground,investment,0.55,EUR/kWh,Langfristszenarien Szen
 2040,offwind,investment,2010,"EUR/kW_e, 2020","https://www.ise.fraunhofer.de/de/veroeffentlichungen/studien/studie-stromgestehungskosten-erneuerbare-energien.html, Tabelle 1, Mittelpunkt der Preisspanne","CPI=1.2, DEA Vergleichswert für 2024 durch lineare Interpolation, Kostenreduktion nach DEA"
 2045,offwind,investment,1985,"EUR/kW_e, 2020","https://www.ise.fraunhofer.de/de/veroeffentlichungen/studien/studie-stromgestehungskosten-erneuerbare-energien.html, Tabelle 1, Mittelpunkt der Preisspanne","CPI=1.2, DEA Vergleichswert für 2024 durch lineare Interpolation, Kostenreduktion nach DEA"
 2050,offwind,investment,1960,"EUR/kW_e, 2020","https://www.ise.fraunhofer.de/de/veroeffentlichungen/studien/studie-stromgestehungskosten-erneuerbare-energien.html, Tabelle 1, Mittelpunkt der Preisspanne","CPI=1.2, DEA Vergleichswert für 2024 durch lineare Interpolation, Kostenreduktion nach DEA"
-2019,gas,fuel,16.0,EUR/MWh_th,Ariadne,2019,oil,fuel,33.2457,EUR2020/MWh,Ariadne,"$2020 = 0.8775 EUR2020, 1bbl = 1.6998MWh"
+2019,gas,fuel,16.0,EUR/MWh_th,Ariadne,
+2019,oil,fuel,33.2457,EUR2020/MWh,Ariadne,"$2020 = 0.8775 EUR2020, 1bbl = 1.6998MWh"
 2019,coal,fuel,6.7391,EUR2020/MWh,Ariadne,"$2020 = 0.8775 EUR2020, 1t = 8.06 MWh"
 2019,decentral air-sourced heat pump,investment,1685,EUR2020/kW_th,https://ariadneprojekt.de/media/2024/01/Ariadne-Analyse_HeizkostenEmissionenGebaeude_Januar2024.pdf https://www.enpal.de/waermepumpe/kosten/ https://www.bdew.de/media/documents/BDEW-HKV_Altbau.pdf
 2019,decentral ground-sourced heat pump,investment,2774,EUR2020/kW_th,https://ariadneprojekt.de/media/2024/01/Ariadne-Analyse_HeizkostenEmissionenGebaeude_Januar2024.pdf https://www.enpal.de/waermepumpe/kosten/ https://www.bdew.de/media/documents/BDEW-HKV_Altbau.pdf
