@@ -82,7 +82,7 @@ KN2045_Mix:
 #   costs:
 #     custom_cost_fn: data/pypsa-de/custom_costs_nep_2023_low_decentral_discount.csv
 
-KN2045_Mix_HighDecentralDiscount:
+KN2045_Mix_HDD_Upstream:
   costs:
     custom_cost_fn: data/pypsa-de/custom_costs_nep_2023_high_decentral_discount.csv
   
