@@ -1083,7 +1083,7 @@ rule build_industry_sector_ratios_intermediate:
         ),
     threads: 1
     resources:
-        mem_mb=1000,
+        mem_mb=4000,
     log:
         logs("build_industry_sector_ratios_{planning_horizons}.log"),
     benchmark:
@@ -1109,7 +1109,7 @@ rule build_industrial_production_per_country:
         ),
     threads: 8
     resources:
-        mem_mb=2000,
+        mem_mb=4000,
     log:
         logs("build_industrial_production_per_country.log"),
     benchmark:
@@ -1193,7 +1193,7 @@ rule build_industrial_production_per_node:
         ),
     threads: 1
     resources:
-        mem_mb=1000,
+        mem_mb=2000,
     log:
         logs("build_industrial_production_per_node_{clusters}_{planning_horizons}.log"),
     benchmark:

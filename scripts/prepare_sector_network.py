@@ -722,7 +722,21 @@ def add_carrier_buses(
                 efficiency2=cf_industry["gas_compression_losses"]
                 * costs.at[carrier, "CO2 intensity"],
             )
+            upstream_co2_factor = cf_industry.get("gas_upstream_co2_factor", 0.0)
 
+            if  upstream_co2_factor > 0:
+                n.add(
+                    "Link",
+                    nodes + " upstream emissions",
+                    bus0=nodes + " primary",    # zieht sich Referenzfluss vom Primärbus
+                    bus1=nodes + " primary",    # gibt ihn zurück (Durchfluss, kein Energieverlust)
+                    bus2="co2 atmosphere",      # Vorkettenemission
+                    location=location,
+                    carrier=carrier + " upstream",
+                    p_nom=1e6,
+                    efficiency=1.0,             # kein Energieverlust
+                    efficiency2=-upstream_co2_factor,  # tCO2 pro MWh_gas
+                )
             suffix = " primary"
 
         n.add(
