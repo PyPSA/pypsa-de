@@ -26,10 +26,10 @@ jobs:
         shell: bash -l {0}
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - name: Setup Pixi
-      uses: prefix-dev/setup-pixi@v0.9.5
+      uses: prefix-dev/setup-pixi@v0.9.6
       with:
         pixi-version: v0.59.0
         cache: true
@@ -53,7 +53,7 @@ jobs:
         shell: bash -l {0}
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     - uses: dorny/paths-filter@v4
       id: filter
@@ -86,7 +86,7 @@ jobs:
 
     - name: Setup Pixi
       if: steps.filter.outputs.src == 'true' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-      uses: prefix-dev/setup-pixi@v0.9.5
+      uses: prefix-dev/setup-pixi@v0.9.6
       with:
         pixi-version: v0.59.0
         cache: true
