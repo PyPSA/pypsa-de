@@ -12,6 +12,16 @@ rule add_existing_baseyear:
         existing_capacities=config_provider("existing_capacities"),
         carriers=config_provider("electricity", "renewable_carriers"),
         costs=config_provider("costs"),
+        H2_retrofit_plants=config_provider(
+            "electricity", "H2_retrofit_plants", "enable"
+        ),
+        retrofit_start=config_provider("electricity", "H2_retrofit_plants", "year"),
+        retrofit_cost=config_provider(
+            "electricity", "H2_retrofit_plants", "retro_factor"
+        ),
+        retrofit_efficiency=config_provider(
+            "electricity", "H2_retrofit_plants", "efficiency"
+        ),        
         heat_pump_sources=config_provider("sector", "heat_pump_sources"),
         energy_totals_year=config_provider("energy", "energy_totals_year"),
         add_district_heating_subnodes=config_provider(
@@ -92,6 +102,16 @@ rule add_brownfield:
         dynamic_ptes_capacity=config_provider(
             "sector", "district_heating", "ptes", "dynamic_capacity"
         ),
+        H2_retrofit_plants=config_provider(
+            "electricity", "H2_retrofit_plants", "enable"
+        ),
+        retrofit_start=config_provider("electricity", "H2_retrofit_plants", "year"),
+        retrofit_cost=config_provider(
+            "electricity", "H2_retrofit_plants", "retro_factor"
+        ),
+        retrofit_efficiency=config_provider(
+            "electricity", "H2_retrofit_plants", "efficiency"
+        ),        
     input:
         unpack(input_profile_tech_brownfield),
         simplify_busmap=resources("busmap_base_s.csv"),

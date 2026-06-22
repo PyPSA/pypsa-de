@@ -4,12 +4,12 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20260607_ref_noH2_Force_upstream
+  prefix: 20260619_ref_noH2_Force_upstream_ENDORETROFIT
   name:
   # - ExPol
   # - KN2045_Mix
   # - KN2045_Mix_LowDecentralDiscount
-    - KN2045_Mix_HDD_Upstream
+  # - KN2045_Mix_HDD_Upstream
   # - KN2045_Mix_HighDecentralDiscount_GasCrisis
   # - KN2045_Mix_HDD_pseudo_foresight
   # - KN2045_Mix_H2plantsEU
@@ -244,7 +244,7 @@ clustering:
     # 'ES': 0.0408
     # 'IT': 0.0408
   temporal:
-    resolution_sector: 3H
+    resolution_sector: 365H
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#co2-budget
 co2_budget:
@@ -650,6 +650,10 @@ plotting:
     H2 CCGT: '#ff0000'
     urban central H2 CHP: '#ff0000'
     renewable gas: '#e05b09'
+    retrofitted H2 OCGT: '#e0986c'
+    retrofitted H2 CCGT: '#e0986c'
+    urban central retrofitted H2 CHP: '#e0986c'
+    OCGT H2 retrofitted: '#e0986c'
   countries:
   - all
   - DE

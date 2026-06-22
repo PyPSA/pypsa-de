@@ -85,7 +85,10 @@ KN2045_Mix:
 KN2045_Mix_HDD_Upstream:
   costs:
     custom_cost_fn: data/pypsa-de/custom_costs_nep_2023_high_decentral_discount.csv
-  
+    
+KN2045_Mix_endoH2retrofit:
+  costs:
+    custom_cost_fn: data/pypsa-de/custom_costs_nep_2023_high_decentral_discount.csv
   
 KN2045_Mix_HDD_pseudo_foresight: #HDD = HighDecentralDiscount nur mit max. Kapazitäten von 2045, um perfect foresight zu approximieren
   costs:
@@ -123,11 +126,11 @@ KN2045_Mix_H2plantsEU:
     H2_plants:
       enable: EU
 
-KN2045_Mix_no_H2_Force:
+KN2045_Mix_no_H2_Force_Upstream:
 
   electricity:
     H2_plants:
-      enable: EU # allowed values: false, DE, EU
+      enable: false # allowed values: false, DE, EU
       start: 2030 # should be < force
       force: 2055
       cost_factor: 0.15 # repurposing cost of OCGT gas to H2 in % investment cost in EUR/MW source: Christidis et al (2023) - H2-Ready-Gaskraftwerke, Table 3 https://reiner-lemoine-institut.de/wp-content/uploads/2023/11/RLI-Studie-H2-ready_DE.pdf

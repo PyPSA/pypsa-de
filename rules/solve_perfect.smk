@@ -12,6 +12,16 @@ rule add_existing_baseyear:
         costs=config_provider("costs"),
         heat_pump_sources=config_provider("sector", "heat_pump_sources"),
         energy_totals_year=config_provider("energy", "energy_totals_year"),
+        H2_retrofit_plants=config_provider(
+            "electricity", "H2_retrofit_plants", "enable"
+        ),
+        retrofit_start=config_provider("electricity", "H2_retrofit_plants", "year"),
+        retrofit_cost=config_provider(
+            "electricity", "H2_retrofit_plants", "retro_factor"
+        ),
+        retrofit_efficiency=config_provider(
+            "electricity", "H2_retrofit_plants", "efficiency"
+        ),
     input:
         network=resources(
             "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc"

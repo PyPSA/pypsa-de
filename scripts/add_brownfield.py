@@ -20,7 +20,7 @@ from scripts._helpers import (
     update_config_from_wildcards,
 )
 from scripts.add_electricity import flatten, sanitize_carriers
-from scripts.add_existing_baseyear import add_build_year_to_new_assets
+from scripts.add_existing_baseyear import add_build_year_to_new_assets, add_h2_retro
 
 logger = logging.getLogger(__name__)
 idx = pd.IndexSlice
@@ -378,7 +378,13 @@ if __name__ == "__main__":
         h2_retrofit_capacity_per_ch4=snakemake.params.H2_retrofit_capacity_per_CH4,
         capacity_threshold=snakemake.params.threshold_capacity,
     )
-
+    if snakemake.params.H2_retrofit_plants:
+        add_h2_retro(
+            n,
+            year,
+            snakemake.params,
+        )
+        
     disable_grid_expansion_if_limit_hit(n)
 
     n.meta = dict(snakemake.config, **dict(wildcards=dict(snakemake.wildcards)))
