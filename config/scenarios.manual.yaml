@@ -222,13 +222,12 @@ KN2045_NFniedrig:
 
   sector:
     reduce_space_heat_exogenously_factor:
-      2020: 0.0
-      2025: 0.08
-      2030: 0.16
-      2035: 0.25
-      2040: 0.34
-      2045: 0.43
-      2050: 0.50
+      2025: 0.18
+      2030: 0.26
+      2035: 0.35
+      2040: 0.44
+      2045: 0.53
+      2050: 0.60
 
 KN2045_NFhoch:
 # Ausgewogener Mix an Technologien zur Dekarbonisierung der Sektoren
@@ -242,10 +241,9 @@ KN2045_NFhoch:
 
   sector:
     reduce_space_heat_exogenously_factor:
-      2020: 0.0
-      2025: 0.06
-      2030: 0.12
-      2035: 0.18
-      2040: 0.24
-      2045: 0.29
-      2050: 0.33
+      2025: 0.16
+      2030: 0.22
+      2035: 0.28
+      2040: 0.34
+      2045: 0.39
+      2050: 0.43

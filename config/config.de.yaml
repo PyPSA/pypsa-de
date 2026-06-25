@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20260612_offwind_cost
+  prefix: 20260625_reduce_space_heat
   name:
   - KN2045_Bal_v5
   # - KN2045_Elec_plus_v5
@@ -358,13 +358,21 @@ sector:
   # calculated based on ariadne "Stock|Space Heating"
   # and then 2% of buildings renovated per year to reduce their demand by 80%
   reduce_space_heat_exogenously_factor:
-    2020: 0.0
-    2025: 0.07
-    2030: 0.14
-    2035: 0.21
-    2040: 0.29
-    2045: 0.36
-    2050: 0.43
+    # 2025: 0.07 
+    # 2030: 0.14
+    # 2035: 0.21
+    # 2040: 0.29
+    # 2045: 0.36
+    # 2050: 0.43
+    # Add 0.1 reduction to account for cold weather / high demand in the weather year 2013
+    # Roughly based on https://ag-energiebilanzen.de/wp-content/uploads/EBD24e_Auswertungstabellen_deutsch.pdf
+    # and on observed differences in Ariadne database between 2013 and 2019
+    2025: 0.17
+    2030: 0.24
+    2035: 0.31
+    2040: 0.39
+    2045: 0.46
+    2050: 0.53
   # For Germany these settings get overwritten in build_exogenous_mobility_data
   # Essentially all PyPSA-EUR settings but with a little bit of hydrogen to allow for the later overwrites
   land_transport_fuel_cell_share:
