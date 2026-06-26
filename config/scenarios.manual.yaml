@@ -14,13 +14,11 @@ ExPol:
   co2_budget_DE_source: UBA
 
   co2_budget:
-    2020: 0.720 # average emissions of 2019 to 2021 relative to 1990, excl LULUCF, EEA data, European Environment Agency. (2023a). Annual European Union greenhouse gas inventory 1990–2021 and inventory report 2023 - CRF Table. https://unfccc.int/documents/627830
-    2025: 0.675 # With existing measures (WEM) projection, CO2 excl LULUCF, European Environment Agency. (2023e). Member States’ greenhouse gas (GHG) emission projections 2023. https://www.eea.europa.eu/en/datahub/datahubitem-view/4b8d94a4-aed7-4e67-a54c-0623a50f48e8
-    2030: 0.569
-    2035: 0.502
-    2040: 0.452
-    2045: 0.431
-    2050: 0.419
+    2030: 0.513
+    2035: 0.429
+    2040: 0.362
+    2045: 0.311
+    2050: 0.283
 
   costs:
     transmission: "underground" # either overhead line ("overhead") or underground cable ("underground")

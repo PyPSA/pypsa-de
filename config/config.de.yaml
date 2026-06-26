@@ -238,27 +238,14 @@ clustering:
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#co2-budget
 co2_budget:
-  # # GHG TARGETS AND HISTORICAL EMISSIONS
-  # 2025: 0.61 # WAM 2025 compared to baseline, https://www.eea.europa.eu/en/analysis/indicators/total-greenhouse-gas-emission-trends
-  # 2030: 0.45 # 55% reduction by 2030 (Ff55)
-  # 2035: 0.28 # upper end of NDC range (66.25% to 72.5%=). https://www.consilium.europa.eu/en/press/press-releases/2025/11/05/paris-agreement-the-eu-submits-its-updated-ndc-with-an-indicative-target-for-2035-to-the-un-ahead-of-cop30/
-  # 2040: 0.15 # 85% reduction by 2040 - 5% offsets (not modelled, but assuming cheaper than domestic reducitons)
-  # 2045: 0.05
-  # 2050: 0 # climate-neutral by 2050
-  # # NON-CO2 EMISSIONS PLUS LAND-SINK AS FRACTION OF BASELINE
-  # 2025: 0.080
-  # 2030: 0.055
-  # 2035: 0.039
-  # 2040: 0.030
-  # 2045: 0.024
-  # 2050: 0.019
-  # -> TARGETS FOR CO2 COMPENSATING NON-CO2
-  2025: 0.53
-  2030: 0.395
-  2035: 0.24
-  2040: 0.12
-  2045: 0.025
-  2050: -0.02
+  # determined by EU goals and Non-co2 as well as LULUCF emisisons from https://www.nature.com/articles/s41467-025-66682-z
+  #  see also locally scenario_2026_co2_budget_EU_computation.ods
+  2025: 0.632
+  2030: 0.467
+  2035: 0.285
+  2040: 0.142
+  2045: 0.030
+  2050: -0.024
 wasserstoff_kernnetz:
   enable: true
   reload_locations: false
