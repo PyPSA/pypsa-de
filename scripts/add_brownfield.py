@@ -15,6 +15,7 @@ import xarray as xr
 from scripts._helpers import (
     configure_logging,
     get_snapshots,
+    load_costs,
     sanitize_custom_columns,
     set_scenario_config,
     update_config_from_wildcards,
@@ -378,13 +379,15 @@ if __name__ == "__main__":
         h2_retrofit_capacity_per_ch4=snakemake.params.H2_retrofit_capacity_per_CH4,
         capacity_threshold=snakemake.params.threshold_capacity,
     )
-    if snakemake.params.H2_retrofit_plants:
+    costs = load_costs(snakemake.input.costs)
+    if snakemake.params.H2_plants_endogen:
         add_h2_retro(
             n,
             year,
             snakemake.params,
+            costs
         )
-        
+
     disable_grid_expansion_if_limit_hit(n)
 
     n.meta = dict(snakemake.config, **dict(wildcards=dict(snakemake.wildcards)))

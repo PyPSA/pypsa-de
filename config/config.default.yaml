@@ -147,12 +147,6 @@ electricity:
     - battery
     - H2
     Link: []
-  
-  H2_retrofit_plants:
-    enable: True
-    year: 2030
-    retro_factor: 0.15 # repurposing cost of OCGT gas to H2 in % investment cost in EUR/MW source: Christidis et al (2023) - H2-Ready-Gaskraftwerke, Table 3 https://reiner-lemoine-institut.de/wp-content/uploads/2023/11/RLI-Studie-H2-ready_DE.pdf
-    efficiency: 0.35 #expected efficiency drop of 10 %
   powerplants_filter: "(DateOut > 2025 or DateOut != DateOut) and (DateIn < 2026 or DateIn != DateIn)"
   custom_powerplants: false
   everywhere_powerplants: []

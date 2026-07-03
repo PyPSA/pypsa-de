@@ -687,16 +687,83 @@ def _get_capacities(n, region, cap_func, cap_string="Capacity|"):
         [
             "H2 CCGT",
             "H2 retrofit CCGT",
-            "urban central H2 retrofit CHP",
+            "endogenously retrofitted H2 CCGT"  
         ]
     ).sum()
+
+    var[cap_string + "Electricity|Hydrogen|CC|force retrofit"] = capacities_electricity.reindex(
+        [
+            "H2 retrofit CCGT",  
+        ]
+    ).sum()
+
+    var[cap_string + "Electricity|Hydrogen|CC|new built"] = capacities_electricity.reindex(
+        [
+            "H2 CCGT",  
+        ]
+    ).sum()
+
+    var[cap_string + "Electricity|Hydrogen|CC|endogenously retrofitted"] = capacities_electricity.reindex(
+        [
+            "endogenously retrofitted H2 CCGT",  
+        ]
+    ).sum()
+
+    var[cap_string + "Electricity|Hydrogen|CHP"] = capacities_electricity.reindex(
+        [
+            "urban central H2 CHP",
+            "urban central H2 retrofit CHP",
+            "endogenously retrofitted urban central H2 CHP"  
+        ]
+    ).sum()
+
+    var[cap_string + "Electricity|Hydrogen|CHP|force retrofit"] = capacities_electricity.reindex(
+        [
+            "urban central H2 retrofit CHP",  
+        ]
+    ).sum()
+
+    var[cap_string + "Electricity|Hydrogen|CHP|new built"] = capacities_electricity.reindex(
+        [
+            "urban central H2 CHP",  
+        ]
+    ).sum()
+
+    var[cap_string + "Electricity|Hydrogen|CHP|endogenously retrofitted"] = capacities_electricity.reindex(
+        [
+            "endogenously retrofitted urban central H2 CHP",  
+        ]
+    ).sum()
+
 
     var[cap_string + "Electricity|Hydrogen|OC"] = capacities_electricity.reindex(
         [
             "H2 OCGT",
             "H2 retrofit OCGT",
+            "endogenously retrofitted H2 OCGT"
         ]
     ).sum()
+ 
+    var[cap_string + "Electricity|Hydrogen|OC|force retrofit"] = capacities_electricity.reindex(
+        [
+            "H2 retrofit OCGT",  
+        ]
+    ).sum()
+
+    var[cap_string + "Electricity|Hydrogen|OC|new built"] = capacities_electricity.reindex(
+        [
+            "H2 OCGT",  
+        ]
+    ).sum()
+
+    var[cap_string + "Electricity|Hydrogen|OC|endogenously retrofitted"] = capacities_electricity.reindex(
+        [
+            "endogenously retrofitted H2 OCGT",  
+        ]
+    ).sum()
+
+
+
 
     var[cap_string + "Electricity|Hydrogen|FC"] = capacities_electricity.get(
         "H2 Fuel Cell", 0
@@ -1652,10 +1719,12 @@ def get_secondary_energy(n, region, _industry_demand):
             "H2 Fuel Cell",
             "H2 OCGT",
             "H2 CCGT",
-            "urban central H2 CHP",
-            "H2 retrofit OCGT",
+	        "urban central H2 retrofit CHP",
+	        "endogenously retrofitted urban central H2 CHP"
             "H2 retrofit CCGT",
-            "urban central H2 retrofit CHP",
+            "endogenously retrofitted H2 CCGT" 
+            "H2 retrofit OCGT",
+            "endogenously retrofitted H2 OCGT"
         ]
     ).sum()
     # ! Add H2 Turbines if they get implemented

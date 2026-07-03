@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20260619_ref_noH2_Force_upstream_ENDORETROFIT
+  prefix: 20260702_endoretroV2_upstream
   name:
   # - ExPol
   # - KN2045_Mix
@@ -13,7 +13,10 @@ run:
   # - KN2045_Mix_HighDecentralDiscount_GasCrisis
   # - KN2045_Mix_HDD_pseudo_foresight
   # - KN2045_Mix_H2plantsEU
-    - KN2045_Mix_no_H2_Force_Upstream
+  # - KN2045_Mix_no_H2_Force_Upstream
+    - KN2045_Mix_pure_endo_retrofit
+    - KN2045_H2_force_2040_no_endo
+    - KN2045_no_H2
   # - KN2045_Elek
   # - KN2045_H2
   # - KN2045_NFniedrig
@@ -654,6 +657,9 @@ plotting:
     retrofitted H2 CCGT: '#e0986c'
     urban central retrofitted H2 CHP: '#e0986c'
     OCGT H2 retrofitted: '#e0986c'
+    endogenously retrofitted urban central H2 CHP: '#e0986c'
+    endogenously retrofitted H2 OCGT: '#e0986c'
+    endogenously retrofitted H2 CCGT: '#e0986c'
   countries:
   - all
   - DE
@@ -672,12 +678,20 @@ electricity:
   powerplants_filter: (DateOut > 2025 or DateOut != DateOut) and not (Country == "DE" and Set == "CHP") and (DateIn < 2026 or DateIn != DateIn)
   custom_powerplants: true
   custom_file: resources/german_chp.csv
-  H2_plants:
-    enable: EU # allowed values: false, DE, EU
-    start: 2030 # should be < force
-    force: 2050
-    cost_factor: 0.15 # repurposing cost of OCGT gas to H2 in % investment cost in EUR/MW source: Christidis et al (2023) - H2-Ready-Gaskraftwerke, Table 3 https://reiner-lemoine-institut.de/wp-content/uploads/2023/11/RLI-Studie-H2-ready_DE.pdf
+  H2_plants_endogen:
+    enable: EU            # allowed values: false, DE, EU
+    endogenous: true      # allowed values: true, false 
+    start: 2030           # should be < force
+    force: 2055           # force year after last planning horizon leads to no retrofitting of H2 plants
+    cost_factor: 0.15     # repurposing cost of OCGT gas to H2 in % investment cost in EUR/MW source: Christidis et al (2023) - H2-Ready-Gaskraftwerke, Table 3 https://reiner-lemoine-institut.de/wp-content/uploads/2023/11/RLI-Studie-H2-ready_DE.pdf
     efficiency_loss: 0.05
+
+    #Alt - von Toni:
+    # H2_retrofit_plants:
+    # enable: True
+    # year: 2030
+    # retro_factor: 0.15 # repurposing cost of OCGT gas to H2 in % investment cost in EUR/MW source: Christidis et al (2023) - H2-Ready-Gaskraftwerke, Table 3 https://reiner-lemoine-institut.de/wp-content/uploads/2023/11/RLI-Studie-H2-ready_DE.pdf
+    # efficiency: 0.35 #expected efficiency drop of 10 %
 
 pypsa_eur:
   Bus:

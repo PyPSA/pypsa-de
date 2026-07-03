@@ -1202,25 +1202,44 @@ def add_heating_capacities_installed_before_baseyear(
                     and n.links.p_nom[index] < capacity_threshold
                 ],
             )
-def add_h2_retro(n, baseyear, params):
+def add_h2_retro(n, baseyear, params, costs):
     """
-    Function to add H2 retrofitting of existing plants.
+    Function to add ENDOGENOUS H2 retrofitting of existing gas plants.
     """
-    logger.info("Add H2 retrofitting.")
+    logger.info("Add ENDOGENOUS H2 retrofitting.")
     plant_types = [
-        ("OCGT", "retrofitted H2 OCGT"),
-        ("CCGT", "retrofitted H2 CCGT"),
-        ("urban central gas CHP", "urban central retrofitted H2 CHP"),
+        ("OCGT", "endogenously retrofitted H2 OCGT"),
+        ("CCGT", "endogenously retrofitted H2 CCGT"),
+        ("urban central gas CHP", "endogenously retrofitted urban central H2 CHP"),
     ]
-    start = params.retrofit_start
+    cost_carrier_map = {
+    "OCGT": "OCGT",
+    "CCGT": "CCGT",
+    "urban central gas CHP": "central gas CHP",
+}
+    start = params.retrofit_start_year
 
     for original_carrier, new_carrier in plant_types:
+        cost_carrier = cost_carrier_map[original_carrier]       
         # Query to filter the DataFrame
         plant_i = n.links.query(f"carrier == '{original_carrier}'")
         # Further filtering based on build_year excluding the current planning horizon
         plant_i = plant_i.loc[
             (plant_i.build_year >= start) & (plant_i.build_year != baseyear)
         ].index
+        # --- Sunk-cost fix ---
+        # Bestandsanlagen: annuisierten Investitionsanteil aus capital_cost
+        # entfernen, BEVOR p_nom_extendable gesetzt wird. Sonst könnte das
+        # Modell durch "Downsizing" der historischen Kapazität den bereits
+        # versunkenen Investitionsanteil einsparen (ökonomisch nicht korrekt).
+        fom_only = (
+            costs.at[cost_carrier, "FOM"] / 100
+            * costs.at[cost_carrier, "investment"]
+            * costs.at[cost_carrier, "efficiency"]
+        )
+        n.links.loc[plant_i, "capital_cost"] = fom_only
+        # ---------------------
+
         # Set plants to extendable for constraint in solve_network()
         n.links.loc[plant_i, "p_nom_extendable"] = True
 
@@ -1251,8 +1270,17 @@ def add_h2_retro(n, baseyear, params):
             index=lambda x: x.replace(original_carrier, new_carrier),
             inplace=True,
         )
-        df.loc[:, "capital_cost"] += params.retrofit_cost
-        df.loc[:, "efficiency"] = params.retrofit_efficiency
+        # H2-Anlage: volle (annuisierte) Kosten + cost_factor-Aufschlag,
+        # da dies eine ECHTE Neuinvestition ist (kein Sunk Cost)
+        # Hinweis: FOM-Neuberechnung nutzt costs-Tabelle des aktuellen Horizons,
+        # nicht das historische Baujahr der Anlage. Abweichung typischerweise <2%.
+        df.loc[:, "capital_cost"] = (
+            costs.at[cost_carrier, "capital_cost"]
+            * costs.at[cost_carrier, "efficiency"]
+            * (1 + params.cost_factor)
+        )
+
+        df.loc[:, "efficiency"] -= params.retrofit_efficiency_loss
         # Set p_nom_max to gas plant p_nom and existing capacity to zero
         df.loc[:, "p_nom"] = 0
         # Set CO2 emissions to 0: CHP plants have co2 emissions at bus3, gas plants at bus2
@@ -1352,12 +1380,13 @@ if __name__ == "__main__":
 
     if options.get("cluster_heat_buses", False):
         cluster_heat_buses(n)
-    if snakemake.params.H2_retrofit_plants:
-        # allow retrofitting of gas power plants to H2
+    if snakemake.params.retrofit_endogenous:
+        # allow endogenous retrofitting of gas power plants to H2
         add_h2_retro(
             n,
             baseyear,
             snakemake.params,
+            costs
         )
     n.meta = dict(snakemake.config, **dict(wildcards=dict(snakemake.wildcards)))
 

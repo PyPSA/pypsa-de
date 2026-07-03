@@ -199,8 +199,12 @@ rule modify_prenetwork:
         transmission_costs=config_provider("costs", "transmission"),
         must_run=config_provider("must_run"),
         clustering=config_provider("clustering", "temporal", "resolution_sector"),
-        H2_plants=config_provider("electricity", "H2_plants"),
-        onshore_nep_force=config_provider("onshore_nep_force"),
+        H2_plants_endogen=config_provider( "electricity", "H2_plants_endogen", "enable"),
+        retrofit_endogenous=config_provider( "electricity", "H2_plants_endogen", "endogenous"),
+        retrofit_start_year=config_provider("electricity", "H2_plants_endogen", "start"),
+        retrofit_force_year=config_provider("electricity", "H2_plants_endogen", "force"),
+        cost_factor_cost=config_provider("electricity", "H2_plants_endogen", "cost_factor"),
+        retrofit_efficiency_loss=config_provider("electricity", "H2_plants_endogen", "efficiency_loss"),          onshore_nep_force=config_provider("onshore_nep_force"),
         offshore_nep_force=config_provider("offshore_nep_force"),
         shipping_methanol_efficiency=config_provider(
             "sector", "shipping_methanol_efficiency"
