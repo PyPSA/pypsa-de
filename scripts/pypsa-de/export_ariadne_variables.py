@@ -686,7 +686,6 @@ def _get_capacities(n, region, cap_func, cap_string="Capacity|"):
     var[cap_string + "Electricity|Hydrogen|CC"] = capacities_electricity.reindex(
         [
             "H2 CCGT",
-            "urban central H2 CHP",
             "H2 retrofit CCGT",
             "urban central H2 retrofit CHP",
         ]
