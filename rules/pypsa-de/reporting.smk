@@ -51,7 +51,7 @@ rule export_ariadne_variables:
         exported_variables=RESULTS + "ariadne/exported_variables.xlsx",
         exported_variables_full=RESULTS + "ariadne/exported_variables_full.xlsx",
     resources:
-        mem_mb=16000,
+        mem_mb=32000,
     log:
         RESULTS + "logs/export_ariadne_variables.log",
     script:
