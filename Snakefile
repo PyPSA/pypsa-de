@@ -262,13 +262,11 @@ rule purge:
             "Delete all files in the folders above? [y/N] "
         )
         if do_purge == "y":
-
             # Remove the directories and recreate them with .gitkeep
             for dir_path in ["resources/", "results/"]:
                 rmtree(dir_path, ignore_errors=True)
                 Path(dir_path).mkdir(parents=True, exist_ok=True)
                 (Path(dir_path) / ".gitkeep").touch()
-
             rmtree("doc/_build", ignore_errors=True)
             print(
                 "Purging all generated resources, results and docs. Downloads are kept."
@@ -303,7 +301,7 @@ rule rulegraph:
         r"""
         # Generate DOT file using nested snakemake with the dumped final config
         echo "[Rule rulegraph] Using final config file: {input.config_file}"
-        snakemake --rulegraph --configfile {input.config_file} --quiet | sed -n "/digraph/,\$p" > {output.dot}
+        snakemake --rulegraph --configfile {input.config_file} --quiet | sed -n "/digraph/,\$p" >{output.dot}
 
         # Generate visualizations from the DOT file
         if [ -s {output.dot} ]; then
@@ -340,7 +338,7 @@ rule filegraph:
         r"""
         # Generate DOT file using nested snakemake with the dumped final config
         echo "[Rule filegraph] Using final config file: {input.config_file}"
-        snakemake --filegraph all --configfile {input.config_file} --quiet | sed -n "/digraph/,\$p" > {output.dot}
+        snakemake --filegraph all --configfile {input.config_file} --quiet | sed -n "/digraph/,\$p" >{output.dot}
 
         # Generate visualizations from the DOT file
         if [ -s {output.dot} ]; then
