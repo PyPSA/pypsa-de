@@ -1418,7 +1418,7 @@ def limit_cross_border_flows_ac(n, s_max_pu):
 def remove_electricity_grid(n):
     """
     Remove all transmission lines and links from PyPSA network.
-    
+
     Parameters
     ----------
     n : pypsa.Network
@@ -1426,11 +1426,10 @@ def remove_electricity_grid(n):
     """
     # Remove all AC lines
     n.mremove("Line", n.lines.index)
-    
-    # Remove all DC links
-    transmission_links = n.links[n.links.carrier.isin(['DC'])].index
-    n.mremove("Link", transmission_links)
 
+    # Remove all DC links
+    transmission_links = n.links[n.links.carrier.isin(["DC"])].index
+    n.mremove("Link", transmission_links)
 
 
 if __name__ == "__main__":
@@ -1528,7 +1527,7 @@ if __name__ == "__main__":
         limit_cross_border_flows_ac(
             n, snakemake.params.limit_cross_border_flows_ac[current_year]
         )
-    
+
     if snakemake.params.remove_electricity_grid:
         remove_electricity_grid(n)
 
