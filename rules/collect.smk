@@ -37,6 +37,8 @@ rule cluster_networks:
             **config["scenario"],
             run=config["run"]["name"],
         ),
+    message:
+        "Collecting clustered network files"
 
 
 rule prepare_elec_networks:
@@ -46,6 +48,8 @@ rule prepare_elec_networks:
             **config["scenario"],
             run=config["run"]["name"],
         ),
+    message:
+        "Collecting prepared electricity network files"
 
 
 rule prepare_sector_networks:
@@ -57,6 +61,8 @@ rule prepare_sector_networks:
             **config["scenario"],
             run=config["run"]["name"],
         ),
+    message:
+        "Collecting prepared sector-coupled network files"
 
 
 rule solve_elec_networks:
@@ -66,6 +72,8 @@ rule solve_elec_networks:
             **config["scenario"],
             run=config["run"]["name"],
         ),
+    message:
+        "Collecting solved electricity network files"
 
 
 rule solve_sector_networks:
@@ -76,6 +84,8 @@ rule solve_sector_networks:
             **config["scenario"],
             run=config["run"]["name"],
         ),
+    message:
+        "Collecting solved sector-coupled network files"
 
 
 rule solve_sector_networks_perfect:
@@ -86,6 +96,8 @@ rule solve_sector_networks_perfect:
             **config["scenario"],
             run=config["run"]["name"],
         ),
+    message:
+        "Collecting solved sector-coupled network files with perfect foresight"
 
 
 def balance_map_paths(kind, w):
@@ -108,6 +120,8 @@ rule plot_balance_maps:
     input:
         static=lambda w: balance_map_paths("static", w),
         interactive=lambda w: balance_map_paths("interactive", w),
+    message:
+        "Plotting energy balance maps"
 
 
 rule plot_balance_maps_static:
@@ -120,22 +134,12 @@ rule plot_balance_maps_interactive:
         lambda w: balance_map_paths("interactive", w),
 
 
-rule plot_statistics:
+rule plot_power_networks_clustered:
     input:
-        [
-            expand(
-                RESULTS
-                + "statistics/figures/comparison/country_{country}/.statistics_{carrier}_plots",
-                country=config["plotting"].get("countries", "all"),
-                carrier=config["plotting"].get("carriers", ["all"]),
-                run=config["run"]["name"],
-            ),
-            expand(
-                RESULTS
-                + "statistics/figures/single/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}/country_{country}/.statistics_{carrier}_plots",
-                **config["scenario"],
-                country=config["plotting"].get("countries", "all"),
-                carrier=config["plotting"].get("carriers", ["all"]),
-                run=config["run"]["name"],
-            ),
-        ],
+        expand(
+            resources("maps/power-network-s-{clusters}.pdf"),
+            **config["scenario"],
+            run=config["run"]["name"],
+        ),
+    message:
+        "Plotting clustered power network topology"

@@ -120,7 +120,13 @@ def get_mobility_data(
         for fuel in fuels:
             for subsector in subsectors:
                 key = f"Final Energy|Transportation|{subsector}|{fuel}"
-                mobility_data.loc[fuel] += df.get((key, "TWh/yr"), 0.0)
+                unit = "TWh/yr"
+                if unit not in df.index.get_level_values("unit").unique():
+                    unit = "PJ/yr"
+                increment = df.get((key, unit), 0.0)
+                if unit == "PJ/yr":
+                    increment /= 3.6  # convert PJ to TWh
+                mobility_data.loc[fuel] += increment
 
         mobility_data = mobility_data.mul(1e6)  # convert TWh to MWh
         mobility_data["million_EVs"] = (

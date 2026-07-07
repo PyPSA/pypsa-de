@@ -207,7 +207,7 @@ def add_wasserstoff_kernnetz(n, wkn, costs):
         #     costs.at["H2 (g) pipeline repurposed", "capital_cost"] * wkn_new.length.values,
         # )
 
-        # overnight_costs = np.where(
+        # onight_costs = np.where(
         #     wkn_new.retrofitted == False,
         #     costs.at["H2 (g) pipeline", "investment"] * wkn_new.length.values,
         #     costs.at["H2 (g) pipeline repurposed", "investment"]
@@ -222,7 +222,7 @@ def add_wasserstoff_kernnetz(n, wkn, costs):
             0.7 * costs.at["H2 (g) pipeline", "capital_cost"]
             + 0.3 * costs.at["H2 (g) pipeline repurposed", "capital_cost"]
         ) * wkn_new.length.values
-        overnight_costs = (
+        onight_costs = (
             0.7 * costs.at["H2 (g) pipeline", "investment"]
             + 0.3 * costs.at["H2 (g) pipeline repurposed", "investment"]
         ) * wkn_new.length.values
@@ -245,7 +245,7 @@ def add_wasserstoff_kernnetz(n, wkn, costs):
             build_year=wkn_new.build_year.values,
             length=wkn_new.length.values,
             capital_cost=capital_costs,
-            overnight_cost=overnight_costs,
+            onight_cost=onight_costs,
             carrier="H2 pipeline (Kernnetz)",
             lifetime=lifetime,
             retrofitted=wkn_new.retrofitted.values,
@@ -441,7 +441,7 @@ def unravel_carbonaceous_fuels(n):
         e_nom_extendable=EU_oil_store.e_nom_extendable,
         e_cyclic=EU_oil_store.e_cyclic,
         capital_cost=EU_oil_store.capital_cost,
-        overnight_cost=EU_oil_store.overnight_cost,
+        onight_cost=EU_oil_store.onight_cost,
         lifetime=costs.at["General liquid hydrocarbon storage (product)", "lifetime"],
     )
     # check if there are loads at the EU oil bus
@@ -511,7 +511,7 @@ def unravel_carbonaceous_fuels(n):
         e_nom_extendable=EU_meoh_store.e_nom_extendable,
         e_cyclic=EU_meoh_store.e_cyclic,
         capital_cost=EU_meoh_store.capital_cost,
-        overnight_cost=EU_meoh_store.overnight_cost,
+        onight_cost=EU_meoh_store.onight_cost,
         lifetime=costs.at["General liquid hydrocarbon storage (product)", "lifetime"],
     )
     # check for loads
@@ -547,7 +547,7 @@ def unravel_carbonaceous_fuels(n):
             bus2="co2 atmosphere",
             carrier="industry methanol",
             p_nom_extendable=True,
-            efficiency2=1 / snakemake.params.mwh_meoh_per_tco2,
+            efficiency2=n.links.loc["EU industry methanol", "efficiency2"],
         )
 
     # shipping load
@@ -610,7 +610,7 @@ def unravel_carbonaceous_fuels(n):
             bus2="co2 atmosphere",
             carrier="shipping methanol",
             p_nom_extendable=True,
-            efficiency2=1 / snakemake.params.mwh_meoh_per_tco2,
+            efficiency2=n.links.loc["EU shipping methanol", "efficiency2"],
         )
 
 
@@ -649,7 +649,7 @@ def unravel_gasbus(n, costs):
         e_nom_extendable=True,
         e_cyclic=True,
         capital_cost=costs.at["gas storage", "capital_cost"],
-        overnight_cost=costs.at["gas storage", "investment"],
+        onight_cost=costs.at["gas storage", "investment"],
         lifetime=costs.at["gas storage", "lifetime"],
     )
 
@@ -756,9 +756,7 @@ def transmission_costs_from_modified_cost_data(n, costs, transmission):
     n.lines["capital_cost"] = (
         n.lines["length"] * costs.at["HVAC overhead", "capital_cost"]
     )
-    n.lines["overnight_cost"] = (
-        n.lines["length"] * costs.at["HVAC overhead", "investment"]
-    )
+    n.lines["onight_cost"] = n.lines["length"] * costs.at["HVAC overhead", "investment"]
 
     if n.links.empty:
         return
@@ -786,7 +784,7 @@ def transmission_costs_from_modified_cost_data(n, costs, transmission):
         + costs.at["HVDC inverter pair", "capital_cost"]
     )
 
-    overnight_cost = (
+    onight_cost = (
         n.links.loc[dc_b, "length"]
         * (
             (1.0 - n.links.loc[dc_b, "underwater_fraction"])
@@ -797,7 +795,7 @@ def transmission_costs_from_modified_cost_data(n, costs, transmission):
         + costs.at["HVDC inverter pair", "investment"]
     )
     n.links.loc[dc_b, "capital_cost"] = capital_cost
-    n.links.loc[dc_b, "overnight_cost"] = overnight_cost
+    n.links.loc[dc_b, "onight_cost"] = onight_cost
 
 
 def must_run(n, params):
@@ -1032,20 +1030,27 @@ def modify_industry_demand(
         )
 
 
-def add_hydrogen_turbines(n):
+def add_hydrogen_turbines(n, H2_plants):
     """
     This adds links that instead of a gas turbine use a hydrogen turbine.
 
     It is assumed that the efficiency stays the same. This function is
     only applied to German nodes.
     """
-    logger.info("Adding hydrogen turbine technologies for Germany.")
 
+    scope = H2_plants.get("enable")
+    if scope not in ["DE", "EU"]:
+        msg = f"Invalid value in `H2_plants:enable` for adding hydrogen turbines: {scope}. Expected 'DE' or 'EU'."
+        logger.error(msg)
+        raise ValueError(msg)
+    logger.info(f"Adding hydrogen turbine technologies in {scope}.")
+    if scope == "EU":
+        scope = ""
     gas_carrier = ["OCGT", "CCGT"]
     for carrier in gas_carrier:
         gas_plants = n.links[
             (n.links.carrier == carrier)
-            & (n.links.index.str[:2] == "DE")
+            & (n.links.index.str.startswith(scope))
             & (n.links.p_nom_extendable)
         ].index
         if gas_plants.empty:
@@ -1062,7 +1067,7 @@ def add_hydrogen_turbines(n):
     # special handling of CHPs
     gas_plants = n.links[
         (n.links.carrier == "urban central gas CHP")
-        & (n.links.index.str[:2] == "DE")
+        & (n.links.index.str.startswith(scope))
         & (n.links.p_nom_extendable)
     ].index
     h2_plants = n.links.loc[gas_plants].copy()
@@ -1112,7 +1117,7 @@ def force_retrofit(n, params):
         h2_plants.efficiency -= params["efficiency_loss"]
         h2_plants.efficiency2 = 1  # default value
         h2_plants.capital_cost *= 1 + params["cost_factor"]
-        h2_plants.overnight_cost *= 1 + params["cost_factor"]
+        h2_plants.onight_cost *= 1 + params["cost_factor"]
         # add the new links
         n.add("Link", h2_plants.index, **h2_plants)
         n.links.drop(gas_plants, inplace=True)
@@ -1134,7 +1139,7 @@ def force_retrofit(n, params):
     h2_plants.efficiency -= params["efficiency_loss"]
     h2_plants.efficiency3 = 1  # default value
     h2_plants.capital_cost *= 1 + params["cost_factor"]
-    h2_plants.overnight_cost *= 1 + params["cost_factor"]
+    h2_plants.onight_cost *= 1 + params["cost_factor"]
     n.add("Link", h2_plants.index, **h2_plants)
     n.links.drop(gas_plants, inplace=True)
 
@@ -1182,6 +1187,7 @@ def force_connection_nep_offshore(n, current_year, costs):
         offshore.loc[offshore["Inbetriebnahmejahr"] > 2025, "Inbetriebnahmejahr"] += (
             int(snakemake.params.offshore_nep_force["delay_years"])
         )
+        offshore.loc[offshore["Inbetriebnahmejahr"] <= 2025, "Inbetriebnahmejahr"] += 1
         logger.info(
             f"Delaying NEP offshore connection points by {snakemake.params.offshore_nep_force['delay_years']} years."
         )
@@ -1227,9 +1233,18 @@ def force_connection_nep_offshore(n, current_year, costs):
         + costs.at["offwind-dc-station", "investment"]
     ) * dc_projects["Übertragungsleistung in MW"]
 
-    dc_connection_overnight_costs = (
+    dc_connection_onight_costs = (
         dc_connection_totals.groupby(dc_projects.name).sum().div(dc_power)
     )
+    # Instead of taking over capacities from add_existing, set everything to 0 and use only the NEP projects.
+    current_offwind = n.generators.index[
+        n.generators.carrier.str.contains("offwind")
+        & n.generators.index.str.startswith("DE")
+        & (n.generators.build_year == current_year)
+    ]
+
+    n.generators.loc[current_offwind, "p_nom_min"] = 0
+    n.generators.loc[current_offwind, "p_nom"] = 0
 
     if (current_year >= int(snakemake.params.offshore_nep_force["cutin_year"])) and (
         current_year <= int(snakemake.params.offshore_nep_force["cutout_year"])
@@ -1249,9 +1264,9 @@ def force_connection_nep_offshore(n, current_year, costs):
                 n.generators.at[node_off, "p_nom_min"] = 0
                 n.generators.at[node_off, "p_nom"] = 0
 
-            n.generators.at[node_off, "p_nom_min"] += dc_power.loc[node]
-            n.generators.at[node_off, "connection_overnight_cost"] = (
-                dc_connection_overnight_costs.loc[node]
+            n.generators.at[node_off, "p_nom_min"] = dc_power.loc[node]
+            n.generators.at[node_off, "connection_onight_cost"] = (
+                dc_connection_onight_costs.loc[node]
             )
             # Differing from add_existing_baseyear "p_nom" is not set,
             # because we want to fully account the capacity expansion in the exporter
@@ -1296,7 +1311,7 @@ def force_connection_nep_offshore(n, current_year, costs):
         + costs.at["offwind-ac-station", "investment"]
     ) * ac_projects["Übertragungsleistung in MW"]
 
-    ac_connection_overnight_costs = (
+    ac_connection_onight_costs = (
         ac_connection_totals.groupby(ac_projects.name).sum().div(ac_power)
     )
 
@@ -1316,9 +1331,9 @@ def force_connection_nep_offshore(n, current_year, costs):
                     f"Assuming all AC projects are connected at locations where other generators exists. That is not the case for {node_off}. Terminating"
                 )
 
-            n.generators.at[node_off, "p_nom_min"] += ac_power.loc[node]
-            n.generators.at[node_off, "connection_overnight_cost"] = (
-                ac_connection_overnight_costs.loc[node]
+            n.generators.at[node_off, "p_nom_min"] = ac_power.loc[node]
+            n.generators.at[node_off, "connection_onight_cost"] = (
+                ac_connection_onight_costs.loc[node]
             )
 
 
@@ -1477,7 +1492,7 @@ if __name__ == "__main__":
         if snakemake.params.H2_plants["start"] <= int(
             snakemake.wildcards.planning_horizons
         ):
-            add_hydrogen_turbines(n)
+            add_hydrogen_turbines(n, snakemake.params.H2_plants)
         if snakemake.params.H2_plants["force"] <= int(
             snakemake.wildcards.planning_horizons
         ):

@@ -74,6 +74,19 @@ KN2045_Mix:
 # dient als Referenzszenario in der Familie der Ariadne-Szenarien
 
 
+KN2045_Mix_LowDecentralDiscount:
+  costs:
+    custom_cost_fn: data/pypsa-de/custom_costs_nep_2023_low_decentral_discount.csv
+
+KN2045_Mix_HighDecentralDiscount:
+  costs:
+    custom_cost_fn: data/pypsa-de/custom_costs_nep_2023_high_decentral_discount.csv
+
+KN2045_Mix_H2plantsEU:
+  electricity:
+    H2_plants:
+      enable: EU
+
 KN2045_Elek:
 # Fokus auf dem Hochlauf von Technologien zur direkten Elektrifizierung der Sektoren
 # Strom als präferierter Energieträger in der Endenergie, andere Energieträger ergänzend, wo nötig (Wasserstoff, synthetische Kraftstoffe)

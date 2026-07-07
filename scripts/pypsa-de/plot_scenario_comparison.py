@@ -14,22 +14,21 @@ from scripts._helpers import (
 )
 
 
-def scenario_plot(df, var):
+def scenario_plot(df, var, output_dir):
     unit = df._get_label_or_level_values("Unit")[0]
     if var.startswith("Investment"):
         unit = "billion EUR2020/yr"
     df = df.droplevel("Unit")
     ax = df.T.plot(xlabel="years", ylabel=str(unit), title=str(var))
-    prefix = snakemake.config["run"]["prefix"]
     var = var.replace("|", "-").replace("\\", "-").replace(" ", "-").replace("/", "-")
-    ax.figure.savefig(f"results/{prefix}/ariadne_comparison/{var}", bbox_inches="tight")
+    ax.figure.savefig(f"{output_dir}/{var}.png", bbox_inches="tight", dpi=100)
     plt.close(ax.figure)
 
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
         snakemake = mock_snakemake(
-            "ariadne_all",
+            "plot_scenario_comparison",
             # simpl="",
             # clusters=22,
             # opts="",
@@ -53,8 +52,10 @@ if __name__ == "__main__":
     df = pd.concat(dfs, axis=0)
 
     prefix = snakemake.config["run"]["prefix"]
-    if not os.path.exists(f"results/{prefix}/ariadne_comparison/"):
-        os.mkdir(f"results/{prefix}/ariadne_comparison/")
+
+    output_dir = f"results/{prefix}/scenario_comparison/"
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
 
     for var in df._get_label_or_level_values("Variable"):
-        scenario_plot(df.xs(var, level="Variable"), var)
+        scenario_plot(df.xs(var, level="Variable"), var, output_dir)

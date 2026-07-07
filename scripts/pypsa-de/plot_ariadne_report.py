@@ -242,6 +242,7 @@ carriers_in_german = {
     "oil primary": "Primäröl",
     "solar rooftop": "Solar-Dach",
     "urban central heat vent": "Zentrale städtische Wärmeentlüftung",
+    "urban decentral heat vent": "Dezentrale städtische Wärmeentlüftung",
     "gas primary": "Primärgas",
     "solid biomass for industry": "Biomasse (Industrie)",
     "shipping oil": "Schiffsöl",
@@ -745,11 +746,6 @@ def plot_nodal_heat_balance(
     start_date = str(network.generators_t.p.index[0])[:4] + "-" + start_date
     end_date = str(network.generators_t.p.index[-1])[:4] + "-" + end_date
 
-    carriers = carriers
-    loads = loads
-    start_date = start_date
-    end_date = end_date
-    regions = regions
     period = network.generators_t.p.index[
         (network.generators_t.p.index >= start_date)
         & (network.generators_t.p.index <= end_date)
@@ -849,7 +845,6 @@ def plot_nodal_heat_balance(
         labels = [nice_names_dict.get(l, l) for l in labels]
 
     if german_carriers:
-        german_carriers
         labels = [carriers_in_german.get(l, l) for l in labels]
 
     # rescale the y-axis
@@ -1272,7 +1267,7 @@ def plot_backup_capacity(
 
     df_all = pd.DataFrame()
 
-    for year in np.arange(2020, 2050, 5):
+    for year in networks.keys():
         n = networks[year]
 
         electricity_cap = (
@@ -1293,7 +1288,7 @@ def plot_backup_capacity(
 
         df_all = pd.concat([df_all, df], axis=1)
 
-    df_all.columns = np.arange(2020, 2050, 5)
+    df_all.columns = list(networks.keys())
 
     tech_colors["coal"] = "black"
 
@@ -1392,7 +1387,7 @@ def plot_backup_generation(
 
     df_all = pd.DataFrame()
 
-    for year in np.arange(2020, 2050, 5):
+    for year in networks.keys():
         n = networks[year]
 
         electricity_supply_de = (
@@ -1412,7 +1407,7 @@ def plot_backup_generation(
         df = df[df > 0.01]
         df_all = pd.concat([df_all, df], axis=1)
 
-    df_all.columns = np.arange(2020, 2050, 5)
+    df_all.columns = list(networks.keys())
 
     # Create figure
     plt.figure(figsize=(18, 5))
@@ -1678,7 +1673,9 @@ def group_pipes(df, drop_direction=False):
     # there are pipes for each investment period rename to AC buses name for plotting
     df["index_orig"] = df.index
     df.index = df.apply(
-        lambda x: f"H2 pipeline {x.bus0.replace(' H2', '')} -> {x.bus1.replace(' H2', '')}",
+        lambda x: (
+            f"H2 pipeline {x.bus0.replace(' H2', '')} -> {x.bus1.replace(' H2', '')}"
+        ),
         axis=1,
     )
     return df.groupby(level=0).agg(
@@ -2880,6 +2877,9 @@ if __name__ == "__main__":
     tech_colors["H2 retrofit OCGT"] = "#9abbff"
     tech_colors["urban central H2 CHP"] = "#c9d7f0"
     tech_colors["urban central H2 retrofit CHP"] = "#edd1c2"
+    tech_colors["urban central heat vent"] = "#fdb462"
+    tech_colors["urban decentral heat vent"] = "#fdb462"
+    tech_colors["rural heat vent"] = "#fdb462"
 
     ### plotting
     for year in planning_horizons:
@@ -3147,7 +3147,7 @@ if __name__ == "__main__":
         for s in scenarios:
             plot_elec_map_de(
                 networks[planning_horizons.index(year)],
-                networks[planning_horizons.index(2020)],
+                networks[0],
                 tech_colors,
                 regions_de,
                 savepath=f"{snakemake.output.elec_transmission}/elec-transmission-DE-{s}-{year}.pdf",
@@ -3156,7 +3156,7 @@ if __name__ == "__main__":
         s = "total-expansion"
         plot_elec_map_de(
             networks[planning_horizons.index(year)],
-            networks[planning_horizons.index(2020)],
+            networks[0],
             tech_colors,
             regions_de,
             savepath=f"{snakemake.output.elec_transmission}/elec-transmission-DE-{s}-{year}_eng.png",

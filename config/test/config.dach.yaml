@@ -44,7 +44,7 @@ renewable:
     cutout: dach-03-2013-sarah3-era5
 
 clustering:
-  focus_weights: []
+  focus_weights: false
   temporal:
     resolution_sector: 3H
 
