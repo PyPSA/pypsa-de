@@ -841,11 +841,15 @@ def additional_functionality(n, snapshots, snakemake):
         n, investment_year, constraints["limits_capacity_max"], "maximum"
     )
 
-    add_power_limits(n, investment_year, constraints["limits_power_max"])
-
-    if snakemake.wildcards.clusters != "1":
+    region_buses = n.buses.index[n.buses.carrier == "AC"] # check for single region/single node model
+    region_codes = region_buses.str.extract(r"^([A-Z]{2})")[0].dropna().unique()
+    if len(region_codes) == 1:
+        logger.info(
+            "Skipping powerand import limit constraints because the network has only one node."
+        )
+    else:
+        add_power_limits(n, investment_year, constraints["limits_power_max"])
         h2_import_limits(n, investment_year, constraints["limits_volume_max"])
-
         electricity_import_limits(n, investment_year, constraints["limits_volume_max"])
 
     if investment_year >= 2025:

@@ -73,8 +73,8 @@ def domestic_length_factor(n, carriers, region="DE"):
                 # Filter based on carrier and region, excluding reversed links
                 all_i = c.static[
                     (c.static["carrier"] == carrier)
-                    & (c.static.bus0 + c.static.bus1).str.contains(region)
-                    & ~c.static.index.str.contains("reversed")
+                    & (c.static.bus0 + c.static.bus1).str.contains(region, na=False)
+                    & ~c.static.index.map(lambda x: bool(re.search(r"reversed", str(x))))
                 ].index
 
                 # Separate domestic and cross-border links
@@ -352,8 +352,13 @@ def get_capacities(n, region):
 def add_system_cost_rows(n):
     def fill_if_lifetime_inf(n, carrier, lifetime, component="links"):
         df = getattr(n, component)
-        if df.loc[df.carrier == carrier, "lifetime"].sum() == np.inf:
-            df.loc[df.carrier == carrier, "lifetime"] = lifetime
+        sel = df.carrier == carrier
+        if not sel.any():
+            logger.warning(f"No components with carrier '{carrier}' in {component}; skipping lifetime fill")
+            return
+        lifetimes = df.loc[sel, "lifetime"]
+        if lifetimes.eq(np.inf).all():
+            df.loc[sel, "lifetime"] = lifetime
         else:
             logger.error(f"Mean lifetime of {carrier} is not infinite!")
             raise ValueError()
@@ -390,26 +395,26 @@ def add_system_cost_rows(n):
         df = getattr(n, component)
         if df.empty:
             continue
-        decentral_idx = df.index[df.index.str.contains("decentral|rural|rooftop")]
-        not_decentral_idx = df.index[~df.index.str.contains("decentral|rural|rooftop")]
+        decentral_idx = df.index[df.index.map(lambda x: bool(re.search(r"decentral|rural|rooftop", str(x))))]
+        not_decentral_idx = df.index[~df.index.map(lambda x: bool(re.search(r"decentral|rural|rooftop", str(x))))]
 
         for idx, discount_rate in zip([decentral_idx, not_decentral_idx], [0.04, 0.07]):
             df.loc[idx, "annuity"] = (
                 calculate_annuity(df.loc[idx, "lifetime"], discount_rate)
-                * df.loc[idx, "onight_cost"]
+                * df.loc[idx, "overnight_cost"]
             )
 
         df["FOM"] = df["capital_cost"] - df["annuity"]
         # Special case offwind, because it includes the connection
         if component == "generators":
             df.loc[
-                df.carrier.str.contains("offwind"),
+                df.carrier.str.contains("offwind", na=False),
                 "FOM",
             ] = (
                 0.023185
                 * df.loc[
-                    df.carrier.str.contains("offwind"),
-                    "onight_cost",
+                    df.carrier.str.contains("offwind", na=False),
+                    "overnight_cost",
                 ]
             )
         if df["FOM"].min() < 0:
@@ -432,7 +437,7 @@ def get_system_cost(n, region):
         n,
         region,
         lambda **kwargs: n.statistics.expanded_capex(
-            **kwargs, cost_attribute="onight_cost"
+            **kwargs, cost_attribute="overnight_cost"
         ),
         cap_string="Investment|Energy Supply|",
     )
@@ -467,10 +472,7 @@ def get_system_cost(n, region):
         data=calculate_annuity(40, 0.07)
         * 5
         * baseyear_grid_invest.values,  # yearly invest for 5 years
-        index=baseyear_grid_invest.index.str.replace(
-            "Investment|Energy Supply|",
-            "System Cost|CAPEX|",
-        ),
+        index=baseyear_grid_invest.index.map(lambda x: re.sub(r"Investment\|Energy Supply\|", "System Cost|CAPEX|", str(x))),
     )
 
     # For FOM all existing capacities are considered
@@ -498,18 +500,12 @@ def get_system_cost(n, region):
     # Assuming VOM=0, FOM=2% of Investment
     grid_opex = pd.Series(
         data=0.02 * 5 * all_grid_invest.values,  # yearly invest for 5 years
-        index=all_grid_invest.index.str.replace(
-            "Investment|Energy Supply|",
-            "System Cost|OPEX|",
-        ),
+        index=all_grid_invest.index.map(lambda x: re.sub(r"Investment\|Energy Supply\|", "System Cost|OPEX|", str(x))),
     )
 
     grid_fom = pd.Series(
         data=grid_opex.values,
-        index=grid_opex.index.str.replace(
-            "System Cost|OPEX|",
-            "System Cost|FOM|",
-        ),
+        index=grid_opex.index.map(lambda x: re.sub(r"System Cost\|OPEX\|", "System Cost|FOM|", str(x))),
     )
 
     for var, grid_var, var_name in zip(
@@ -526,12 +522,6 @@ def get_system_cost(n, region):
 
     return pd.concat(
         [invest, grid_invest, capex, fom, grid_capex, opex, grid_opex, grid_fom]
-    )
-
-
-def get_installed_capacities(n, region):
-    return _get_capacities(
-        n, region, n.statistics.installed_capacity, cap_string="Installed Capacity|"
     )
 
 
@@ -981,11 +971,11 @@ def _get_capacities(n, region, cap_func, cap_string="Capacity|"):
     ).sum()
 
     var[cap_string + "Heat|Storage Converter|Tanks"] = capacities_central_heat[
-        capacities_central_heat.index.str.contains("water tanks discharger")
+        capacities_central_heat.index.map(lambda x: bool(re.search(r"water tanks discharger", str(x))))
     ].sum()
 
     var[cap_string + "Heat|Storage Converter|Pits"] = capacities_central_heat[
-        capacities_central_heat.index.str.contains("water pits discharger")
+        capacities_central_heat.index.map(lambda x: bool(re.search(r"water pits discharger", str(x))))
     ].sum()
 
     var[cap_string + "Heat|Storage Converter"] = (
@@ -993,11 +983,11 @@ def _get_capacities(n, region, cap_func, cap_string="Capacity|"):
         + var[cap_string + "Heat|Storage Converter|Pits"]
     )
     var[cap_string + "Heat|Storage Reservoir|Tanks"] = storage_capacities[
-        storage_capacities.index.str.contains("urban central water tanks")
+        storage_capacities.index.map(lambda x: bool(re.search(r"urban central water tanks", str(x))))
     ].sum()
 
     var[cap_string + "Heat|Storage Reservoir|Pits"] = storage_capacities[
-        storage_capacities.index.str.contains("urban central water pits")
+        storage_capacities.index.map(lambda x: bool(re.search(r"urban central water pits", str(x))))
     ].sum()
     var[cap_string + "Heat|Storage Reservoir"] = (
         var[cap_string + "Heat|Storage Reservoir|Tanks"]
@@ -1071,11 +1061,11 @@ def _get_capacities(n, region, cap_func, cap_string="Capacity|"):
     ).sum()
 
     var[cap_string + "Decentral Heat|Storage Converter"] = capacities_decentral_heat[
-        capacities_decentral_heat.index.str.contains("water tanks discharger")
+        capacities_decentral_heat.index.map(lambda x: bool(re.search(r"water tanks discharger", str(x))))
     ].sum()
 
     var[cap_string + "Decentral Heat|Storage Reservoir"] = storage_capacities[
-        storage_capacities.index.str.contains("(?:decentral|rural) water tanks")
+        storage_capacities.index.map(lambda x: bool(re.search(r"(?:decentral|rural) water tanks", str(x))))
     ].sum()
 
     capacities_h2 = (
@@ -1437,11 +1427,11 @@ def get_primary_energy(n, region):
     )
 
     var["Primary Energy|Biomass|w/ CCS"] = biomass_usage[
-        biomass_usage.index.str.contains("CC")
+        biomass_usage.index.map(lambda x: bool(re.search(r"CC", str(x))))
     ].sum()
 
     var["Primary Energy|Biomass|w/o CCS"] = biomass_usage[
-        ~biomass_usage.index.str.contains("CC")
+        ~biomass_usage.index.map(lambda x: bool(re.search(r"CC", str(x))))
     ].sum()
 
     var["Primary Energy|Biomass|Electricity"] = (
@@ -1759,8 +1749,8 @@ def get_secondary_energy(n, region, _industry_demand):
 
     assert isclose(
         electricity_supply[
-            ~electricity_supply.index.str.contains(
-                "PHS|battery discharger|home battery discharger|V2G"
+            ~electricity_supply.index.map(
+                lambda x: bool(re.search(r"PHS|battery discharger|home battery discharger|V2G", str(x)))
             )
         ].sum(),
         var["Secondary Energy|Electricity"],
@@ -1835,7 +1825,7 @@ def get_secondary_energy(n, region, _industry_demand):
     )
     assert isclose(
         var["Secondary Energy|Heat"],
-        heat_supply[~heat_supply.index.str.contains("discharger")].sum(),
+        heat_supply[~heat_supply.index.map(lambda x: bool(re.search(r"discharger", str(x))))].sum(),
     )
 
     hydrogen_production = (
@@ -1867,7 +1857,7 @@ def get_secondary_energy(n, region, _industry_demand):
     assert isclose(
         var["Secondary Energy|Hydrogen"],
         hydrogen_production[
-            ~hydrogen_production.index.str.startswith("H2 pipeline")
+            ~hydrogen_production.index.map(lambda x: str(x).startswith("H2 pipeline"))
         ].sum(),
         rtol=0.01,
         atol=1e-3,
@@ -2305,9 +2295,8 @@ def get_final_energy(
 
     rescom_electricity = low_voltage_electricity[
         # carrier does not contain one of the following substrings
-        ~low_voltage_electricity.index.str.contains(
-            "urban central|industry|agriculture|charger|distribution"
-            # Excluding chargers (battery and EV)
+        ~low_voltage_electricity.index.map(
+            lambda x: bool(re.search(r"urban central|industry|agriculture|charger|distribution", str(x)))
         )
     ]
     var["Final Energy|Residential and Commercial|Electricity|Heat Pumps"] = (
@@ -3004,7 +2993,7 @@ def get_emissions(n, region, _energy_totals, _industry_demand):
 
     # E and Biofuels with CC
     var["Carbon Sequestration|Other"] = co2_storage.mul(ccs_fraction)[
-        ~co2_storage.index.str.contains("bio|process")
+        ~co2_storage.index.map(lambda x: bool(re.search(r"bio|process", str(x))))
     ].sum() + co2_storage.mul(ccs_fraction).get("process emissions CC", 0) * (
         1 - pe_fossil_fraction
     )
@@ -3471,7 +3460,7 @@ def costs_gen_links(n, region, carrier, gen_bus="p1"):
         tuple: A tuple containing the costs per unit of generetad energy and the total generation of the specified generator bus.
     """
 
-    links = n.links[(n.links.carrier == carrier) & (n.links.index.str.contains(region))]
+    links = n.links[(n.links.carrier == carrier) & (n.links.index.map(lambda x: region in str(x)))]
     gen = abs(
         n.links_t[gen_bus][links.index].multiply(
             n.snapshot_weightings.generators, axis="index"
@@ -4152,11 +4141,11 @@ def get_grid_investments(
         )
         common_index = offwind.index.intersection(offwind2020.index)
         offwind_capacity.loc[common_index] -= offwind2020.loc[common_index]
-    offwind_connection_onight_cost = (
-        offwind_capacity * offwind.connection_onight_cost
+    offwind_connection_overnight_cost = (
+        offwind_capacity * offwind.connection_overnight_cost
     ) * 1e-9
-    offwind_connection_ac = offwind_connection_onight_cost.filter(like="ac")
-    offwind_connection_dc = offwind_connection_onight_cost.filter(regex="dc|float")
+    offwind_connection_ac = offwind_connection_overnight_cost.filter(like="ac")
+    offwind_connection_dc = offwind_connection_overnight_cost.filter(regex="dc|float")
 
     var[var_name + "AC|Offshore"] = offwind_connection_ac.sum() / 5
     var[var_name + "AC|NEP|Offshore"] = (
@@ -4186,13 +4175,13 @@ def get_grid_investments(
         # Subtracting 2020 capacity
         dc_capacity -= networks[0].links.loc[dc_links.index].p_nom_min
 
-    dc_investments = dc_capacity * dc_links.onight_cost * 1e-9
+    dc_investments = dc_capacity * dc_links.overnight_cost * 1e-9
     # International dc_projects are only accounted with half the costs
     dc_investments[
         ~(dc_links.bus0.str.contains(region) & dc_links.bus1.str.contains(region))
     ] *= 0.5
 
-    ac_lines = n.lines[(n.lines.bus0 + n.lines.bus1).str.contains(region)]
+    ac_lines = n.lines[(n.lines.bus0 + n.lines.bus1).str.contains(region, na=False)]
     nep_ac = ac_lines.query(
         "(build_year > 2025) and (@current_year - 5 < build_year <= @current_year)"
     ).index
@@ -4205,10 +4194,10 @@ def get_grid_investments(
         # Subtracting 2020 capacity
         ac_capacity -= networks[0].lines.loc[ac_lines.index].s_nom_min
 
-    ac_investments = ac_capacity * ac_lines.onight_cost * 1e-9
+    ac_investments = ac_capacity * ac_lines.overnight_cost * 1e-9
     # International ac_projects are only accounted with half the costs
     ac_investments[
-        ~(ac_lines.bus0.str.contains(region) & ac_lines.bus1.str.contains(region))
+        ~(ac_lines.bus0.str.contains(region, na=False) & ac_lines.bus1.str.contains(region, na=False))
     ] *= 0.5
 
     # Blindleistungskompensation
@@ -4268,21 +4257,29 @@ def get_grid_investments(
         & ~n.links.reversed
     ]
 
-    year = distribution_grid.build_year.max()
-    year_pre = (year - 5) if year > 2020 else 2020
+    dg_capacity = 0.0
+    distribution_investment = 0.0
+    if not distribution_grid.empty:
+        year = distribution_grid.build_year.max()
+        year_pre = (year - 5) if year > 2020 else 2020
 
-    dg_capacity = distribution_grid.p_nom_opt.sum()
-    if scope == "expanded":
-        dg_capacity -= distribution_grid[
-            distribution_grid.build_year <= year_pre
-        ].p_nom_opt.sum()
-    elif scope == "baseyear":
-        dg_capacity -= distribution_grid[
-            distribution_grid.build_year <= 2020
-        ].p_nom_opt.sum()
+        dg_capacity = distribution_grid.p_nom_opt.sum()
+        if scope == "expanded":
+            dg_capacity -= distribution_grid[
+                distribution_grid.build_year <= year_pre
+            ].p_nom_opt.sum()
+        elif scope == "baseyear":
+            dg_capacity -= distribution_grid[
+                distribution_grid.build_year <= 2020
+            ].p_nom_opt.sum()
 
-    dg_investment = dg_capacity * distribution_grid.onight_cost.unique().item() * 1e-9
-    var["Investment|Energy Supply|Electricity|Distribution"] = dg_investment / 5
+        overnight_costs = distribution_grid.overnight_cost.unique()
+        overnight_cost = overnight_costs[0] if len(overnight_costs) else 0.0
+        distribution_investment = dg_capacity * overnight_cost * 1e-9
+
+    var["Investment|Energy Supply|Electricity|Distribution"] = (
+        distribution_investment / 5
+    )
 
     var["Investment|Energy Supply|Electricity|Transmission and Distribution"] = (
         var["Investment|Energy Supply|Electricity|Distribution"]
@@ -4294,19 +4291,24 @@ def get_grid_investments(
         & ~n.links.reversed
         & (n.links.bus0 + n.links.bus1).str.contains(region)
     ]
-    year = h2_links.build_year.max()
-
-    if scope == "expanded":
-        new_h2_links = h2_links[
-            ((year - 5) < h2_links.build_year) & (h2_links.build_year <= year)
-        ]
-    else:  # scope is all or baseyear
+    if h2_links.empty:
+        year = 0
         new_h2_links = h2_links.copy()
+    else:
+        year = h2_links.build_year.max()
+        if scope == "expanded":
+            new_h2_links = h2_links[
+                ((year - 5) < h2_links.build_year) & (h2_links.build_year <= year)
+            ]
+        else:  # scope is all or baseyear
+            new_h2_links = h2_links.copy()
 
     h2_expansion = new_h2_links.p_nom_opt
-    h2_investments = h2_expansion * new_h2_links.onight_cost * 1e-9
+    h2_investments = h2_expansion * new_h2_links.overnight_cost * 1e-9
     # International h2_projects are only accounted with domestic_length_factor * costs
-    if len(h2_links.carrier.unique()) == 1:
+    if h2_links.empty:
+        dlf = 1.0
+    elif len(h2_links.carrier.unique()) == 1:
         dlf = domestic_length_factor(n, h2_links.carrier.unique().tolist(), region)
     else:
         dlf = np.array(
@@ -4329,11 +4331,11 @@ def get_grid_investments(
     ] = h2_investments.sum() / 5
 
     new_h2_links_kernnetz_i = new_h2_links[
-        (new_h2_links.index.str.contains("kernnetz"))
+        new_h2_links.index.map(lambda x: bool(re.search(r"kernnetz", str(x))))
     ].index
 
     new_h2_links_endogen_i = new_h2_links[
-        ~(new_h2_links.index.str.contains("kernnetz"))
+        ~new_h2_links.index.map(lambda x: bool(re.search(r"kernnetz", str(x))))
     ].index
 
     var["Investment|Energy Supply|Hydrogen|Transmission and Distribution|Endogen"] = (
@@ -4354,11 +4356,11 @@ def get_grid_investments(
     if "retrofitted" in new_h2_links.columns:
         new_h2_links_retrofitted_i = new_h2_links[
             (new_h2_links.retrofitted == 1.0)
-            | (new_h2_links.index.str.contains("retrofitted"))
+            | new_h2_links.index.map(lambda x: bool(re.search(r"retrofitted", str(x))))
         ].index
     else:
         new_h2_links_retrofitted_i = new_h2_links[
-            (new_h2_links.index.str.contains("retrofitted"))
+            new_h2_links.index.map(lambda x: bool(re.search(r"retrofitted", str(x))))
         ].index
 
     new_h2_links_newbuild_i = new_h2_links.index.difference(new_h2_links_retrofitted_i)
@@ -4638,12 +4640,12 @@ def get_economy(n, region):
         to_rename_links = n.links[
             (n.links.bus0.str.contains(region))
             & (n.links.bus1.str.contains(region))
-            & ~(n.links.index.str.contains(region))
+            & ~n.links.index.map(lambda x: region in str(x))
         ].index
         to_rename_lines = n.lines[
             (n.lines.bus0.str.contains(region))
             & (n.lines.bus1.str.contains(region))
-            & ~(n.lines.index.str.contains(region))
+            & ~n.lines.index.map(lambda x: region in str(x))
         ].index
         tsc.rename(
             index={index: index + " " + region for index in to_rename_links},
@@ -4704,7 +4706,7 @@ def get_economy(n, region):
 
     rev = n.statistics.revenue(groupby=["bus"]).loc["Load"]
     var["Total Energy System Cost|Load Revenue"] = (
-        rev[rev.index.str.startswith(region)].sum() / 1e9
+        rev[rev.index.map(lambda x: str(x).startswith(region))].sum() / 1e9
     )
 
     return var
@@ -5049,18 +5051,18 @@ def get_grid_capacity(n, region, year):
 
     dc_links = n.links[
         (n.links.carrier == "DC")
-        & (n.links.bus0 + n.links.bus1).str.contains(region)
+        & (n.links.bus0 + n.links.bus1).str.contains(region, na=False)
         & ~n.links.reversed
     ]
-    ac_lines = n.lines[(n.lines.bus0 + n.lines.bus1).str.contains(region)]
+    ac_lines = n.lines[(n.lines.bus0 + n.lines.bus1).str.contains(region, na=False)]
 
     # Count length of internationl links only half
     dc_links.loc[
-        ~(dc_links.bus0.str.contains(region) & dc_links.bus1.str.contains(region)),
+        ~(dc_links.bus0.str.contains(region, na=False) & dc_links.bus1.str.contains(region, na=False)),
         "length",
     ] *= 0.5
     ac_lines.loc[
-        ~(ac_lines.bus0.str.contains(region) & ac_lines.bus1.str.contains(region)),
+        ~(ac_lines.bus0.str.contains(region, na=False) & ac_lines.bus1.str.contains(region, na=False)),
         "length",
     ] *= 0.5
 
@@ -5161,7 +5163,7 @@ def get_grid_capacity(n, region, year):
     distr_grid = n.links[
         (n.links.carrier == "electricity distribution grid")
         & (n.links.bus0.str[:2] == region)
-        & ~(n.links.index.str.contains("reversed"))
+        & ~n.links.index.map(lambda x: bool(re.search(r"reversed", str(x))))
     ]
 
     var["Capacity|Electricity|Distribution"] = distr_grid.p_nom_opt.sum() * MW2GW
@@ -5173,9 +5175,9 @@ def get_grid_capacity(n, region, year):
     # TODO: add missing variables and make nice plot
 
     h2_links = n.links[
-        n.links.carrier.str.contains("H2 pipeline")
+        n.links.carrier.str.contains("H2 pipeline", na=False)
         & ~n.links.reversed
-        & (n.links.bus0 + n.links.bus1).str.contains(region)
+        & (n.links.bus0 + n.links.bus1).str.contains(region, na=False)
     ]
 
     # Count length of internationl links according to domestic length factor
@@ -5190,12 +5192,12 @@ def get_grid_capacity(n, region, year):
             )
         ).mean()
     h2_links.loc[
-        ~(h2_links.bus0.str.contains(region) & h2_links.bus1.str.contains(region)),
+        ~(h2_links.bus0.str.contains(region, na=False) & h2_links.bus1.str.contains(region, na=False)),
         "length",
     ] *= dlf
 
     # Kernnetz
-    h2_links_kern = h2_links[h2_links.index.str.contains("kernnetz")]
+    h2_links_kern = h2_links[h2_links.index.map(lambda x: bool(re.search(r"kernnetz", str(x))))]
 
     # Endogeneous
     endo_carriers = ["H2 pipeline", "H2 pipeline retrofitted"]
@@ -5227,7 +5229,7 @@ def get_grid_capacity(n, region, year):
     new_h2_links = h2_links[
         ((year - 5) < h2_links.build_year) & (h2_links.build_year <= year)
     ]
-    new_h2_links_kern = new_h2_links[new_h2_links.index.str.contains("kernnetz")]
+    new_h2_links_kern = new_h2_links[new_h2_links.index.map(lambda x: bool(re.search(r"kernnetz", str(x))))]
     new_h2_links_endo = new_h2_links[new_h2_links.carrier.isin(endo_carriers)]
 
     var["Capacity Additions|Hydrogen|Transmission"] = (
@@ -5262,7 +5264,7 @@ def hack_DC_projects(n, p_nom_start, p_nom_planned, model_year, snakemake, costs
 
     logger.info("Assuming all indices of DC projects start with 'DC' or 'TYNDP'")
     tprojs = n.links.loc[
-        (n.links.index.str.startswith("DC") | n.links.index.str.startswith("TYNDP"))
+        n.links.index.map(lambda x: str(x).startswith("DC") or str(x).startswith("TYNDP"))
         & ~n.links.reversed
     ].index
 
@@ -5304,7 +5306,7 @@ def hack_DC_projects(n, p_nom_start, p_nom_planned, model_year, snakemake, costs
             snakemake.params.NEP_transmission == "overhead"
         ):
             logger.warning("Switching DC projects to NEP23 and underground costs.")
-            n.links.loc[current_projects, "onight_cost"] = (
+            n.links.loc[current_projects, "overnight_cost"] = (
                 n.links.loc[current_projects, "length"]
                 * (
                     (1.0 - n.links.loc[current_projects, "underwater_fraction"])
@@ -5352,7 +5354,7 @@ def hack_AC_projects(n, s_nom_start, model_year, snakemake):
 
     if snakemake.params.NEP_year == 2021:
         logger.warning("Switching AC projects to NEP23 costs post-optimization")
-        n.lines.loc[current_projects, "onight_cost"] *= 772 / 472
+        n.lines.loc[current_projects, "overnight_cost"] *= 772 / 472
 
     # Even though the lines are available to the model from the start,
     # we pretend that the lines were expanded in the current year
@@ -5388,12 +5390,12 @@ def process_postnetworks(n, n_start, model_year, snakemake, costs):
         0.7 * costs.at["H2 (g) pipeline", "capital_cost"]
         + 0.3 * costs.at["H2 (g) pipeline repurposed", "capital_cost"]
     ) * n.links.loc[h2_links_kern, "length"]
-    onight_costs = (
+    overnight_costs = (
         0.7 * costs.at["H2 (g) pipeline", "investment"]
         + 0.3 * costs.at["H2 (g) pipeline repurposed", "investment"]
     ) * n.links.loc[h2_links_kern, "length"]
     n.links.loc[h2_links_kern, "capital_cost"] = capital_costs
-    n.links.loc[h2_links_kern, "onight_cost"] = onight_costs
+    n.links.loc[h2_links_kern, "overnight_cost"] = overnight_costs
 
     logger.info("Post-Discretizing DC links")
 
@@ -5659,7 +5661,7 @@ if __name__ == "__main__":
 
     if "debug" == "debug":  # For debugging
         var = pd.Series()
-        idx = 1
+        idx = len(networks) - 1
         n = networks[idx]
         c = costs[idx]
         _industry_demand = industry_demands[idx]

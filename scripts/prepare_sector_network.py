@@ -412,15 +412,20 @@ def create_network_topology(
     lk_attrs = ["bus0", "bus1", "length", "underwater_fraction"]
     lk_attrs = n.links.columns.intersection(lk_attrs)
 
+    underwater_fraction = n.links.get(
+        "underwater_fraction",
+        pd.Series(0.0, index=n.links.index),
+    )
+
     candidates = pd.concat(
         [
             n.lines[ln_attrs],
             n.links.loc[
-                (n.links.carrier.isin(carriers)) & (n.links.underwater_fraction > 0.1),
+                (n.links.carrier.isin(carriers)) & (underwater_fraction > 0.1),
                 lk_attrs,
             ],
         ]
-    ).fillna(0)
+    ).fillna(0) 
 
     # base network topology purely on location not carrier
     candidates["bus0"] = candidates.bus0.map(n.buses.location)
@@ -3456,6 +3461,7 @@ def add_heat(
         for heat_source in params.heat_pump_sources[heat_system.system_type.value]:
             costs_name_heat_pump = heat_system.heat_pump_costs_name(heat_source)
 
+
             cop_heat_pump = (
                 cop.sel(
                     heat_system=heat_system.system_type.value,
@@ -3465,8 +3471,20 @@ def add_heat(
                 .to_pandas()
                 .reindex(index=n.snapshots)
                 if options["time_dep_hp_cop"]
-                else costs.loc[[costs_name_heat_pump], ["efficiency"]]
+                else costs.at[costs_name_heat_pump, "efficiency"]
             )
+
+            link_names = nodes + f" {heat_system} {heat_source} heat pump"
+
+            if isinstance(cop_heat_pump, pd.DataFrame):
+                cop_heat_pump = cop_heat_pump.reindex(index=n.snapshots)
+                cop_heat_pump = cop_heat_pump.loc[:, nodes]
+                cop_heat_pump.columns = link_names
+                if len(nodes) == 1:
+                    link_names = link_names[0]
+
+            elif isinstance(cop_heat_pump, pd.Series) and cop_heat_pump.index.equals(pd.Index(n.snapshots)):
+                cop_heat_pump = cop_heat_pump.reindex(n.snapshots).to_frame(link_names[0])
 
             if heat_source in params.limited_heat_sources:
                 # get potential
@@ -3544,16 +3562,14 @@ def add_heat(
                     bus1=nodes,
                     bus2=nodes + f" {heat_carrier}",
                     carrier=f"{heat_system} {heat_source} heat pump",
-                    efficiency=(1 / cop_heat_pump.clip(lower=0.001)).squeeze(),
-                    efficiency2=(1 - (1 / cop_heat_pump.clip(lower=0.001))).squeeze(),
+                    efficiency=1 / cop_heat_pump.clip(lower=0.001),
+                    efficiency2=1 - (1 / cop_heat_pump.clip(lower=0.001)),
                     capital_cost=costs.at[costs_name_heat_pump, "capital_cost"]
                     * overdim_factor,
                     onight_cost=costs.at[costs_name_heat_pump, "investment"]
                     * overdim_factor,
                     p_nom_extendable=True,
-                    p_min_pu=(
-                        -cop_heat_pump / cop_heat_pump.clip(lower=0.001)
-                    ).squeeze(),
+                    p_min_pu=-cop_heat_pump / cop_heat_pump.clip(lower=0.001),
                     p_max_pu=0,
                     lifetime=costs.at[costs_name_heat_pump, "lifetime"],
                 )
@@ -3609,16 +3625,33 @@ def add_heat(
                     bus1=nodes,
                     bus2=nodes + f" {heat_system} water pits",
                     carrier=f"{heat_system} {heat_source} heat pump",
-                    efficiency=(1 / (cop_heat_pump - 1).clip(lower=0.001)).squeeze(),
-                    efficiency2=(1 - 1 / cop_heat_pump.clip(lower=0.001)).squeeze(),
+                    efficiency=1 / (cop_heat_pump - 1).clip(lower=0.001),
+                    efficiency2=1 - 1 / cop_heat_pump.clip(lower=0.001),
                     capital_cost=costs.at[costs_name_heat_pump, "capital_cost"]
                     * overdim_factor,
                     onight_cost=costs.at[costs_name_heat_pump, "investment"]
                     * overdim_factor,
                     p_nom_extendable=True,
-                    p_min_pu=(
-                        -cop_heat_pump / cop_heat_pump.clip(lower=0.001)
-                    ).squeeze(),
+                    p_min_pu=-cop_heat_pump / cop_heat_pump.clip(lower=0.001),
+                    p_max_pu=0,
+                    lifetime=costs.at[costs_name_heat_pump, "lifetime"],
+                )
+
+                n.add(
+                    "Link",
+                    link_names,
+                    bus0=nodes + f" {heat_system} heat",
+                    bus1=nodes,
+                    bus2=nodes + f" {heat_system} water pits",
+                    carrier=f"{heat_system} {heat_source} heat pump",
+                    efficiency=1 / (cop_heat_pump - 1).clip(lower=0.001),
+                    efficiency2=1 - 1 / cop_heat_pump.clip(lower=0.001),
+                    capital_cost=costs.at[costs_name_heat_pump, "capital_cost"]
+                    * overdim_factor,
+                    onight_cost=costs.at[costs_name_heat_pump, "investment"]
+                    * overdim_factor,
+                    p_nom_extendable=True,
+                    p_min_pu=-cop_heat_pump / cop_heat_pump.clip(lower=0.001),
                     p_max_pu=0,
                     lifetime=costs.at[costs_name_heat_pump, "lifetime"],
                 )
@@ -3631,14 +3664,12 @@ def add_heat(
                     bus0=nodes + f" {heat_system} heat",
                     bus1=nodes,
                     carrier=f"{heat_system} {heat_source} heat pump",
-                    efficiency=(1 / cop_heat_pump.clip(lower=0.001)).squeeze(),
+                    efficiency=1 / cop_heat_pump.clip(lower=0.001),
                     capital_cost=costs.at[costs_name_heat_pump, "capital_cost"]
                     * overdim_factor,
                     onight_cost=costs.at[costs_name_heat_pump, "investment"]
                     * overdim_factor,
-                    p_min_pu=(
-                        -cop_heat_pump / cop_heat_pump.clip(lower=0.001)
-                    ).squeeze(),
+                    p_min_pu=-cop_heat_pump / cop_heat_pump.clip(lower=0.001),
                     p_max_pu=0,
                     p_nom_extendable=True,
                     lifetime=costs.at[costs_name_heat_pump, "lifetime"],
@@ -6557,9 +6588,10 @@ if __name__ == "__main__":
         snakemake = mock_snakemake(
             "prepare_sector_network",
             opts="",
-            clusters="10",
+            clusters="adm",
             sector_opts="",
             planning_horizons="2050",
+            run="KN2045_Mix"
         )
 
     configure_logging(snakemake)  # pylint: disable=E0606
