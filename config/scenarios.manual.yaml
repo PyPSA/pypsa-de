@@ -97,38 +97,21 @@ KN2045_Elek:
   solving:
     constraints:
       limits_volume_max:
-        # constrain electricity import in TWh
-        electricity_import:
-          DE:
-            2020: -20
-            2025: 0
-            2030: 0
-            2035: 50
-            2040: 100
-            2045: 150
-            2050: 150
         electrolysis:
           DE:
-            2020: 0
-            2025: 5
-            2030: 45
             2035: 95
             2040: 145
             2045: 200
             2050: 200
         h2_derivate_import:
           DE:
-            2020: 0
-            2025: 0
-            2030: 10
+            2030: 15
             2035: 70
             2040: 130
             2045: 200
             2050: 200
         h2_import:
           DE:
-            2020: 0
-            2025: 5
             2030: 10
             2035: 90
             2040: 170
@@ -155,19 +138,14 @@ KN2045_H2:
         # constrain electricity import in TWh
         electricity_import:
           DE:
-            2020: -20
-            2025: 0
-            2030: 0
-            2035: 30
+            2030: 35
+            2035: 50
             2040: 70
             2045: 100 # scenario guidelines
             2050: 100
-
         # constrain hydrogen import in TWh
         h2_import:
           DE:
-            2020: 0
-            2025: 5
             2030: 45 # scenario guidelines
             2035: 155
             2040: 265
@@ -176,11 +154,8 @@ KN2045_H2:
         # import of h2 derivatives in TWh
         h2_derivate_import:
           DE:
-            2020: 0
-            2025: 0
-            2030: 10 # scenario guidelines
-            2035: 140
-            2040: 270
+            2035: 150
+            2040: 275
             2045: 400 # scenario guidelines
             2050: 400
         electrolysis:
