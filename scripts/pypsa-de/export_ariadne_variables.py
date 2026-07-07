@@ -4997,6 +4997,9 @@ def get_trade(n, region):
     )
 
     biomass_imports = local_biomass_usage - local_biomass_potential
+    # if biomass_imports < 0, it means that the local biomass potential is not fully used, so there are no imports
+    # this does not imply that the remaining biomass potential is exported, as it could also be wasted or used for other purposes
+    biomass_imports = biomass_imports if biomass_imports > 0 else 0
 
     var["Trade|Primary Energy|Biomass|Net Imports"] = biomass_imports
 
