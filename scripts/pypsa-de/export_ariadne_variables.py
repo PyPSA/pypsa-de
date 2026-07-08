@@ -2149,7 +2149,16 @@ def get_final_energy(
     # var["Final Energy|Industry|Geothermal"] = \
     # Not implemented
 
-    var["Final Energy|Industry|Gases"] = sum_load(n, "gas for industry", region)
+    gas_usage = (
+        n.statistics.withdrawal(bus_carrier="gas", **kwargs)
+        .filter(like=region)
+        .groupby(["carrier"])
+        .sum()
+    )
+
+    var["Final Energy|Industry|Gases"] = gas_usage.get(
+        "gas for industry", 0
+    ) + gas_usage.get("gas for industry CC", 0)
 
     for gas_type in gas_fractions.index:
         var[f"Final Energy|Industry|Gases|{gas_type}"] = (
@@ -2207,20 +2216,36 @@ def get_final_energy(
     )
 
     var["Final Energy|Industry|Liquids"] = sum_load(n, "naphtha for industry", region)
+
+    assert isclose(
+        var["Final Energy|Industry|Liquids"],
+        var["Final Energy|Industry|Liquids|Petroleum"]
+        + var["Final Energy|Industry|Liquids|Efuel"]
+        + var["Final Energy|Industry|Liquids|Biomass"],
+    )
     # subtract non-energy used liquids from total liquid demand
     var["Final Energy|Industry excl Non-Energy Use|Liquids"] = (
         var["Final Energy|Industry|Liquids"]
         - var["Final Energy|Non-Energy Use|Liquids"]
     )
 
-    # var["Final Energy|Industry|Other"] = \
-
-    var["Final Energy|Industry|Solids|Biomass"] = sum_load(
-        n, "solid biomass for industry", region
+    solid_biomass_fe = (
+        n.statistics.withdrawal(
+            bus_carrier="solid biomass",
+            **kwargs,
+        )
+        .filter(
+            like=region,
+        )
+        .groupby("carrier")
+        .sum()
     )
+
     var["Final Energy|Industry excl Non-Energy Use|Solids|Biomass"] = var[
         "Final Energy|Industry|Solids|Biomass"
-    ]
+    ] = solid_biomass_fe.get("solid biomass for industry", 0) + solid_biomass_fe.get(
+        "solid biomass for industry CC", 0
+    )
 
     mwh_coal_per_mwh_coke = 1.366
 
@@ -2365,13 +2390,6 @@ def get_final_energy(
         )  # For urban central Final Energy is delivered as Heat
         + decentral_heat_supply_rescom.filter(like="solar thermal").sum()
     )  # Assuming for solar thermal secondary energy == Final energy
-
-    gas_usage = (
-        n.statistics.withdrawal(bus_carrier="gas", **kwargs)
-        .filter(like=region)
-        .groupby(["carrier"])
-        .sum()
-    )
 
     # !!! Here the final is delivered as gas, not as heat
     var["Final Energy|Residential and Commercial|Gases"] = gas_usage.get(
@@ -2996,7 +3014,7 @@ def get_emissions(n, region, _energy_totals, _industry_demand):
 
     pe_fossil_fraction = (
         process_emissions.get("process emissions", 0)
-        + process_emissions.get("naptha for industry", 0) * oil_fossil_fraction
+        + process_emissions.get("naphtha for industry", 0) * oil_fossil_fraction
     ) / process_emissions.sum()
 
     var["Carbon Sequestration|DACCS"] = co2_negative_emissions.get("DAC", 0)
