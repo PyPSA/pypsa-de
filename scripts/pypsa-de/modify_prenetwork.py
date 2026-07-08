@@ -1102,7 +1102,7 @@ def force_retrofit(n, params):
         gas_plants = n.links[
             (n.links.carrier == carrier)
             & (n.links.index.str[:2] == "DE")
-            & (n.links.build_year >= params["retrofit_start_year"])
+            & (n.links.build_year >= params["retrofit_force_year"])
         ].index
         if gas_plants.empty:
             continue
@@ -1111,7 +1111,7 @@ def force_retrofit(n, params):
         h2_plants.carrier = h2_plants.carrier.str.replace(
             carrier, "forced H2 retrofit " + carrier
         )
-        h2_plants.index = h2_plants.index.str.replace(carrier, "H2 retrofit " + carrier)
+        h2_plants.index = h2_plants.index.str.replace(carrier, "forced H2 retrofit " + carrier)
         h2_plants.bus0 = h2_plants.bus1 + " H2"
         h2_plants.bus2 = ""
         h2_plants.efficiency -= params["retrofit_efficiency_loss"]
@@ -1126,7 +1126,7 @@ def force_retrofit(n, params):
     gas_plants = n.links[
         (n.links.carrier == "urban central gas CHP")
         & (n.links.index.str[:2] == "DE")
-        & (n.links.build_year >= params["retrofit_start_year"])
+        & (n.links.build_year >= params["retrofit_force_year"])
     ].index
     if gas_plants.empty:
         return

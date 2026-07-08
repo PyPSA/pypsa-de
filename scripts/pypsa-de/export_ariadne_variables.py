@@ -686,14 +686,14 @@ def _get_capacities(n, region, cap_func, cap_string="Capacity|"):
     var[cap_string + "Electricity|Hydrogen|CC"] = capacities_electricity.reindex(
         [
             "H2 CCGT",
-            "H2 retrofit CCGT",
+            "forced H2 retrofit CCGT",
             "endogenously retrofitted H2 CCGT"  
         ]
     ).sum()
 
     var[cap_string + "Electricity|Hydrogen|CC|force retrofit"] = capacities_electricity.reindex(
         [
-            "H2 retrofit CCGT",  
+            "forced H2 retrofit CCGT",  
         ]
     ).sum()
 
@@ -712,14 +712,14 @@ def _get_capacities(n, region, cap_func, cap_string="Capacity|"):
     var[cap_string + "Electricity|Hydrogen|CHP"] = capacities_electricity.reindex(
         [
             "urban central H2 CHP",
-            "urban central H2 retrofit CHP",
+            "urban central forced H2 retrofit CHP",
             "endogenously retrofitted urban central H2 CHP"  
         ]
     ).sum()
 
     var[cap_string + "Electricity|Hydrogen|CHP|force retrofit"] = capacities_electricity.reindex(
         [
-            "urban central H2 retrofit CHP",  
+            "urban central forced H2 retrofit CHP",  
         ]
     ).sum()
 
@@ -739,14 +739,14 @@ def _get_capacities(n, region, cap_func, cap_string="Capacity|"):
     var[cap_string + "Electricity|Hydrogen|OC"] = capacities_electricity.reindex(
         [
             "H2 OCGT",
-            "H2 retrofit OCGT",
+            "forced H2 retrofit OCGT",
             "endogenously retrofitted H2 OCGT"
         ]
     ).sum()
  
     var[cap_string + "Electricity|Hydrogen|OC|force retrofit"] = capacities_electricity.reindex(
         [
-            "H2 retrofit OCGT",  
+            "forced H2 retrofit OCGT",  
         ]
     ).sum()
 

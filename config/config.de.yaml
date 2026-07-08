@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20260703_endoretro_upstream
+  prefix: 20260706_endoretro_upstream_V2
   name:
   # - ExPol
   # - KN2045_Mix
@@ -14,9 +14,10 @@ run:
   # - KN2045_Mix_HDD_pseudo_foresight
   # - KN2045_Mix_H2plantsEU
   # - KN2045_Mix_no_H2_Force_Upstream
-    - KN2045_Mix_pure_endo_retrofit
-    - KN2045_H2_force_2040_no_endo
-    - KN2045_no_H2
+  # - pure_endo_retrofit
+  # - H2_force_2040_no_endo
+  # - no_H2
+    - pure_endo_upstream  
   # - KN2045_Elek
   # - KN2045_H2
   # - KN2045_NFniedrig
@@ -247,7 +248,7 @@ clustering:
     # 'ES': 0.0408
     # 'IT': 0.0408
   temporal:
-    resolution_sector: 3H
+    resolution_sector: 365H
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#co2-budget
 co2_budget:
@@ -427,7 +428,7 @@ industry:
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#solving
 solving:
   runtime: 12h
-  mem_mb: 140000 #30000 is OK for 22 nodes, 365H; 140000 for 22 nodes 3H; 400000 for 44 nodes 3H
+  mem_mb: 30000 #30000 is OK for 22 nodes, 365H; 140000 for 22 nodes 3H; 400000 for 44 nodes 3H
   options:
     transmission_losses: true
     custom_extra_functionality: "../scripts/pypsa-de/additional_functionality.py"
@@ -546,6 +547,12 @@ solving:
           H2 Electrolysis:
             DE:
               2030: 3
+          CCGT:
+            DE:
+              2030: 20
+          OCGT:
+            DE:
+              2030: 10
   # For reference, this are the values specified in the laws
   # limits_capacity_min:
   #     Generator:
@@ -646,12 +653,12 @@ plotting:
     load: "#111100"
     H2 pipeline (Kernnetz): '#6b3161'
     renewable oil: '#c9c9c9'
-    urban central H2 retrofit CHP: '#ff0000'
-    H2 retrofit OCGT: '#ff0000'
-    H2 retrofit CCGT: '#ff0000'
+    urban central forced H2 retrofit CHP: '#ff0000'
+    forced H2 retrofit OCGT: '#ff0000'
+    forced H2 retrofit CCGT: '#ff0000'
     H2 OCGT: '#ff0000'
     H2 CCGT: '#ff0000'
-    urban central H2 CHP: '#ff0000'
+    urban central forced H2 retrofit CHP: '#ff0000'
     renewable gas: '#e05b09'
     retrofitted H2 OCGT: '#e0986c'
     retrofitted H2 CCGT: '#e0986c'

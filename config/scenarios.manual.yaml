@@ -89,29 +89,32 @@ KN2045_Mix_HDD_Upstream:
 KN2045_Mix_endoH2retrofit:
   costs:
     custom_cost_fn: data/pypsa-de/custom_costs_nep_2023_high_decentral_discount.csv
-KN2045_Mix_pure_endo_retrofit:
+pure_endo_retrofit:
   electricity:  
     H2_plants_endogen:
         enable: EU            # allowed values: false, DE, EU
-        endogenous: true      # allowed values: true, false 
+        endogenous: True      # allowed values: true, false 
         start: 2030           # should be < force
         force: 2055           # force year after last planning horizon leads to no retrofitting of H2 plants
         cost_factor: 0.15     # repurposing cost of OCGT gas to H2 in % investment cost in EUR/MW source: Christidis et al (2023) - H2-Ready-Gaskraftwerke, Table 3 https://reiner-lemoine-institut.de/wp-content/uploads/2023/11/RLI-Studie-H2-ready_DE.pdf
         efficiency_loss: 0.05
-KN2045_H2_force_2040_no_endo:
+H2_force_2040_no_endo:
   electricity:  
     H2_plants_endogen:
         enable: EU            # allowed values: false, DE, EU
-        endogenous: false      # allowed values: true, false 
+        endogenous: False      # allowed values: true, false 
         start: 2030           # should be < force
         force: 2040           # force year after last planning horizon leads to no retrofitting of H2 plants
         cost_factor: 0.15     # repurposing cost of OCGT gas to H2 in % investment cost in EUR/MW source: Christidis et al (2023) - H2-Ready-Gaskraftwerke, Table 3 https://reiner-lemoine-institut.de/wp-content/uploads/2023/11/RLI-Studie-H2-ready_DE.pdf
         efficiency_loss: 0.05
-KN2045_no_H2:
+no_H2:
   electricity:  
     H2_plants_endogen:
-        enable: false            # allowed values: false, DE, EU
-        endogenous: false      # allowed values: true, false 
+        enable: False            # allowed values: false, DE, EU
+        endogenous: False      # allowed values: true, false 
+pure_endo_upstream:
+  industry:  
+    gas_upstream_co2_factor: 0.2 # in t_CO2/MWh Gas
 
 
 KN2045_Mix_HDD_pseudo_foresight: #HDD = HighDecentralDiscount nur mit max. Kapazitäten von 2045, um perfect foresight zu approximieren

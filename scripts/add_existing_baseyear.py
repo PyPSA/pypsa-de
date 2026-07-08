@@ -1212,7 +1212,7 @@ def add_h2_retro(n, baseyear, params, costs):
         ("CCGT", "endogenously retrofitted H2 CCGT"),
         ("urban central gas CHP", "endogenously retrofitted urban central H2 CHP"),
     ]
-    cost_carrier_map = {
+    cost_carrier_map = {    
     "OCGT": "OCGT",
     "CCGT": "CCGT",
     "urban central gas CHP": "central gas CHP",
@@ -1220,7 +1220,7 @@ def add_h2_retro(n, baseyear, params, costs):
     start = params.retrofit_start_year
 
     for original_carrier, new_carrier in plant_types:
-        cost_carrier = cost_carrier_map[original_carrier]       
+        #cost_carrier = cost_carrier_map[original_carrier]       
         # Query to filter the DataFrame
         plant_i = n.links.query(f"carrier == '{original_carrier}'")
         # Further filtering based on build_year excluding the current planning horizon
@@ -1232,12 +1232,12 @@ def add_h2_retro(n, baseyear, params, costs):
         # entfernen, BEVOR p_nom_extendable gesetzt wird. Sonst könnte das
         # Modell durch "Downsizing" der historischen Kapazität den bereits
         # versunkenen Investitionsanteil einsparen (ökonomisch nicht korrekt).
-        fom_only = (
-            costs.at[cost_carrier, "FOM"] / 100
-            * costs.at[cost_carrier, "investment"]
-            * costs.at[cost_carrier, "efficiency"]
-        )
-        n.links.loc[plant_i, "capital_cost"] = fom_only
+        #fom_only = (
+        #     costs.at[cost_carrier, "FOM"] / 100
+        #     * costs.at[cost_carrier, "investment"]
+        #     * costs.at[cost_carrier, "efficiency"]
+        # )
+        # n.links.loc[plant_i, "capital_cost"] = fom_only
         # ---------------------
 
         # Set plants to extendable for constraint in solve_network()
@@ -1274,12 +1274,7 @@ def add_h2_retro(n, baseyear, params, costs):
         # da dies eine ECHTE Neuinvestition ist (kein Sunk Cost)
         # Hinweis: FOM-Neuberechnung nutzt costs-Tabelle des aktuellen Horizons,
         # nicht das historische Baujahr der Anlage. Abweichung typischerweise <2%.
-        df.loc[:, "capital_cost"] = (
-            costs.at[cost_carrier, "capital_cost"]
-            * costs.at[cost_carrier, "efficiency"]
-            * (1 + params.cost_factor)
-        )
-
+        df.loc[:, "capital_cost"] *= (1 + params.cost_factor)
         df.loc[:, "efficiency"] -= params.retrofit_efficiency_loss
         # Set p_nom_max to gas plant p_nom and existing capacity to zero
         df.loc[:, "p_nom"] = 0

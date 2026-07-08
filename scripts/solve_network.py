@@ -1105,9 +1105,9 @@ def add_h2_retrofit_constraint(n):
     logger.info("Add constraint for retrofitting gas plants to H2 plants.")
 
     plant_types = [
-        ("OCGT", "retrofitted H2 OCGT"),
-        ("CCGT", "retrofitted H2 CCGT"),
-        ("urban central gas CHP", "retrofitted urban central H2 CHP"),
+        ("OCGT", "endogenously retrofitted H2 OCGT"),
+        ("CCGT", "endogenously retrofitted H2 CCGT"),
+        ("urban central gas CHP", "endogenously retrofitted urban central H2 CHP"),
     ]
     current_horizon = snakemake.wildcards.planning_horizons
 
