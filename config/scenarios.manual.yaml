@@ -134,6 +134,13 @@ KN2045_H2:
 
   solving:
     constraints:
+      limits_capacity_min:
+        Link:
+          H2 Electrolysis:
+            DE:
+              2035: 8
+              2040: 20
+              2045: 50
       limits_volume_max:
         # constrain electricity import in TWh
         electricity_import:
