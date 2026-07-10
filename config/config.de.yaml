@@ -14,9 +14,9 @@ run:
   # - KN2045_Mix_HDD_pseudo_foresight
   # - KN2045_Mix_H2plantsEU
   # - KN2045_Mix_no_H2_Force_Upstream
-  # - pure_endo_retrofit
-  # - H2_force_2040_no_endo
-  # - no_H2
+    - pure_endo_retrofit
+    - H2_force_2040_no_endo
+    - no_H2
     - pure_endo_upstream  
   # - KN2045_Elek
   # - KN2045_H2
@@ -248,7 +248,7 @@ clustering:
     # 'ES': 0.0408
     # 'IT': 0.0408
   temporal:
-    resolution_sector: 365H
+    resolution_sector: 3H
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#co2-budget
 co2_budget:
@@ -428,7 +428,7 @@ industry:
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#solving
 solving:
   runtime: 12h
-  mem_mb: 30000 #30000 is OK for 22 nodes, 365H; 140000 for 22 nodes 3H; 400000 for 44 nodes 3H
+  mem_mb: 140000 #30000 is OK for 22 nodes, 365H; 140000 for 22 nodes 3H; 400000 for 44 nodes 3H
   options:
     transmission_losses: true
     custom_extra_functionality: "../scripts/pypsa-de/additional_functionality.py"
@@ -543,16 +543,11 @@ solving:
           DE:
             2025: 118 # Abb. 4_9 https://www.agora-energiewende.de/fileadmin/Projekte/2025/2025-28_DE_JAW25/A-EW_391_Die_Energiewende_in_Deutschland_Stand_der_Dinge_2025_WEB.pdf
             2030: 200
-        Link:
-          H2 Electrolysis:
-            DE:
-              2030: 3
-          CCGT:
-            DE:
-              2030: 20
-          OCGT:
-            DE:
-              2030: 10
+      Link:
+        H2 Electrolysis:
+          DE:
+            2030: 3
+
   # For reference, this are the values specified in the laws
   # limits_capacity_min:
   #     Generator:
@@ -685,7 +680,7 @@ electricity:
   powerplants_filter: (DateOut > 2025 or DateOut != DateOut) and not (Country == "DE" and Set == "CHP") and (DateIn < 2026 or DateIn != DateIn)
   custom_powerplants: true
   custom_file: resources/german_chp.csv
-  H2_plants_endogen:
+  H2_plants:
     enable: EU            # allowed values: false, DE, EU
     endogenous: true      # allowed values: true, false 
     start: 2030           # should be < force

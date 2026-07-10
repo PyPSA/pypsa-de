@@ -1079,71 +1079,6 @@ def add_hydrogen_turbines(n, H2_plants):
     n.add("Link", h2_plants.index, **h2_plants)
 
 
-def force_retrofit(n, params):
-    """
-    This function forces the retrofit of gas turbines from params["retrofit_force_year"] on.
-
-    Extendable gas links are deleted.
-    """
-
-    logger.info("Forcing retrofit of gas turbines to hydrogen turbines.")
-
-    gas_carrier = ["OCGT", "CCGT", "urban central gas CHP"]
-    # deleting extendable gas turbine plants
-    to_drop = n.links[
-        (n.links.carrier.isin(gas_carrier))
-        & (n.links.p_nom_extendable)
-        & (n.links.index.str[:2] == "DE")
-    ].index
-    n.links.drop(to_drop, inplace=True)
-
-    # forcing retrofit
-    for carrier in ["OCGT", "CCGT"]:
-        gas_plants = n.links[
-            (n.links.carrier == carrier)
-            & (n.links.index.str[:2] == "DE")
-            & (n.links.build_year >= params["retrofit_force_year"])
-        ].index
-        if gas_plants.empty:
-            continue
-
-        h2_plants = n.links.loc[gas_plants].copy()
-        h2_plants.carrier = h2_plants.carrier.str.replace(
-            carrier, "forced H2 retrofit " + carrier
-        )
-        h2_plants.index = h2_plants.index.str.replace(carrier, "forced H2 retrofit " + carrier)
-        h2_plants.bus0 = h2_plants.bus1 + " H2"
-        h2_plants.bus2 = ""
-        h2_plants.efficiency -= params["retrofit_efficiency_loss"]
-        h2_plants.efficiency2 = 1  # default value
-        h2_plants.capital_cost *= 1 + params["cost_factor"]
-        h2_plants.onight_cost *= 1 + params["cost_factor"]
-        # add the new links
-        n.add("Link", h2_plants.index, **h2_plants)
-        n.links.drop(gas_plants, inplace=True)
-
-    # special handling of CHPs
-    gas_plants = n.links[
-        (n.links.carrier == "urban central gas CHP")
-        & (n.links.index.str[:2] == "DE")
-        & (n.links.build_year >= params["retrofit_force_year"])
-    ].index
-    if gas_plants.empty:
-        return
-
-    h2_plants = n.links.loc[gas_plants].copy()
-    h2_plants.carrier = h2_plants.carrier.str.replace("gas", "forced H2 retrofit")
-    h2_plants.index = h2_plants.index.str.replace("gas", "forced H2 retrofit")
-    h2_plants.bus0 = h2_plants.bus1 + " H2"
-    h2_plants.bus3 = ""
-    h2_plants.efficiency -= params["retrofit_efficiency_loss"]
-    h2_plants.efficiency3 = 1  # default value
-    h2_plants.capital_cost *= 1 + params["cost_factor"]
-    h2_plants.onight_cost *= 1 + params["cost_factor"]
-    n.add("Link", h2_plants.index, **h2_plants)
-    n.links.drop(gas_plants, inplace=True)
-
-
 def enforce_transmission_project_build_years(n, current_year):
     # this step is necessary for any links w/
     # current year >= build_year > previous year
@@ -1470,15 +1405,12 @@ if __name__ == "__main__":
     if snakemake.params.must_run is not None:
         must_run(n, snakemake.params.must_run)
 
-    if snakemake.params.H2_plants_endogen:
+    if snakemake.params.H2_plants:
         if snakemake.params.retrofit_start_year <= int(
             snakemake.wildcards.planning_horizons
         ):
-            add_hydrogen_turbines(n, snakemake.params.H2_plants_endogen)
-        if snakemake.params.retrofit_force_year <= int(
-            snakemake.wildcards.planning_horizons
-        ):
-            force_retrofit(n, snakemake.params)
+            add_hydrogen_turbines(n, snakemake.params.H2_plants)
+
 
     current_year = int(snakemake.wildcards.planning_horizons)
 

@@ -1202,7 +1202,7 @@ def add_heating_capacities_installed_before_baseyear(
                     and n.links.p_nom[index] < capacity_threshold
                 ],
             )
-def add_h2_retro(n, baseyear, params, costs):
+def add_h2_retro(n, baseyear, params):
     """
     Function to add ENDOGENOUS H2 retrofitting of existing gas plants.
     """
@@ -1212,50 +1212,48 @@ def add_h2_retro(n, baseyear, params, costs):
         ("CCGT", "endogenously retrofitted H2 CCGT"),
         ("urban central gas CHP", "endogenously retrofitted urban central H2 CHP"),
     ]
-    cost_carrier_map = {    
-    "OCGT": "OCGT",
-    "CCGT": "CCGT",
-    "urban central gas CHP": "central gas CHP",
-}
+
     start = params.retrofit_start_year
 
     for original_carrier, new_carrier in plant_types:
-        #cost_carrier = cost_carrier_map[original_carrier]       
-        # Query to filter the DataFrame
+        # Query to extract all gas plant links
         plant_i = n.links.query(f"carrier == '{original_carrier}'")
-        # Further filtering based on build_year excluding the current planning horizon
+        # Further filtering based on build_year excluding the current planning horizon and kick out old ones (before retrofit_start_year)
         plant_i = plant_i.loc[
             (plant_i.build_year >= start) & (plant_i.build_year != baseyear)
         ].index
-        # --- Sunk-cost fix ---
-        # Bestandsanlagen: annuisierten Investitionsanteil aus capital_cost
-        # entfernen, BEVOR p_nom_extendable gesetzt wird. Sonst könnte das
-        # Modell durch "Downsizing" der historischen Kapazität den bereits
-        # versunkenen Investitionsanteil einsparen (ökonomisch nicht korrekt).
-        #fom_only = (
-        #     costs.at[cost_carrier, "FOM"] / 100
-        #     * costs.at[cost_carrier, "investment"]
-        #     * costs.at[cost_carrier, "efficiency"]
-        # )
-        # n.links.loc[plant_i, "capital_cost"] = fom_only
-        # ---------------------
 
-        # Set plants to extendable for constraint in solve_network()
-        n.links.loc[plant_i, "p_nom_extendable"] = True
+        #extract existing, endogenously retrofitted H2 plants
+        existing_h2_idx = n.links.query(f"carrier == '{new_carrier}'").index
+        # turn them into a renamed set with gas names (all endogenously retrofitted H2 plants are renamed from gas plants, 
+        # so we can use this to filter out the gas plants that have already been retrofitted)
+        existing_h2_as_gas_names = set(
+            idx.replace(new_carrier, original_carrier) for idx in existing_h2_idx
+        )
+
+        # only keep gas plants that do not have a corresponding H2 plant yet
+        plant_i = [idx for idx in plant_i if idx not in existing_h2_as_gas_names]
+
+
+
+        # Set plants to extendable for constraint in solve_network() wrong because then model keeps expanding them in the next optimization
+        # n.links.loc[plant_i, "p_nom_extendable"] = True
 
         # get all retrofitted plants and set p_nom_extendable to True
-        h2_counterpart = n.links.query(f"carrier == '{new_carrier}'").index
-        n.links.loc[h2_counterpart, "p_nom_extendable"] = True
+        # h2_counterpart = n.links.query(f"carrier == '{new_carrier}'").index
+        # n.links.loc[h2_counterpart, "p_nom_extendable"] = True
 
-        # check if the plants are not having a h2 counterpart yet
-        h2_counterpart = set(
-            index.replace(new_carrier, original_carrier) for index in h2_counterpart
-        )
-        plant_i = [index for index in plant_i if index not in h2_counterpart]
+        # # check if the plants are not having a h2 counterpart yet
+        # h2_counterpart = set(
+        #     index.replace(new_carrier, original_carrier) for index in h2_counterpart
+        # )
+        # plant_i = [index for index in plant_i if index not in h2_counterpart]
 
         if not plant_i:
             logger.info(f"No more {original_carrier} retrofitting potential.")
             continue
+        # only set Gas plants without a corresponding H2 plant to extendable, not the existing ones
+        n.links.loc[plant_i, "p_nom_extendable"] = True
 
         n.links.loc[plant_i, "p_nom_max"] = n.links.loc[plant_i, "p_nom"]
 
@@ -1270,10 +1268,6 @@ def add_h2_retro(n, baseyear, params, costs):
             index=lambda x: x.replace(original_carrier, new_carrier),
             inplace=True,
         )
-        # H2-Anlage: volle (annuisierte) Kosten + cost_factor-Aufschlag,
-        # da dies eine ECHTE Neuinvestition ist (kein Sunk Cost)
-        # Hinweis: FOM-Neuberechnung nutzt costs-Tabelle des aktuellen Horizons,
-        # nicht das historische Baujahr der Anlage. Abweichung typischerweise <2%.
         df.loc[:, "capital_cost"] *= (1 + params.cost_factor)
         df.loc[:, "efficiency"] -= params.retrofit_efficiency_loss
         # Set p_nom_max to gas plant p_nom and existing capacity to zero
@@ -1375,13 +1369,12 @@ if __name__ == "__main__":
 
     if options.get("cluster_heat_buses", False):
         cluster_heat_buses(n)
-    if snakemake.params.retrofit_endogenous:
+    if snakemake.params.H2_plants and snakemake.params.retrofit_endogenous:
         # allow endogenous retrofitting of gas power plants to H2
         add_h2_retro(
             n,
             baseyear,
-            snakemake.params,
-            costs
+            snakemake.params
         )
     n.meta = dict(snakemake.config, **dict(wildcards=dict(snakemake.wildcards)))
 
