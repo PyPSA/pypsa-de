@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20260706_endoretro_upstream_V2
+  prefix: 20260710_endoretro_upstream_V3
   name:
   # - ExPol
   # - KN2045_Mix
