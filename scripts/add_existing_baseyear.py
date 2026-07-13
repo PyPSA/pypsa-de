@@ -1259,7 +1259,7 @@ def add_h2_retro(n, baseyear, params):
 
         df = n.links.loc[plant_i].copy()
         # Adjust bus 0
-        df["bus0"] = df["bus0"] + " H2" #ACHTUNG - online anders
+        df["bus0"] = df["bus1"] + " H2" 
         # Rename carrier and index
         df["carrier"] = df.carrier.apply(
             lambda x: x.replace(original_carrier, new_carrier)
