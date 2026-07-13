@@ -16,7 +16,7 @@ run:
   # - KN2045_Mix_no_H2_Force_Upstream
     - pure_endo_retrofit
     - H2_force_2040_no_endo
-    - no_H2
+  #  - no_H2
   #  - pure_endo_upstream  
   # - KN2045_Elek
   # - KN2045_H2
