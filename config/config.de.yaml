@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20260625_reduce_space_heat
+  prefix: 20260713_coal_limits
   name:
   - KN2045_Bal_v5
   # - KN2045_Elec_plus_v5
@@ -583,16 +583,6 @@ solving:
           2040: 100
           2045: 125
           2050: 125
-      electrolysis:
-      # boundary condition lower?
-        DE:
-          2020: 0
-          2025: 5
-          2030: 45
-          2035: 130
-          2040: 215
-          2045: 300
-          2050: 300
       h2_derivate_import:
       # boundary condition lower?
         DE:
@@ -613,16 +603,34 @@ solving:
           2040: 220
           2045: 325
           2050: 325
-    limits_volume_min:
-      electrolysis:
-        DE:
-          2020: 0
-          2025: 0
-          2030: 0
-          2035: 0
-          2040: 0
-          2045: 0
-          2050: 0
+    limits_production_min:
+      Link:
+        H2 Electrolysis:
+          DE:
+            2020: 0
+            2025: 0
+            2030: 0
+            2035: 0
+            2040: 0
+            2045: 0
+            2050: 0
+    limits_production_max:
+      Link:
+        H2 Electrolysis:
+          DE:
+            2020: 0
+            2025: 5
+            2030: 45
+            2035: 130
+            2040: 215
+            2045: 300
+            2050: 300
+        lignite:
+          DE:
+            2025: 67.2
+        coal:
+          DE:
+            2025: 28.2
     limits_power_max: # in GW
       DE:
         2020: 15
@@ -695,9 +703,9 @@ pypsa_eur:
   Store: []
 
 must_run:
-  2020:
+  2025:
     DE:
-      lignite: 0.4
+      lignite: 0.2
       # biogas: 0.6
 
 transmission_projects:

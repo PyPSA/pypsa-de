@@ -106,6 +106,71 @@ def add_capacity_limits(n, investment_year, limits_capacity, sense="maximum"):
                     sys.exit()
 
 
+def add_production_limits(n, investment_year, limits_production, sense="maximum"):
+
+    assert limits_production.keys() == {"Link"}, (
+        "limits_production only supports Link components"
+    )
+
+    for carrier in limits_production["Link"]:
+        for ct in limits_production["Link"][carrier]:
+            if investment_year not in limits_production["Link"][carrier][ct].keys():
+                continue
+
+            limit = 1e6 * limits_production["Link"][carrier][ct][investment_year]
+            logger.info(
+                f"Adding constraint on {'Link'} {carrier} production in {ct} to be {sense} {limit} MWh/a"
+            )
+
+            valid_components = (n.links.index.str[:2] == ct) & (
+                n.links.carrier == carrier
+            )
+            efficiency = n.links.loc[valid_components, "efficiency"]
+            lhs = (
+                n.model["Link-p"].loc[:, efficiency.index]
+                * n.snapshot_weightings.generators
+                * efficiency
+            ).sum()
+
+            cname = f"production_{sense}-{ct}-Link-{carrier.replace(' ', '-')}"
+
+            if cname in n.global_constraints.index:
+                logger.warning(
+                    f"Global constraint {cname} already exists. Dropping and adding it again."
+                )
+                n.global_constraints.drop(cname, inplace=True)
+
+            if sense == "maximum":
+                n.model.add_constraints(
+                    lhs <= limit,
+                    name=f"GlobalConstraint-{cname}",
+                )
+                n.add(
+                    "GlobalConstraint",
+                    cname,
+                    constant=limit,
+                    sense="<=",
+                    type="",
+                    carrier_attribute="",
+                )
+            elif sense == "minimum":
+                n.model.add_constraints(
+                    lhs >= limit,
+                    name=f"GlobalConstraint-{cname}",
+                )
+                n.add(
+                    "GlobalConstraint",
+                    cname,
+                    constant=limit,
+                    sense=">=",
+                    type="",
+                    carrier_attribute="",
+                )
+            else:
+                logger.error("sense {sense} not recognised")
+                sys.exit()
+
+
 def add_power_limits(n, investment_year, limits_power_max):
     """
     " Restricts the maximum inflow/outflow of electricity from/to a country.
@@ -276,64 +341,6 @@ def h2_import_limits(n, investment_year, limits_volume_max):
             type="",
             carrier_attribute="",
         )
-
-
-def h2_production_limits(n, investment_year, limits_volume_min, limits_volume_max):
-    for ct in limits_volume_max["electrolysis"]:
-        if ct not in limits_volume_min["electrolysis"]:
-            logger.warning(
-                f"no lower limit for H2 electrolysis in {ct} assuming 0 TWh/a"
-            )
-            limit_lower = 0
-        else:
-            limit_lower = limits_volume_min["electrolysis"][ct][investment_year] * 1e6
-
-        limit_upper = limits_volume_max["electrolysis"][ct][investment_year] * 1e6
-
-        logger.info(
-            f"limiting H2 electrolysis in DE between {limit_lower / 1e6} and {limit_upper / 1e6} TWh/a"
-        )
-
-        production = n.links[
-            (n.links.carrier == "H2 Electrolysis") & (n.links.bus0.str.contains(ct))
-        ].index
-        efficiency = n.links.loc[production, "efficiency"]
-
-        lhs = (
-            n.model["Link-p"].loc[:, production]
-            * n.snapshot_weightings.generators
-            * efficiency
-        ).sum()
-
-        cname_upper = f"H2_production_limit_upper-{ct}"
-        cname_lower = f"H2_production_limit_lower-{ct}"
-
-        n.model.add_constraints(
-            lhs <= limit_upper, name=f"GlobalConstraint-{cname_upper}"
-        )
-
-        n.model.add_constraints(
-            lhs >= limit_lower, name=f"GlobalConstraint-{cname_lower}"
-        )
-
-        if cname_upper not in n.global_constraints.index:
-            n.add(
-                "GlobalConstraint",
-                cname_upper,
-                constant=limit_upper,
-                sense="<=",
-                type="",
-                carrier_attribute="",
-            )
-        if cname_lower not in n.global_constraints.index:
-            n.add(
-                "GlobalConstraint",
-                cname_lower,
-                constant=limit_lower,
-                sense=">=",
-                type="",
-                carrier_attribute="",
-            )
 
 
 def electricity_import_limits(n, investment_year, limits_volume_max):
@@ -921,20 +928,20 @@ def additional_functionality(n, snapshots, snakemake):
         n, investment_year, constraints["limits_capacity_max"], "maximum"
     )
 
+    add_production_limits(
+        n, investment_year, constraints["limits_production_min"], "minimum"
+    )
+
+    add_production_limits(
+        n, investment_year, constraints["limits_production_max"], "maximum"
+    )
+
     add_power_limits(n, investment_year, constraints["limits_power_max"])
 
     if snakemake.wildcards.clusters != "1":
         h2_import_limits(n, investment_year, constraints["limits_volume_max"])
 
         electricity_import_limits(n, investment_year, constraints["limits_volume_max"])
-
-    if investment_year >= 2025:
-        h2_production_limits(
-            n,
-            investment_year,
-            constraints["limits_volume_min"],
-            constraints["limits_volume_max"],
-        )
 
     add_h2_derivate_limit(n, investment_year, constraints["limits_volume_max"])
 
