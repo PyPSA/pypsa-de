@@ -129,54 +129,54 @@ rule plot_hydrogen_network_incl_kernnetz:
         scripts("pypsa-de/plot_hydrogen_network_incl_kernnetz.py")
 
 
-rule plot_ariadne_report:
-    params:
-        planning_horizons=config_provider("scenario", "planning_horizons"),
-        plotting=config_provider("plotting"),
-        run=config_provider("run", "name"),
-        foresight=config_provider("foresight"),
-        post_discretization=config_provider("solving", "options", "post_discretization"),
-        NEP_year=lambda w: config_provider("costs", "custom_cost_fn")(w)[-8:-4],
-        hours=config_provider("clustering", "temporal", "resolution_sector"),
-        NEP_transmission=config_provider("costs", "transmission"),
-    input:
-        networks=expand(
-            RESULTS
-            + "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
-            **config["scenario"],
-            allow_missing=True,
-        ),
-        regions_onshore_clustered=expand(
-            resources("regions_onshore_base_s_{clusters}.geojson"),
-            clusters=config["scenario"]["clusters"],
-            allow_missing=True,
-        ),
-        rc="matplotlibrc",
-        costs=expand(
-            resources("costs_{planning_horizons}_processed.csv"),
-            **config["scenario"],
-            allow_missing=True,
-        ),
-        exported_variables_full=RESULTS + "ariadne/exported_variables_full.xlsx",
-    output:
-        elec_price_duration_curve=RESULTS
-        + "ariadne/report/elec_price_duration_curve.pdf",
-        elec_price_duration_hist=RESULTS + "ariadne/report/elec_price_duration_hist.pdf",
-        backup_capacity=RESULTS + "ariadne/report/backup_capacity.pdf",
-        backup_generation=RESULTS + "ariadne/report/backup_generation.pdf",
-        results=directory(RESULTS + "ariadne/report"),
-        elec_transmission=directory(RESULTS + "ariadne/report/elec_transmission"),
-        h2_transmission=directory(RESULTS + "ariadne/report/h2_transmission"),
-        co2_transmission=directory(RESULTS + "ariadne/report/co2_transmission"),
-        elec_balances=directory(RESULTS + "ariadne/report/elec_balance_timeseries"),
-        heat_balances=directory(RESULTS + "ariadne/report/heat_balance_timeseries"),
-        nodal_balances=directory(RESULTS + "ariadne/report/balance_timeseries_2045"),
-    resources:
-        mem_mb=32000,
-    log:
-        RESULTS + "logs/plot_ariadne_report.log",
-    script:
-        scripts("pypsa-de/plot_ariadne_report.py")
+#rule plot_ariadne_report:
+#    params:
+#       planning_horizons=config_provider("scenario", "planning_horizons"),
+#       plotting=config_provider("plotting"),
+#        run=config_provider("run", "name"),
+#        foresight=config_provider("foresight"),
+#        post_discretization=config_provider("solving", "options", "post_discretization"),
+#        NEP_year=lambda w: config_provider("costs", "custom_cost_fn")(w)[-8:-4],
+#        hours=config_provider("clustering", "temporal", "resolution_sector"),
+#        NEP_transmission=config_provider("costs", "transmission"),
+#    input:
+#        networks=expand(
+#            RESULTS
+#            + "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
+#            **config["scenario"],
+#            allow_missing=True,
+#        ),
+#        regions_onshore_clustered=expand(
+#            resources("regions_onshore_base_s_{clusters}.geojson"),
+#            clusters=config["scenario"]["clusters"],
+#            allow_missing=True,
+#        ),
+#        rc="matplotlibrc",
+#        costs=expand(
+#            resources("costs_{planning_horizons}_processed.csv"),
+#            **config["scenario"],
+#            allow_missing=True,
+#        ),
+#        exported_variables_full=RESULTS + "ariadne/exported_variables_full.xlsx",
+#    output:
+#        elec_price_duration_curve=RESULTS
+#        + "ariadne/report/elec_price_duration_curve.pdf",
+#        elec_price_duration_hist=RESULTS + "ariadne/report/elec_price_duration_hist.pdf",
+#        backup_capacity=RESULTS + "ariadne/report/backup_capacity.pdf",
+#        backup_generation=RESULTS + "ariadne/report/backup_generation.pdf",
+#        results=directory(RESULTS + "ariadne/report"),
+#        elec_transmission=directory(RESULTS + "ariadne/report/elec_transmission"),
+#        h2_transmission=directory(RESULTS + "ariadne/report/h2_transmission"),
+#        co2_transmission=directory(RESULTS + "ariadne/report/co2_transmission"),
+#        elec_balances=directory(RESULTS + "ariadne/report/elec_balance_timeseries"),
+#        heat_balances=directory(RESULTS + "ariadne/report/heat_balance_timeseries"),
+#        nodal_balances=directory(RESULTS + "ariadne/report/balance_timeseries_2045"),
+#    resources:
+#        mem_mb=32000,
+#    log:
+#        RESULTS + "logs/plot_ariadne_report.log",
+#    script:
+#        scripts("pypsa-de/plot_ariadne_report.py")
 
 
 rule ariadne_report_only:
