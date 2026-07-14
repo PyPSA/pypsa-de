@@ -301,6 +301,60 @@ def configure_logging(snakemake, skip_handlers=False):
     sys.excepthook = handle_exception
 
 
+def get_transmission_country_subsets(n: pypsa.Network, country: str) -> dict:
+    """
+    Split AC lines and DC links into three disjoint groups relative to `country`.
+
+    Used to apply separate transmission expansion limits to a country's
+    internal grid and its cross-border interconnectors (see
+    ``electricity.transmission_limit_countries``).
+
+    Parameters
+    ----------
+    n : pypsa.Network
+    country : str
+        ISO2 country code (must match values in ``n.buses.country``).
+
+    Returns
+    -------
+    dict
+        Keys "internal" (both buses in `country`), "interconnector" (exactly
+        one bus in `country`) and "rest" (neither bus in `country`). Each maps
+        to a dict with keys "lines" and "links" (pandas Index).
+    """
+    dc_i = (
+        n.links.index[n.links.carrier == "DC"] if not n.links.empty else n.links.index
+    )
+
+    lines_c0 = n.lines.bus0.map(n.buses.country)
+    lines_c1 = n.lines.bus1.map(n.buses.country)
+    links_c0 = n.links.bus0.map(n.buses.country)
+    links_c1 = n.links.bus1.map(n.buses.country)
+
+    lines_internal = lines_c0.eq(country) & lines_c1.eq(country)
+    links_internal = links_c0.eq(country) & links_c1.eq(country)
+
+    lines_cross_border = lines_c0.eq(country) ^ lines_c1.eq(country)
+    links_cross_border = links_c0.eq(country) ^ links_c1.eq(country)
+
+    return {
+        "internal": {
+            "lines": n.lines.index[lines_internal],
+            "links": dc_i.intersection(n.links.index[links_internal]),
+        },
+        "interconnector": {
+            "lines": n.lines.index[lines_cross_border],
+            "links": dc_i.intersection(n.links.index[links_cross_border]),
+        },
+        "rest": {
+            "lines": n.lines.index[~(lines_internal | lines_cross_border)],
+            "links": dc_i.intersection(
+                n.links.index[~(links_internal | links_cross_border)]
+            ),
+        },
+    }
+
+
 def update_p_nom_max(n):
     # if extendable carriers (solar/onwind/...) have capacity >= 0,
     # e.g. existing assets from GEM are included to the network,

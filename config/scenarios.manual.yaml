@@ -249,3 +249,67 @@ KN2045_NFhoch:
       2040: 0.24
       2045: 0.29
       2050: 0.33
+
+
+KN2045_Mix_no_grid:
+
+  remove_electricity_grid: true
+
+KN2045_Mix_transmission_limit_1.0:
+
+  electricity:
+    transmission_limit: v1.0
+
+KN2045_Mix_transmission_limit_1.1:
+
+  electricity:
+    transmission_limit: v1.1
+
+KN2045_Mix_transmission_limit_1.2:
+
+  electricity:
+    transmission_limit: v1.2
+
+KN2045_Mix_transmission_limit_1.3:
+
+  electricity:
+    transmission_limit: v1.3
+
+KN2045_Mix_transmission_limit_DE_1.0:
+# Like KN2045_Mix_transmission_limit_1.0, but the expansion limit only
+# applies to Germany's internal grid and its interconnectors; the rest of
+# the European grid stays at the default (unconstrained, vopt).
+
+  electricity:
+    transmission_limit_countries:
+      enable: true
+      country: DE
+      internal: v1.0
+      interconnector: v1.0
+
+KN2045_Mix_transmission_limit_DE_1.1:
+
+  electricity:
+    transmission_limit_countries:
+      enable: true
+      country: DE
+      internal: v1.1
+      interconnector: v1.1
+
+KN2045_Mix_transmission_limit_DE_1.2:
+
+  electricity:
+    transmission_limit_countries:
+      enable: true
+      country: DE
+      internal: v1.2
+      interconnector: v1.2
+
+KN2045_Mix_transmission_limit_DE_1.3:
+
+  electricity:
+    transmission_limit_countries:
+      enable: true
+      country: DE
+      internal: v1.3
+      interconnector: v1.3

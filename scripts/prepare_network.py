@@ -34,6 +34,7 @@ from scripts._helpers import (
     PYPSA_V1,
     configure_logging,
     get,
+    get_transmission_country_subsets,
     load_costs,
     set_scenario_config,
     update_config_from_wildcards,
@@ -156,8 +157,35 @@ def set_line_s_max_pu(n, s_max_pu=0.7):
     logger.info(f"N-1 security margin of lines set to {s_max_pu}")
 
 
-def set_transmission_limit(n, kind, factor, costs, Nyears=1):
-    links_dc_b = n.links.carrier == "DC" if not n.links.empty else pd.Series()
+def set_transmission_limit(
+    n, kind, factor, costs, Nyears=1, lines_i=None, links_i=None, suffix=""
+):
+    """
+    Limit transmission expansion for a (sub)set of lines and DC links.
+
+    Parameters
+    ----------
+    lines_i : pandas.Index, optional
+        Subset of ``n.lines.index`` to constrain. Defaults to all lines.
+    links_i : pandas.Index, optional
+        Subset of DC ``n.links.index`` to constrain. Defaults to all DC links.
+    suffix : str, optional
+        Appended to the ``GlobalConstraint`` name/type so that several
+        independent expansion limits (e.g. per country) can coexist. PyPSA's
+        built-in optimizer only recognizes the constraint when ``suffix`` is
+        empty; non-empty suffixes must be handled by a custom
+        ``extra_functionality`` (see
+        ``add_country_transmission_limit_constraints`` in
+        ``solve_network.py``).
+    """
+    if lines_i is None:
+        lines_i = n.lines.index
+    if links_i is None:
+        links_i = (
+            n.links.index[n.links.carrier == "DC"]
+            if not n.links.empty
+            else n.links.index
+        )
 
     _lines_s_nom = (
         np.sqrt(3)
@@ -165,30 +193,30 @@ def set_transmission_limit(n, kind, factor, costs, Nyears=1):
         * n.lines.num_parallel
         * n.lines.bus0.map(n.buses.v_nom)
     )
-    lines_s_nom = n.lines.s_nom.where(n.lines.type == "", _lines_s_nom)
+    lines_s_nom = n.lines.s_nom.where(n.lines.type == "", _lines_s_nom).loc[lines_i]
 
     col = "capital_cost" if kind == "c" else "length"
     ref = (
-        lines_s_nom @ n.lines[col]
-        + n.links.loc[links_dc_b, "p_nom"] @ n.links.loc[links_dc_b, col]
+        lines_s_nom @ n.lines.loc[lines_i, col]
+        + n.links.loc[links_i, "p_nom"] @ n.links.loc[links_i, col]
     )
 
     set_transmission_costs(n, costs)
 
     if factor == "opt" or float(factor) > 1.0:
-        n.lines["s_nom_min"] = lines_s_nom
-        n.lines["s_nom_extendable"] = True
+        n.lines.loc[lines_i, "s_nom_min"] = lines_s_nom
+        n.lines.loc[lines_i, "s_nom_extendable"] = True
 
-        n.links.loc[links_dc_b, "p_nom_min"] = n.links.loc[links_dc_b, "p_nom"]
-        n.links.loc[links_dc_b, "p_nom_extendable"] = True
+        n.links.loc[links_i, "p_nom_min"] = n.links.loc[links_i, "p_nom"]
+        n.links.loc[links_i, "p_nom_extendable"] = True
 
     if factor != "opt":
         con_type = "expansion_cost" if kind == "c" else "volume_expansion"
         rhs = float(factor) * ref
         n.add(
             "GlobalConstraint",
-            f"l{kind}_limit",
-            type=f"transmission_{con_type}_limit",
+            f"l{kind}_limit{suffix}",
+            type=f"transmission_{con_type}_limit{suffix}",
             sense="<=",
             constant=rhs,
             carrier_attribute="AC, DC",
@@ -356,7 +384,51 @@ if __name__ == "__main__":
 
     kind = snakemake.params.transmission_limit[0]
     factor = snakemake.params.transmission_limit[1:]
-    set_transmission_limit(n, kind, factor, costs, Nyears)
+
+    country_limits = snakemake.params.transmission_limit_countries
+    if country_limits.get("enable", False):
+        country = country_limits["country"]
+        subsets = get_transmission_country_subsets(n, country)
+        suffix = f"_{country.lower()}"
+
+        internal_kind = country_limits["internal"][0]
+        internal_factor = country_limits["internal"][1:]
+        set_transmission_limit(
+            n,
+            internal_kind,
+            internal_factor,
+            costs,
+            Nyears,
+            lines_i=subsets["internal"]["lines"],
+            links_i=subsets["internal"]["links"],
+            suffix=f"{suffix}_internal",
+        )
+
+        interconnector_kind = country_limits["interconnector"][0]
+        interconnector_factor = country_limits["interconnector"][1:]
+        set_transmission_limit(
+            n,
+            interconnector_kind,
+            interconnector_factor,
+            costs,
+            Nyears,
+            lines_i=subsets["interconnector"]["lines"],
+            links_i=subsets["interconnector"]["links"],
+            suffix=f"{suffix}_interconnector",
+        )
+
+        # global transmission_limit still governs everything else (rest of Europe)
+        set_transmission_limit(
+            n,
+            kind,
+            factor,
+            costs,
+            Nyears,
+            lines_i=subsets["rest"]["lines"],
+            links_i=subsets["rest"]["links"],
+        )
+    else:
+        set_transmission_limit(n, kind, factor, costs, Nyears)
 
     set_line_nom_max(
         n,

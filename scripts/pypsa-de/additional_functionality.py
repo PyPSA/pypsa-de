@@ -221,11 +221,13 @@ def h2_import_limits(n, investment_year, limits_volume_max):
             (n.links.carrier.isin(pipeline_carrier))
             & (n.links.bus0.str[:2] != ct)
             & (n.links.bus1.str[:2] == ct)
+            & n.links.active
         ]
         outgoing = n.links.index[
             (n.links.carrier.isin(pipeline_carrier))
             & (n.links.bus0.str[:2] == ct)
             & (n.links.bus1.str[:2] != ct)
+            & n.links.active
         ]
 
         incoming_p = (
@@ -295,7 +297,9 @@ def h2_production_limits(n, investment_year, limits_volume_min, limits_volume_ma
         )
 
         production = n.links[
-            (n.links.carrier == "H2 Electrolysis") & (n.links.bus0.str.contains(ct))
+            (n.links.carrier == "H2 Electrolysis")
+            & (n.links.bus0.str.contains(ct))
+            & n.links.active
         ].index
         efficiency = n.links.loc[production, "efficiency"]
 
@@ -349,22 +353,26 @@ def electricity_import_limits(n, investment_year, limits_volume_max):
             (n.lines.carrier == "AC")
             & (n.lines.bus0.str[:2] != ct)
             & (n.lines.bus1.str[:2] == ct)
+            & n.lines.active
         ]
         outgoing_line = n.lines.index[
             (n.lines.carrier == "AC")
             & (n.lines.bus0.str[:2] == ct)
             & (n.lines.bus1.str[:2] != ct)
+            & n.lines.active
         ]
 
         incoming_link = n.links.index[
             (n.links.carrier == "DC")
             & (n.links.bus0.str[:2] != ct)
             & (n.links.bus1.str[:2] == ct)
+            & n.links.active
         ]
         outgoing_link = n.links.index[
             (n.links.carrier == "DC")
             & (n.links.bus0.str[:2] == ct)
             & (n.links.bus1.str[:2] != ct)
+            & n.links.active
         ]
 
         incoming_line_p = (
@@ -450,6 +458,7 @@ def add_national_co2_budgets(n, snakemake, national_co2_budgets, investment_year
                 & ~n.links.carrier.str.contains(
                     "shipping|aviation"
                 )  # first exclude aviation to multiply it with a domestic factor later
+                & n.links.active
             ]
 
             logger.info(

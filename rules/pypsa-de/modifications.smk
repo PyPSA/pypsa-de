@@ -260,6 +260,7 @@ rule modify_prenetwork:
         limit_cross_border_flows_ac=config_provider(
             "pypsa-de", "limit_cross_border_flows_ac"
         ),
+        remove_electricity_grid=config_provider("pypsa-de", "remove_electricity_grid"),
     script:
         scripts("pypsa-de/modify_prenetwork.py")
 

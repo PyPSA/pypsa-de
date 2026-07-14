@@ -5274,7 +5274,7 @@ def hack_DC_projects(n, p_nom_start, p_nom_planned, model_year, snakemake, costs
     ]
     past_projects = tprojs[n.links.loc[tprojs, "build_year"] <= (model_year - 5)]
 
-    for proj in tprojs:
+    for proj in tprojs.difference(future_projects, sort=False):
         if not isclose(n.links.loc[proj, "p_nom"], p_nom_planned[proj]):
             logger.warning(
                 f"(Post-)discretization changed p_nom of {proj} from {p_nom_planned[proj]} to {n.links.loc[proj, 'p_nom']}"
@@ -5410,8 +5410,11 @@ def process_postnetworks(n, n_start, model_year, snakemake, costs):
         # the same logic is applied to p_nom and p_nom_min
         n.links.loc[dc_links, attr] = n.links.loc[dc_links, attr].apply(_dc_lambda)
 
-    p_nom_planned = n_start.links.loc[dc_links, "p_nom"]
-    p_nom_start = n_start.links.loc[dc_links, "p_nom"].apply(_dc_lambda)
+    p_nom_planned = n_start.links.loc[
+        dc_links,
+        "p_nom_planned" if "p_nom_planned" in n_start.links.columns else "p_nom",
+    ].fillna(n_start.links.loc[dc_links, "p_nom"])
+    p_nom_start = p_nom_planned.apply(_dc_lambda)
 
     logger.info("Post-Discretizing AC lines")
 
@@ -5707,6 +5710,8 @@ if __name__ == "__main__":
     # In this hacky part of the code we assure that the investments for the AC projects, match those of the NEP-AC-Startnetz
     # Thus the variable 'Investment|Energy Supply|Electricity|Transmission|AC' is equal to the sum of exogeneous AC projects, endogenous AC expansion and Übernahme of NEP costs (mainly Systemdienstleistungen (Reactive Power Compensation) and lines that are below our spatial resolution)
     ac_startnetz = 14.5 / 5 / EUR20TOEUR23  # billion EUR
+    # 2045 is excluded since it is the fully-built target year, not an interim investment period
+    non_final_horizons = planning_horizons[:-1]
 
     ac_projects_invest = df.query(
         "Variable == 'Investment|Energy Supply|Electricity|Transmission|AC|NEP|Onshore'"
@@ -5716,16 +5721,16 @@ if __name__ == "__main__":
         df.query(
             "Variable == 'Investment|Energy Supply|Electricity|Transmission|AC|Übernahme|Startnetz Delta'"
         ).index,
-        [2025, 2030, 2035, 2040],
-    ] += (ac_startnetz - ac_projects_invest) / 4
+        non_final_horizons,
+    ] += (ac_startnetz - ac_projects_invest) / len(non_final_horizons)
 
     for suffix in ["|AC|NEP", "|AC", "", " and Distribution"]:
         df.loc[
             df.query(
                 f"Variable == 'Investment|Energy Supply|Electricity|Transmission{suffix}'"
             ).index,
-            [2025, 2030, 2035, 2040],
-        ] += (ac_startnetz - ac_projects_invest) / 4
+            non_final_horizons,
+        ] += (ac_startnetz - ac_projects_invest) / len(non_final_horizons)
 
     logger.info("Assigning mean investments of year and year + 5 to year.")
     investment_rows = df.loc[df["Variable"].str.contains("Investment")]

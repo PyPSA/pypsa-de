@@ -1145,11 +1145,29 @@ def force_retrofit(n, params):
 
 
 def enforce_transmission_project_build_years(n, current_year):
+    dc_projects = n.links.index[n.links.carrier.str.fullmatch("DC")]
+    if "p_nom_planned" not in n.links.columns:
+        n.links["p_nom_planned"] = np.nan
+
+    missing_planned = dc_projects[n.links.loc[dc_projects, "p_nom_planned"].isna()]
+    n.links.loc[missing_planned, "p_nom_planned"] = n.links.loc[
+        missing_planned, "p_nom"
+    ]
+
+    dc_future = dc_projects[n.links.loc[dc_projects, "build_year"] > current_year]
+    dc_available = dc_projects.difference(dc_future, sort=False)
+    restore_p_nom = dc_available[
+        n.links.loc[dc_available, "p_nom"].eq(0)
+        & n.links.loc[dc_available, "p_nom_planned"].notna()
+    ]
+    n.links.loc[restore_p_nom, "p_nom"] = n.links.loc[restore_p_nom, "p_nom_planned"]
+    n.links.loc[dc_available, "active"] = True
+
     # this step is necessary for any links w/
     # current year >= build_year > previous year
     # it undoes the p_nom_min = p_nom_opt from add_brownfield
     dc_previously_deactivated = n.links.index[
-        (n.links.carrier == "DC")
+        n.links.index.isin(dc_projects)
         & (n.links.p_nom > 0)
         & (n.links.p_nom_opt == 0)
         & (n.links.build_year <= snakemake.params.onshore_nep_force["cutout_year"])
@@ -1162,12 +1180,10 @@ def enforce_transmission_project_build_years(n, current_year):
         .round(3)
     )
 
-    # this forces p_nom_opt = 0 for links w/ build_year > current year
-    dc_future = n.links.index[
-        n.links.carrier.str.fullmatch("DC") & (n.links.build_year > current_year)
-    ]
-    n.links.loc[dc_future, "p_nom_min"] = 0.0
-    n.links.loc[dc_future, "p_nom_max"] = 0.0
+    # Fixed links ignore p_nom_max, and PyPSA writes p_nom_opt = p_nom for
+    # fixed links during solution assignment. Keep the planned size separately.
+    n.links.loc[dc_future, "active"] = False
+    n.links.loc[dc_future, ["p_nom", "p_nom_min", "p_nom_max", "p_nom_opt"]] = 0.0
 
 
 def force_connection_nep_offshore(n, current_year, costs):
@@ -1415,6 +1431,23 @@ def limit_cross_border_flows_ac(n, s_max_pu):
     n.lines.loc[cross_border_lines, "s_max_pu"] = s_max_pu
 
 
+def remove_electricity_grid(n):
+    """
+    Remove all transmission lines and links from PyPSA network.
+
+    Parameters
+    ----------
+    n : pypsa.Network
+        PyPSA network object
+    """
+    # Remove all AC lines
+    n.mremove("Line", n.lines.index)
+
+    # Remove all DC links
+    transmission_links = n.links[n.links.carrier.isin(["DC"])].index
+    n.mremove("Link", transmission_links)
+
+
 if __name__ == "__main__":
     if "snakemake" not in globals():
         snakemake = mock_snakemake(
@@ -1510,5 +1543,8 @@ if __name__ == "__main__":
         limit_cross_border_flows_ac(
             n, snakemake.params.limit_cross_border_flows_ac[current_year]
         )
+
+    if snakemake.params.remove_electricity_grid:
+        remove_electricity_grid(n)
 
     n.export_to_netcdf(snakemake.output.network)
