@@ -15,6 +15,7 @@ import xarray as xr
 from scripts._helpers import (
     configure_logging,
     get_snapshots,
+    get_transmission_country_subsets,
     sanitize_custom_columns,
     set_scenario_config,
     update_config_from_wildcards,
@@ -173,7 +174,7 @@ def add_brownfield(
             n.links.loc[gas_pipes_i, "p_nom_max"] = remaining_capacity
 
 
-def disable_grid_expansion_if_limit_hit(n):
+def disable_grid_expansion_if_limit_hit(n, transmission_limit_countries=None):
     """
     Check if transmission expansion limit is already reached; then turn off.
 
@@ -183,45 +184,70 @@ def disable_grid_expansion_if_limit_hit(n):
     n.global_constraints. If so, the nominal capacities are set to the
     minimum and extendable is turned off; the corresponding global
     constraint is then dropped.
+
+    This acts as a ratchet across myopic planning horizons: since
+    ``prepare_network.py`` re-adds the same (absolute) limit at every
+    horizon and brownfield carries forward built capacity as ``s_nom_min``/
+    ``p_nom_min``, expansion is automatically frozen for all later horizons
+    once a cap is reached, without needing a per-horizon budget.
+
+    Parameters
+    ----------
+    transmission_limit_countries : dict, optional
+        The ``electricity.transmission_limit_countries`` config. When
+        enabled, the DE-internal and DE-interconnector limits (added as
+        custom ``GlobalConstraint`` types by ``prepare_network.py``, see
+        ``scripts.solve_network.add_country_transmission_limit_constraints``)
+        are each checked against their own line/link subset, while the plain
+        (unsuffixed) limit is checked only against the remaining lines/links.
     """
     types = {"expansion_cost": "capital_cost", "volume_expansion": "length"}
-    for limit_type in types:
-        glcs = n.global_constraints.query(f"type == 'transmission_{limit_type}_limit'")
 
-        for name, glc in glcs.iterrows():
-            total_expansion = (
-                (
-                    n.lines.query("s_nom_extendable")
-                    .eval(f"s_nom_min * {types[limit_type]}")
-                    .sum()
+    dc_i = n.links.index[n.links.carrier == "DC"] if not n.links.empty else n.links.index
+    country_cfg = transmission_limit_countries or {}
+    if country_cfg.get("enable", False):
+        subsets = get_transmission_country_subsets(n, country_cfg["country"])
+        country = country_cfg["country"].lower()
+        suffix_scopes = {
+            "": subsets["rest"],
+            f"_{country}_internal": subsets["internal"],
+            f"_{country}_interconnector": subsets["interconnector"],
+        }
+    else:
+        suffix_scopes = {"": {"lines": n.lines.index, "links": dc_i}}
+
+    for limit_type, attr in types.items():
+        for suffix, scope in suffix_scopes.items():
+            glc_type = f"transmission_{limit_type}_limit{suffix}"
+            glcs = n.global_constraints.query("type == @glc_type")
+            if glcs.empty:
+                continue
+
+            ext_lines = n.lines.loc[scope["lines"]].query("s_nom_extendable")
+            ext_links = n.links.loc[scope["links"]].query("p_nom_extendable")
+
+            for name, glc in glcs.iterrows():
+                total_expansion = (
+                    ext_lines.eval(f"s_nom_min * {attr}").sum()
+                    + ext_links.eval(f"p_nom_min * {attr}").sum()
                 )
-                + (
-                    n.links.query("carrier == 'DC' and p_nom_extendable")
-                    .eval(f"p_nom_min * {types[limit_type]}")
-                    .sum()
-                )
-            ).sum()
 
-            # Allow small numerical differences
-            if np.abs(glc.constant - total_expansion) / glc.constant < 1e-6:
-                logger.info(
-                    f"Transmission expansion {limit_type} is already reached, disabling expansion and limit"
-                )
-                extendable_acs = n.lines.query("s_nom_extendable").index
-                n.lines.loc[extendable_acs, "s_nom_extendable"] = False
-                n.lines.loc[extendable_acs, "s_nom"] = n.lines.loc[
-                    extendable_acs, "s_nom_min"
-                ]
+                # Allow small numerical differences
+                if np.abs(glc.constant - total_expansion) / glc.constant < 1e-6:
+                    logger.info(
+                        f"Transmission expansion {limit_type}{suffix} is already reached, disabling expansion and limit"
+                    )
+                    n.lines.loc[ext_lines.index, "s_nom_extendable"] = False
+                    n.lines.loc[ext_lines.index, "s_nom"] = n.lines.loc[
+                        ext_lines.index, "s_nom_min"
+                    ]
 
-                extendable_dcs = n.links.query(
-                    "carrier == 'DC' and p_nom_extendable"
-                ).index
-                n.links.loc[extendable_dcs, "p_nom_extendable"] = False
-                n.links.loc[extendable_dcs, "p_nom"] = n.links.loc[
-                    extendable_dcs, "p_nom_min"
-                ]
+                    n.links.loc[ext_links.index, "p_nom_extendable"] = False
+                    n.links.loc[ext_links.index, "p_nom"] = n.links.loc[
+                        ext_links.index, "p_nom_min"
+                    ]
 
-                n.global_constraints.drop(name, inplace=True)
+                    n.global_constraints.drop(name, inplace=True)
 
 
 def adjust_renewable_profiles(n, input_profiles, params, year):
@@ -386,7 +412,9 @@ if __name__ == "__main__":
         capacity_threshold=snakemake.params.threshold_capacity,
     )
 
-    disable_grid_expansion_if_limit_hit(n)
+    disable_grid_expansion_if_limit_hit(
+        n, snakemake.config["electricity"].get("transmission_limit_countries")
+    )
 
     n.meta = dict(snakemake.config, **dict(wildcards=dict(snakemake.wildcards)))
 

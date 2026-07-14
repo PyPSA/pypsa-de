@@ -50,6 +50,7 @@ from scripts._helpers import (
     PYPSA_V1,
     configure_logging,
     get,
+    get_transmission_country_subsets,
     set_scenario_config,
     update_config_from_wildcards,
 )
@@ -1198,6 +1199,75 @@ def add_import_limit_constraint(n: pypsa.Network, sns: pd.DatetimeIndex):
     n.model.add_constraints(lhs, limit_sense, rhs, name="import_limit")
 
 
+def add_country_transmission_limit_constraints(n: pypsa.Network) -> None:
+    """
+    Enforce transmission expansion limits scoped to a country's internal grid
+    and to its cross-border interconnectors.
+
+    PyPSA's built-in `transmission_volume_expansion_limit` /
+    `transmission_cost_expansion_limit` global constraints always sum over
+    *all* extendable AC lines and DC links, so they cannot be scoped to a
+    subset. ``prepare_network.py`` therefore stores the country-specific
+    limits as ``GlobalConstraint`` rows with a distinguishing, custom `type`
+    (e.g. ``transmission_volume_expansion_limit_de_internal``), which PyPSA
+    ignores. Here we build the actual constraint for those rows, restricted
+    to the relevant subset of lines/links (see
+    ``electricity.transmission_limit_countries`` and
+    ``get_transmission_country_subsets``).
+    """
+    country_cfg = n.config["electricity"]["transmission_limit_countries"]
+    country = country_cfg["country"]
+    subsets = get_transmission_country_subsets(n, country)
+    m = n.model
+
+    limit_attrs = {"volume_expansion": "length", "expansion_cost": "capital_cost"}
+
+    for scope in ("internal", "interconnector"):
+        lines_i = subsets[scope]["lines"]
+        links_i = subsets[scope]["links"]
+
+        for limit_type, attr in limit_attrs.items():
+            glc_type = f"transmission_{limit_type}_limit_{country.lower()}_{scope}"
+            glcs = n.global_constraints.query("type == @glc_type")
+            if glcs.empty:
+                continue
+
+            # Intersect with the actual variable index rather than just
+            # `s_nom_extendable`/`p_nom_extendable`: extendable assets whose
+            # `build_year` lies after the current planning horizon (or that
+            # are otherwise inactive) have no `Line-s_nom`/`Link-p_nom`
+            # variable, which would otherwise raise a KeyError below. If no
+            # asset of a kind is extendable at all, the variable is absent.
+            ext_lines = (
+                lines_i.intersection(m["Line-s_nom"].indexes["name"])
+                if "Line-s_nom" in m.variables
+                else lines_i[:0]
+            )
+            ext_links = (
+                links_i.intersection(m["Link-p_nom"].indexes["name"])
+                if "Link-p_nom" in m.variables
+                else links_i[:0]
+            )
+
+            if ext_lines.empty and ext_links.empty:
+                continue
+
+            lhs = None
+            if not ext_lines.empty:
+                vars_lines = m["Line-s_nom"].loc[ext_lines]
+                term = m.linexpr((n.lines.loc[ext_lines, attr], vars_lines)).sum()
+                lhs = term if lhs is None else lhs + term
+            if not ext_links.empty:
+                vars_links = m["Link-p_nom"].loc[ext_links]
+                term = m.linexpr((n.links.loc[ext_links, attr], vars_links)).sum()
+                lhs = term if lhs is None else lhs + term
+
+            for name, glc in glcs.iterrows():
+                m.add_constraints(
+                    lhs, glc.sense, glc.constant, name=f"GlobalConstraint-{name}"
+                )
+
+
 def add_co2_atmosphere_constraint(n, snapshots):
     glcs = n.global_constraints[n.global_constraints.type == "co2_atmosphere"]
 
@@ -1290,6 +1360,9 @@ def extra_functionality(
 
     if config["sector"]["imports"]["enable"]:
         add_import_limit_constraint(n, snapshots)
+
+    if config["electricity"].get("transmission_limit_countries", {}).get("enable", False):
+        add_country_transmission_limit_constraints(n)
 
     if n.params.custom_extra_functionality:
         source_path = pathlib.Path(n.params.custom_extra_functionality).resolve()

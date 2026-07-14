@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20260203-elec-grid-limitations
+  prefix: 20260710-elec-grid-limitations-test
   name:
   # - ExPol
   - KN2045_Mix
@@ -15,11 +15,15 @@ run:
   # - KN2045_H2
   # - KN2045_NFniedrig
   # - KN2045_NFhoch
-  - KN2045_Mix_no_grid
+  # - KN2045_Mix_no_grid
   - KN2045_Mix_transmission_limit_1.0
   - KN2045_Mix_transmission_limit_1.1
-  - KN2045_Mix_transmission_limit_1.2
-  - KN2045_Mix_transmission_limit_1.3
+  # - KN2045_Mix_transmission_limit_1.2
+  # - KN2045_Mix_transmission_limit_1.3
+  - KN2045_Mix_transmission_limit_DE_1.0
+  # - KN2045_Mix_transmission_limit_DE_1.1
+  # - KN2045_Mix_transmission_limit_DE_1.2
+  - KN2045_Mix_transmission_limit_DE_1.3
   scenarios:
     enable: true
     manual_file: config/scenarios.manual.yaml
@@ -384,6 +388,7 @@ sector:
     2040: 0.299
     2045: 0.149
 
+
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#industry
 industry:
   steam_biomass_fraction: 0.4
@@ -737,3 +742,5 @@ data:
   costs:
     source: primary
     version: latest
+
+remove_electricity_grid: false

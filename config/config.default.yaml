@@ -183,6 +183,11 @@ electricity:
     enable: false
     by_country: false
   transmission_limit: vopt
+  transmission_limit_countries:
+    enable: false
+    country: DE
+    internal: v1.0
+    interconnector: v1.0
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#atlite
 atlite:

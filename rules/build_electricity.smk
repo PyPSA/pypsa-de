@@ -872,6 +872,9 @@ rule prepare_network:
         autarky=config_provider("electricity", "autarky", default={}),
         drop_leap_day=config_provider("enable", "drop_leap_day"),
         transmission_limit=config_provider("electricity", "transmission_limit"),
+        transmission_limit_countries=config_provider(
+            "electricity", "transmission_limit_countries", default={}
+        ),
     message:
         "Preparing network for model with {wildcards.clusters} clusters and options {wildcards.opts}"
     script:
