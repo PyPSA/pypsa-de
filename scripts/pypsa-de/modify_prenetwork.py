@@ -1160,9 +1160,7 @@ def enforce_transmission_project_build_years(n, current_year):
         n.links.loc[dc_available, "p_nom"].eq(0)
         & n.links.loc[dc_available, "p_nom_planned"].notna()
     ]
-    n.links.loc[restore_p_nom, "p_nom"] = n.links.loc[
-        restore_p_nom, "p_nom_planned"
-    ]
+    n.links.loc[restore_p_nom, "p_nom"] = n.links.loc[restore_p_nom, "p_nom_planned"]
     n.links.loc[dc_available, "active"] = True
 
     # this step is necessary for any links w/

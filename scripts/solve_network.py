@@ -1361,7 +1361,11 @@ def extra_functionality(
     if config["sector"]["imports"]["enable"]:
         add_import_limit_constraint(n, snapshots)
 
-    if config["electricity"].get("transmission_limit_countries", {}).get("enable", False):
+    if (
+        config["electricity"]
+        .get("transmission_limit_countries", {})
+        .get("enable", False)
+    ):
         add_country_transmission_limit_constraints(n)
 
     if n.params.custom_extra_functionality:

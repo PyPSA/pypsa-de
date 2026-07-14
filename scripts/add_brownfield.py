@@ -203,7 +203,9 @@ def disable_grid_expansion_if_limit_hit(n, transmission_limit_countries=None):
     """
     types = {"expansion_cost": "capital_cost", "volume_expansion": "length"}
 
-    dc_i = n.links.index[n.links.carrier == "DC"] if not n.links.empty else n.links.index
+    dc_i = (
+        n.links.index[n.links.carrier == "DC"] if not n.links.empty else n.links.index
+    )
     country_cfg = transmission_limit_countries or {}
     if country_cfg.get("enable", False):
         subsets = get_transmission_country_subsets(n, country_cfg["country"])

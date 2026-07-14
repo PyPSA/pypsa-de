@@ -322,7 +322,9 @@ def get_transmission_country_subsets(n: pypsa.Network, country: str) -> dict:
         one bus in `country`) and "rest" (neither bus in `country`). Each maps
         to a dict with keys "lines" and "links" (pandas Index).
     """
-    dc_i = n.links.index[n.links.carrier == "DC"] if not n.links.empty else n.links.index
+    dc_i = (
+        n.links.index[n.links.carrier == "DC"] if not n.links.empty else n.links.index
+    )
 
     lines_c0 = n.lines.bus0.map(n.buses.country)
     lines_c1 = n.lines.bus1.map(n.buses.country)
