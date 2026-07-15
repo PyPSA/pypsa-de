@@ -351,6 +351,7 @@ def force_retrofit(n, params):
         (n.links.carrier.isin(gas_carrier))
         & (n.links.p_nom_extendable)
         & (n.links.index.str[:2] == "DE")
+        & (n.links.build_year == snakemake.wildcards.planning_horizons)
     ].index
     n.links.drop(to_drop, inplace=True)
 

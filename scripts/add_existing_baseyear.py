@@ -1218,42 +1218,28 @@ def add_h2_retro(n, baseyear, params):
     for original_carrier, new_carrier in plant_types:
         # Query to extract all gas plant links
         plant_i = n.links.query(f"carrier == '{original_carrier}'")
-        # Further filtering based on build_year excluding the current planning horizon and kick out old ones (before retrofit_start_year)
+        # Further filtering based on build_year excluding the current planning horizon 
         plant_i = plant_i.loc[
             (plant_i.build_year >= start) & (plant_i.build_year != baseyear)
         ].index
 
-        #extract existing, endogenously retrofitted H2 plants
-        existing_h2_idx = n.links.query(f"carrier == '{new_carrier}'").index
-        # turn them into a renamed set with gas names (all endogenously retrofitted H2 plants are renamed from gas plants, 
-        # so we can use this to filter out the gas plants that have already been retrofitted)
-        existing_h2_as_gas_names = set(
-            idx.replace(new_carrier, original_carrier) for idx in existing_h2_idx
+
+        #Set plants to extendable for constraint in solve_network() 
+        n.links.loc[plant_i, "p_nom_extendable"] = True
+
+        #get all retrofitted plants and set p_nom_extendable to True
+        h2_counterpart = n.links.query(f"carrier == '{new_carrier}'").index
+        n.links.loc[h2_counterpart, "p_nom_extendable"] = True
+
+        # check if the plants are not having a h2 counterpart yet
+        h2_counterpart = set(
+            index.replace(new_carrier, original_carrier) for index in h2_counterpart
         )
-
-        # only keep gas plants that do not have a corresponding H2 plant yet
-        plant_i = [idx for idx in plant_i if idx not in existing_h2_as_gas_names]
-
-
-
-        # Set plants to extendable for constraint in solve_network() wrong because then model keeps expanding them in the next optimization
-        # n.links.loc[plant_i, "p_nom_extendable"] = True
-
-        # get all retrofitted plants and set p_nom_extendable to True
-        # h2_counterpart = n.links.query(f"carrier == '{new_carrier}'").index
-        # n.links.loc[h2_counterpart, "p_nom_extendable"] = True
-
-        # # check if the plants are not having a h2 counterpart yet
-        # h2_counterpart = set(
-        #     index.replace(new_carrier, original_carrier) for index in h2_counterpart
-        # )
-        # plant_i = [index for index in plant_i if index not in h2_counterpart]
+        plant_i = [index for index in plant_i if index not in h2_counterpart]
 
         if not plant_i:
             logger.info(f"No more {original_carrier} retrofitting potential.")
             continue
-        # only set Gas plants without a corresponding H2 plant to extendable, not the existing ones
-        n.links.loc[plant_i, "p_nom_extendable"] = True
 
         n.links.loc[plant_i, "p_nom_max"] = n.links.loc[plant_i, "p_nom"]
 

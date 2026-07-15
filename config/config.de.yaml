@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20260713_endoretro_V4
+  prefix: 20260715_endoretro_V5
   name:
   # - ExPol
   # - KN2045_Mix
@@ -248,7 +248,7 @@ clustering:
     # 'ES': 0.0408
     # 'IT': 0.0408
   temporal:
-    resolution_sector: 3H
+    resolution_sector: 6H
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#co2-budget
 co2_budget:

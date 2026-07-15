@@ -1052,6 +1052,7 @@ def add_hydrogen_turbines(n, H2_plants):
             (n.links.carrier == carrier)
             & (n.links.index.str.startswith(scope))
             & (n.links.p_nom_extendable)
+            & (n.links.build_year == snakemake.wildcards.planning_horizons)
         ].index
         if gas_plants.empty:
             continue
