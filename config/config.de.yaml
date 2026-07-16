@@ -260,7 +260,7 @@ wasserstoff_kernnetz:
   force_all_ipcei_pci: true
 
 new_decentral_fossil_boiler_ban:
-  DE: 2029
+  DE: 2055
 
 coal_generation_ban:
   DE: 2038
