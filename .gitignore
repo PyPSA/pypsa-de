@@ -23,7 +23,7 @@ gurobi.log
 /networks
 /benchmarks
 /logs
-/notebooks
+# /notebooks
 /data/*
 # Allowlist a small subset under data/pypsa-de.
 # Important: parent directories must be un-ignored for negations to take effect.
@@ -76,7 +76,7 @@ d1gam3xoknrgr2.cloudfront.net/
 
 *.geojson
 
-*.ipynb
+# *.ipynb
 
 merger-todos.md
 
