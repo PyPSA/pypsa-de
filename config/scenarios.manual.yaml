@@ -31,7 +31,6 @@ ExPol:
               2030: 86.5   # 75 % Wind-an-Land Law
           offwind:
             DE:
-              2030: 17.3
               2035: 29.3
           solar:
             DE:
@@ -41,9 +40,6 @@ ExPol:
         Generator:
           offwind:
             DE:
-              2020: 7.8
-              2025: 11.3
-              2030: 17.3 # 12 less than NEP, because of 1 year delay
               2035: 40 # 29.3 + half of extra projects
           onwind:
             DE:
@@ -52,15 +48,9 @@ ExPol:
             DE:
               2030: 215 # uba Projektionsbericht
 
-
   sector:
     district_heating:
       potential: 0.1
-
-  offshore_nep_force:
-    cutin_year: 2025
-    cutout_year: 2035 # Hackily reduced to 2030 if delay_years: 1
-    delay_years: 1
 
 
 KN2045_Mix:
