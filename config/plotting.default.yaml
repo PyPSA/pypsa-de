@@ -495,6 +495,7 @@ plotting:
     solid biomass for industry co2 to stored: '#47411c'
     urban central solid biomass CHP: '#9d9042'
     urban central solid biomass CHP CC: '#6c5d28'
+    biogas CHP: '#92d46c'
     biomass boiler: '#8A9A5B'
     residential rural biomass boiler: '#a1a066'
     residential urban decentral biomass boiler: '#b0b87b'

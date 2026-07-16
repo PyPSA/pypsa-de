@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20260713_coal_limits
+  prefix: 20260716_biogas_chps
   name:
   - KN2045_Bal_v5
   # - KN2045_Elec_plus_v5
@@ -631,6 +631,9 @@ solving:
         coal:
           DE:
             2025: 28.2
+        biogas CHP:
+          DE:
+            2025: 29
     limits_power_max: # in GW
       DE:
         2020: 15

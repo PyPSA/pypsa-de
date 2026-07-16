@@ -26,7 +26,6 @@ from scripts._helpers import (
 )
 from scripts.add_electricity import sanitize_carriers
 from scripts.build_energy_totals import cartesian
-from scripts.build_powerplants import add_custom_powerplants
 from scripts.definitions.heat_system import HeatSystem
 from scripts.prepare_sector_network import (
     cluster_heat_buses,
@@ -203,8 +202,10 @@ def add_power_capacities_installed_before_baseyear(
     logger.debug(f"Adding power capacities installed before {baseyear}")
 
     df_agg = pd.read_csv(powerplants_file, index_col=0)
-    if german_chps_file:
-        df_agg = add_custom_powerplants(df_agg, german_chps_file, True)
+    if "DE" in df_agg.query("Set == 'CHP'").Country:
+        msg = "PyPSA-DE reads in German CHPs from MaStR, not from powerplantmatching database. Please use `powerplants_filter` to remove DE CHPs from the powerplants.csv file."
+        logger.error(msg)
+        raise ValueError(msg)
 
     rename_fuel = {
         "Hard Coal": "coal",
@@ -213,16 +214,8 @@ def add_power_capacities_installed_before_baseyear(
         "Oil": "oil",
         "OCGT": "OCGT",
         "CCGT": "CCGT",
-        "Bioenergy": "solid biomass",
+        "Bioenergy": "urban central solid biomass CHP",
     }
-
-    # If heat is considered, add CHPs in the add_heating_capacities function.
-    # Assume that all oil power plants are not CHPs.
-    if options["heating"]:
-        df_agg = df_agg.query("Set != 'CHP'")
-    elif not options["industry"] and "Industry" in df_agg.columns:
-        df_agg["Industry"].fillna(False, inplace=True)
-        df_agg.query("not Industry", inplace=True)
 
     # Replace Fueltype "Natural Gas" with the respective technology (OCGT or CCGT)
     natural_gas_mask = df_agg["Fueltype"] == "Natural Gas"
@@ -269,12 +262,6 @@ def add_power_capacities_installed_before_baseyear(
         df_agg.DateIn + df_agg.Fueltype.map(costs.lifetime).fillna(30)
     )
 
-    # split biogas and solid biomass
-    biogas_i = df_agg.loc[
-        (df_agg.Fueltype == "solid biomass") & (df_agg.Capacity < 2)
-    ].index
-    df_agg.loc[biogas_i, "Fueltype"] = "biogas"
-
     # include renewables in df_agg
     add_existing_renewables(
         df_agg=df_agg,
@@ -284,13 +271,11 @@ def add_power_capacities_installed_before_baseyear(
         renewable_carriers=renewable_carriers,
     )
 
-    # add chp plants
-    add_chp_plants(
+    add_german_chp_plants(
         n,
         grouping_years,
         costs,
         baseyear,
-        powerplants_file,
         german_chps_file,
         lifetime_values,
         lifetime_gas_chp,
@@ -364,22 +349,7 @@ def add_power_capacities_installed_before_baseyear(
         "oil": "oil",
         "lignite": "lignite",
         "nuclear": "uranium",
-        "solid biomass": "biomass",
-        "biogas": "biogas",
-    }
-
-    cost_key_dict = {
-        "solar": "solar",
-        "solar rooftop": "solar-rooftop",
-        "onwind": "onwind",
-        "offwind-ac": "offwind",
-    }
-
-    cost_key_dict = {
-        "solar": "solar",
-        "solar rooftop": "solar-rooftop",
-        "onwind": "onwind",
-        "offwind-ac": "offwind",
+        "urban central solid biomass CHP": "biomass",
     }
 
     cost_key_dict = {
@@ -479,16 +449,7 @@ def add_power_capacities_installed_before_baseyear(
             if not new_build.empty:
                 new_capacity = capacity.loc[new_build.str.replace(name_suffix, "")]
 
-                if generator not in ["solid biomass", "biogas"]:
-                    # missing lifetimes are filled with mean lifetime
-                    # if mean cannot be built, lifetime is taken from costs.csv
-                    if isinstance(lifetime_assets, pd.Series):
-                        lifetime_assets = (
-                            lifetime_assets.reindex(capacity.index)
-                            .fillna(lifetime_assets.mean())
-                            .fillna(costs.at[generator, "lifetime"])
-                        )
-
+                if generator != "urban central solid biomass CHP":
                     n.add(
                         "Link",
                         new_capacity.index,
@@ -511,46 +472,36 @@ def add_power_capacities_installed_before_baseyear(
                         efficiency=costs.at[generator, "efficiency"],
                         efficiency2=costs.at[carrier[generator], "CO2 intensity"],
                         build_year=grouping_year,
-                        lifetime=(
-                            lifetime_assets.loc[new_capacity.index]
-                            if isinstance(lifetime_assets, pd.Series)
-                            else lifetime_assets
-                        ),
+                        lifetime=lifetime_assets.loc[new_capacity.index],
                     )
                 else:
-                    if generator == "solid biomass":
-                        bus0 = spatial.biomass.df.loc[
-                            new_capacity.index, "nodes"
-                        ].values
-                    elif generator == "biogas":
-                        bus0 = spatial.biogas.df.loc[new_capacity.index, "nodes"].values
-                    else:
-                        logger.error(f"Generator {generator} not recognized.")
-                        raise ValueError(f"Generator {generator} not recognized.")
-
-                    # We assume the electrical efficiency of a CHP for the biomass and biogas power plants
-                    # The EOP from technology data seems to be somewhat too efficient
-
                     key = "central solid biomass CHP"
-
+                    central_heat = n.buses.query(
+                        "carrier == 'urban central heat'"
+                    ).location.unique()
+                    heat_buses = new_capacity.index.map(
+                        lambda i: i + " urban central heat" if i in central_heat else ""
+                    )
                     n.add(
                         "Link",
                         new_capacity.index,
                         suffix=name_suffix,
-                        bus0=bus0,
+                        bus0=spatial.biomass.df.loc[new_capacity.index]["nodes"].values,
                         bus1=new_capacity.index,
+                        bus2=heat_buses,
                         carrier=generator,
                         p_nom=new_capacity / costs.at[key, "efficiency"],
                         capital_cost=costs.at[key, "capital_cost"]
                         * costs.at[key, "efficiency"],
                         onight_cost=costs.at[key, "investment"]
                         * costs.at[key, "efficiency"],
-                        marginal_cost=costs.at[key, "VOM"],
+                        marginal_cost=costs.at[key, "efficiency"]
+                        * costs.at[key, "VOM"],  # NB: VOM is per MWel
                         efficiency=costs.at[key, "efficiency"],
+                        efficiency2=costs.at[key, "efficiency-heat"],
                         build_year=grouping_year,
                         lifetime=lifetime_assets.loc[new_capacity.index],
                     )
-
         # check if existing capacities are larger than technical potential
         existing_large = n.generators[
             n.generators["p_nom_min"] > n.generators["p_nom_max"]
@@ -565,12 +516,11 @@ def add_power_capacities_installed_before_baseyear(
             ]
 
 
-def add_chp_plants(
+def add_german_chp_plants(
     n,
     grouping_years,
     costs,
     baseyear,
-    powerplants_file,
     german_chps_file,
     lifetime_values,
     lifetime_gas_chp,
@@ -583,17 +533,12 @@ def add_chp_plants(
         "Coal": "coal",
         "Lignite": "lignite",
         "Natural Gas": "gas",
-        "Bioenergy": "urban central solid biomass CHP",
+        "Biomasse": "solid biomass",
+        "Biogas": "biogas",
         "Oil": "oil",
     }
 
-    ppl = pd.read_csv(powerplants_file, index_col=0)
-
-    if german_chps_file:
-        if german_chps_file.endswith("german_chp_{clusters}.csv"):
-            logger.info("Supersedeing default German CHPs with custom ones from MASTR.")
-            ppl = ppl.query("~(Set == 'CHP' and Country == 'DE')")
-        ppl = add_custom_powerplants(ppl, german_chps_file, True)
+    ppl = pd.read_csv(german_chps_file, dtype={"bus": "str"})
 
     # drop assets which are already phased out / decommissioned
     # drop hydro, waste and oil fueltypes for CHP
@@ -603,10 +548,9 @@ def add_chp_plants(
         "Set == 'CHP' and (DateOut >= @baseyear or DateOut != DateOut) and (DateIn <= @limit or DateIn != DateIn) and Fueltype not in @drop_fueltypes"
     ).copy()
 
-    # calculate remaining lifetime before phase-out (+1 because assuming
-    # phase out date at the end of the year)
     chp.Fueltype = chp.Fueltype.map(rename_fuel)
-
+    if "biogas" in chp.Fueltype:
+        n.add("Carrier", "biogas CHP")
     # Fill missing DateIn, drop the remaining missing values afterwards
     chp["DateIn"] = chp.groupby("Fueltype")["DateIn"].transform(
         lambda x: x.fillna(x.mean() // 1)
@@ -621,9 +565,16 @@ def add_chp_plants(
 
     chp.dropna(subset="DateIn", inplace=True)
 
-    chp["grouping_year"] = np.take(
-        grouping_years, np.digitize(chp.DateIn, grouping_years, right=True)
-    )
+    chp["grouping_year"] = pd.cut(
+        chp.DateIn,
+        bins=grouping_years,
+        labels=grouping_years[1:],
+        right=True,
+        include_lowest=True,
+    ).astype(int)
+
+    # calculate remaining lifetime before phase-out (+1 because assuming
+    # phase out date at the end of the year)
     chp["lifetime"] = (chp.DateOut - chp["grouping_year"] + 1).fillna(
         lifetime_values["lifetime"]
     )
@@ -636,251 +587,183 @@ def add_chp_plants(
     ]  # in add_brownfield this is build_year + lifetime <= baseyear
 
     # check if the CHPs were read in from MaStR for Germany
-    if "Capacity_thermal" in chp.columns:
-        if not options["industry"]:
-            chp.query("Industry == False", inplace=True)
+    assert "Capacity_thermal" in chp.columns, (
+        "Column 'Capacity_thermal' is missing from the CHP dataframe. Make sure the data for this function is read from MaStR and correctly preprocessed."
+    )
 
-        thermal_capacity_b = ~chp.Capacity_thermal.isna()
-        mastr_chp = chp[thermal_capacity_b]
+    if not options["industry"]:
+        chp.query("Industry == False", inplace=True)
 
-        # CHPs without thermal capacity are handled later
-        chp = chp[~thermal_capacity_b]
+    assert ~chp.Capacity_thermal.isna().any(), (
+        "Column 'Capacity_thermal' contains NaN values. Make sure the data for this function is read from MaStR and correctly preprocessed."
+    )
 
-        # exclude small CHPs below 500 kW
-        mastr_chp = mastr_chp.query("Capacity > 0.5 or Capacity_thermal > 0.5")
+    # exclude small CHPs below 500 kW except for biogas CHPs, which are often small-scale
+    mastr_chp = chp.query(
+        "(Capacity > 0.5) or (Capacity_thermal > 0.5) or (Fueltype == 'biogas')"
+    )
 
-        # separate CHPs with substantial power output from those with little power output
-        # ratio chosen for reasonable backpressure coefficients c_b
-        mastr_chp_power = mastr_chp.query("Capacity > 0.5 * Capacity_thermal").copy()
-        mastr_chp_heat = mastr_chp.query("Capacity <= 0.5 * Capacity_thermal").copy()
+    # separate CHPs with substantial power output from those with little power output
+    # ratio chosen for reasonable backpressure coefficients c_b
+    mastr_chp_power = mastr_chp.query("Capacity > 0.5 * Capacity_thermal").copy()
+    mastr_chp_heat = mastr_chp.query("Capacity <= 0.5 * Capacity_thermal").copy()
 
-        mastr_chp_power["p_nom"] = mastr_chp_power.eval("Capacity / Efficiency")
-        mastr_chp_power["c_b"] = mastr_chp_power.eval("Capacity / Capacity_thermal")
-        mastr_chp_power["c_b"] = mastr_chp_power["c_b"].clip(
-            upper=costs.at["CCGT", "c_b"]
-        )  # exclude outliers
-        mastr_chp_power["efficiency-heat"] = mastr_chp_power.eval("Efficiency / c_b")
+    mastr_chp_power["p_nom"] = mastr_chp_power.eval("Capacity / Efficiency")
+    mastr_chp_power["c_b"] = mastr_chp_power.eval("Capacity / Capacity_thermal")
+    mastr_chp_power["c_b"] = mastr_chp_power["c_b"].clip(
+        upper=costs.at["CCGT", "c_b"]
+    )  # exclude outliers
+    mastr_chp_power["efficiency-heat"] = mastr_chp_power.eval("Efficiency / c_b")
 
-        # these CHPs are mainly biomass CHPs
-        mastr_chp_heat["efficiency-heat"] = costs.at[
-            "central solid biomass CHP", "efficiency-heat"
-        ]
-        mastr_chp_heat["p_nom"] = (
-            mastr_chp_heat.Capacity_thermal / mastr_chp_heat["efficiency-heat"]
-        )
-        mastr_chp_heat["Efficiency"] = mastr_chp_heat.eval("Capacity / p_nom")
-        eff_total_max = costs.loc[
-            "central solid biomass CHP", ["efficiency-heat", "efficiency"]
-        ].sum()
-        eff_heat = mastr_chp_heat["efficiency-heat"]
-        mastr_chp_heat["Efficiency"] = mastr_chp_heat["Efficiency"].clip(
-            upper=eff_total_max - eff_heat
-        )
+    # these CHPs are mainly biomass CHPs
+    mastr_chp_heat["efficiency-heat"] = costs.at[
+        "central solid biomass CHP", "efficiency-heat"
+    ]
+    mastr_chp_heat["p_nom"] = (
+        mastr_chp_heat.Capacity_thermal / mastr_chp_heat["efficiency-heat"]
+    )
+    mastr_chp_heat["Efficiency"] = mastr_chp_heat.eval("Capacity / p_nom")
+    eff_total_max = costs.loc[
+        "central solid biomass CHP", ["efficiency-heat", "efficiency"]
+    ].sum()
+    eff_heat = mastr_chp_heat["efficiency-heat"]
+    mastr_chp_heat["Efficiency"] = mastr_chp_heat["Efficiency"].clip(
+        upper=eff_total_max - eff_heat
+    )
 
-        mastr_chp = pd.concat([mastr_chp_power, mastr_chp_heat])
+    mastr_chp = pd.concat([mastr_chp_power, mastr_chp_heat])
 
-        mastr_chp_efficiency_power = mastr_chp.pivot_table(
-            index=["grouping_year", "Fueltype"],
-            columns="bus",
-            values="Efficiency",
-            aggfunc=lambda x: np.average(x, weights=mastr_chp.loc[x.index, "p_nom"]),
-        )
-
-        mastr_chp_efficiency_heat = mastr_chp.pivot_table(
-            index=["grouping_year", "Fueltype"],
-            columns="bus",
-            values="efficiency-heat",
-            aggfunc=lambda x: np.average(x, weights=mastr_chp.loc[x.index, "p_nom"]),
-        )
-
-        mastr_chp_lifetime = mastr_chp.pivot_table(
-            index=["grouping_year", "Fueltype"],
-            columns="bus",
-            values="lifetime",
-            aggfunc=lambda x: np.average(x, weights=mastr_chp.loc[x.index, "p_nom"]),
-        )
-        mastr_chp_p_nom = mastr_chp.pivot_table(
-            index=["grouping_year", "Fueltype"],
-            columns="bus",
-            values="p_nom",
-            aggfunc="sum",
-        )
-
-        keys = {
-            "coal": "central coal CHP",
-            "gas": "central gas CHP",
-            "waste": "waste CHP",
-            "oil": "central gas CHP",
-            "lignite": "central coal CHP",
-        }
-        # add everything as Link
-        for grouping_year, generator in mastr_chp_p_nom.index:
-            # capacity is the capacity in MW at each node for this
-            p_nom = mastr_chp_p_nom.loc[grouping_year, generator]
-            threshold = capacity_threshold
-            p_nom = p_nom[p_nom > threshold]
-
-            efficiency_power = mastr_chp_efficiency_power.loc[grouping_year, generator]
-            efficiency_heat = mastr_chp_efficiency_heat.loc[grouping_year, generator]
-            lifetime = mastr_chp_lifetime.loc[grouping_year, generator]
-
-            for bus in p_nom.index:
-                # check if link already exists and set p_nom_min and efficiency
-                if generator != "urban central solid biomass CHP":
-                    suffix = f" urban central {generator} CHP-{grouping_year}"
-                else:
-                    suffix = f" {generator}-{grouping_year}"
-
-                if bus + suffix in n.links.index:
-                    # only change p_nom_min and efficiency
-                    n.links.loc[bus + suffix, "p_nom_min"] = p_nom.loc[bus]
-                    n.links.loc[bus + suffix, "p_nom"] = p_nom.loc[bus]
-                    n.links.loc[bus + suffix, "efficiency"] = efficiency_power.loc[bus]
-                    n.links.loc[bus + suffix, "efficiency2"] = efficiency_heat.loc[bus]
-                    continue
-
-                # bus1 represents electricity transmission node
-                bus1 = " ".join(bus.split()[:2])
-                if generator != "urban central solid biomass CHP":
-                    # lignite CHPs are not in DEA database - use coal CHP parameters
-                    key = keys[generator]
-                    if "EU" in vars(spatial)[generator].locations:
-                        bus0 = vars(spatial)[generator].nodes[0]
-                    else:
-                        bus0 = vars(spatial)[generator].df.loc[bus, "nodes"]
-
-                    n.add(
-                        "Link",
-                        bus,
-                        suffix=f" urban central {generator} CHP-{grouping_year}",
-                        bus0=bus0,
-                        bus1=bus1,
-                        bus2=bus + " urban central heat",
-                        bus3="co2 atmosphere",
-                        carrier=f"urban central {generator} CHP",
-                        p_nom=p_nom[bus],
-                        capital_cost=costs.at[key, "capital_cost"]
-                        * costs.at[key, "efficiency"],
-                        onight_cost=costs.at[key, "investment"]
-                        * costs.at[key, "efficiency"],
-                        marginal_cost=costs.at[key, "VOM"],
-                        efficiency=efficiency_power.loc[bus],
-                        efficiency2=efficiency_heat.loc[bus],
-                        efficiency3=costs.at[generator, "CO2 intensity"],
-                        build_year=grouping_year,
-                        lifetime=lifetime.loc[bus],
-                    )
-                else:
-                    key = "central solid biomass CHP"
-                    n.add(
-                        "Link",
-                        bus,
-                        suffix=f" urban {key}-{grouping_year}",
-                        bus0=spatial.biomass.df.loc[bus1]["nodes"],
-                        bus1=bus1,
-                        bus2=bus + " urban central heat",
-                        carrier=generator,
-                        p_nom=p_nom[bus],
-                        capital_cost=costs.at[key, "capital_cost"]
-                        * costs.at[key, "efficiency"],
-                        onight_cost=costs.at[key, "investment"]
-                        * costs.at[key, "efficiency"],
-                        marginal_cost=costs.at[key, "VOM"],
-                        efficiency=efficiency_power.loc[bus],
-                        efficiency2=efficiency_heat.loc[bus],
-                        build_year=grouping_year,
-                        lifetime=lifetime.loc[bus],
-                    )
-
-    # CHPs that are not from MaStR
-    chp_nodal_p_nom = chp.pivot_table(
+    mastr_chp_efficiency_power = mastr_chp.pivot_table(
         index=["grouping_year", "Fueltype"],
         columns="bus",
-        values="Capacity",
-        aggfunc="sum",
+        values="Efficiency",
+        aggfunc=lambda x: np.average(x, weights=mastr_chp.loc[x.index, "p_nom"]),
     )
-    chp_nodal_lifetime = chp.pivot_table(
+
+    mastr_chp_efficiency_heat = mastr_chp.pivot_table(
+        index=["grouping_year", "Fueltype"],
+        columns="bus",
+        values="efficiency-heat",
+        aggfunc=lambda x: np.average(x, weights=mastr_chp.loc[x.index, "p_nom"]),
+    )
+
+    mastr_chp_lifetime = mastr_chp.pivot_table(
         index=["grouping_year", "Fueltype"],
         columns="bus",
         values="lifetime",
-        aggfunc=lambda x: np.average(x, weights=chp.loc[x.index, "Capacity"]),
+        aggfunc=lambda x: np.average(x, weights=mastr_chp.loc[x.index, "p_nom"]),
     )
-    for grouping_year, generator in chp_nodal_p_nom.index:
-        p_nom = chp_nodal_p_nom.loc[grouping_year, generator]
+    mastr_chp_p_nom = mastr_chp.pivot_table(
+        index=["grouping_year", "Fueltype"],
+        columns="bus",
+        values="p_nom",
+        aggfunc="sum",
+    )
+
+    keys = {
+        "coal": "central coal CHP",
+        "gas": "central gas CHP",
+        "waste": "waste CHP",
+        "oil": "central gas CHP",
+        "lignite": "central coal CHP",
+    }
+    # add everything as Link
+    for grouping_year, generator in mastr_chp_p_nom.index:
+        # capacity is the capacity in MW at each node for this
+        p_nom = mastr_chp_p_nom.loc[grouping_year, generator]
         threshold = capacity_threshold
         p_nom = p_nom[p_nom > threshold]
-        lifetime = chp_nodal_lifetime.loc[grouping_year, generator]
+
+        efficiency_power = mastr_chp_efficiency_power.loc[grouping_year, generator]
+        efficiency_heat = mastr_chp_efficiency_heat.loc[grouping_year, generator]
+        lifetime = mastr_chp_lifetime.loc[grouping_year, generator]
 
         for bus in p_nom.index:
             # check if link already exists and set p_nom_min and efficiency
-            if generator != "urban central solid biomass CHP":
-                suffix = f" urban central {generator} CHP-{grouping_year}"
-            else:
-                suffix = f" {generator}-{grouping_year}"
+            suffix = f" urban central {generator} CHP-{grouping_year}"
+            if generator == "biogas":
+                suffix = f" {generator} CHP-{grouping_year}"
 
             if bus + suffix in n.links.index:
-                # only change p_nom_min
+                # only change p_nom_min and efficiency
                 n.links.loc[bus + suffix, "p_nom_min"] = p_nom.loc[bus]
                 n.links.loc[bus + suffix, "p_nom"] = p_nom.loc[bus]
+                n.links.loc[bus + suffix, "efficiency"] = efficiency_power.loc[bus]
+                n.links.loc[bus + suffix, "efficiency2"] = efficiency_heat.loc[bus]
                 continue
 
             # bus1 represents electricity transmission node
             bus1 = " ".join(bus.split()[:2])
-            # CHPs are represented as EOP if no urban central heat bus is available
-            if f"{bus} urban central heat" in n.buses.index:
-                bus2 = bus + " urban central heat"
-            else:
-                logger.warning(
-                    f"Bus {bus} urban central heat not found. CHP is represented as EOP."
-                )
-                bus2 = ""
-
-            if generator != "urban central solid biomass CHP":
+            if generator not in ["biogas", "solid biomass"]:
                 # lignite CHPs are not in DEA database - use coal CHP parameters
                 key = keys[generator]
                 if "EU" in vars(spatial)[generator].locations:
                     bus0 = vars(spatial)[generator].nodes[0]
                 else:
                     bus0 = vars(spatial)[generator].df.loc[bus, "nodes"]
+
                 n.add(
                     "Link",
                     bus,
                     suffix=f" urban central {generator} CHP-{grouping_year}",
                     bus0=bus0,
                     bus1=bus1,
-                    bus2=bus2,
+                    bus2=bus + " urban central heat",
                     bus3="co2 atmosphere",
                     carrier=f"urban central {generator} CHP",
-                    p_nom=p_nom[bus] / costs.at[key, "efficiency"],
+                    p_nom=p_nom[bus],
                     capital_cost=costs.at[key, "capital_cost"]
                     * costs.at[key, "efficiency"],
                     onight_cost=costs.at[key, "investment"]
                     * costs.at[key, "efficiency"],
                     marginal_cost=costs.at[key, "VOM"],
-                    efficiency=costs.at[key, "efficiency"],
-                    efficiency2=costs.at[key, "efficiency"] / costs.at[key, "c_b"],
+                    efficiency=efficiency_power.loc[bus],
+                    efficiency2=efficiency_heat.loc[bus],
                     efficiency3=costs.at[generator, "CO2 intensity"],
                     build_year=grouping_year,
                     lifetime=lifetime.loc[bus],
                 )
-            else:
+            elif generator == "solid biomass":
                 key = "central solid biomass CHP"
                 n.add(
                     "Link",
-                    p_nom.index,
+                    bus,
                     suffix=f" urban {key}-{grouping_year}",
                     bus0=spatial.biomass.df.loc[bus1]["nodes"],
                     bus1=bus1,
-                    bus2=bus2,
+                    bus2=bus + " urban central heat",
                     carrier=generator,
-                    p_nom=p_nom[bus] / costs.at[key, "efficiency"],
+                    p_nom=p_nom[bus],
                     capital_cost=costs.at[key, "capital_cost"]
                     * costs.at[key, "efficiency"],
                     onight_cost=costs.at[key, "investment"]
                     * costs.at[key, "efficiency"],
                     marginal_cost=costs.at[key, "VOM"],
-                    efficiency=costs.at[key, "efficiency"],
-                    efficiency2=costs.at[key, "efficiency-heat"],
+                    efficiency=efficiency_power.loc[bus],
+                    efficiency2=efficiency_heat.loc[bus],
+                    build_year=grouping_year,
+                    lifetime=lifetime.loc[bus],
+                )
+            elif generator == "biogas":
+                # uses the technological parameters of the central solid biomass CHP for biogas CHPs
+                key = "central solid biomass CHP"
+                n.add(
+                    "Link",
+                    bus,
+                    suffix=f" {generator} CHP-{grouping_year}",
+                    bus0=spatial.biogas.df.loc[bus1]["nodes"],
+                    bus1=bus1,
+                    bus2=bus + " rural heat",
+                    carrier=f"{generator} CHP",
+                    p_nom=p_nom[bus],
+                    capital_cost=costs.at[key, "capital_cost"]
+                    * costs.at[key, "efficiency"],
+                    onight_cost=costs.at[key, "investment"]
+                    * costs.at[key, "efficiency"],
+                    marginal_cost=costs.at[key, "VOM"],
+                    efficiency=efficiency_power.loc[bus],
+                    efficiency2=efficiency_heat.loc[bus]
+                    * 0.5,  # assuming 50% of the produced heat is used for heat loads outside the biogas CHP plant, roughly based on https://www.unendlich-viel-energie.de/erneuerbare/bioenergie/fachverband-biogas-praesentiert-aktuelle-branchenzahlen
                     build_year=grouping_year,
                     lifetime=lifetime.loc[bus],
                 )

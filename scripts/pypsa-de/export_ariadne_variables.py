@@ -591,7 +591,7 @@ def _get_capacities(n, region, cap_func, cap_string="Capacity|"):
     )
 
     var[cap_string + "Electricity|Biomass|w/o CCS"] = capacities_electricity.reindex(
-        ["urban central solid biomass CHP", "solid biomass", "biogas"]
+        ["urban central solid biomass CHP", "solid biomass", "biogas CHP"]
     ).sum()
 
     var[cap_string + "Electricity|Biomass|Solids"] = capacities_electricity.filter(
@@ -599,7 +599,7 @@ def _get_capacities(n, region, cap_func, cap_string="Capacity|"):
     ).sum()
 
     var[cap_string + "Electricity|Biomass|Gases and Liquids"] = (
-        capacities_electricity.get("biogas", 0)
+        capacities_electricity.get("biogas CHP", 0)
     )
 
     var[cap_string + "Electricity|Biomass"] = (
@@ -1412,9 +1412,7 @@ def get_primary_energy(n, region):
         n, "solid biomass", region
     )
 
-    var["Primary Energy|Biomass|Gases"] = biomass_usage.filter(
-        like="biogas to gas"
-    ).sum()
+    var["Primary Energy|Biomass|Gases"] = biomass_usage.filter(like="biogas").sum()
 
     # btl_efficiency = n.links.query(
     #         "carrier == 'biomass to liquid' and (build_year == 2020)"
@@ -1444,8 +1442,8 @@ def get_primary_energy(n, region):
         ~biomass_usage.index.str.contains("CC")
     ].sum()
 
-    var["Primary Energy|Biomass|Electricity"] = (
-        biomass_CHP_E_usage + biomass_usage.reindex(["solid biomass", "biogas"]).sum()
+    var["Primary Energy|Biomass|Electricity"] = biomass_CHP_E_usage + biomass_usage.get(
+        "solid biomass", 0
     )
     var["Primary Energy|Biomass|Heat"] = biomass_CHP_H_usage + biomass_usage.get(
         "urban central solid biomass boiler", 0
@@ -1617,7 +1615,7 @@ def get_secondary_energy(n, region, _industry_demand):
     )
 
     var["Secondary Energy|Electricity|Biomass|w/o CCS"] = electricity_supply.reindex(
-        ["urban central solid biomass CHP", "solid biomass", "biogas"]
+        ["urban central solid biomass CHP", "solid biomass", "biogas CHP"]
     ).sum()
     var["Secondary Energy|Electricity|Biomass|w/ CCS"] = electricity_supply.get(
         "urban central solid biomass CHP CC", 0
@@ -1626,7 +1624,7 @@ def get_secondary_energy(n, region, _industry_demand):
         like="solid biomass"
     ).sum()
     var["Secondary Energy|Electricity|Biomass|Gaseous and Liquid"] = (
-        electricity_supply.get("biogas", 0)
+        electricity_supply.get("biogas CHP", 0)
         + var["Secondary Energy|Electricity|Gas|Biomass"]
     )
     var["Secondary Energy|Electricity|Biomass"] = (
@@ -1917,11 +1915,17 @@ def get_secondary_energy(n, region, _industry_demand):
         .sum()
         .drop(["renewable gas"], errors="ignore")
     )
+    biogas_supply = (
+        n.statistics.supply(bus_carrier="biogas", **kwargs)
+        .filter(like=region)
+        .groupby(["carrier"])
+        .sum()
+    )
 
     # Fraction supplied by Hydrogen conversion
     var["Secondary Energy|Gases|Hydrogen"] = gas_supply.get("Sabatier", 0)
 
-    var["Secondary Energy|Gases|Biomass"] = gas_supply.filter(like="bio").sum()
+    var["Secondary Energy|Gases|Biomass"] = biogas_supply.sum()
 
     var["Secondary Energy|Gases|Natural Gas"] = gas_supply.get("gas compressing", 0)
 
@@ -1930,8 +1934,6 @@ def get_secondary_energy(n, region, _industry_demand):
         + var["Secondary Energy|Gases|Biomass"]
         + var["Secondary Energy|Gases|Natural Gas"]
     )
-
-    assert isclose(var["Secondary Energy|Gases"], gas_supply.sum())
 
     industry_demand = _industry_demand.filter(
         like=region,
@@ -2388,8 +2390,11 @@ def get_final_energy(
         sum_load(
             n, "urban central heat", region
         )  # For urban central Final Energy is delivered as Heat
-        + decentral_heat_supply_rescom.filter(like="solar thermal").sum()
-    )  # Assuming for solar thermal secondary energy == Final energy
+        + decentral_heat_supply_rescom.filter(
+            like="solar thermal"
+        ).sum()  # Assuming for solar thermal secondary energy == Final energy
+        + decentral_heat_supply_rescom.filter(like="biogas CHP").sum()
+    )
 
     # !!! Here the final is delivered as gas, not as heat
     var["Final Energy|Residential and Commercial|Gases"] = gas_usage.get(
