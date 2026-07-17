@@ -47,7 +47,6 @@ ExPol:
           solar:
             DE:
               2030: 215 # uba Projektionsbericht
-
   sector:
     district_heating:
       potential: 0.1
@@ -86,13 +85,15 @@ KN2045_Elek:
 
   solving:
     constraints:
+      limits_production_max:
+        Link:
+          H2 Electrolysis:
+            DE:
+              2035: 95
+              2040: 145
+              2045: 200
+              2050: 200
       limits_volume_max:
-        electrolysis:
-          DE:
-            2035: 95
-            2040: 145
-            2045: 200
-            2050: 200
         h2_derivate_import:
           DE:
             2030: 15
@@ -155,26 +156,27 @@ KN2045_H2:
             2040: 275
             2045: 400 # scenario guidelines
             2050: 400
-        electrolysis:
-          DE:
-            2020: 0
-            2025: 5
-            2030: 45 # scenario guidelines
-            2035: 160
-            2040: 275
-            2045: 400 # scenario guidelines
-            2050: 400
-
-      limits_volume_min:
-        electrolysis:
-          DE:
-            2025: 0
-            2030: 0
-            2035: 0
-            2040: 0
-            2045: 200
-            2050: 200
-
+      limits_production_max:
+        Link:
+          H2 Electrolysis:
+            DE:
+              2020: 0
+              2025: 5
+              2030: 45 # scenario guidelines
+              2035: 160
+              2040: 275
+              2045: 400 # scenario guidelines
+              2050: 400
+      limits_production_min:
+        Link:
+          H2 Electrolysis:
+            DE:
+              2025: 0
+              2030: 0
+              2035: 0
+              2040: 0
+              2045: 200
+              2050: 200
   industry:
     steam_biomass_fraction: 0.4
     steam_hydrogen_fraction: 0.5
