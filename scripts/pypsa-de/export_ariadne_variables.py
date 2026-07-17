@@ -1598,18 +1598,18 @@ def get_secondary_energy(n, region, _industry_demand):
 
     gas_fractions = _get_fuel_fractions(n, region, "gas")
 
-    var["Secondary Energy|Electricity|Gas|Fossil"] = (
+    var["Secondary Energy|Electricity|Gas|Natural Gas"] = (
         var["Secondary Energy|Electricity|Gas"] * gas_fractions["Natural Gas"]
     )
     var["Secondary Energy|Electricity|Gas|Biomass"] = (
         var["Secondary Energy|Electricity|Gas"] * gas_fractions["Biomass"]
     )
-    var["Secondary Energy|Electricity|Gas|Hydrogen"] = (
+    var["Secondary Energy|Electricity|Gas|Efuel"] = (
         var["Secondary Energy|Electricity|Gas"] * gas_fractions["Efuel"]
     )
 
     var["Secondary Energy|Electricity|Fossil"] = (
-        var["Secondary Energy|Electricity|Gas|Fossil"]
+        var["Secondary Energy|Electricity|Gas|Natural Gas"]
         + var["Secondary Energy|Electricity|Oil"]
         + var["Secondary Energy|Electricity|Coal"]
     )
@@ -1625,7 +1625,6 @@ def get_secondary_energy(n, region, _industry_demand):
     ).sum()
     var["Secondary Energy|Electricity|Biomass|Gaseous and Liquid"] = (
         electricity_supply.get("biogas CHP", 0)
-        + var["Secondary Energy|Electricity|Gas|Biomass"]
     )
     var["Secondary Energy|Electricity|Biomass"] = (
         var["Secondary Energy|Electricity|Biomass|w/o CCS"]
