@@ -106,6 +106,7 @@ if config["foresight"] == "perfect":
 include: "rules/pypsa-de/retrieve.smk"
 include: "rules/pypsa-de/modifications.smk"
 include: "rules/pypsa-de/reporting.smk"
+include: "rules/pypsa-de/stochastic_grid.smk"
 
 
 rule all:

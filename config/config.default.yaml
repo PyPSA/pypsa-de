@@ -481,6 +481,13 @@ transmission_projects:
   - confirmed
   new_link_capacity: zero
 
+# stochastic optimization over uncertain grid-expansion (DC link / AC line) capacities
+# see notebooks/stochastic_grid_uncertainty.ipynb for the underlying methodology
+stochastic_grid_scenarios:
+  enable: false
+  planning_horizons: [] # subset of scenario.planning_horizons to build topology variants for
+  scenarios: {} # name -> {probability, links (csv path, optional), lines (csv path, optional)}
+
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#transformers
 transformers:
   x: 0.1

@@ -48,8 +48,11 @@ from pypsa.descriptors import get_switchable_as_dense as get_as_dense
 from scripts._benchmark import memory_logger
 from scripts._helpers import (
     PYPSA_V1,
+    component_names,
     configure_logging,
     get,
+    scenario_index,
+    scenario_slice,
     set_scenario_config,
     update_config_from_wildcards,
 )
@@ -158,37 +161,52 @@ def add_land_use_constraint(n: pypsa.Network, planning_horizons: str) -> None:
     """
     # warning: this will miss existing offwind which is not classed AC-DC and has carrier 'offwind'
 
-    for carrier in [
-        "solar",
-        "solar rooftop",
-        "solar-hsat",
-        "onwind",
-        "offwind-ac",
-        "offwind-dc",
-        "offwind-float",
-    ]:
-        ext_i = (n.generators.carrier == carrier) & ~n.generators.p_nom_extendable
-        grouper = n.generators.loc[ext_i].index.str.replace(
-            f" {carrier}.*$", "", regex=True
+    # Only the grid (Line s_nom / DC Link p_nom) varies by scenario in the
+    # stochastic-grid-scenarios workflow - generator existing capacities and
+    # technical potentials are identical across scenarios, but n.generators
+    # carries a (scenario, name) MultiIndex if n.has_scenarios, so each
+    # scenario's slice is fixed up independently to stay index-aligned.
+    for scenario in n.scenarios if n.has_scenarios else [None]:
+        generators = (
+            n.generators.xs(scenario, level="scenario")
+            if scenario is not None
+            else n.generators
         )
-        existing = n.generators.loc[ext_i, "p_nom"].groupby(grouper).sum()
-        existing.index += f" {carrier}-{planning_horizons}"
-        n.generators.loc[existing.index, "p_nom_max"] -= existing
 
-    # check if existing capacities are larger than technical potential
-    existing_large = n.generators[
-        n.generators["p_nom_min"] > n.generators["p_nom_max"]
-    ].index
-    if len(existing_large):
-        logger.warning(
-            f"Existing capacities larger than technical potential for {existing_large},\
-                        adjust technical potential to existing capacities"
-        )
-        n.generators.loc[existing_large, "p_nom_max"] = n.generators.loc[
-            existing_large, "p_nom_min"
-        ]
+        for carrier in [
+            "solar",
+            "solar rooftop",
+            "solar-hsat",
+            "onwind",
+            "offwind-ac",
+            "offwind-dc",
+            "offwind-float",
+        ]:
+            ext_i = (generators.carrier == carrier) & ~generators.p_nom_extendable
+            grouper = generators.loc[ext_i].index.str.replace(
+                f" {carrier}.*$", "", regex=True
+            )
+            existing = generators.loc[ext_i, "p_nom"].groupby(grouper).sum()
+            existing.index += f" {carrier}-{planning_horizons}"
+            idx = scenario_index(n, scenario, existing.index)
+            n.generators.loc[idx, "p_nom_max"] -= existing.values
 
-    n.generators["p_nom_max"] = n.generators["p_nom_max"].clip(lower=0)
+        # check if existing capacities are larger than technical potential
+        existing_large = generators[
+            generators["p_nom_min"] > generators["p_nom_max"]
+        ].index
+        if len(existing_large):
+            logger.warning(
+                f"Existing capacities larger than technical potential for {existing_large},\
+                            adjust technical potential to existing capacities"
+            )
+            idx = scenario_index(n, scenario, existing_large)
+            n.generators.loc[idx, "p_nom_max"] = n.generators.loc[idx, "p_nom_min"]
+
+        idx_all = scenario_index(n, scenario, generators.index)
+        n.generators.loc[idx_all, "p_nom_max"] = n.generators.loc[
+            idx_all, "p_nom_max"
+        ].clip(lower=0)
 
 
 def add_solar_potential_constraints(n: pypsa.Network, config: dict) -> None:
@@ -208,15 +226,22 @@ def add_solar_potential_constraints(n: pypsa.Network, config: dict) -> None:
     }
     rename = {} if PYPSA_V1 else {"Generator-ext": "Generator"}
 
+    # only grid Line/DC-Link capacities vary by scenario in this workflow, so
+    # a representative single-scenario slice is used here; the
+    # extendable-capacity variable (Generator-p_nom) has no scenario
+    # dimension in the optimization model.
+    generators = scenario_slice(n.generators)
+    buses = scenario_slice(n.buses)
+
     solar_carriers = ["solar", "solar-hsat"]
-    solar = n.generators[
-        n.generators.carrier.isin(solar_carriers) & n.generators.p_nom_extendable
+    solar = generators[
+        generators.carrier.isin(solar_carriers) & generators.p_nom_extendable
     ].index
 
-    solar_today = n.generators[
-        (n.generators.carrier == "solar") & (n.generators.p_nom_extendable)
+    solar_today = generators[
+        (generators.carrier == "solar") & (generators.p_nom_extendable)
     ].index
-    solar_hsat = n.generators[(n.generators.carrier == "solar-hsat")].index
+    solar_hsat = generators[(generators.carrier == "solar-hsat")].index
 
     if solar.empty:
         return
@@ -227,14 +252,14 @@ def add_solar_potential_constraints(n: pypsa.Network, config: dict) -> None:
             lambda x: (x * factor) if carrier in x.name else x, axis=1
         )
 
-    location = pd.Series(n.buses.index, index=n.buses.index)
-    ggrouper = n.generators.loc[solar].bus
+    location = pd.Series(buses.index, index=buses.index)
+    ggrouper = generators.loc[solar].bus
     rhs = (
-        n.generators.loc[solar_today, "p_nom_max"]
-        .groupby(n.generators.loc[solar_today].bus.map(location))
+        generators.loc[solar_today, "p_nom_max"]
+        .groupby(generators.loc[solar_today].bus.map(location))
         .sum()
-        - n.generators.loc[solar_hsat, "p_nom"]
-        .groupby(n.generators.loc[solar_hsat].bus.map(location))
+        - generators.loc[solar_hsat, "p_nom"]
+        .groupby(generators.loc[solar_hsat].bus.map(location))
         .sum()
         * land_use_factors["solar-hsat"]
     ).clip(lower=0)
@@ -849,9 +874,15 @@ def add_operational_reserve_margin(n, sns, config):
     CONTINGENCY = reserve_config["contingency"]
 
     # Reserve Variables
-    n.model.add_variables(
-        0, np.inf, coords=[sns, n.generators.index], name="Generator-r"
-    )
+    # `n.generators.index` is a `(scenario, name)` MultiIndex once
+    # `n.set_scenarios()` is active; linopy needs a flat name index plus an
+    # explicit `scenario` coord instead (a raw MultiIndex coord raises).
+    if n.has_scenarios:
+        gen_coord = n.generators.index.get_level_values("name").unique()
+        reserve_coords = [n.scenarios, sns, gen_coord]
+    else:
+        reserve_coords = [sns, n.generators.index]
+    n.model.add_variables(0, np.inf, coords=reserve_coords, name="Generator-r")
     reserve = n.model["Generator-r"]
     summed_reserve = reserve.sum("Generator")
 
@@ -921,13 +952,20 @@ def add_TES_energy_to_power_ratio_constraints(n: pypsa.Network) -> None:
     RuntimeError
         If the TES storage and charger indices do not align.
     """
-    indices_charger_p_nom_extendable = n.links.index[
-        n.links.index.str.contains("water tanks charger|water pits charger")
-        & n.links.p_nom_extendable
+    # only grid Line/DC-Link capacities vary by scenario in this workflow, so
+    # an arbitrary single scenario's slice is representative for filtering
+    # and reading non-varying attributes (see `scenario_slice`); the
+    # extendable-capacity variables themselves have no scenario dimension.
+    links = scenario_slice(n.links)
+    stores = scenario_slice(n.stores)
+
+    indices_charger_p_nom_extendable = links.index[
+        links.index.str.contains("water tanks charger|water pits charger")
+        & links.p_nom_extendable
     ]
-    indices_stores_e_nom_extendable = n.stores.index[
-        n.stores.index.str.contains("water tanks|water pits")
-        & n.stores.e_nom_extendable
+    indices_stores_e_nom_extendable = stores.index[
+        stores.index.str.contains("water tanks|water pits")
+        & stores.e_nom_extendable
     ]
 
     if indices_charger_p_nom_extendable.empty or indices_stores_e_nom_extendable.empty:
@@ -936,7 +974,7 @@ def add_TES_energy_to_power_ratio_constraints(n: pypsa.Network) -> None:
         )
         return
 
-    energy_to_power_ratio_values = n.links.loc[
+    energy_to_power_ratio_values = links.loc[
         indices_charger_p_nom_extendable, "energy to power ratio"
     ].values
 
@@ -985,17 +1023,19 @@ def add_TES_charger_ratio_constraints(n: pypsa.Network) -> None:
     RuntimeError
         If the charger and discharger indices do not align.
     """
-    indices_charger_p_nom_extendable = n.links.index[
-        n.links.index.str.contains(
+    links = scenario_slice(n.links)
+
+    indices_charger_p_nom_extendable = links.index[
+        links.index.str.contains(
             "water tanks charger|water pits charger|aquifer thermal energy storage charger"
         )
-        & n.links.p_nom_extendable
+        & links.p_nom_extendable
     ]
-    indices_discharger_p_nom_extendable = n.links.index[
-        n.links.index.str.contains(
+    indices_discharger_p_nom_extendable = links.index[
+        links.index.str.contains(
             "water tanks discharger|water pits discharger|aquifer thermal energy storage discharger"
         )
-        & n.links.p_nom_extendable
+        & links.p_nom_extendable
     ]
 
     if (
@@ -1019,7 +1059,7 @@ def add_TES_charger_ratio_constraints(n: pypsa.Network) -> None:
                 "Ensure that the charger and discharger are in the same location and refer to the same technology."
             )
 
-    eff_discharger = n.links.efficiency[indices_discharger_p_nom_extendable].values
+    eff_discharger = links.efficiency[indices_discharger_p_nom_extendable].values
     lhs = (
         n.model["Link-p_nom"].loc[indices_charger_p_nom_extendable]
         - n.model["Link-p_nom"].loc[indices_discharger_p_nom_extendable]
@@ -1034,16 +1074,18 @@ def add_battery_constraints(n):
     Add constraint ensuring that charger = discharger, i.e.
     1 * charger_size - efficiency * discharger_size = 0
     """
-    if not n.links.p_nom_extendable.any():
+    links = scenario_slice(n.links)
+
+    if not links.p_nom_extendable.any():
         return
 
-    discharger_bool = n.links.index.str.contains("battery discharger")
-    charger_bool = n.links.index.str.contains("battery charger")
+    discharger_bool = links.index.str.contains("battery discharger")
+    charger_bool = links.index.str.contains("battery charger")
 
-    dischargers_ext = n.links[discharger_bool].query("p_nom_extendable").index
-    chargers_ext = n.links[charger_bool].query("p_nom_extendable").index
+    dischargers_ext = links[discharger_bool].query("p_nom_extendable").index
+    chargers_ext = links[charger_bool].query("p_nom_extendable").index
 
-    eff = n.links.efficiency[dischargers_ext].values
+    eff = links.efficiency[dischargers_ext].values
     lhs = (
         n.model["Link-p_nom"].loc[chargers_ext]
         - n.model["Link-p_nom"].loc[dischargers_ext] * eff
@@ -1053,11 +1095,13 @@ def add_battery_constraints(n):
 
 
 def add_lossy_bidirectional_link_constraints(n):
-    if not n.links.p_nom_extendable.any() or not any(n.links.get("reversed", [])):
+    links = scenario_slice(n.links)
+
+    if not links.p_nom_extendable.any() or not any(links.get("reversed", [])):
         return
 
-    carriers = n.links.loc[n.links.reversed, "carrier"].unique()  # noqa: F841
-    backwards = n.links.query(
+    carriers = links.loc[links.reversed, "carrier"].unique()  # noqa: F841
+    backwards = links.query(
         "carrier in @carriers and p_nom_extendable and reversed and active"
     ).index
     forwards = backwards.str.replace("-reversed", "")
@@ -1067,24 +1111,26 @@ def add_lossy_bidirectional_link_constraints(n):
 
 
 def add_chp_constraints(n):
+    links = scenario_slice(n.links)
+
     electric = (
-        n.links.index.str.contains("urban central")
-        & n.links.index.str.contains("CHP")
-        & n.links.index.str.contains("electric")
+        links.index.str.contains("urban central")
+        & links.index.str.contains("CHP")
+        & links.index.str.contains("electric")
     )
     heat = (
-        n.links.index.str.contains("urban central")
-        & n.links.index.str.contains("CHP")
-        & n.links.index.str.contains("heat")
+        links.index.str.contains("urban central")
+        & links.index.str.contains("CHP")
+        & links.index.str.contains("heat")
     )
 
-    electric_ext = n.links[electric].query("p_nom_extendable").index
-    heat_ext = n.links[heat].query("p_nom_extendable").index
+    electric_ext = links[electric].query("p_nom_extendable").index
+    heat_ext = links[heat].query("p_nom_extendable").index
 
-    electric_fix = n.links[electric].query("~p_nom_extendable").index
-    heat_fix = n.links[heat].query("~p_nom_extendable").index
+    electric_fix = links[electric].query("~p_nom_extendable").index
+    heat_fix = links[heat].query("~p_nom_extendable").index
 
-    p = n.model["Link-p"]  # dimension: [time, link]
+    p = n.model["Link-p"]  # dimension: [(scenario,) time, link]
 
     # output ratio between heat and electricity and top_iso_fuel_line for extendable
     if not electric_ext.empty:
@@ -1092,8 +1138,8 @@ def add_chp_constraints(n):
 
         lhs = (
             p_nom.loc[electric_ext]
-            * (n.links.p_nom_ratio * n.links.efficiency)[electric_ext].values
-            - p_nom.loc[heat_ext] * n.links.efficiency[heat_ext].values
+            * (links.p_nom_ratio * links.efficiency)[electric_ext].values
+            - p_nom.loc[heat_ext] * links.efficiency[heat_ext].values
         )
         n.model.add_constraints(lhs == 0, name="chplink-fix_p_nom_ratio")
 
@@ -1108,14 +1154,14 @@ def add_chp_constraints(n):
     # top_iso_fuel_line for fixed
     if not electric_fix.empty:
         lhs = p.loc[:, electric_fix] + p.loc[:, heat_fix]
-        rhs = n.links.p_nom[electric_fix]
+        rhs = links.p_nom[electric_fix]
         n.model.add_constraints(lhs <= rhs, name="chplink-top_iso_fuel_line_fix")
 
     # back-pressure
     if not electric.empty:
         lhs = (
-            p.loc[:, heat] * (n.links.efficiency[heat] * n.links.c_b[electric].values)
-            - p.loc[:, electric] * n.links.efficiency[electric]
+            p.loc[:, heat] * (links.efficiency[heat] * links.c_b[electric].values)
+            - p.loc[:, electric] * links.efficiency[electric]
         )
         n.model.add_constraints(lhs <= rhs, name="chplink-backpressure")
 
@@ -1126,10 +1172,11 @@ def add_pipe_retrofit_constraint(n):
     """
     if "reversed" not in n.links.columns:
         n.links["reversed"] = False
-    gas_pipes_i = n.links.query(
+    links = scenario_slice(n.links)
+    gas_pipes_i = links.query(
         "carrier == 'gas pipeline' and p_nom_extendable and ~reversed and active"
     ).index
-    h2_retrofitted_i = n.links.query(
+    h2_retrofitted_i = links.query(
         "carrier == 'H2 pipeline retrofitted' and p_nom_extendable and ~reversed and active"
     ).index
 
@@ -1140,7 +1187,7 @@ def add_pipe_retrofit_constraint(n):
 
     CH4_per_H2 = 1 / n.config["sector"]["H2_retrofit_capacity_per_CH4"]
     lhs = p_nom.loc[gas_pipes_i] + CH4_per_H2 * p_nom.loc[h2_retrofitted_i]
-    rhs = n.links.p_nom[gas_pipes_i]
+    rhs = links.p_nom[gas_pipes_i]
     if not PYPSA_V1:
         rhs = rhs.rename_axis("Link-ext")
 
@@ -1203,19 +1250,29 @@ def add_co2_atmosphere_constraint(n, snapshots):
 
     if glcs.empty:
         return
-    for name, glc in glcs.iterrows():
+
+    # global constraints, buses, carriers and stores are replicated
+    # identically across scenarios in this workflow (only grid Line/DC-Link
+    # capacities vary) - iterate over the deduplicated constraint names, but
+    # keep the "scenario" dimension in `lhs` below so linopy creates one
+    # constraint per scenario via broadcasting, matching the per-scenario
+    # (scenario, name) rows `glcs` actually carries when n.has_scenarios.
+    glcs_repr = scenario_slice(glcs)
+    for name, glc in glcs_repr.iterrows():
         carattr = glc.carrier_attribute
-        emissions = n.carriers.query(f"{carattr} != 0")[carattr]
+        emissions = scenario_slice(n.carriers).query(f"{carattr} != 0")[carattr]
 
         if emissions.empty:
             continue
 
         # stores
-        bus_carrier = n.stores.bus.map(n.buses.carrier)
-        stores = n.stores[bus_carrier.isin(emissions.index) & ~n.stores.e_cyclic]
+        buses = scenario_slice(n.buses)
+        stores = scenario_slice(n.stores)
+        bus_carrier = stores.bus.map(buses.carrier)
+        stores = stores[bus_carrier.isin(emissions.index) & ~stores.e_cyclic]
         if not stores.empty:
             last_i = snapshots[-1]
-            lhs = n.model["Store-e"].loc[last_i, stores.index]
+            lhs = n.model["Store-e"].sel(snapshot=last_i, name=stores.index)
             rhs = glc.constant
 
             n.model.add_constraints(lhs <= rhs, name=f"GlobalConstraint-{name}")
@@ -1267,7 +1324,7 @@ def extra_functionality(
         add_solar_potential_constraints(n, config)
 
     if n.config.get("sector", {}).get("tes", False):
-        if n.buses.index.str.contains(
+        if component_names(n.buses).str.contains(
             r"urban central heat|urban decentral heat|rural heat",
             case=False,
             na=False,
@@ -1461,6 +1518,16 @@ def create_optimization_model(
 
     # Create optimization model
     logger.info("Creating optimization model...")
+    if n.has_scenarios:
+        # PyPSA 1.1.2's built-in consistency_check() is not yet fully
+        # scenario-aware: several warning-formatting helpers in
+        # pypsa.consistency assume a flat string index and crash with a
+        # TypeError on the (scenario, name) MultiIndex tuples that
+        # n.set_scenarios() introduces (e.g. check_cost_consistency joining
+        # asset names). Skip it for scenario-enabled networks until that's
+        # fixed upstream; the checks add no scenario-specific safety here
+        # since scenarios only vary grid Line/Link capacities.
+        model_kwargs = {**model_kwargs, "consistency_check": False}
     n.optimize.create_model(**model_kwargs)
 
     # Add extra functionality (custom constraints)

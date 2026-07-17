@@ -10268,6 +10268,44 @@
         }
       }
     },
+    "stochastic_grid_scenarios": {
+      "description": "Configuration for PyPSA-native two-stage stochastic optimization over uncertain grid-expansion (AC line/DC link) capacities. See notebooks/stochastic_grid_uncertainty.ipynb for the underlying methodology.",
+      "properties": {
+        "enable": {
+          "default": false,
+          "description": "Whether to build and solve stochastic grid-topology scenario variants for the configured planning_horizons.",
+          "type": "boolean"
+        },
+        "planning_horizons": {
+          "description": "Subset of scenario.planning_horizons for which stochastic grid-topology variants are built and solved.",
+          "items": {
+            "type": "integer"
+          },
+          "type": "array"
+        },
+        "scenarios": {
+          "description": "Named grid-topology scenarios, each with a probability and CSV files (keyed by component name, may contain a literal {clusters} placeholder) overriding Line s_nom and/or DC Link p_nom.",
+          "additionalProperties": {
+            "properties": {
+              "probability": {
+                "description": "Probability weight of this scenario. All scenario probabilities must sum to 1.",
+                "type": "number"
+              },
+              "links": {
+                "description": "Path to a CSV (index = Link name, column p_nom required, p_nom_min/p_nom_max/p_nom_extendable optional) overriding DC link capacities for this scenario.",
+                "type": "string"
+              },
+              "lines": {
+                "description": "Path to a CSV (index = Line name, column s_nom required, s_nom_min/s_nom_max/s_nom_extendable optional) overriding AC line capacities for this scenario.",
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "type": "object"
+        }
+      }
+    },
     "transformers": {
       "description": "Configuration for `transformers` settings.",
       "properties": {

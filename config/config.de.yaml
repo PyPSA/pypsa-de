@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20260422_small_changes
+  prefix: 202600717-stoch-grid-testing-2030-70h
   name:
   # - ExPol
   - KN2045_Mix
@@ -240,7 +240,7 @@ clustering:
     # 'ES': 0.0408
     # 'IT': 0.0408
   temporal:
-    resolution_sector: 365H
+    resolution_sector: 70H
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#co2-budget
 co2_budget:
@@ -711,6 +711,19 @@ scale_capacity:
     DE:
       CCGT: 10000
       "urban central gas CHP": 22000
+
+stochastic_grid_scenarios:
+  enable: true
+  planning_horizons: [2030]
+  scenarios:
+    reduced_40:
+      probability: 0.5
+      links: data/pypsa-de/grid_scenarios/links_reduced_40_{clusters}.csv
+      lines: data/pypsa-de/grid_scenarios/lines_reduced_40_{clusters}.csv
+    reduced_10:
+      probability: 0.5
+      links: data/pypsa-de/grid_scenarios/links_reduced_10_{clusters}.csv
+      lines: data/pypsa-de/grid_scenarios/lines_reduced_10_{clusters}.csv
 
 data:
   ariadne_database:

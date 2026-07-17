@@ -310,6 +310,47 @@ def update_p_nom_max(n):
     n.generators.p_nom_max = n.generators[["p_nom_min", "p_nom_max"]].max(1)
 
 
+def scenario_slice(static_df):
+    """
+    Plain, flat-name-indexed view of a component's static dataframe,
+    regardless of whether it carries a scenario dimension (PyPSA stochastic
+    optimization, ``n.set_scenarios()``, adds a ``(scenario, name)``
+    MultiIndex to every component's static dataframe).
+
+    Use this wherever a constraint builder filters by name/carrier pattern
+    (e.g. ``.str.contains``) or reads an attribute that never varies by
+    scenario in this workflow (``efficiency``, ``carrier``,
+    ``p_nom_extendable``, ...) - only capacity *values* for grid Lines/DC
+    Links differ across scenarios, so an arbitrary single scenario's slice is
+    representative for everything else. The extendable-capacity variables
+    themselves (``*-p_nom``, ``*-e_nom``) have no scenario dimension in the
+    optimization model either (they are genuine shared first-stage
+    decisions), so the plain names from this slice index them directly.
+    """
+    if isinstance(static_df.index, pd.MultiIndex):
+        first_scenario = static_df.index.get_level_values("scenario")[0]
+        return static_df.xs(first_scenario, level="scenario")
+    return static_df
+
+
+def component_names(static_df):
+    """Plain component-name Index, regardless of a scenario dimension. See `scenario_slice`."""
+    return scenario_slice(static_df).index
+
+
+def scenario_index(n, scenario, names):
+    """
+    Build the index to assign into a component's static dataframe for one
+    scenario's worth of `names`, whether or not `n` has scenarios. Pairs with
+    iterating ``n.scenarios if n.has_scenarios else [None]`` to fix up
+    per-scenario mutations of static dataframes (e.g. p_nom_max) that must
+    write into the correct ``(scenario, name)`` slice.
+    """
+    if scenario is None:
+        return names
+    return pd.MultiIndex.from_product([[scenario], names])
+
+
 def aggregate_p_nom(n):
     return pd.concat(
         [

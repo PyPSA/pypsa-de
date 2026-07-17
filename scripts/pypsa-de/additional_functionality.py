@@ -4,9 +4,25 @@ import sys
 import pandas as pd
 from xarray import DataArray
 
+from scripts._helpers import component_names, scenario_slice
 from scripts.prepare_sector_network import determine_emission_sectors
 
 logger = logging.getLogger(__name__)
+
+
+def sum_excl_scenario(expr):
+    """Sum a linopy expression over every dim except `scenario`.
+
+    A bare `.sum()` collapses *all* dims, including `scenario` - pooling
+    both scenarios' flows into one combined constraint instead of building
+    one independent constraint per scenario. Use this wherever a volume/
+    energy-limit constraint is built from a scenario-carrying dispatch
+    expression (`Link-p`, `Line-s`). Identical to bare `.sum()` when there's
+    no `scenario` dim (the non-scenario default workflow), so this is a
+    drop-in replacement, not a behavioural change outside stochastic runs.
+    """
+    dims = [d for d in expr.dims if d not in ("scenario", "_term")]
+    return expr.sum(dims) if dims else expr.sum()
 
 
 def add_capacity_limits(n, investment_year, limits_capacity, sense="maximum"):
@@ -15,6 +31,12 @@ def add_capacity_limits(n, investment_year, limits_capacity, sense="maximum"):
 
         attr = "e" if c.name == "Store" else "p"
         units = "MWh or tCO2" if c.name == "Store" else "MW"
+
+        # only grid Line/DC-Link capacities vary by scenario in this
+        # workflow, so a representative single-scenario slice is used for
+        # filtering/reading attributes; the extendable-capacity variables
+        # (`nom` below) have no scenario dimension in the optimization model.
+        static = scenario_slice(c.static)
 
         for carrier in limits_capacity[c.name]:
             for ct in limits_capacity[c.name][carrier]:
@@ -28,18 +50,18 @@ def add_capacity_limits(n, investment_year, limits_capacity, sense="maximum"):
                 )
 
                 valid_components = (
-                    (c.static.index.str[:2] == ct)
-                    & (c.static.carrier.str[: len(carrier)] == carrier)
-                    & ~c.static.carrier.str.contains("thermal")
+                    (static.index.str[:2] == ct)
+                    & (static.carrier.str[: len(carrier)] == carrier)
+                    & ~static.carrier.str.contains("thermal")
                 )  # exclude solar thermal
 
-                existing_index = c.static.index[
-                    valid_components & ~c.static[attr + "_nom_extendable"]
+                existing_index = static.index[
+                    valid_components & ~static[attr + "_nom_extendable"]
                 ]
-                extendable_index = c.static.index[
+                extendable_index = static.index[
                     valid_components
-                    & c.static[attr + "_nom_extendable"]
-                    & c.static.active
+                    & static[attr + "_nom_extendable"]
+                    & static.active
                 ]
 
                 if extendable_index.empty:
@@ -48,7 +70,7 @@ def add_capacity_limits(n, investment_year, limits_capacity, sense="maximum"):
                     )
                     continue
 
-                existing_capacity = c.static.loc[existing_index, attr + "_nom"].sum()
+                existing_capacity = static.loc[existing_index, attr + "_nom"].sum()
 
                 logger.info(
                     f"Existing {c.name} {carrier} capacity in {ct}: {existing_capacity} {units}"
@@ -60,11 +82,14 @@ def add_capacity_limits(n, investment_year, limits_capacity, sense="maximum"):
 
                 cname = f"capacity_{sense}-{ct}-{c.name}-{carrier.replace(' ', '-')}"
 
-                if cname in n.global_constraints.index:
+                if cname in component_names(n.global_constraints):
                     logger.warning(
                         f"Global constraint {cname} already exists. Dropping and adding it again."
                     )
-                    n.global_constraints.drop(cname, inplace=True)
+                    if isinstance(n.global_constraints.index, pd.MultiIndex):
+                        n.global_constraints.drop(cname, level="name", inplace=True)
+                    else:
+                        n.global_constraints.drop(cname, inplace=True)
 
                 rhs = limit - existing_capacity
 
@@ -125,15 +150,22 @@ def add_power_limits(n, investment_year, limits_power_max):
             A string used to create unique names for the auxiliary variables and constraints.
         """
         var = n.model[var_name].sel({"name": idx})
+        # `var` (a dispatch variable) carries a `scenario` dim once
+        # `n.set_scenarios()` is active; without matching that here, the
+        # aux constraints below broadcast a single shared aux variable
+        # across all scenarios instead of one per scenario.
+        coords = [n.snapshots, idx]
+        if n.has_scenarios:
+            coords = [n.scenarios, *coords]
         aux_pos = n.model.add_variables(
             name=f"{var_name}-{infix}-aux-pos",
             lower=0,
-            coords=[n.snapshots, idx],
+            coords=coords,
         )
         aux_neg = n.model.add_variables(
             name=f"{var_name}-{infix}-aux-neg",
             upper=0,
-            coords=[n.snapshots, idx],
+            coords=coords,
         )
         n.model.add_constraints(
             aux_pos >= var,
@@ -154,18 +186,23 @@ def add_power_limits(n, investment_year, limits_power_max):
         logger.info(
             f"Adding constraint on electricity import/export from/to {ct} to be < {lim} MW"
         )
-        # identify interconnectors
+        # identify interconnectors; a representative single-scenario slice is
+        # used for filtering (see scenario_slice docstring) - the flat names
+        # this yields index the Line-s/Link-p model variables directly, since
+        # those keep scenario as a separate broadcasting dimension.
+        lines = scenario_slice(n.lines)
+        links = scenario_slice(n.links)
 
-        incoming_lines = n.lines.query(
+        incoming_lines = lines.query(
             f"not bus0.str.startswith('{ct}') and bus1.str.startswith('{ct}') and active"
         )
-        outgoing_lines = n.lines.query(
+        outgoing_lines = lines.query(
             f"bus0.str.startswith('{ct}') and not bus1.str.startswith('{ct}') and active"
         )
-        incoming_links = n.links.query(
+        incoming_links = links.query(
             f"not bus0.str.startswith('{ct}') and bus1.str.startswith('{ct}') and carrier == 'DC' and active"
         )
-        outgoing_links = n.links.query(
+        outgoing_links = links.query(
             f"bus0.str.startswith('{ct}') and not bus1.str.startswith('{ct}') and carrier == 'DC' and active"
         )
 
@@ -217,23 +254,24 @@ def h2_import_limits(n, investment_year, limits_volume_max):
             "H2 pipeline (Kernnetz)",
             "H2 pipeline retrofitted",
         ]
-        incoming = n.links.index[
-            (n.links.carrier.isin(pipeline_carrier))
-            & (n.links.bus0.str[:2] != ct)
-            & (n.links.bus1.str[:2] == ct)
+        links = scenario_slice(n.links)
+        incoming = links.index[
+            (links.carrier.isin(pipeline_carrier))
+            & (links.bus0.str[:2] != ct)
+            & (links.bus1.str[:2] == ct)
         ]
-        outgoing = n.links.index[
-            (n.links.carrier.isin(pipeline_carrier))
-            & (n.links.bus0.str[:2] == ct)
-            & (n.links.bus1.str[:2] != ct)
+        outgoing = links.index[
+            (links.carrier.isin(pipeline_carrier))
+            & (links.bus0.str[:2] == ct)
+            & (links.bus1.str[:2] != ct)
         ]
 
-        incoming_p = (
+        incoming_p = sum_excl_scenario(
             n.model["Link-p"].loc[:, incoming] * n.snapshot_weightings.generators
-        ).sum()
-        outgoing_p = (
+        )
+        outgoing_p = sum_excl_scenario(
             n.model["Link-p"].loc[:, outgoing] * n.snapshot_weightings.generators
-        ).sum()
+        )
 
         lhs = incoming_p - outgoing_p
 
@@ -294,16 +332,17 @@ def h2_production_limits(n, investment_year, limits_volume_min, limits_volume_ma
             f"limiting H2 electrolysis in DE between {limit_lower / 1e6} and {limit_upper / 1e6} TWh/a"
         )
 
-        production = n.links[
-            (n.links.carrier == "H2 Electrolysis") & (n.links.bus0.str.contains(ct))
+        links = scenario_slice(n.links)
+        production = links[
+            (links.carrier == "H2 Electrolysis") & (links.bus0.str.contains(ct))
         ].index
-        efficiency = n.links.loc[production, "efficiency"]
+        efficiency = links.loc[production, "efficiency"]
 
-        lhs = (
+        lhs = sum_excl_scenario(
             n.model["Link-p"].loc[:, production]
             * n.snapshot_weightings.generators
             * efficiency
-        ).sum()
+        )
 
         cname_upper = f"H2_production_limit_upper-{ct}"
         cname_lower = f"H2_production_limit_lower-{ct}"
@@ -345,41 +384,44 @@ def electricity_import_limits(n, investment_year, limits_volume_max):
 
         logger.info(f"limiting electricity imports in {ct} to {limit / 1e6} TWh/a")
 
-        incoming_line = n.lines.index[
-            (n.lines.carrier == "AC")
-            & (n.lines.bus0.str[:2] != ct)
-            & (n.lines.bus1.str[:2] == ct)
+        lines = scenario_slice(n.lines)
+        links = scenario_slice(n.links)
+
+        incoming_line = lines.index[
+            (lines.carrier == "AC")
+            & (lines.bus0.str[:2] != ct)
+            & (lines.bus1.str[:2] == ct)
         ]
-        outgoing_line = n.lines.index[
-            (n.lines.carrier == "AC")
-            & (n.lines.bus0.str[:2] == ct)
-            & (n.lines.bus1.str[:2] != ct)
+        outgoing_line = lines.index[
+            (lines.carrier == "AC")
+            & (lines.bus0.str[:2] == ct)
+            & (lines.bus1.str[:2] != ct)
         ]
 
-        incoming_link = n.links.index[
-            (n.links.carrier == "DC")
-            & (n.links.bus0.str[:2] != ct)
-            & (n.links.bus1.str[:2] == ct)
+        incoming_link = links.index[
+            (links.carrier == "DC")
+            & (links.bus0.str[:2] != ct)
+            & (links.bus1.str[:2] == ct)
         ]
-        outgoing_link = n.links.index[
-            (n.links.carrier == "DC")
-            & (n.links.bus0.str[:2] == ct)
-            & (n.links.bus1.str[:2] != ct)
+        outgoing_link = links.index[
+            (links.carrier == "DC")
+            & (links.bus0.str[:2] == ct)
+            & (links.bus1.str[:2] != ct)
         ]
 
-        incoming_line_p = (
+        incoming_line_p = sum_excl_scenario(
             n.model["Line-s"].loc[:, incoming_line] * n.snapshot_weightings.generators
-        ).sum()
-        outgoing_line_p = (
+        )
+        outgoing_line_p = sum_excl_scenario(
             n.model["Line-s"].loc[:, outgoing_line] * n.snapshot_weightings.generators
-        ).sum()
+        )
 
-        incoming_link_p = (
+        incoming_link_p = sum_excl_scenario(
             n.model["Link-p"].loc[:, incoming_link] * n.snapshot_weightings.generators
-        ).sum()
-        outgoing_link_p = (
+        )
+        outgoing_link_p = sum_excl_scenario(
             n.model["Link-p"].loc[:, outgoing_link] * n.snapshot_weightings.generators
-        ).sum()
+        )
 
         lhs = (incoming_link_p - outgoing_link_p) + (incoming_line_p - outgoing_line_p)
 
@@ -429,6 +471,12 @@ def add_national_co2_budgets(n, snakemake, national_co2_budgets, investment_year
 
     co2_total_totals = co2_totals[sectors].sum(axis=1) * nyears
 
+    # only grid Line/DC-Link capacities vary by scenario in this workflow, so
+    # a representative single-scenario slice is used for filtering/reading
+    # attributes below; Link-p keeps its scenario dimension in the model and
+    # broadcasts correctly through the `.loc[:, names]` selections.
+    links = scenario_slice(n.links)
+
     for ct in national_co2_budgets:
         if ct != "DE":
             logger.error(
@@ -443,32 +491,32 @@ def add_national_co2_budgets(n, snakemake, national_co2_budgets, investment_year
 
         lhs = []
 
-        for port in [col[3:] for col in n.links if col.startswith("bus")]:
-            links = n.links.index[
-                (n.links.index.str[:2] == ct)
-                & (n.links[f"bus{port}"] == "co2 atmosphere")
-                & ~n.links.carrier.str.contains(
+        for port in [col[3:] for col in links if col.startswith("bus")]:
+            port_links = links.index[
+                (links.index.str[:2] == ct)
+                & (links[f"bus{port}"] == "co2 atmosphere")
+                & ~links.carrier.str.contains(
                     "shipping|aviation"
                 )  # first exclude aviation to multiply it with a domestic factor later
             ]
 
             logger.info(
-                f"For {ct} adding following link carriers to port {port} CO2 constraint: {n.links.loc[links, 'carrier'].unique()}"
+                f"For {ct} adding following link carriers to port {port} CO2 constraint: {links.loc[port_links, 'carrier'].unique()}"
             )
 
             if port == "0":
                 efficiency = -1.0
             elif port == "1":
-                efficiency = n.links.loc[links, "efficiency"]
+                efficiency = links.loc[port_links, "efficiency"]
             else:
-                efficiency = n.links.loc[links, f"efficiency{port}"]
+                efficiency = links.loc[port_links, f"efficiency{port}"]
 
             lhs.append(
-                (
-                    n.model["Link-p"].loc[:, links]
+                sum_excl_scenario(
+                    n.model["Link-p"].loc[:, port_links]
                     * efficiency
                     * n.snapshot_weightings.generators
-                ).sum()
+                )
             )
 
         # Aviation demand
@@ -481,15 +529,15 @@ def add_national_co2_budgets(n, snakemake, national_co2_budgets, investment_year
         domestic_aviation_factor = domestic_aviation / (
             domestic_aviation + international_aviation
         )
-        aviation_links = n.links[
-            (n.links.index.str[:2] == ct) & (n.links.carrier == "kerosene for aviation")
+        aviation_links = links[
+            (links.index.str[:2] == ct) & (links.carrier == "kerosene for aviation")
         ]
         lhs.append(
-            (
+            sum_excl_scenario(
                 n.model["Link-p"].loc[:, aviation_links.index]
                 * aviation_links.efficiency2
                 * n.snapshot_weightings.generators
-            ).sum()
+            )
             * domestic_aviation_factor
         )
         logger.info(
@@ -506,29 +554,29 @@ def add_national_co2_budgets(n, snakemake, national_co2_budgets, investment_year
         domestic_navigation_factor = domestic_navigation / (
             domestic_navigation + international_navigation
         )
-        shipping_links = n.links[
-            (n.links.index.str[:2] == ct) & (n.links.carrier == "shipping oil")
+        shipping_links = links[
+            (links.index.str[:2] == ct) & (links.carrier == "shipping oil")
         ]
         lhs.append(
-            (
+            sum_excl_scenario(
                 n.model["Link-p"].loc[:, shipping_links.index]
                 * shipping_links.efficiency2
                 * n.snapshot_weightings.generators
-            ).sum()
+            )
             * domestic_navigation_factor
         )
 
         # Shipping methanol
-        shipping_meoh_links = n.links[
-            (n.links.index.str[:2] == ct) & (n.links.carrier == "shipping methanol")
+        shipping_meoh_links = links[
+            (links.index.str[:2] == ct) & (links.carrier == "shipping methanol")
         ]
         if not shipping_meoh_links.empty:  # no shipping methanol in 2025
             lhs.append(
-                (
+                sum_excl_scenario(
                     n.model["Link-p"].loc[:, shipping_meoh_links.index]
                     * shipping_meoh_links.efficiency2
                     * n.snapshot_weightings.generators
-                ).sum()
+                )
                 * domestic_navigation_factor
             )
 
@@ -537,69 +585,69 @@ def add_national_co2_budgets(n, snakemake, national_co2_budgets, investment_year
         )
 
         # Adding Efuel imports and exports to constraint
-        incoming_oil = n.links.index[n.links.index == f"EU renewable oil -> {ct} oil"]
-        outgoing_oil = n.links.index[n.links.index == f"{ct} renewable oil -> EU oil"]
+        incoming_oil = links.index[links.index == f"EU renewable oil -> {ct} oil"]
+        outgoing_oil = links.index[links.index == f"{ct} renewable oil -> EU oil"]
 
         lhs.append(
-            (
+            sum_excl_scenario(
                 -1
                 * n.model["Link-p"].loc[:, incoming_oil]
                 * 0.2571
                 * n.snapshot_weightings.generators
-            ).sum()
+            )
         )
         lhs.append(
-            (
+            sum_excl_scenario(
                 n.model["Link-p"].loc[:, outgoing_oil]
                 * 0.2571
                 * n.snapshot_weightings.generators
-            ).sum()
+            )
         )
 
-        incoming_methanol = n.links.index[
-            n.links.index == f"EU methanol -> {ct} methanol"
+        incoming_methanol = links.index[
+            links.index == f"EU methanol -> {ct} methanol"
         ]
-        outgoing_methanol = n.links.index[
-            n.links.index == f"{ct} methanol -> EU methanol"
+        outgoing_methanol = links.index[
+            links.index == f"{ct} methanol -> EU methanol"
         ]
 
-        methanol_emissions = n.links.loc["EU industry methanol", "efficiency2"]
+        methanol_emissions = links.loc["EU industry methanol", "efficiency2"]
         lhs.append(
-            (
+            sum_excl_scenario(
                 -1
                 * n.model["Link-p"].loc[:, incoming_methanol]
                 * methanol_emissions
                 * n.snapshot_weightings.generators
-            ).sum()
+            )
         )
 
         lhs.append(
-            (
+            sum_excl_scenario(
                 n.model["Link-p"].loc[:, outgoing_methanol]
                 * methanol_emissions
                 * n.snapshot_weightings.generators
-            ).sum()
+            )
         )
 
         # Methane
-        incoming_CH4 = n.links.index[n.links.index == f"EU renewable gas -> {ct} gas"]
-        outgoing_CH4 = n.links.index[n.links.index == f"{ct} renewable gas -> EU gas"]
+        incoming_CH4 = links.index[links.index == f"EU renewable gas -> {ct} gas"]
+        outgoing_CH4 = links.index[links.index == f"{ct} renewable gas -> EU gas"]
 
         lhs.append(
-            (
+            sum_excl_scenario(
                 -1
                 * n.model["Link-p"].loc[:, incoming_CH4]
                 * 0.198
                 * n.snapshot_weightings.generators
-            ).sum()
+            )
         )
 
         lhs.append(
-            (
+            sum_excl_scenario(
                 n.model["Link-p"].loc[:, outgoing_CH4]
                 * 0.198
                 * n.snapshot_weightings.generators
-            ).sum()
+            )
         )
 
         lhs = sum(lhs)
@@ -611,11 +659,14 @@ def add_national_co2_budgets(n, snakemake, national_co2_budgets, investment_year
             name=f"GlobalConstraint-{cname}",
         )
 
-        if cname in n.global_constraints.index:
+        if cname in component_names(n.global_constraints):
             logger.warning(
                 f"Global constraint {cname} already exists. Dropping and adding it again."
             )
-            n.global_constraints.drop(cname, inplace=True)
+            if isinstance(n.global_constraints.index, pd.MultiIndex):
+                n.global_constraints.drop(cname, level="name", inplace=True)
+            else:
+                n.global_constraints.drop(cname, inplace=True)
 
         n.add(
             "GlobalConstraint",
@@ -685,28 +736,42 @@ def force_boiler_profiles_existing_per_boiler(n):
         "Forcing each existing boiler dispatch to be proportional to the load profile"
     )
 
-    decentral_boilers = n.links.index[
-        n.links.carrier.str.contains("boiler")
-        & ~n.links.carrier.str.contains("urban central")
-        & ~n.links.p_nom_extendable
+    links = scenario_slice(n.links)
+    decentral_boilers = links.index[
+        links.carrier.str.contains("boiler")
+        & ~links.carrier.str.contains("urban central")
+        & ~links.p_nom_extendable
     ]
 
     if decentral_boilers.empty:
         return
 
-    boiler_loads = n.links.loc[decentral_boilers, "bus1"]
-    boiler_loads = boiler_loads[boiler_loads.isin(n.loads_t.p_set.columns)]
+    # `n.loads_t.p_set.columns` is a `(scenario, name)` MultiIndex once
+    # `n.set_scenarios()` is active; `boiler_loads.isin(...)` against flat
+    # bus names then silently matches nothing (a flat string never equals a
+    # MultiIndex tuple), which previously made this whole function a no-op
+    # under scenarios. Load profiles don't vary by grid scenario in this
+    # workflow, so a representative single-scenario slice is used here too.
+    p_set = scenario_slice(n.loads_t.p_set.T).T if n.has_scenarios else n.loads_t.p_set
+
+    boiler_loads = links.loc[decentral_boilers, "bus1"]
+    boiler_loads = boiler_loads[boiler_loads.isin(p_set.columns)]
     decentral_boilers = boiler_loads.index
-    boiler_profiles_pu = n.loads_t.p_set[boiler_loads].div(
-        n.loads_t.p_set[boiler_loads].max(), axis=1
-    )
+    boiler_profiles_pu = p_set[boiler_loads].div(p_set[boiler_loads].max(), axis=1)
     boiler_profiles_pu.columns = decentral_boilers
     boiler_profiles = DataArray(
-        boiler_profiles_pu.multiply(n.links.loc[decentral_boilers, "p_nom"], axis=1)
+        boiler_profiles_pu.multiply(links.loc[decentral_boilers, "p_nom"], axis=1)
     )
 
     # will be per unit
-    n.model.add_variables(coords=[decentral_boilers], name="Link-fixed_profile_scaling")
+    # `Link-p` below carries a `scenario` dim once `n.set_scenarios()` is
+    # active; without matching that here, this variable (and the equality
+    # constraint built from it) would be silently shared across scenarios
+    # instead of being an independent per-scenario recourse decision.
+    scaling_coords = (
+        [n.scenarios, decentral_boilers] if n.has_scenarios else [decentral_boilers]
+    )
+    n.model.add_variables(coords=scaling_coords, name="Link-fixed_profile_scaling")
 
     lhs = (
         (1, n.model["Link-p"].loc[:, decentral_boilers]),
@@ -728,14 +793,15 @@ def add_h2_derivate_limit(n, investment_year, limits_volume_max):
 
         logger.info(f"limiting H2 derivate imports in {ct} to {limit / 1e6} TWh/a")
 
-        incoming = n.links.loc[
+        links = scenario_slice(n.links)
+        incoming = links.loc[
             [
                 "EU renewable oil -> DE oil",
                 "EU methanol -> DE methanol",
                 "EU renewable gas -> DE gas",
             ]
         ].index
-        outgoing = n.links.loc[
+        outgoing = links.loc[
             [
                 "DE renewable oil -> EU oil",
                 "DE methanol -> EU methanol",
@@ -758,14 +824,14 @@ def add_h2_derivate_limit(n, investment_year, limits_volume_max):
         for carrier, idx in carrier_idx_dict.items():
             cname = f"{carrier}_import_limit-{ct}"
 
-            incoming_p = (
+            incoming_p = sum_excl_scenario(
                 n.model["Link-p"].loc[:, incoming[idx]]
                 * n.snapshot_weightings.generators
-            ).sum()
-            outgoing_p = (
+            )
+            outgoing_p = sum_excl_scenario(
                 n.model["Link-p"].loc[:, outgoing[idx]]
                 * n.snapshot_weightings.generators
-            ).sum()
+            )
 
             lhs = incoming_p - outgoing_p
 
@@ -795,15 +861,16 @@ def adapt_nuclear_output(n):
     )
     limit = 61e6
 
-    nuclear_de_index = n.links.index[
-        (n.links.carrier == "nuclear") & (n.links.index.str[:2] == "DE")
+    links = scenario_slice(n.links)
+    nuclear_de_index = links.index[
+        (links.carrier == "nuclear") & (links.index.str[:2] == "DE")
     ]
 
-    nuclear_gen = (
+    nuclear_gen = sum_excl_scenario(
         n.model["Link-p"].loc[:, nuclear_de_index]
-        * n.links.loc[nuclear_de_index, "efficiency"]
+        * links.loc[nuclear_de_index, "efficiency"]
         * n.snapshot_weightings.generators
-    ).sum()
+    )
 
     lhs = nuclear_gen
 
@@ -811,11 +878,14 @@ def adapt_nuclear_output(n):
 
     n.model.add_constraints(lhs <= limit, name=f"GlobalConstraint-{cname}")
 
-    if cname in n.global_constraints.index:
+    if cname in component_names(n.global_constraints):
         logger.warning(
             f"Global constraint {cname} already exists. Dropping and adding it again."
         )
-        n.global_constraints.drop(cname, inplace=True)
+        if isinstance(n.global_constraints.index, pd.MultiIndex):
+            n.global_constraints.drop(cname, level="name", inplace=True)
+        else:
+            n.global_constraints.drop(cname, inplace=True)
 
     n.add(
         "GlobalConstraint",
