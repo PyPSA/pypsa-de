@@ -70,6 +70,30 @@ def stochastic_grid_solving(wildcards):
     return solving
 
 
+def evaluate_grid_portfolio_solving(wildcards):
+    """`stochastic_grid_solving` plus load-shedding, for evaluate_grid_portfolio only.
+
+    A portfolio sized for one grid topology can genuinely have no feasible
+    dispatch when frozen and re-solved on a worse one (e.g. reduced_10's own
+    portfolio evaluated against reduced_40's grid: less transmission, same
+    fixed capacities) - a real capacity-adequacy shortfall, not a bug.
+    Load-shedding turns that into a large-but-finite cost instead of a hard
+    solver failure, so one infeasible cell doesn't take down the whole
+    compute_stochastic_metrics comparison.
+
+    Deliberately not added to `stochastic_grid_solving` (used by
+    solve_grid_topology_network too): letting the capacity-expansion solves
+    lean on cheap load-shedding instead of building adequate capacity would
+    quietly distort the very capacities this analysis is comparing.
+    """
+    import copy
+
+    solving = stochastic_grid_solving(wildcards)
+    solving = copy.deepcopy(solving)
+    solving["options"]["load_shedding"]["enable"] = True
+    return solving
+
+
 rule build_grid_topology:
     input:
         network=resources(
@@ -176,7 +200,7 @@ rule evaluate_grid_portfolio:
         runtime=config_provider("solving", "runtime", default="6h"),
     params:
         options=config_provider("solving", "options"),
-        solving=stochastic_grid_solving,
+        solving=evaluate_grid_portfolio_solving,
         foresight=config_provider("foresight"),
         co2_sequestration_potential=config_provider(
             "sector", "co2_sequestration_potential", default=200

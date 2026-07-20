@@ -422,7 +422,18 @@ solving:
   runtime: 12h
   mem_mb: 70000 #30000 is OK for 22 nodes, 365H; 140000 for 22 nodes 3H; 400000 for 44 nodes 3H
   options:
-    transmission_losses: true
+    load_shedding:
+      enable: false
+      default_cost: 100000
+      carriers: # overrides the default cost for specific carriers
+        AC: 4000
+        low voltage: 4000
+        residential rural heat: 5000
+        services rural heat: 5000
+        residential urban decentral heat: 5000
+        services urban decentral heat: 5000
+        urban central heat: 5000
+    transmission_losses: false
     custom_extra_functionality: "../scripts/pypsa-de/additional_functionality.py"
     assign_all_duals: true
     skip_iterations: true # settings for post-discretization: false

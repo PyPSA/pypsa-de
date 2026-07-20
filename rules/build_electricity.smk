@@ -374,7 +374,7 @@ rule build_renewable_profiles:
         technology="(?!hydro).*",  # Any technology other than hydro
     threads: config["atlite"].get("nprocesses", 4)
     resources:
-        mem_mb=config["atlite"].get("nprocesses", 4) * 5000,
+        mem_mb=config["atlite"].get("nprocesses", 4) * 6000,
     params:
         snapshots=config_provider("snapshots"),
         drop_leap_day=config_provider("enable", "drop_leap_day"),
