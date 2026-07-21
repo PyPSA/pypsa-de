@@ -251,7 +251,7 @@ rule compute_stochastic_metrics:
         ),
     threads: 1
     resources:
-        mem_mb=4000,
+        mem_mb=16000,
     params:
         grid_scenario_names=GRID_SCENARIO_NAMES,
         grid_scenario_values=GRID_SCENARIO_VALUES,
