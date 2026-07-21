@@ -1030,15 +1030,11 @@ def modify_industry_demand(
         )
 
 
-def add_hydrogen_turbines(n, H2_plants):
+def add_new_H2_turbines(n, scope, costs):
     """
-    This adds links that instead of a gas turbine use a hydrogen turbine.
-
-    It is assumed that the efficiency stays the same. This function is
-    only applied to German nodes.
+    This function adds H2 OCGT, H2 CCGT and H2 CHP at all AC bases within scope (DE or EU).
     """
 
-    scope = H2_plants
     if scope not in ["DE", "EU"]:
         msg = f"Invalid value in `H2_plants:enable` for adding hydrogen turbines: {scope}. Expected 'DE' or 'EU'."
         logger.error(msg)
@@ -1046,38 +1042,45 @@ def add_hydrogen_turbines(n, H2_plants):
     logger.info(f"Adding hydrogen turbine technologies in {scope}.")
     if scope == "EU":
         scope = ""
-    gas_carrier = ["OCGT", "CCGT"]
-    for carrier in gas_carrier:
-        gas_plants = n.links[
-            (n.links.carrier == carrier)
-            & (n.links.index.str.startswith(scope))
-            & (n.links.p_nom_extendable)
-            & (n.links.build_year == snakemake.wildcards.planning_horizons)
-        ].index
-        if gas_plants.empty:
-            continue
-        h2_plants = n.links.loc[gas_plants].copy()
-        h2_plants.carrier = h2_plants.carrier.str.replace(carrier, "H2 " + carrier)
-        h2_plants.index = h2_plants.index.str.replace(carrier, "H2 " + carrier)
-        h2_plants.bus0 = h2_plants.bus1 + " H2"
-        h2_plants.bus2 = ""
-        h2_plants.efficiency2 = 1
-        # add the new links
-        n.add("Link", h2_plants.index, **h2_plants)
 
-    # special handling of CHPs
-    gas_plants = n.links[
-        (n.links.carrier == "urban central gas CHP")
-        & (n.links.index.str.startswith(scope))
-        & (n.links.p_nom_extendable)
-    ].index
-    h2_plants = n.links.loc[gas_plants].copy()
-    h2_plants.carrier = h2_plants.carrier.str.replace("gas", "H2")
-    h2_plants.index = h2_plants.index.str.replace("gas", "H2")
-    h2_plants.bus0 = h2_plants.bus1 + " H2"
-    h2_plants.bus3 = ""
-    h2_plants.efficiency3 = 1
-    n.add("Link", h2_plants.index, **h2_plants)
+    nodes = n.buses.index[n.buses.index.str.startswith(scope) & (n.buses.carrier == "AC")]
+
+    for carrier in ["OCGT", "CCGT"]:
+        n.add(
+            "Link",
+            nodes + f" H2 {carrier}",
+            bus0=nodes + " H2",
+            bus1=nodes,
+            p_nom_extendable=True,
+            build_year=int(snakemake.wildcards.planning_horizons),
+            carrier=f"H2 {carrier}",
+            efficiency=costs.at[carrier, "efficiency"],
+            capital_cost=costs.at[carrier, "capital_cost"]
+            * costs.at[carrier, "efficiency"],  # NB: fixed cost is per MWel
+            onight_cost=costs.at[carrier, "investment"]
+            * costs.at[carrier, "efficiency"],  # NB: fixed cost is per MWel
+            marginal_cost=costs.at[carrier, "VOM"],
+            lifetime=costs.at[carrier, "lifetime"],
+        )
+
+    n.add(
+        "Link",
+        nodes + f" urban central H2 CHP",
+        bus0=nodes + " H2",
+        bus1=nodes,
+        bus2=nodes + " urban central heat",
+        carrier=f"urban central H2 CHP",
+        p_nom_extendable=True,
+        capital_cost=costs.at["central gas CHP", "capital_cost"]
+        * costs.at["central gas CHP", "efficiency"],
+        onight_cost=costs.at["central gas CHP", "investment"]
+        * costs.at["central gas CHP", "efficiency"],
+        marginal_cost=costs.at["central gas CHP", "VOM"],
+        efficiency=costs.at["central gas CHP", "efficiency"],
+        efficiency2=costs.at["central gas CHP", "efficiency"]
+        / costs.at["central gas CHP", "c_b"],
+        lifetime=costs.at["central gas CHP", "lifetime"],
+    )
 
 
 def enforce_transmission_project_build_years(n, current_year):
@@ -1351,6 +1354,163 @@ def limit_cross_border_flows_ac(n, s_max_pu):
     n.lines.loc[cross_border_lines, "s_max_pu"] = s_max_pu
 
 
+def drop_new_gas_turbines(n, planning_horizon):
+    """
+    This function drops new gas turbines that are available to be built in DE in the current planning horizon.
+    """
+    gas_carrier = ["OCGT", "CCGT", "urban central gas CHP"]
+    # deleting extendable gas turbine plants
+    to_drop = n.links[
+        (n.links.carrier.isin(gas_carrier))
+        & (n.links.p_nom_extendable)
+        & (n.links.index.str[:2] == "DE")
+        & (n.links.build_year == planning_horizon)
+    ].index
+    n.links.drop(to_drop, inplace=True)
+
+
+def force_retrofit(n, planning_horizon, params):
+    """
+    This function forces the retrofit of gas turbines from the year specified in params["force"] on.
+    """
+
+    logger.info("Forcing retrofit of gas turbines in DE to hydrogen turbines.")
+
+    # forcing retrofit
+    for carrier in ["OCGT", "CCGT"]:
+        gas_plants = n.links[
+            (n.links.carrier == carrier)
+            & (n.links.index.str[:2] == "DE")
+            & (n.links.build_year >= params["start"])
+        ].index
+        if gas_plants.empty:
+            logger.info(f"No {carrier} plants to retrofit in DE for year {planning_horizon}.")
+            continue
+        assert gas_plants.p_nom_extendable.any() == False, "Gas plants should not be extendable when forcing retrofit."
+        h2_plants = n.links.loc[gas_plants].copy()
+        h2_plants.carrier = h2_plants.carrier.str.replace(
+            carrier, "forced H2 retrofit " + carrier
+        )
+        h2_plants.index = h2_plants.index.str.replace(carrier, "forced H2 retrofit " + carrier)
+        h2_plants.bus0 = h2_plants.bus1 + " H2"
+        h2_plants.bus2 = ""
+        h2_plants.efficiency -= params["efficiency_loss"]
+        h2_plants.efficiency2 = 1  # default value
+        h2_plants.capital_cost *= 1 + params["cost_factor"]
+        h2_plants.onight_cost *= 1 + params["cost_factor"]
+        # add the new links
+        n.add("Link", h2_plants.index, **h2_plants)
+        n.links.drop(gas_plants, inplace=True)
+
+    # special handling of CHPs
+    gas_plants = n.links[
+        (n.links.carrier == "urban central gas CHP")
+        & (n.links.index.str[:2] == "DE")
+        & (n.links.build_year >= params["start"])
+    ].index
+    if gas_plants.empty:
+        logger.info(f"No urban central gas CHP plants to retrofit in DE for year {planning_horizon}.")
+        return
+    assert gas_plants.p_nom_extendable.any() == False, "Gas plants should not be extendable when forcing retrofit."
+    h2_plants = n.links.loc[gas_plants].copy()
+    h2_plants.carrier = h2_plants.carrier.str.replace("gas", "forced H2 retrofit")
+    h2_plants.index = h2_plants.index.str.replace("gas", "forced H2 retrofit")
+    h2_plants.bus0 = h2_plants.bus1 + " H2"
+    h2_plants.bus3 = ""
+    h2_plants.efficiency -= params["efficiency_loss"]
+    h2_plants.efficiency3 = 1  # default value
+    h2_plants.capital_cost *= 1 + params["cost_factor"]
+    h2_plants.onight_cost *= 1 + params["cost_factor"]
+    n.add("Link", h2_plants.index, **h2_plants)
+    n.links.drop(gas_plants, inplace=True)
+
+    # Asserting that there are no leftover gas turbines in the network
+    gas_carrier = ["OCGT", "CCGT", "urban central gas CHP"]
+    # Check for existing gas turbine plants
+    existing_gas_plants = n.links[
+        (n.links.carrier.isin(gas_carrier))
+        & (n.links.index.str[:2] == "DE")
+        & (n.links.build_year >= params["start"])
+    ].index
+    if not existing_gas_plants.empty:
+        raise AssertionError(
+            f"Gas turbines elgible for forced retrofit remain in the network for planning horizon {planning_horizon}: {existing_gas_plants.tolist()}"
+        )
+    
+
+def add_endo_retro_H2_turbines(n, planning_horizon, params):
+    """
+    Function to add ENDOGENOUS H2 retrofitting of existing gas plants.
+    """
+    logger.info("Add ENDOGENOUS H2 retrofitting.")
+    plant_types = [
+        ("OCGT", "endogenously retrofitted H2 OCGT"),
+        ("CCGT", "endogenously retrofitted H2 CCGT"),
+        ("urban central gas CHP", "endogenously retrofitted urban central H2 CHP"),
+    ]
+
+    start = params["start"]
+
+    for original_carrier, new_carrier in plant_types:
+        # Query to extract all suitable gas plants
+        gas_plants = n.links.loc[
+            (n.links.carrier == original_carrier)
+            & (n.links.build_year >= start)
+            & (n.links.build_year < planning_horizon)
+        ].index
+        assert n.links.loc[gas_plants, "p_nom_extendable"].any() == False, "Gas plants from previous horizons should not be extendable at this point in the workflow"
+
+        # Set plants to extendable for constraint in solve_network() 
+        n.links.loc[gas_plants, "p_nom_extendable"] = True
+
+        # get all retrofitted plants and set p_nom_extendable to True
+        h2_counterpart = n.links.loc[n.links.carrier == new_carrier].index
+        assert n.links.loc[h2_counterpart, "p_nom_extendable"].any() == False, "H2 endo retro plants from previous horizons should not be extendable at this point in the workflow."
+
+        # add_brownfield sets extendable to False for all existing plants, however, retrofitting should be allowed in every timestep
+        n.links.loc[h2_counterpart, "p_nom_extendable"] = True
+        # To avoid deconstruction of previously retrofitted H2 plants, set p_nom_min to p_nom_opt for all existing H2 plants
+        n.links.loc[h2_counterpart, "p_nom_min"] = n.links.loc[h2_counterpart, "p_nom_opt"]
+
+        # check if the plants are not having a h2 counterpart yet
+        h2_counterpart = set(
+            index.replace(new_carrier, original_carrier) for index in h2_counterpart
+        )
+        no_h2_counterpart = [index for index in gas_plants if index not in h2_counterpart]
+
+        if not no_h2_counterpart:
+            logger.info(f"All existing {original_carrier} plants have H2 counterparts.")
+            continue
+        
+        # Set p_nom_max of gas plants without H2 counterpart will get a new H2 counterpart
+        # They are not allowed to be extended anymore
+        n.links.loc[no_h2_counterpart, "p_nom_max"] = n.links.loc[no_h2_counterpart, "p_nom"]
+
+        df = n.links.loc[no_h2_counterpart].copy()
+        # Adjust bus 0
+        df["bus0"] = df["bus1"] + " H2" 
+        # Rename carrier and index
+        df["carrier"] = df.carrier.apply(
+            lambda x: x.replace(original_carrier, new_carrier)
+        )
+        df.rename(
+            index=lambda x: x.replace(original_carrier, new_carrier),
+            inplace=True,
+        )
+        df.loc[:, "capital_cost"] *= (1 + params["cost_factor"])
+        df.loc[:, "efficiency"] -= params["efficiency_loss"]
+        # Set p_nom_max to gas plant p_nom (see above)...
+        # ... and existing capacity to zero
+        df.loc[:, "p_nom"] = 0
+        # Set CO2 emissions to 0: CHP plants have co2 emissions at bus3, gas plants at bus2
+        if original_carrier != "urban central gas CHP":
+            df.loc[:, "efficiency2"] = 0.0
+        else:
+            df.loc[:, "efficiency3"] = 0.0
+        # Build_year and lifetime will stay the same as decommissioning of gas plant
+        # Add retrofitted plant to network
+        n.add("Link", df.index, **df)
+
 if __name__ == "__main__":
     if "snakemake" not in globals():
         snakemake = mock_snakemake(
@@ -1406,12 +1566,16 @@ if __name__ == "__main__":
     if snakemake.params.must_run is not None:
         must_run(n, snakemake.params.must_run)
 
-    if snakemake.params.H2_plants:
-        if snakemake.params.retrofit_start_year <= int(
-            snakemake.wildcards.planning_horizons
-        ):
-            add_hydrogen_turbines(n, snakemake.params.H2_plants)
+    H2_plants = snakemake.params.H2_plants
+    planning_horizon = int(snakemake.wildcards.planning_horizons)
 
+    if H2_plants["enable"] and planning_horizon >= H2_plants["start"]:
+        add_new_H2_turbines(n, H2_plants["enable"], costs)
+        if planning_horizon >= H2_plants["force"]:
+            drop_new_gas_turbines(n, planning_horizon)
+            force_retrofit(n, planning_horizon, H2_plants)
+        if H2_plants["endogenous"]:
+            add_endo_retro_H2_turbines(n, planning_horizon, H2_plants)
 
     current_year = int(snakemake.wildcards.planning_horizons)
 

@@ -12,12 +12,6 @@ rule add_existing_baseyear:
         existing_capacities=config_provider("existing_capacities"),
         carriers=config_provider("electricity", "renewable_carriers"),
         costs=config_provider("costs"),
-        H2_plants=config_provider( "electricity", "H2_plants", "enable"),
-        retrofit_endogenous=config_provider( "electricity", "H2_plants", "endogenous"),
-        retrofit_start_year=config_provider("electricity", "H2_plants", "start"),
-        retrofit_force_year=config_provider("electricity", "H2_plants", "force"),
-        cost_factor=config_provider("electricity", "H2_plants", "cost_factor"),
-        retrofit_efficiency_loss=config_provider("electricity", "H2_plants", "efficiency_loss"),       
         heat_pump_sources=config_provider("sector", "heat_pump_sources"),
         energy_totals_year=config_provider("energy", "energy_totals_year"),
         add_district_heating_subnodes=config_provider(
@@ -96,13 +90,6 @@ rule add_brownfield:
         heat_pump_sources=config_provider("sector", "heat_pump_sources"),
         tes=config_provider("sector", "tes"),
         dynamic_ptes_capacity=config_provider("sector", "district_heating", "ptes", "dynamic_capacity"),
-        
-        H2_plants=config_provider( "electricity", "H2_plants", "enable"),
-        retrofit_endogenous=config_provider( "electricity", "H2_plants", "endogenous"),
-        retrofit_start_year=config_provider("electricity", "H2_plants", "start"),
-        retrofit_force_year=config_provider("electricity", "H2_plants", "force"),
-        cost_factor=config_provider("electricity", "H2_plants", "cost_factor"),
-        retrofit_efficiency_loss=config_provider("electricity", "H2_plants", "efficiency_loss"),        
     input:
         unpack(input_profile_tech_brownfield),
         simplify_busmap=resources("busmap_base_s.csv"),
@@ -115,9 +102,6 @@ rule add_brownfield:
             else resources(
                 "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc"
             )
-        ),
-        costs=lambda w: resources(
-            f"costs_{config_provider('scenario', 'planning_horizons',0)(w)}_processed.csv"
         ),
         network_p=solved_previous_horizon,  #solved network at previous time step
     output:

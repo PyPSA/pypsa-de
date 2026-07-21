@@ -199,12 +199,7 @@ rule modify_prenetwork:
         transmission_costs=config_provider("costs", "transmission"),
         must_run=config_provider("must_run"),
         clustering=config_provider("clustering", "temporal", "resolution_sector"),
-        H2_plants=config_provider( "electricity", "H2_plants", "enable"),
-        retrofit_endogenous=config_provider( "electricity", "H2_plants", "endogenous"),
-        retrofit_start_year=config_provider("electricity", "H2_plants", "start"),
-        retrofit_force_year=config_provider("electricity", "H2_plants", "force"),
-        cost_factor=config_provider("electricity", "H2_plants", "cost_factor"),
-        retrofit_efficiency_loss=config_provider("electricity", "H2_plants", "efficiency_loss"),          
+        H2_plants=config_provider("electricity", "H2_plants"),
         onshore_nep_force=config_provider("onshore_nep_force"),
         offshore_nep_force=config_provider("offshore_nep_force"),
         shipping_methanol_efficiency=config_provider(
@@ -232,7 +227,11 @@ rule modify_prenetwork:
             if config_provider("wasserstoff_kernnetz", "enable")(w)
             else []
         ),
-        costs=resources("costs_{planning_horizons}_processed.csv"),
+        costs=lambda w: (
+            resources(f"costs_{config_provider('costs', 'year')(w)}_processed.csv")
+            if config_provider("foresight")(w) == "overnight"
+            else resources("costs_{planning_horizons}_processed.csv")
+        ),
         modified_mobility_data=resources(
             "modified_mobility_data_{clusters}_{planning_horizons}.csv"
         ),
