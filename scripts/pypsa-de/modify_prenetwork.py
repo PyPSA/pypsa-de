@@ -1465,8 +1465,11 @@ def add_endo_retro_H2_turbines(n, planning_horizon, params):
         # Set plants to extendable for constraint in solve_network() 
         n.links.loc[gas_plants, "p_nom_extendable"] = True
 
-        # get all retrofitted plants and set p_nom_extendable to True
+        # get all retrofitted plants to set p_nom_extendable to True
         h2_counterpart = n.links.loc[n.links.carrier == new_carrier].index
+        # restrict to those plants which still have a gas counterpart, i.e. those which have not yet been completely retrofitted
+        # NB: completly retrofitted plants will have been dropped from the network in add_brownfield, because their capacity is close to 0
+        h2_counterpart = h2_counterpart[h2_counterpart.str.replace(new_carrier, original_carrier).isin(gas_plants)]
         assert n.links.loc[h2_counterpart, "p_nom_extendable"].any() == False, "H2 endo retro plants from previous horizons should not be extendable at this point in the workflow."
 
         # add_brownfield sets extendable to False for all existing plants, however, retrofitting should be allowed in every timestep
@@ -1484,7 +1487,7 @@ def add_endo_retro_H2_turbines(n, planning_horizon, params):
             logger.info(f"All existing {original_carrier} plants have H2 counterparts.")
             continue
         
-        # Set p_nom_max of gas plants without H2 counterpart will get a new H2 counterpart
+        # gas plants without H2 counterpart will get a new H2 counterpart
         # They are not allowed to be extended anymore
         n.links.loc[no_h2_counterpart, "p_nom_max"] = n.links.loc[no_h2_counterpart, "p_nom"]
 
