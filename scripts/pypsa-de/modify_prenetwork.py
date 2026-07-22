@@ -1030,7 +1030,7 @@ def modify_industry_demand(
         )
 
 
-def add_new_H2_turbines(n, scope, costs):
+def add_new_H2_turbines(n, scope, costs, planning_horizon):
     """
     This function adds H2 OCGT, H2 CCGT and H2 CHP at all AC bases within scope (DE or EU).
     """
@@ -1048,11 +1048,11 @@ def add_new_H2_turbines(n, scope, costs):
     for carrier in ["OCGT", "CCGT"]:
         n.add(
             "Link",
-            nodes + f" H2 {carrier}",
+            nodes + f" H2 {carrier}-{planning_horizon}",
             bus0=nodes + " H2",
             bus1=nodes,
             p_nom_extendable=True,
-            build_year=int(snakemake.wildcards.planning_horizons),
+            build_year=int(planning_horizon),
             carrier=f"H2 {carrier}",
             efficiency=costs.at[carrier, "efficiency"],
             capital_cost=costs.at[carrier, "capital_cost"]
@@ -1062,13 +1062,15 @@ def add_new_H2_turbines(n, scope, costs):
             marginal_cost=costs.at[carrier, "VOM"],
             lifetime=costs.at[carrier, "lifetime"],
         )
-
+    # CHPs can only be added if the corresponding heat bus exists
+    nodes = nodes[(nodes + " urban central heat").isin(n.buses.index)]
     n.add(
         "Link",
-        nodes + f" urban central H2 CHP",
+        nodes + f" urban central H2 CHP-{planning_horizon}",
         bus0=nodes + " H2",
         bus1=nodes,
         bus2=nodes + " urban central heat",
+        build_year=int(planning_horizon),
         carrier=f"urban central H2 CHP",
         p_nom_extendable=True,
         capital_cost=costs.at["central gas CHP", "capital_cost"]
@@ -1570,7 +1572,7 @@ if __name__ == "__main__":
     planning_horizon = int(snakemake.wildcards.planning_horizons)
 
     if H2_plants["enable"] and planning_horizon >= H2_plants["start"]:
-        add_new_H2_turbines(n, H2_plants["enable"], costs)
+        add_new_H2_turbines(n, H2_plants["enable"], costs, snakemake.wildcards.planning_horizons)
         if planning_horizon >= H2_plants["force"]:
             drop_new_gas_turbines(n, planning_horizon)
             force_retrofit(n, planning_horizon, H2_plants)
