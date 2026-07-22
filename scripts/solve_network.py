@@ -1098,60 +1098,6 @@ def add_pipe_retrofit_constraint(n):
 
     n.model.add_constraints(lhs == rhs, name="Link-pipe_retrofit")
 
-def add_h2_retrofit_constraint(n):
-    """
-    Add constraint for retrofitting existing gas to H2 plants for all planning horizons after start and nodes.
-    """
-    logger.info("Add constraint for retrofitting gas plants to H2 plants.")
-
-    plant_types = [
-        ("OCGT", "endogenously retrofitted H2 OCGT"),
-        ("CCGT", "endogenously retrofitted H2 CCGT"),
-        ("urban central gas CHP", "endogenously retrofitted urban central H2 CHP"),
-    ]
-    current_horizon = int(snakemake.wildcards.planning_horizons)
-
-    # bus1 is the best location identifier for the plants, as it is the bus where the plant is connected to 
-    location = n.links.bus1.map(n.buses.location)
-    p_nom = n.model["Link-p_nom"]
-
-    for gas_carrier, h2_carrier in plant_types:
-        gas_plants = n.links.query(
-            f"carrier == '{gas_carrier}' and p_nom_extendable and build_year < {current_horizon}"
-        ).copy()
-        h2_plants = n.links.query(
-            f"carrier == '{h2_carrier}' and p_nom_extendable and build_year < {current_horizon}"
-        ).copy()
-
-        if h2_plants.empty or gas_plants.empty:
-            continue
-
-        gas_plants["location"] = location.reindex(gas_plants.index)
-        h2_plants["location"] = location.reindex(h2_plants.index)
-
-        for (node, build_year), gas_group in gas_plants.groupby(["location", "build_year"]):
-            #find matching h2 plants for the same node and build year
-            h2_group = h2_plants.query("location == @node and build_year == @build_year")
-
-            if h2_group.empty:
-                continue
-
-            lhs = p_nom.loc[gas_group.index].sum() + p_nom.loc[h2_group.index].sum()
-            rhs = gas_group.p_nom_max.sum()
-
-            n.model.add_constraints(
-                lhs == rhs,
-                name=f"{gas_carrier}_retrofit_{node}_{build_year}",
-            )
-
-        # Sum of p_nom OCGT/CCGT/CHP retrofitted must be == installed capacity of OCGT/CCGT/CHP 
-        # lhs = p_nom.loc[h2_plants] + p_nom.loc[gas_plants]
-        # rhs = n.links.p_nom_max[gas_plants]
-        # n.model.add_constraints(lhs == rhs, name=f"{gas_carrier}_retrofit")
-
-        logger.info(
-            f"Added constraint for retrofitting {gas_carrier} gas to {h2_carrier}."
-        )
 
 def add_flexible_egs_constraint(n):
     """
@@ -1284,7 +1230,6 @@ def extra_functionality(
     add_battery_constraints(n)
     add_lossy_bidirectional_link_constraints(n)
     add_pipe_retrofit_constraint(n)
-    add_h2_retrofit_constraint(n)
     if n._multi_invest:
         add_carbon_constraint(n, snapshots)
         add_carbon_budget_constraint(n, snapshots)

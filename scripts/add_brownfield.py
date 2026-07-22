@@ -15,13 +15,12 @@ import xarray as xr
 from scripts._helpers import (
     configure_logging,
     get_snapshots,
-    load_costs,
     sanitize_custom_columns,
     set_scenario_config,
     update_config_from_wildcards,
 )
 from scripts.add_electricity import flatten, sanitize_carriers
-from scripts.add_existing_baseyear import add_build_year_to_new_assets, add_h2_retro
+from scripts.add_existing_baseyear import add_build_year_to_new_assets
 
 logger = logging.getLogger(__name__)
 idx = pd.IndexSlice
@@ -336,70 +335,6 @@ def update_dynamic_ptes_capacity(
         corresponding_idx_this_iteration
     ].values
 
-def force_retrofit(n, params):
-    """
-    This function forces the retrofit of gas turbines from params["retrofit_force_year"] on.
-
-    Extendable gas links are deleted.
-    """
-
-    logger.info("Forcing retrofit of gas turbines to hydrogen turbines.")
-
-    gas_carrier = ["OCGT", "CCGT", "urban central gas CHP"]
-    # deleting extendable gas turbine plants
-    to_drop = n.links[
-        (n.links.carrier.isin(gas_carrier))
-        & (n.links.p_nom_extendable)
-        & (n.links.index.str[:2] == "DE")
-        & (n.links.build_year == snakemake.wildcards.planning_horizons)
-    ].index
-    n.links.drop(to_drop, inplace=True)
-
-    # forcing retrofit
-    for carrier in ["OCGT", "CCGT"]:
-        gas_plants = n.links[
-            (n.links.carrier == carrier)
-            & (n.links.index.str[:2] == "DE")
-            & (n.links.build_year >= params["retrofit_start_year"])
-        ].index
-        if gas_plants.empty:
-            continue
-
-        h2_plants = n.links.loc[gas_plants].copy()
-        h2_plants.carrier = h2_plants.carrier.str.replace(
-            carrier, "forced H2 retrofit " + carrier
-        )
-        h2_plants.index = h2_plants.index.str.replace(carrier, "forced H2 retrofit " + carrier)
-        h2_plants.bus0 = h2_plants.bus1 + " H2"
-        h2_plants.bus2 = ""
-        h2_plants.efficiency -= params["retrofit_efficiency_loss"]
-        h2_plants.efficiency2 = 1  # default value
-        h2_plants.capital_cost *= 1 + params["cost_factor"]
-        h2_plants.onight_cost *= 1 + params["cost_factor"]
-        # add the new links
-        n.add("Link", h2_plants.index, **h2_plants)
-        n.links.drop(gas_plants, inplace=True)
-
-    # special handling of CHPs
-    gas_plants = n.links[
-        (n.links.carrier == "urban central gas CHP")
-        & (n.links.index.str[:2] == "DE")
-        & (n.links.build_year >= params["retrofit_start_year"])
-    ].index
-    if gas_plants.empty:
-        return
-
-    h2_plants = n.links.loc[gas_plants].copy()
-    h2_plants.carrier = h2_plants.carrier.str.replace("gas", "forced H2 retrofit")
-    h2_plants.index = h2_plants.index.str.replace("gas", "forced H2 retrofit")
-    h2_plants.bus0 = h2_plants.bus1 + " H2"
-    h2_plants.bus3 = ""
-    h2_plants.efficiency -= params["retrofit_efficiency_loss"]
-    h2_plants.efficiency3 = 1  # default value
-    h2_plants.capital_cost *= 1 + params["cost_factor"]
-    h2_plants.onight_cost *= 1 + params["cost_factor"]
-    n.add("Link", h2_plants.index, **h2_plants)
-    n.links.drop(gas_plants, inplace=True)
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
@@ -443,20 +378,6 @@ if __name__ == "__main__":
         h2_retrofit_capacity_per_ch4=snakemake.params.H2_retrofit_capacity_per_CH4,
         capacity_threshold=snakemake.params.threshold_capacity,
     )
-    
-    if snakemake.params.H2_plants: 
-        if snakemake.params.retrofit_endogenous:    
-            add_h2_retro(
-                n,
-                year,
-                snakemake.params
-            )
-
-        if snakemake.params.retrofit_force_year <= int(
-            snakemake.wildcards.planning_horizons
-        ):
-            force_retrofit(n, snakemake.params)    
-
 
     disable_grid_expansion_if_limit_hit(n)
 

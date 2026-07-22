@@ -827,6 +827,53 @@ def adapt_nuclear_output(n):
     )
 
 
+def add_h2_retrofit_constraint(n, snakemake):
+    """
+    Add constraint for retrofitting existing gas to H2 plants for all planning horizons after start and nodes.
+    """
+    logger.info("Add constraint for retrofitting gas plants to H2 plants.")
+
+    plant_types = [
+        ("OCGT", "endogenously retrofitted H2 OCGT"),
+        ("CCGT", "endogenously retrofitted H2 CCGT"),
+        ("urban central gas CHP", "endogenously retrofitted urban central H2 CHP"),
+    ]
+    current_horizon = int(snakemake.wildcards.planning_horizons)
+
+    p_nom = n.model["Link-p_nom"]
+
+    for gas_carrier, h2_carrier in plant_types:
+        gas_plants = n.links.query(
+            f"carrier == '{gas_carrier}' and p_nom_extendable and build_year < {current_horizon}"
+        ).copy()
+        h2_plants = n.links.query(
+            f"carrier == '{h2_carrier}' and p_nom_extendable and build_year < {current_horizon}"
+        ).copy()
+
+        if h2_plants.empty or gas_plants.empty:
+            continue
+        
+        assert (h2_plants.index.str.replace(h2_carrier, gas_carrier) == gas_plants.index).all(), "Mismatch in index or in bus1 between gas and H2 plants"
+
+        for gas_plant, h2_plant in zip(gas_plants.index, h2_plants.index):
+
+            lhs = p_nom.loc[gas_plant] + p_nom.loc[h2_plant]
+            rhs = n.links.loc[gas_plant, "p_nom_max"]
+
+            n.model.add_constraints(
+                lhs == rhs,
+                name=f"{gas_carrier}_to_{h2_carrier}_retrofit-{gas_plant}",
+            )
+
+        # Sum of p_nom OCGT/CCGT/CHP retrofitted must be == installed capacity of OCGT/CCGT/CHP 
+        # lhs = p_nom.loc[h2_plants] + p_nom.loc[gas_plants]
+        # rhs = n.links.p_nom_max[gas_plants]
+        # n.model.add_constraints(lhs == rhs, name=f"{gas_carrier}_retrofit")
+
+        logger.info(
+            f"Added constraint for retrofitting {gas_carrier} gas to {h2_carrier}."
+        )
+
 def additional_functionality(n, snapshots, snakemake):
     logger.info("Adding Ariadne-specific functionality")
 
@@ -873,3 +920,5 @@ def additional_functionality(n, snapshots, snakemake):
 
     if investment_year == 2020:
         adapt_nuclear_output(n)
+    
+    add_h2_retrofit_constraint(n, snakemake)
