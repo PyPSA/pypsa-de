@@ -1386,7 +1386,7 @@ def force_retrofit(n, planning_horizon, params):
         if gas_plants.empty:
             logger.info(f"No {carrier} plants to retrofit in DE for year {planning_horizon}.")
             continue
-        assert gas_plants.p_nom_extendable.any() == False, "Gas plants should not be extendable when forcing retrofit."
+        assert n.links.loc[gas_plants, "p_nom_extendable"].any() == False, "Gas plants should not be extendable when forcing retrofit."
         h2_plants = n.links.loc[gas_plants].copy()
         h2_plants.carrier = h2_plants.carrier.str.replace(
             carrier, "forced H2 retrofit " + carrier
@@ -1411,7 +1411,7 @@ def force_retrofit(n, planning_horizon, params):
     if gas_plants.empty:
         logger.info(f"No urban central gas CHP plants to retrofit in DE for year {planning_horizon}.")
         return
-    assert gas_plants.p_nom_extendable.any() == False, "Gas plants should not be extendable when forcing retrofit."
+    assert n.links.loc[gas_plants, "p_nom_extendable"].any() == False, "Gas plants should not be extendable when forcing retrofit."
     h2_plants = n.links.loc[gas_plants].copy()
     h2_plants.carrier = h2_plants.carrier.str.replace("gas", "forced H2 retrofit")
     h2_plants.index = h2_plants.index.str.replace("gas", "forced H2 retrofit")
