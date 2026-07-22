@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20260715_endoretro_V6
+  prefix: 20260722_endoretro_V6
   name:
   # - ExPol
   # - KN2045_Mix
@@ -14,8 +14,8 @@ run:
   # - KN2045_Mix_HDD_pseudo_foresight
   # - KN2045_Mix_H2plantsEU
   # - KN2045_Mix_no_H2_Force_Upstream
-    - pure_endo_retrofit
-    - H2_force_2040_no_endo
+    - endoretro
+    - H2_force
   #  - no_H2
   #  - pure_endo_upstream  
   # - KN2045_Elek
@@ -258,7 +258,7 @@ co2_budget:
   2035: 0.250
   2040: 0.100 # 90% by 2040
   2045: 0.050
-  2050: 0.000 # climate-neutral by 2050
+  2050: -0.025 # climate-neutral by 2050
 
 wasserstoff_kernnetz:
   enable: true
