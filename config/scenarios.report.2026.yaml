@@ -154,6 +154,14 @@ KN2045_Elec_plus_v5:
       force: 2055
   sector:
     v2g: true
+    co2_sequestration_potential:  # 25% higher than Bal
+      2020: 0
+      2025: 0
+      2030: 50
+      2035: 125
+      2040: 225
+      2045: 312.5
+      2050: 312.5
 
 KN2045_H2_v5:
 # Fokus stärker auf dem Hochlauf von Technologien zur indirekten Elektrifizierung der Sektoren
