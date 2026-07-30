@@ -1604,6 +1604,7 @@ rule prepare_sector_network:
         electricity=config_provider("electricity"),
         biomass=config_provider("biomass"),
         RDIR=RDIR,
+        biogas_potential_factor=config_provider("sector", "biogas_potential_factor"),
         heat_pump_sources=config_provider("sector", "heat_pump_sources"),
         heat_systems=config_provider("sector", "heat_systems"),
         energy_totals_year=config_provider("energy", "energy_totals_year"),

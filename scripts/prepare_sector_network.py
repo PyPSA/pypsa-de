@@ -4023,6 +4023,7 @@ def add_biomass(
     biomass_potentials_file,
     biomass_transport_costs_file=None,
     nyears=1,
+    biogas_potential_factor=1,
 ):
     """
     Add biomass-related components to the PyPSA network.
@@ -4183,7 +4184,7 @@ def add_biomass(
         p_nom=biogas_potentials_spatial,
         marginal_cost=costs.at["biogas", "fuel"],
         e_sum_min=0,
-        e_sum_max=biogas_potentials_spatial,
+        e_sum_max=biogas_potentials_spatial/biogas_potential_factor,
     )
 
     n.add(
@@ -4257,8 +4258,8 @@ def add_biomass(
             p_nom=unsustainable_biogas_potentials_spatial,
             p_nom_extendable=False,
             marginal_cost=costs.at["biogas", "fuel"],
-            e_sum_min=unsustainable_biogas_potentials_spatial,
-            e_sum_max=unsustainable_biogas_potentials_spatial,
+            e_sum_min=unsustainable_biogas_potentials_spatial / biogas_potential_factor,
+            e_sum_max=unsustainable_biogas_potentials_spatial / biogas_potential_factor,
         )
 
         n.add(
@@ -6761,6 +6762,7 @@ if __name__ == "__main__":
             biomass_potentials_file=snakemake.input.biomass_potentials,
             biomass_transport_costs_file=snakemake.input.biomass_transport_costs,
             nyears=nyears,
+            biogas_potential_factor=snakemake.params.biogas_potential_factor
         )
 
     if options["ammonia"]:

@@ -15,7 +15,9 @@ run:
   # - KN2045_Mix_H2plantsEU
   # - KN2045_Mix_no_H2_Force_Upstream
     - endoretro
-    - H2_force
+    - endoretro_high_GT_cost
+    - endoretro_lowBiogas
+  #  - H2_force
   #  - no_H2
   #  - pure_endo_upstream  
   # - KN2045_Elek
@@ -300,6 +302,7 @@ costs:
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#sector
 sector:
+  biogas_potential_factor: 1 # set to 3 to reduce biogas potentials to 1/3 of the original value, see prepare_sector_network.py
   v2g: false
   solar_thermal: false
   district_heating:
