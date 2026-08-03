@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20260716_biogas_chps
+  prefix: 20260803_must_run_biogas_chp
   name:
   - KN2045_Bal_v5
   # - KN2045_Elec_plus_v5
@@ -726,7 +726,7 @@ offshore_nep_force:
   delay_years: 2
 
 scale_capacity:
-  2020:
+  2025:
     DE:
       CCGT: 10000
       "urban central gas CHP": 22000
