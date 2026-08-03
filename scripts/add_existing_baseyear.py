@@ -747,6 +747,18 @@ def add_german_chp_plants(
             elif generator == "biogas":
                 # uses the technological parameters of the central solid biomass CHP for biogas CHPs
                 key = "central solid biomass CHP"
+                # assuming biogas CHPs are relatively inflexible
+                p_min_pu = 0.5
+                # correcting for maximally available biogas potential at a given node
+                potential = (
+                    n.generators.query(
+                        "carrier.str.contains('biogas') and bus.str.startswith(@bus)"
+                    ).e_sum_max.sum()
+                    * 3
+                )
+                p_min_pu = min(p_min_pu, potential / p_nom[bus] * 8760)
+                # avoid numerical infeasibilities
+                p_min_pu -= 0.001
                 n.add(
                     "Link",
                     bus,
