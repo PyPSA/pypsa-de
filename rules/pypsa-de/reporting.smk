@@ -79,6 +79,27 @@ rule export_dynamic_variables:
         scripts("pypsa-de/export_dynamic_variables.py")
 
 
+rule export_nuts_variables:
+    input:
+        template="data/template_ariadne_database.xlsx",
+        networks=expand(
+            RESULTS
+            + "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
+            **config["scenario"],
+            allow_missing=True,
+        ),
+    output:
+        exported_variables=RESULTS + "ariadne/exported_nuts_variables.xlsx",
+    log:
+        RESULTS + "logs/export_nuts_variables.log",
+    resources:
+        mem_mb=8000,
+    params:
+        planning_horizons=config_provider("scenario", "planning_horizons"),
+    script:
+        scripts("pypsa-de/export_nuts_variables.py")
+
+
 rule plot_ariadne_variables:
     input:
         exported_variables_full=RESULTS + "ariadne/exported_variables_full.xlsx",
@@ -237,6 +258,14 @@ rule get_dynamic_variables:
     input:
         dynamic_variables=expand(
             RESULTS + "ariadne/exported_dynamic_variables.xlsx",
+            run=config_provider("run", "name"),
+        ),
+
+
+rule get_nuts_variables:
+    input:
+        nuts_variables=expand(
+            RESULTS + "ariadne/exported_nuts_variables.xlsx",
             run=config_provider("run", "name"),
         ),
 
