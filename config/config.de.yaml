@@ -7,7 +7,7 @@ run:
   prefix: 20260803_must_run_biogas_chp
   name:
   - KN2045_Bal_v5
-  # - KN2045_Elec_plus_v5
+  - KN2045_Bal_v5_no_transmission_expansion
   scenarios:
     enable: true
     manual_file: config/scenarios.report.2026.yaml
@@ -56,8 +56,6 @@ foresight: myopic
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#scenario
 # Wildcard docs in https://pypsa-eur.readthedocs.io/en/latest/wildcards.html
 scenario:
-  ll:
-  - vopt
   clusters:
   - 49 #current options: 27, 49
   opts:

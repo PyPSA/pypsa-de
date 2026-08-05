@@ -62,6 +62,19 @@ KN2045_Bal_v5:
     reference_scenario: KN2045_Bal_v5
 
 
+KN2045_Bal_v5_no_transmission_expansion:
+# Ausgewogener Mix an Technologien zur Dekarbonisierung der Sektoren
+# Breites Energieträgerportfolio in der Endenergie (Strom, Wasserstoff, synthetische Kraftstoffe)
+# Ausbau der erneuerbare Stromerzeugung erreicht politisch gesetzte Ziele
+# Importe erneuerbar erzeugter Energien auf mittlerem Niveau
+# dient als Referenzszenario in der Familie der Ariadne-Szenarien
+  pypsa-de:
+    reference_scenario: KN2045_Bal_v5
+  transmission_projects:
+    enable: false
+  electricity:
+    transmission_limit: vopt
+
 KN2045_Elec_v5:
 # Fokus auf dem Hochlauf von Technologien zur direkten Elektrifizierung der Sektoren
 # Strom als präferierter Energieträger in der Endenergie, andere Energieträger ergänzend, wo nötig (Wasserstoff, synthetische Kraftstoffe)
