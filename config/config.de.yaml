@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20260730_endoretro_V7
+  prefix: 20260808_endoretro_overnight
   name:
   # - ExPol
   # - KN2045_Mix
@@ -81,10 +81,6 @@ scenario:
   - none
   planning_horizons:
   - 2025
-  - 2030
-  - 2035
-  - 2040
-  - 2045
   - 2050
 
 existing_capacities:
