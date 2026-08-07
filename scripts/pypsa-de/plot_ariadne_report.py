@@ -3,7 +3,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
-from itertools import compress, islice
+from itertools import compress
 
 import cartopy
 import cartopy.crs as ccrs
@@ -1163,11 +1163,6 @@ def plot_price_duration_curve(
     y_lim_values=[-50, 300],
     language="english",
 ):
-    # only plot 2030 onwards
-    years = years[2:]
-    networks = dict(islice(networks.items(), 2, None))
-    year_colors = year_colors[2:]
-
     fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(8, 6))
 
     for i, n in enumerate(networks.values()):
@@ -1228,10 +1223,6 @@ def plot_price_duration_hist(
     regions=["DE"],
     x_lim_values=[-50, 300],
 ):
-    # only plot 2030 onwards
-    years = years[2:]
-    networks = dict(islice(networks.items(), 2, None))
-    year_colors = year_colors[2:]
     fig, axes = plt.subplots(ncols=1, nrows=len(years), figsize=(8, 3 * len(years)))
     axes = axes.flatten()
 
