@@ -32,6 +32,7 @@ pypsa-de:
   region: Deutschland
   uba_for_mobility: # Available for 2020–2035; uses AGEB/KBA for 2020-2025 and MWMS scenario from UBA Projektionsbericht 2025 for 2030-2035
   - 2025
+  - 2030
   uba_for_industry: # Available for 2025–2035; uses MWMS scenario from UBA Projektionsbericht 2025
     scale_non_energy: false # Scale non-energy demand directly proportional to energy demand
     enable: # Allowed values are "false" or a subset of [2025, 2030, 2035]
