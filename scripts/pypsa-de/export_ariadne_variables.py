@@ -5736,12 +5736,12 @@ if __name__ == "__main__":
     ac_projects_invest = df.query(
         "Variable == 'Investment|Energy Supply|Electricity|Transmission|AC|NEP|Onshore'"
     )[planning_horizons].values.sum()
-
+    available_years = [y for y in planning_horizons if y in [2025, 2030, 2035, 2040]]
     df.loc[
         df.query(
             "Variable == 'Investment|Energy Supply|Electricity|Transmission|AC|Übernahme|Startnetz Delta'"
         ).index,
-        [2025, 2030, 2035, 2040],
+        available_years,
     ] += (ac_startnetz - ac_projects_invest) / 4
 
     for suffix in ["|AC|NEP", "|AC", "", " and Distribution"]:
@@ -5749,7 +5749,7 @@ if __name__ == "__main__":
             df.query(
                 f"Variable == 'Investment|Energy Supply|Electricity|Transmission{suffix}'"
             ).index,
-            [2025, 2030, 2035, 2040],
+            available_years,
         ] += (ac_startnetz - ac_projects_invest) / 4
 
     logger.info("Assigning mean investments of year and year + 5 to year.")
