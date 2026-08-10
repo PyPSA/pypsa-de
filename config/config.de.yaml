@@ -25,7 +25,7 @@ run:
 pypsa-de:
   leitmodelle: # Model data downloaded from public IIASA database 'ariadne2'
     general: REMIND-EU v1.1
-    transport: Aladin v
+    transport: Aladin v1
     industry: FORECAST v1.0
   use_internal_db: true
   reference_scenario: KN2045_Bal_v5
