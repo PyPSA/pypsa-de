@@ -331,6 +331,14 @@ sector:
   regional_gas_demand: true
   regional_co2_sequestration_potential:
     enable: false
+  co2_sequestration_potential: # Oriented towards PIK-BIOMIP estimates 
+    2020: 0
+    2025: 0
+    2030: 2
+    2035: 15
+    2040: 50
+    2045: 150
+    2050: 250
   H2_retrofit: true
   hydrogen_turbine: false
   biogas_upgrading_cc: true
