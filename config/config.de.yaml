@@ -458,12 +458,24 @@ solving:
         2040: 0.09
         2045: -0.05
         2050: -0.048
-    decentral_heat_budgets:  # UBA MMS, Projektionsbericht 2025, Abbildung 48
+    decentral_heat_budgets:  # UBA MMS, Projektionsbericht 2026, Abbildung 44
       heat_pump:
         DE:
           2025: 12.0
-          2030: 28.0
+          2030: 32.0
           # 2035: 38.0
+      resistive_heater:
+        DE:
+          2030: 29.0
+          # 2035: 0.0
+      biomass_boiler: # no significant increase compared to 2020 allowed
+        DE:
+          2025: 100.0
+          2030: 100.0
+          2035: 100.0
+          2040: 100.0
+          2045: 100.0
+          2050: 100.0
     efuel_export_ban: false
     limits_capacity_max:
       Generator:
