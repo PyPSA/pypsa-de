@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 202600717-stoch-grid-testing-2030-70h
+  prefix: 202600810-stoch-grid-testing-2030-70h-27cl
   name:
   # - ExPol
   - KN2045_Mix
