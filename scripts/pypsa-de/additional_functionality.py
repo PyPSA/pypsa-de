@@ -882,12 +882,18 @@ def add_decentral_heat_budgets(n, decentral_heat_budgets, investment_year):
             assets = assets[assets.str.startswith(ct)]
 
             lhs = []
+
+            if set(assets).issubset(n.links_t.efficiency.index):
+                efficiency = n.links_t.efficiency.loc[assets]
+            else:
+                efficiency = n.links.loc[assets, "efficiency"]
+
             # For heatpumps the bus0 is heat and bus1 is electricity -> multiply by efficiency and by -1
             lhs.append(
                 (
                     -1
                     * n.model["Link-p"].loc[:, assets]
-                    * n.links_t.efficiency[assets]
+                    * efficiency
                     * n.snapshot_weightings.generators
                 ).sum()
             )
