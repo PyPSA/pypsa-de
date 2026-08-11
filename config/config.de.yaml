@@ -591,11 +591,11 @@ solving:
       electricity_import:
         DE:
           2020: -20
-          2025: 25
-          2030: 50
-          2035: 75
-          2040: 100
-          2045: 125
+          2025: 10
+          2030: 25
+          2035: 50
+          2040: 75
+          2045: 100
           2050: 125
       h2_derivate_import:
       # boundary condition lower?
