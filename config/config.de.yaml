@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20260810_improve_demand_2025
+  prefix: 20260811_scale_only_DE
   name:
   - KN2045_Bal_v5
   scenarios:
@@ -45,9 +45,6 @@ pypsa-de:
     2040: 0.49
     2045: 0.49
     2050: 0.49
-
-load:
-  scaling_factor: 0.925
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#foresight
 foresight: myopic

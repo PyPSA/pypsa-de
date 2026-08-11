@@ -134,6 +134,18 @@ def nuclear_generation_ban(n):
             n.links.drop(links, inplace=True)
 
 
+def scale_DE_elec_load_to_AGEB(n):
+    idx = n.loads.query("bus.str.contains('DE') and carrier == 'electricity'").index
+    AGEB_2025 = 924144 / 3.6
+    DE_elec_load_2025 = (
+        n.loads_t.p_set[idx].sum().sum()
+        * n.snapshot_weightings.generators.sum()
+        / 8760.0
+    )
+    scaling_factor = AGEB_2025 / DE_elec_load_2025
+    n.loads_t.p_set[idx] *= scaling_factor
+
+
 def add_reversed_pipes(df):
     df_rev = df.copy().rename({"bus0": "bus1", "bus1": "bus0"}, axis=1)
     df_rev.index = df_rev.index + "-reversed"
@@ -1545,6 +1557,7 @@ if __name__ == "__main__":
         )
 
     scale_industry_elec_to_2025(n, snakemake.input.industrial_demand_2025)
+    scale_DE_elec_load_to_AGEB(n)
 
     if current_year in snakemake.params.limit_cross_border_flows_ac:
         limit_cross_border_flows_ac(
