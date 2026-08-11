@@ -139,16 +139,15 @@ def restrict_nuclear_capacity_factor(n):
     Restrict nuclear capacity factors to 0.9 for all nuclear generators in the network, because they run baseload and else exceed real annual generation
     """
     idx = n.links.query("carrier == 'nuclear'").index
-    n.links.loc[idx, "p_max_pu"] = 0.9
+    n.links.loc[idx, "p_max_pu"] = 0.85
 
 
 def scale_DE_elec_load_to_AGEB(n):
     idx = n.loads.query("bus.str.contains('DE') and carrier == 'electricity'").index
-    AGEB_2025 = 924144 / 3.6
+    AGEB_2025 = 924144 / 3.6e3
     DE_elec_load_2025 = (
-        n.loads_t.p_set[idx].sum().sum()
-        * n.snapshot_weightings.generators.sum()
-        / 8760.0
+        n.loads_t.p_set[idx].mul(n.snapshot_weightings.generators, axis=0).sum().sum()
+        / 1e6
     )
     scaling_factor = AGEB_2025 / DE_elec_load_2025
     n.loads_t.p_set[idx] *= scaling_factor
