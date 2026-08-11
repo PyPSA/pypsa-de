@@ -15,9 +15,33 @@ GRID_SCENARIO_NAMES = list(_sgs.get("scenarios", {}).keys())
 GRID_SCENARIO_VALUES = GRID_SCENARIO_NAMES + ["eev", "stochastic"]
 
 
+# "topology-stochastic" itself is excluded: it's the actual two-stage
+# stochastic solve, kept on PyPSA's native scenario dimension (MultiIndex
+# over the grid_scenario branches) rather than resolved into a single
+# network. The Ariadne-variable export (like `assign_all_duals`/
+# `transmission_losses` elsewhere in this file, see `stochastic_grid_solving`
+# above) doesn't support that dimension. Its branches are unstacked into
+# plain single-scenario networks instead (see
+# unstack_stochastic_grid_topology below) and exported as
+# "topology-stochastic__{grid_scenario}". All ST portfolio evaluations -
+# including the "stochastic" portfolio's capacities dispatched onto one
+# canvas - and the other LT topology variants are already plain
+# single-scenario networks and are exported directly.
+GRID_EXPORT_NETWORK_IDS = (
+    [f"topology-{gs}" for gs in GRID_SCENARIO_NAMES + ["eev"]]
+    + [f"topology-stochastic__{gs}" for gs in GRID_SCENARIO_NAMES]
+    + [
+        f"portfolio-{p}_on-{gs}_st"
+        for p in GRID_SCENARIO_VALUES
+        for gs in GRID_SCENARIO_NAMES
+    ]
+)
+
+
 wildcard_constraints:
     grid_scenario="|".join(GRID_SCENARIO_VALUES) if GRID_SCENARIO_VALUES else "(?!)",
     portfolio="|".join(GRID_SCENARIO_VALUES) if GRID_SCENARIO_VALUES else "(?!)",
+    network_id="|".join(GRID_EXPORT_NETWORK_IDS) if GRID_EXPORT_NETWORK_IDS else "(?!)",
 
 
 def _scenario_csv_paths(wildcards, names):
@@ -213,6 +237,97 @@ rule evaluate_grid_portfolio:
         scripts("pypsa-de/evaluate_grid_portfolio.py")
 
 
+rule unstack_stochastic_grid_topology:
+    """Extract one branch of the joint two-stage stochastic solve.
+
+    `topology-stochastic` keeps PyPSA's native scenario dimension across
+    both grid_scenario branches at once; this pulls one branch out as a
+    plain single-scenario network so it can go through the same
+    Ariadne-variable export as everything else (see network_id
+    "topology-stochastic__{grid_scenario}" above).
+    """
+    input:
+        network=RESULTS
+        + "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_topology-stochastic.nc",
+    output:
+        network=RESULTS
+        + "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_topology-stochastic__{grid_scenario}.nc",
+    log:
+        logs(
+            "unstack_stochastic_grid_topology_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_{grid_scenario}.log"
+        ),
+    threads: 1
+    resources:
+        mem_mb=4000,
+    message:
+        "Unstacking scenario '{wildcards.grid_scenario}' from the joint stochastic grid-topology network"
+    script:
+        scripts("pypsa-de/unstack_stochastic_grid_topology.py")
+
+
+rule export_ariadne_variables_grid_scenario:
+    """Ariadne-variable export for one grid-topology/portfolio network variant.
+
+    Reuses export_ariadne_variables.py with a single-network input (instead
+    of the full myopic-pathway network list), since each stochastic-grid
+    variant is a standalone one-year network. All variants share the same
+    `run` wildcard/scenario name, so - unlike the main export rule - the
+    output is distinguished by `network_id` (e.g. "topology-stochastic" or
+    "portfolio-eev_on-reduced_10_st") rather than by scenario.
+    """
+    input:
+        template="data/template_ariadne_database.xlsx",
+        industry_demands=expand(
+            resources(
+                "industrial_energy_demand_base_s_{clusters}_{planning_horizons}.csv"
+            ),
+            allow_missing=True,
+        ),
+        networks=expand(
+            RESULTS
+            + "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_{network_id}.nc",
+            allow_missing=True,
+        ),
+        costs=expand(
+            resources("costs_{planning_horizons}_processed.csv"),
+            allow_missing=True,
+        ),
+        industrial_production_per_country_tomorrow=expand(
+            resources(
+                "industrial_production_per_country_tomorrow_{planning_horizons}-modified.csv"
+            ),
+            allow_missing=True,
+        ),
+        industry_sector_ratios=expand(
+            resources("industry_sector_ratios_{planning_horizons}.csv"),
+            allow_missing=True,
+        ),
+        industrial_production=resources("industrial_production_per_country.csv"),
+        energy_totals=resources("energy_totals.csv"),
+    output:
+        exported_variables=RESULTS
+        + "ariadne/exported_variables_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_{network_id}.xlsx",
+        exported_variables_full=RESULTS
+        + "ariadne/exported_variables_full_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_{network_id}.xlsx",
+    log:
+        logs(
+            "export_ariadne_variables_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_{network_id}.log"
+        ),
+    resources:
+        mem_mb=16000,
+    params:
+        planning_horizons=lambda w: [int(w.planning_horizons)],
+        config_industry=config_provider("industry"),
+        energy_totals_year=config_provider("energy", "energy_totals_year"),
+        post_discretization=config_provider("solving", "options", "post_discretization"),
+        NEP_year=lambda w: config_provider("costs", "custom_cost_fn")(w)[-8:-4],
+        NEP_transmission=config_provider("costs", "transmission"),
+    message:
+        "Exporting Ariadne variables for grid-topology network variant '{wildcards.network_id}'"
+    script:
+        scripts("pypsa-de/export_ariadne_variables.py")
+
+
 def get_topology_networks(wildcards):
     return {
         f"topology_{grid_scenario}": RESULTS
@@ -288,6 +403,19 @@ rule stochastic_grid_analysis:
             opts=config["scenario"]["opts"],
             sector_opts=config["scenario"]["sector_opts"],
             planning_horizons=_sgs.get("planning_horizons", []),
+        ),
+        # Ariadne-variable export (LT topology + ST portfolio-evaluation
+        # networks), one xlsx per network variant since they all share the
+        # same `run`/scenario name.
+        expand(
+            RESULTS
+            + "ariadne/exported_variables_full_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_{network_id}.xlsx",
+            run=config["run"]["name"],
+            clusters=config["scenario"]["clusters"],
+            opts=config["scenario"]["opts"],
+            sector_opts=config["scenario"]["sector_opts"],
+            planning_horizons=_sgs.get("planning_horizons", []),
+            network_id=GRID_EXPORT_NETWORK_IDS,
         ),
     message:
         "Collected all stochastic-grid-scenario analysis outputs."

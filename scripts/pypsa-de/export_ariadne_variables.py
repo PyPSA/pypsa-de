@@ -5364,7 +5364,9 @@ def hack_AC_projects(n, s_nom_start, model_year, snakemake):
     return n
 
 
-def process_postnetworks(n, n_start, model_year, snakemake, costs):
+def process_postnetworks(
+    n, n_start, model_year, snakemake, costs, apply_pathway_hacks=True
+):
     post_discretization = snakemake.params.post_discretization
 
     # logger.info("Post-Discretizing H2 pipeline")
@@ -5429,8 +5431,16 @@ def process_postnetworks(n, n_start, model_year, snakemake, costs):
 
     s_nom_start = n_start.lines["s_nom"].apply(_ac_lambda)
 
-    n = hack_DC_projects(n, p_nom_start, p_nom_planned, model_year, snakemake, costs)
-    n = hack_AC_projects(n, s_nom_start, model_year, snakemake)
+    if apply_pathway_hacks:
+        # Attributes each NEP/TYNDP project's capacity to the myopic-pathway
+        # year it's meant to come online, assuming n_start is the true
+        # base-year network and every project still respects its nominal
+        # build_year. Grid-topology "what-if" networks (stochastic-grid
+        # analysis) violate that: their CSV-based capacity overrides ignore
+        # build_year on purpose, so future_projects can legitimately carry
+        # capacity and the hack is skipped for them (see call site).
+        n = hack_DC_projects(n, p_nom_start, p_nom_planned, model_year, snakemake, costs)
+        n = hack_AC_projects(n, s_nom_start, model_year, snakemake)
     return n
 
 
@@ -5650,16 +5660,26 @@ if __name__ == "__main__":
             snakemake.input.costs,
         )
     )
-    modelyears = [fn[-7:-3] for fn in snakemake.input.networks]
+    # Derived from params rather than parsed out of the filename, so this
+    # also works for network filenames with a non-year suffix (e.g. the
+    # stochastic-grid topology/portfolio variants).
+    modelyears = [str(y) for y in planning_horizons]
+    # Grid-topology/portfolio network variants (identified by the
+    # `network_id` wildcard, see export_ariadne_variables_grid_scenario in
+    # rules/pypsa-de/stochastic_grid.smk) aren't part of a myopic pathway, so
+    # the NEP/TYNDP build-year hacks below don't apply to them.
+    apply_pathway_hacks = "network_id" not in snakemake.wildcards.keys()
     # Hack the transmission projects
     networks = [
-        process_postnetworks(n.copy(), _networks[0], int(my), snakemake, c)
+        process_postnetworks(
+            n.copy(), _networks[0], int(my), snakemake, c, apply_pathway_hacks
+        )
         for n, my, c in zip(_networks, modelyears, costs)
     ]
 
     if "debug" == "debug":  # For debugging
         var = pd.Series()
-        idx = 1
+        idx = 1 if len(networks) > 1 else 0
         n = networks[idx]
         c = costs[idx]
         _industry_demand = industry_demands[idx]
@@ -5703,29 +5723,34 @@ if __name__ == "__main__":
         yearly_dfs,
     )
 
-    logger.info("Gleichschaltung of AC-Startnetz with investments for AC projects")
-    # In this hacky part of the code we assure that the investments for the AC projects, match those of the NEP-AC-Startnetz
-    # Thus the variable 'Investment|Energy Supply|Electricity|Transmission|AC' is equal to the sum of exogeneous AC projects, endogenous AC expansion and Übernahme of NEP costs (mainly Systemdienstleistungen (Reactive Power Compensation) and lines that are below our spatial resolution)
-    ac_startnetz = 14.5 / 5 / EUR20TOEUR23  # billion EUR
+    if apply_pathway_hacks:
+        logger.info("Gleichschaltung of AC-Startnetz with investments for AC projects")
+        # In this hacky part of the code we assure that the investments for the AC projects, match those of the NEP-AC-Startnetz
+        # Thus the variable 'Investment|Energy Supply|Electricity|Transmission|AC' is equal to the sum of exogeneous AC projects, endogenous AC expansion and Übernahme of NEP costs (mainly Systemdienstleistungen (Reactive Power Compensation) and lines that are below our spatial resolution)
+        # Reconciles against the official Startnetz total spread over the
+        # [2025, 2030, 2035, 2040] myopic-pathway years - not meaningful for
+        # the single-year grid-topology/portfolio network exports (see
+        # apply_pathway_hacks above), so skipped for those.
+        ac_startnetz = 14.5 / 5 / EUR20TOEUR23  # billion EUR
 
-    ac_projects_invest = df.query(
-        "Variable == 'Investment|Energy Supply|Electricity|Transmission|AC|NEP|Onshore'"
-    )[planning_horizons].values.sum()
+        ac_projects_invest = df.query(
+            "Variable == 'Investment|Energy Supply|Electricity|Transmission|AC|NEP|Onshore'"
+        )[planning_horizons].values.sum()
 
-    df.loc[
-        df.query(
-            "Variable == 'Investment|Energy Supply|Electricity|Transmission|AC|Übernahme|Startnetz Delta'"
-        ).index,
-        [2025, 2030, 2035, 2040],
-    ] += (ac_startnetz - ac_projects_invest) / 4
-
-    for suffix in ["|AC|NEP", "|AC", "", " and Distribution"]:
         df.loc[
             df.query(
-                f"Variable == 'Investment|Energy Supply|Electricity|Transmission{suffix}'"
+                "Variable == 'Investment|Energy Supply|Electricity|Transmission|AC|Übernahme|Startnetz Delta'"
             ).index,
             [2025, 2030, 2035, 2040],
         ] += (ac_startnetz - ac_projects_invest) / 4
+
+        for suffix in ["|AC|NEP", "|AC", "", " and Distribution"]:
+            df.loc[
+                df.query(
+                    f"Variable == 'Investment|Energy Supply|Electricity|Transmission{suffix}'"
+                ).index,
+                [2025, 2030, 2035, 2040],
+            ] += (ac_startnetz - ac_projects_invest) / 4
 
     logger.info("Assigning mean investments of year and year + 5 to year.")
     investment_rows = df.loc[df["Variable"].str.contains("Investment")]
