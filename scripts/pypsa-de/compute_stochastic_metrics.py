@@ -8,13 +8,16 @@ already-solved topology and dispatch-only evaluation networks (no re-solving
 here):
 
 - WS  (wait-and-see): expected cost if the grid outcome were known before
-  investing = sum_s probability_s * objective(solved topology-s)
-- SP  (stochastic solution): objective(solved topology-stochastic), PyPSA's
+  investing = sum_s probability_s * total_cost(solved topology-s)
+- SP  (stochastic solution): total_cost(solved topology-stochastic), PyPSA's
   own expected-cost objective for a scenario-enabled network
 - EEV (expected-value planner): capex(topology-eev) + expected opex of
   dispatching the eev portfolio under each real topology
 - EVPI = SP - WS   (value of perfect information about the grid)
 - ECIU = EEV - SP  (value of stochastic planning over naive EV planning)
+
+`total_cost(n) = n.objective + n.objective_constant`, not `n.objective` alone
+(see `compute_metrics`'s docstring for why this matters).
 """
 
 import logging
@@ -104,6 +107,30 @@ def build_cost_matrix(
     return cost_matrix
 
 
+def total_cost(n: pypsa.Network) -> float:
+    """True total system cost of a solved network: `n.objective + n.objective_constant`,
+    not `n.objective` alone.
+
+    Per PyPSA's own convention (`pypsa.Network.objective`'s docstring), `n.objective` is
+    only the LP's *variable* part - `objective_constant` corrects for capital cost charged
+    on the *full* `s_nom_opt`/`p_nom_opt` of extendable transmission-like assets whose
+    optimization is bounded below by an already-installed baseline (`s_nom_min`/
+    `p_nom_min`), so as not to double-charge that sunk baseline portion inside the
+    objective PyPSA actually optimizes. `objective` alone therefore *omits* that baseline's
+    annuitized cost - it isn't "excluded exogenous grid cost" the way `portfolio_capex()`
+    deliberately excludes fixed (non-extendable) grid Lines/DC-Links; PyPSA's LP builder
+    already never reads `capital_cost` for non-extendable components at all (true sunk
+    cost, zero contribution either way), so that exclusion needs no special handling here.
+
+    Confirmed empirically against a solved run: `objective_constant` was ~9.36bn EUR,
+    identical across all four portfolios (so it isn't tracking each portfolio's own,
+    genuinely different, fixed-grid capex) - and omitting it from SP alone very nearly
+    reproduced the entire previously-reported ECIU, i.e. the "value of stochastic planning"
+    metric was almost entirely this omitted baseline-capex term, not a real cost difference.
+    """
+    return n.objective + n.objective_constant
+
+
 def compute_metrics(
     cost_matrix: pd.DataFrame,
     topologies: dict[str, pypsa.Network],
@@ -111,9 +138,9 @@ def compute_metrics(
     probabilities: dict[str, float],
 ) -> pd.Series:
     ws = sum(
-        probabilities[s] * topologies[s].objective for s in grid_scenario_names
+        probabilities[s] * total_cost(topologies[s]) for s in grid_scenario_names
     )
-    sp = topologies["stochastic"].objective
+    sp = total_cost(topologies["stochastic"])
     eev = cost_matrix.loc["eev", "expected"]
     evpi = sp - ws
     eciu = eev - sp
