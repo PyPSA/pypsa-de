@@ -234,7 +234,7 @@ clustering:
 co2_budget:
   # determined by EU goals and Non-co2 as well as LULUCF emisisons from https://www.nature.com/articles/s41467-025-66682-z
   #  see also locally scenario_2026_co2_budget_EU_computation.ods
-  2025: 0.632
+  2025: 0.627
   2030: 0.467
   2035: 0.285
   2040: 0.142
