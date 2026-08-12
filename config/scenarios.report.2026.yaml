@@ -55,6 +55,9 @@ CurrentPolicies:
   sector:
     district_heating:
       potential: 0.1
+  electricity:
+    H2_plants: # do not force retrofit of gas plants to H2
+      force: 2055
 
 
 KN2045_Bal_v5:
