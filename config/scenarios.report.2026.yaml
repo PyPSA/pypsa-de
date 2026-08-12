@@ -10,6 +10,11 @@ CurrentPolicies:
 
   pypsa-de:
     reference_scenario: CurrentPolicies
+    reduce_space_heat_DE_factor:
+      2035: 0.19 # keep Renovierungsrate fixed at 1%
+      2040: 0.22
+      2045: 0.25
+      2050: 0.28
 
   co2_budget_DE_source: UBA
 

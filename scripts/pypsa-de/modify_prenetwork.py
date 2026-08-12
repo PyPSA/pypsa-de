@@ -153,6 +153,31 @@ def scale_DE_elec_load_to_AGEB(n):
     n.loads_t.p_set[idx] *= scaling_factor
 
 
+def scale_DE_heat_load(n, DE_factor, EU_factor):
+    building_heat_carriers = [
+        "urban central heat",
+        "urban decentral heat",
+        "rural heat",
+        "residential urban decentral heat",
+        "services urban decentral heat",
+        "residential rural heat",
+        "services rural heat",
+    ]
+    heat_scale_factor = (1 - DE_factor) / (1 - EU_factor)
+    idx = n.loads.index[
+        n.loads["bus"].str.contains("DE")
+        & n.loads["carrier"].isin(building_heat_carriers)
+    ]
+    idx = n.loads_t.p_set.columns.intersection(idx)
+    logger.info(
+        f"Space heat demand before scaling: {n.loads_t.p_set[idx].mul(n.snapshot_weightings.generators.values, axis=0).sum().sum() / 1e6} TWh"
+    )
+    n.loads_t.p_set[idx] *= heat_scale_factor
+    logger.info(
+        f"Space heat demand after scaling: {n.loads_t.p_set[idx].mul(n.snapshot_weightings.generators.values, axis=0).sum().sum() / 1e6} TWh"
+    )
+
+
 def add_reversed_pipes(df):
     df_rev = df.copy().rename({"bus0": "bus1", "bus1": "bus0"}, axis=1)
     df_rev.index = df_rev.index + "-reversed"
@@ -1567,6 +1592,12 @@ if __name__ == "__main__":
 
     scale_industry_elec_to_2025(n, snakemake.input.industrial_demand_2025)
     scale_DE_elec_load_to_AGEB(n)
+
+    scale_DE_heat_load(
+        n,
+        DE_factor=snakemake.params.space_heat_DE_factor[current_year],
+        EU_factor=snakemake.params.space_heat_EU_factor[current_year],
+    )
 
     if current_year in snakemake.params.limit_cross_border_flows_ac:
         limit_cross_border_flows_ac(

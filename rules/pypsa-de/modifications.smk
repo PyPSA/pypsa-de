@@ -262,6 +262,10 @@ rule modify_prenetwork:
         limit_cross_border_flows_ac=config_provider(
             "pypsa-de", "limit_cross_border_flows_ac"
         ),
+        space_heat_DE_factor=config_provider("pypsa-de", "reduce_space_heat_DE_factor"),
+        space_heat_EU_factor=config_provider(
+            "sector", "reduce_space_heat_exogenously_factor"
+        ),
     script:
         scripts("pypsa-de/modify_prenetwork.py")
 
