@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20260811_scale_only_DE
+  prefix: 20260812_scale_only_DE_heat
   name:
   - KN2045_Bal_v5
   scenarios:
