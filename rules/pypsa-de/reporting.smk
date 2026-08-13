@@ -187,6 +187,54 @@ rule ariadne_report_only:
         ),
 
 
+rule system_plots:
+    params:
+        planning_horizons=config_provider("scenario", "planning_horizons"),
+        plotting=config_provider("plotting"),
+        run=config_provider("run", "name"),
+        # Named after the network (minus year, since this rule spans every
+        # planning_horizon) rather than "optimal", to stay unambiguous
+        # alongside system/plots/{network_id}/ for the stochastic-grid
+        # variants (see system_plots_grid_scenario in stochastic_grid.smk).
+        output_dir=RESULTS
+        + "system/plots/base_s_{clusters}_{opts}_{sector_opts}__pathway",
+    input:
+        networks=expand(
+            RESULTS
+            + "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
+            **config["scenario"],
+            allow_missing=True,
+        ),
+        # Pre-solve counterpart of `networks` (network as handed to the
+        # solver), for the grid-topology prenetwork-vs-solved maps - see
+        # plot_grid_topology_maps in system_plots.py.
+        prenetworks=expand(
+            resources(
+                "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_final.nc"
+            ),
+            **config["scenario"],
+            allow_missing=True,
+        ),
+        regions_onshore=expand(
+            resources("regions_onshore_base_s_{clusters}.geojson"),
+            clusters=config["scenario"]["clusters"],
+            allow_missing=True,
+        ),
+    output:
+        flag=touch(
+            RESULTS
+            + "system/plots/base_s_{clusters}_{opts}_{sector_opts}__pathway/.system_plots_complete_{run}.flag"
+        ),
+    resources:
+        mem_mb=40000,
+    log:
+        RESULTS + "logs/system_plots_base_s_{clusters}_{opts}_{sector_opts}_{run}.log",
+    message:
+        "Plotting per-scenario system plots for run '{wildcards.run}'"
+    script:
+        scripts("pypsa-de/system_plots.py")
+
+
 rule plot_scenario_comparison:
     input:
         exported_variables=expand(

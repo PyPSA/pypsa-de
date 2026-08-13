@@ -727,6 +727,10 @@ stochastic_grid_scenarios:
   enable: true
   planning_horizons: [2030]
   scenarios:
+    # exogenous2030:
+    #   probability: 0.5
+    #   links: data/pypsa-de/grid_scenarios/links_exogenous2030_de_and_interconnectors_126sn-70h_{clusters}.csv
+    #   lines: data/pypsa-de/grid_scenarios/lines_exogenous2030_de_and_interconnectors_126sn-70h_{clusters}.csv
     reduced_40:
       probability: 0.5
       links: data/pypsa-de/grid_scenarios/links_reduced_40_{clusters}.csv

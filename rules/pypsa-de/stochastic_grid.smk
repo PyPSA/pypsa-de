@@ -27,21 +27,106 @@ GRID_SCENARIO_VALUES = GRID_SCENARIO_NAMES + ["eev", "stochastic"]
 # including the "stochastic" portfolio's capacities dispatched onto one
 # canvas - and the other LT topology variants are already plain
 # single-scenario networks and are exported directly.
-GRID_EXPORT_NETWORK_IDS = (
-    [f"topology-{gs}" for gs in GRID_SCENARIO_NAMES + ["eev"]]
-    + [f"topology-stochastic__{gs}" for gs in GRID_SCENARIO_NAMES]
-    + [
-        f"portfolio-{p}_on-{gs}_st"
-        for p in GRID_SCENARIO_VALUES
-        for gs in GRID_SCENARIO_NAMES
-    ]
+GRID_EXPORT_NETWORK_IDS_LT_TOPOLOGY = [
+    f"topology-{gs}" for gs in GRID_SCENARIO_NAMES + ["eev"]
+] + [f"topology-stochastic__{gs}" for gs in GRID_SCENARIO_NAMES]
+
+
+def _grid_pathway_years(target_year):
+    """Configured myopic-pathway years up to and including `target_year`,
+    oldest first - e.g. [2025, 2030] for target_year=2030. Used to mix the
+    plain (suffix-less) `base_s_..._{year}.nc` pathway networks into the LT
+    comparison alongside the target year's grid-topology variants, so the
+    buildout leading up to the stochastic-grid analysis year is visible.
+    """
+    return sorted(y for y in config["scenario"]["planning_horizons"] if y <= target_year)
+
+
+# "optimal" aliases whichever year a given rule instance's own
+# {planning_horizons} wildcard is bound to; "optimal_YYYY" is a fixed
+# earlier pathway year mixed into that (otherwise single-year) instance.
+# The two never overlap for one target year, but the wildcard-constraint
+# regex below is a static superset across every stochastic_grid_scenarios
+# target year (usually just one), so both forms are listed.
+_GRID_PATHWAY_YEARS_ALL = sorted(
+    {
+        y
+        for target in _sgs.get("planning_horizons", [])
+        for y in _grid_pathway_years(target)
+        if y != target
+    }
 )
+
+GRID_EXPORT_NETWORK_IDS_LT = (
+    GRID_EXPORT_NETWORK_IDS_LT_TOPOLOGY
+    + ["optimal"]
+    + [f"optimal_{y}" for y in _GRID_PATHWAY_YEARS_ALL]
+)
+GRID_EXPORT_NETWORK_IDS_ST = [
+    f"portfolio-{p}_on-{gs}_st"
+    for p in GRID_SCENARIO_VALUES
+    for gs in GRID_SCENARIO_NAMES
+]
+GRID_EXPORT_NETWORK_IDS = GRID_EXPORT_NETWORK_IDS_LT + GRID_EXPORT_NETWORK_IDS_ST
 
 
 wildcard_constraints:
     grid_scenario="|".join(GRID_SCENARIO_VALUES) if GRID_SCENARIO_VALUES else "(?!)",
     portfolio="|".join(GRID_SCENARIO_VALUES) if GRID_SCENARIO_VALUES else "(?!)",
     network_id="|".join(GRID_EXPORT_NETWORK_IDS) if GRID_EXPORT_NETWORK_IDS else "(?!)",
+
+
+def _year_for_network_id(network_id, fallback_year):
+    """Actual data year for one network_id: "optimal_YYYY" pins its own
+    year, everything else (including plain "optimal") uses the enclosing
+    rule instance's own {planning_horizons} wildcard value."""
+    if network_id.startswith("optimal_"):
+        return network_id.removeprefix("optimal_")
+    return fallback_year
+
+
+def _grid_network_path(clusters, opts, sector_opts, network_id, fallback_year):
+    """.nc path for one network_id - suffix-less for "optimal"/"optimal_YYYY"
+    (the plain pathway-reference network), `_{network_id}` suffixed for the
+    regular topology-*/portfolio-*_st grid-scenario variants."""
+    year = _year_for_network_id(network_id, fallback_year)
+    suffix = "" if network_id == "optimal" or network_id.startswith("optimal_") else f"_{network_id}"
+    return RESULTS + f"networks/base_s_{clusters}_{opts}_{sector_opts}_{year}{suffix}.nc"
+
+
+def _grid_prenetwork_path(clusters, opts, sector_opts, network_id, fallback_year):
+    """Pre-solve counterpart of _grid_network_path's network_id, for the
+    grid-topology comparison maps (system_plots.py's
+    plot_grid_topology_maps) - the network as handed to the solver, with
+    whatever grid CSV override (if any) is already applied but before
+    capacity/dispatch optimization:
+    - "optimal"/"optimal_YYYY": the plain prepared network (no override).
+    - "topology-{gs}"/"topology-stochastic__{gs}": {gs}'s own
+      build_grid_topology output (the joint stochastic solve's
+      "topology-stochastic__{gs}" branch starts from the exact same grid
+      CSV override as the deterministic "topology-{gs}" one).
+    - "portfolio-{p}_on-{gs}_st": {gs}'s build_grid_topology output too -
+      that's the frozen "canvas" grid topology being evaluated against.
+    """
+    year = _year_for_network_id(network_id, fallback_year)
+    if network_id.startswith("topology-stochastic__"):
+        gs = network_id.removeprefix("topology-stochastic__")
+    elif network_id.startswith("topology-"):
+        gs = network_id.removeprefix("topology-")
+    elif network_id.startswith("portfolio-") and network_id.endswith("_st"):
+        gs = network_id.rsplit("_on-", 1)[1].removesuffix("_st")
+    else:
+        gs = None
+    suffix = f"_topology-{gs}" if gs is not None else "_final"
+    template = resources(
+        "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}" + suffix + ".nc"
+    )
+    return (
+        template.replace("{clusters}", clusters)
+        .replace("{opts}", opts)
+        .replace("{sector_opts}", sector_opts)
+        .replace("{planning_horizons}", year)
+    )
 
 
 def _scenario_csv_paths(wildcards, names):
@@ -277,31 +362,33 @@ rule export_ariadne_variables_grid_scenario:
     """
     input:
         template="data/template_ariadne_database.xlsx",
-        industry_demands=expand(
+        industry_demands=lambda w: [
             resources(
                 "industrial_energy_demand_base_s_{clusters}_{planning_horizons}.csv"
-            ),
-            allow_missing=True,
-        ),
-        networks=expand(
-            RESULTS
-            + "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_{network_id}.nc",
-            allow_missing=True,
-        ),
-        costs=expand(
-            resources("costs_{planning_horizons}_processed.csv"),
-            allow_missing=True,
-        ),
-        industrial_production_per_country_tomorrow=expand(
+            )
+            .replace("{clusters}", w.clusters)
+            .replace("{planning_horizons}", _year_for_network_id(w.network_id, w.planning_horizons))
+        ],
+        networks=lambda w: [
+            _grid_network_path(w.clusters, w.opts, w.sector_opts, w.network_id, w.planning_horizons)
+        ],
+        costs=lambda w: [
+            resources("costs_{planning_horizons}_processed.csv").replace(
+                "{planning_horizons}", _year_for_network_id(w.network_id, w.planning_horizons)
+            )
+        ],
+        industrial_production_per_country_tomorrow=lambda w: [
             resources(
                 "industrial_production_per_country_tomorrow_{planning_horizons}-modified.csv"
-            ),
-            allow_missing=True,
-        ),
-        industry_sector_ratios=expand(
-            resources("industry_sector_ratios_{planning_horizons}.csv"),
-            allow_missing=True,
-        ),
+            ).replace(
+                "{planning_horizons}", _year_for_network_id(w.network_id, w.planning_horizons)
+            )
+        ],
+        industry_sector_ratios=lambda w: [
+            resources("industry_sector_ratios_{planning_horizons}.csv").replace(
+                "{planning_horizons}", _year_for_network_id(w.network_id, w.planning_horizons)
+            )
+        ],
         industrial_production=resources("industrial_production_per_country.csv"),
         energy_totals=resources("energy_totals.csv"),
     output:
@@ -316,7 +403,7 @@ rule export_ariadne_variables_grid_scenario:
     resources:
         mem_mb=16000,
     params:
-        planning_horizons=lambda w: [int(w.planning_horizons)],
+        planning_horizons=lambda w: [int(_year_for_network_id(w.network_id, w.planning_horizons))],
         config_industry=config_provider("industry"),
         energy_totals_year=config_provider("energy", "energy_totals_year"),
         post_discretization=config_provider("solving", "options", "post_discretization"),
@@ -326,6 +413,110 @@ rule export_ariadne_variables_grid_scenario:
         "Exporting Ariadne variables for grid-topology network variant '{wildcards.network_id}'"
     script:
         scripts("pypsa-de/export_ariadne_variables.py")
+
+
+rule system_plots_grid_scenario:
+    """system_plots.py for one grid-topology/portfolio network variant.
+
+    Single-network/single-year counterpart of `system_plots` (which covers
+    the full myopic pathway for a `run`), analogous to how
+    export_ariadne_variables_grid_scenario relates to export_ariadne_variables.
+    One output folder per `network_id`, since - like the export rule - all
+    variants share the same `run`/scenario name.
+    """
+    params:
+        planning_horizons=lambda w: [int(_year_for_network_id(w.network_id, w.planning_horizons))],
+        plotting=config_provider("plotting"),
+        output_dir=RESULTS + "system/plots/{network_id}",
+    input:
+        networks=lambda w: [
+            _grid_network_path(w.clusters, w.opts, w.sector_opts, w.network_id, w.planning_horizons)
+        ],
+        prenetworks=lambda w: [
+            _grid_prenetwork_path(w.clusters, w.opts, w.sector_opts, w.network_id, w.planning_horizons)
+        ],
+        regions_onshore=expand(
+            resources("regions_onshore_base_s_{clusters}.geojson"),
+            allow_missing=True,
+        ),
+    output:
+        flag=touch(
+            RESULTS
+            + "system/plots/{network_id}/.system_plots_complete_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.flag"
+        ),
+    resources:
+        mem_mb=40000,
+    log:
+        logs(
+            "system_plots_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_{network_id}.log"
+        ),
+    message:
+        "Plotting system plots for grid-topology network variant '{wildcards.network_id}'"
+    script:
+        scripts("pypsa-de/system_plots.py")
+
+
+def _lt_network_ids(wildcards):
+    """LT comparison set for one rule instance: the grid-topology variants
+    (all at the instance's own {planning_horizons} year) plus one
+    suffix-less pathway network per configured year up to and including
+    that target year - "optimal" for the target year itself, "optimal_YYYY"
+    for each earlier one (see _grid_pathway_years above)."""
+    target_year = int(wildcards.planning_horizons)
+    pathway_ids = [
+        "optimal" if y == target_year else f"optimal_{y}"
+        for y in _grid_pathway_years(target_year)
+    ]
+    return GRID_EXPORT_NETWORK_IDS_LT_TOPOLOGY + pathway_ids
+
+
+def _comparison_network_ids(wildcards):
+    return _lt_network_ids(wildcards) if wildcards.variant == "LT" else GRID_EXPORT_NETWORK_IDS_ST
+
+
+rule plot_grid_scenario_comparison:
+    """Compare LT topology or ST portfolio-evaluation network variants.
+
+    All variants share the same `run`/Scenario name (see
+    export_ariadne_variables_grid_scenario above), so the comparison is
+    keyed by `network_id` instead - one directory of plots per `variant`
+    (LT topology-* networks, or ST portfolio-*_on-*_st networks).
+    """
+    input:
+        networks=lambda w: [
+            _grid_network_path(w.clusters, w.opts, w.sector_opts, nid, w.planning_horizons)
+            for nid in _comparison_network_ids(w)
+        ],
+        exported_variables=lambda w: [
+            RESULTS
+            + f"ariadne/exported_variables_full_base_s_{w.clusters}_{w.opts}_{w.sector_opts}_{w.planning_horizons}_{nid}.xlsx"
+            for nid in _comparison_network_ids(w)
+        ],
+        regions_onshore=expand(
+            resources("regions_onshore_base_s_{clusters}.geojson"),
+            allow_missing=True,
+        ),
+    output:
+        directory(
+            RESULTS
+            + "scenario_comparison/{variant}/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}"
+        ),
+    log:
+        logs(
+            "plot_grid_scenario_comparison_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_{variant}.log"
+        ),
+    threads: 1
+    resources:
+        mem_mb=32000,
+    params:
+        network_ids=lambda w: _comparison_network_ids(w),
+        plotting=config_provider("plotting"),
+    wildcard_constraints:
+        variant="LT|ST",
+    message:
+        "Plotting {wildcards.variant} grid-scenario comparison"
+    script:
+        scripts("pypsa-de/plot_grid_scenario_comparison.py")
 
 
 def get_topology_networks(wildcards):
@@ -410,6 +601,29 @@ rule stochastic_grid_analysis:
         expand(
             RESULTS
             + "ariadne/exported_variables_full_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_{network_id}.xlsx",
+            run=config["run"]["name"],
+            clusters=config["scenario"]["clusters"],
+            opts=config["scenario"]["opts"],
+            sector_opts=config["scenario"]["sector_opts"],
+            planning_horizons=_sgs.get("planning_horizons", []),
+            network_id=GRID_EXPORT_NETWORK_IDS,
+        ),
+        # LT/ST scenario-comparison plots.
+        expand(
+            RESULTS
+            + "scenario_comparison/{variant}/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}",
+            run=config["run"]["name"],
+            clusters=config["scenario"]["clusters"],
+            opts=config["scenario"]["opts"],
+            sector_opts=config["scenario"]["sector_opts"],
+            planning_horizons=_sgs.get("planning_horizons", []),
+            variant=["LT", "ST"],
+        ),
+        # Per-network-variant system plots (storage/capacity maps, energy
+        # balances, capacity comparison) - one folder per network variant.
+        expand(
+            RESULTS
+            + "system/plots/{network_id}/.system_plots_complete_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.flag",
             run=config["run"]["name"],
             clusters=config["scenario"]["clusters"],
             opts=config["scenario"]["opts"],

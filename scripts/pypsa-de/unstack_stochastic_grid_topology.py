@@ -12,6 +12,18 @@ Network.get_scenario() does this natively, but crashes on SubNetwork: that
 component isn't scenario-indexed by n.set_scenarios() to begin with (it's
 bookkeeping derived from determine_network_topology(), not solved data), so
 it's dropped here and recomputed for the extracted network instead.
+
+Also rescales buses_t.marginal_price by 1/scenario_weight: PyPSA's
+stochastic objective weights each scenario's cost by its probability, but
+the per-scenario nodal balance constraint is added unweighted, so its dual
+(marginal_price) comes out scaled by that same probability - confirmed
+intended upstream ("expected shadow price", matching how CAPEX/OPEX are
+expected costs too), not a bug. Left as-is, a branch unstacked from e.g. a
+50/50 two-scenario network would show ~half the price of an equivalent
+deterministic solve. Rescaling here (rather than only where it's plotted)
+also keeps it correct for anything else downstream that reads
+marginal_price off these networks (e.g. the trade-cost calculations in
+plot_grid_scenario_comparison.py).
 """
 
 import logging
@@ -24,6 +36,8 @@ logger = logging.getLogger(__name__)
 
 
 def unstack_scenario(n, scenario):
+    weight = n.scenario_weightings.loc[scenario, "weight"]
+
     n2 = n.copy()
     n2.name = f"{n2.name} - Scenario '{scenario}'"
     n2._scenarios_data = n2._scenarios_data.iloc[:0]
@@ -44,6 +58,9 @@ def unstack_scenario(n, scenario):
     if len(n2.sub_networks):
         n2.remove("SubNetwork", n2.sub_networks.index.tolist())
     n2.determine_network_topology()
+
+    if not n2.buses_t.marginal_price.empty:
+        n2.buses_t.marginal_price = n2.buses_t.marginal_price / weight
 
     return n2
 
