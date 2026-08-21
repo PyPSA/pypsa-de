@@ -356,22 +356,26 @@ def electricity_import_limits(n, investment_year, limits_volume_max):
             (n.lines.carrier == "AC")
             & (n.lines.bus0.str[:2] != ct)
             & (n.lines.bus1.str[:2] == ct)
+            & n.lines.active
         ]
         outgoing_line = n.lines.index[
             (n.lines.carrier == "AC")
             & (n.lines.bus0.str[:2] == ct)
             & (n.lines.bus1.str[:2] != ct)
+            & n.lines.active
         ]
 
         incoming_link = n.links.index[
             (n.links.carrier == "DC")
             & (n.links.bus0.str[:2] != ct)
             & (n.links.bus1.str[:2] == ct)
+            & n.links.active
         ]
         outgoing_link = n.links.index[
             (n.links.carrier == "DC")
             & (n.links.bus0.str[:2] == ct)
             & (n.links.bus1.str[:2] != ct)
+            & n.links.active
         ]
 
         incoming_line_p = (

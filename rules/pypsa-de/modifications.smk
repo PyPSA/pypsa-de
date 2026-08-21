@@ -266,6 +266,9 @@ rule modify_prenetwork:
         space_heat_EU_factor=config_provider(
             "sector", "reduce_space_heat_exogenously_factor"
         ),
+        deactivate_early_transmission_expansion=config_provider(
+            "pypsa-de", "deactivate_early_transmission_expansion"
+        ),
     script:
         scripts("pypsa-de/modify_prenetwork.py")
 

@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20260812_scale_only_DE_heat
+  prefix: 20260821_no_early_transmission_expansion
   name:
   - KN2045_Bal_v5
   scenarios:
@@ -45,6 +45,9 @@ pypsa-de:
     2040: 0.49
     2045: 0.49
     2050: 0.49
+  deactivate_early_transmission_expansion:
+  - 2025
+  - 2030
   # Assume 1% of buildings renovated until 2030 (reduces their demand by 60%), then 2% per year until 2050
   reduce_space_heat_DE_factor:
     2020: 0.1

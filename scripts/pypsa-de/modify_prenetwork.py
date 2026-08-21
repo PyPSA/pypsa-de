@@ -1497,6 +1497,16 @@ def scale_industry_elec_to_2025(n, industrial_energy_demand_2025):
     )
 
 
+def deactivate_early_transmission_expansion(n, current_year):
+    logger.info(f"Deactivating transmission expansion for year {current_year}.")
+    # Assumption 1: The current base network captures all existing lines already -> no expansion in 2025
+    # Assumption 2: All international transmission projects and all within Germany are in NEP or TYNDP
+    n.lines.loc[n.lines.build_year > current_year, "active"] = False
+    n.links.loc[n.links.build_year > current_year, "active"] = False
+    n.lines.s_nom_extendable = False
+    n.links.loc[n.links.carrier == "DC", "p_nom_extendable"] = False
+
+
 if __name__ == "__main__":
     if "snakemake" not in globals():
         snakemake = mock_snakemake(
@@ -1603,5 +1613,8 @@ if __name__ == "__main__":
         limit_cross_border_flows_ac(
             n, snakemake.params.limit_cross_border_flows_ac[current_year]
         )
+
+    if current_year in snakemake.params.deactivate_early_transmission_expansion:
+        deactivate_early_transmission_expansion(n, current_year)
 
     n.export_to_netcdf(snakemake.output.network)

@@ -5307,13 +5307,14 @@ def hack_DC_projects(n, p_nom_start, p_nom_planned, model_year, snakemake, costs
             )
 
     # Future projects should not have any capacity
-    assert isclose(n.links.loc[future_projects, "p_nom_opt"], 0).all()
+    assert isclose(n.links.loc[future_projects].query("active").p_nom_opt, 0).all()
 
     # Setting p_nom to 0 such that n.statistics does not compute negative expanded capex or capacity additions
     # Setting p_nom_min to 0 for the grid_expansion calculation
     # This is ONLY POSSIBLE IN POST-PROCESSING
     # We pretend that the model expanded the grid endogenously
     n.links.loc[future_projects, "p_nom"] = 0
+    n.links.loc[future_projects, "p_nom_opt"] = 0
     n.links.loc[future_projects, "p_nom_min"] = 0
 
     # Current projects should have their p_nom_opt bigger or equal to p_nom until the year 2030 (Startnetz that we force in)
