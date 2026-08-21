@@ -153,9 +153,28 @@ rule build_bidding_zones:
         scripts("build_bidding_zones.py")
 
 
-rule build_shapes:
+rule build_offshore_shapes:
     input:
         eez=ancient(rules.retrieve_eez.output["gpkg"]),
+    output:
+        offshore_shapes=resources("offshore_shapes.geojson"),
+    log:
+        logs("build_offshore_shapes.log"),
+    benchmark:
+        benchmarks("build_offshore_shapes")
+    threads: 1
+    resources:
+        mem_mb=1500,
+    params:
+        countries=config_provider("countries"),
+    message:
+        "Building offshore shapes"
+    script:
+        scripts("build_offshore_shapes.py")
+
+
+rule build_nuts3_shapes:
+    input:
         nuts3_2021=rules.retrieve_eu_nuts_2021.output["shapes_level_3"],
         ba_adm1=f"data/osm_boundaries/build/{OSM_BOUNDARIES_DATASET['version']}/BA_adm1.geojson",
         md_adm1=f"data/osm_boundaries/build/{OSM_BOUNDARIES_DATASET['version']}/MD_adm1.geojson",
@@ -163,6 +182,7 @@ rule build_shapes:
         xk_adm1=f"data/osm_boundaries/build/{OSM_BOUNDARIES_DATASET['version']}/XK_adm1.geojson",
         nuts3_gdp=rules.retrieve_jrc_ardeco.output["ardeco_gdp"],
         nuts3_pop=rules.retrieve_jrc_ardeco.output["ardeco_pop"],
+        offshore_shapes=resources("offshore_shapes.geojson"),
         bidding_zones=lambda w: (
             resources("bidding_zones.geojson")
             if config_provider("clustering", "mode")(w) == "administrative"
@@ -171,10 +191,29 @@ rule build_shapes:
         other_gdp=rules.retrieve_gdp_per_capita.output["gdp"],
         other_pop=rules.retrieve_population_count.output["tif"],
     output:
-        country_shapes=resources("country_shapes.geojson"),
-        offshore_shapes=resources("offshore_shapes.geojson"),
-        europe_shape=resources("europe_shape.geojson"),
         nuts3_shapes=resources("nuts3_shapes.geojson"),
+    log:
+        logs("build_nuts3_shapes.log"),
+    benchmark:
+        benchmarks("build_nuts3_shapes")
+    threads: 1
+    resources:
+        mem_mb=1500,
+    params:
+        countries=config_provider("countries"),
+    message:
+        "Building NUTS3 shapes"
+    script:
+        scripts("build_nuts3_shapes.py")
+
+
+rule build_shapes:
+    input:
+        nuts3_shapes=resources("nuts3_shapes.geojson"),
+        offshore_shapes=resources("offshore_shapes.geojson"),
+    output:
+        country_shapes=resources("country_shapes.geojson"),
+        europe_shape=resources("europe_shape.geojson"),
     log:
         logs("build_shapes.log"),
     benchmark:
@@ -183,10 +222,9 @@ rule build_shapes:
     resources:
         mem_mb=1500,
     params:
-        config_provider("clustering", "mode"),
         countries=config_provider("countries"),
     message:
-        "Building geographical shapes"
+        "Building country and Europe shapes"
     script:
         scripts("build_shapes.py")
 
@@ -263,8 +301,10 @@ rule determine_availability_matrix_MD_UA:
             w, config_provider("renewable", w.technology, "cutout")(w)
         ),
     output:
-        availability_matrix=resources(
-            "availability_matrix_MD-UA_{clusters}_{technology}.nc"
+        nc=resources("availability_matrix_MD-UA_{clusters}_{technology}.nc"),
+        plot=branch(
+            config["atlite"]["plot_availability_matrix"],
+            then=resources("availability_matrix_MD-UA_{clusters}_{technology}.png"),
         ),
     log:
         logs("determine_availability_matrix_MD_UA_{clusters}_{technology}.log"),
@@ -275,6 +315,7 @@ rule determine_availability_matrix_MD_UA:
         mem_mb=config["atlite"].get("nprocesses", 4) * 5000,
     params:
         renewable=config_provider("renewable"),
+        plot_availability_matrix=config_provider("atlite", "plot_availability_matrix"),
     message:
         "Determining availability matrix for {wildcards.clusters} clusters and {wildcards.technology} technology"
     script:
@@ -333,7 +374,11 @@ rule determine_availability_matrix:
             w, config_provider("renewable", w.technology, "cutout")(w)
         ),
     output:
-        resources("availability_matrix_{clusters}_{technology}.nc"),
+        nc=resources("availability_matrix_{clusters}_{technology}.nc"),
+        plot=branch(
+            config["atlite"]["plot_availability_matrix"],
+            then=resources("availability_matrix_{clusters}_{technology}.png"),
+        ),
     log:
         logs("determine_availability_matrix_{clusters}_{technology}.log"),
     benchmark:
