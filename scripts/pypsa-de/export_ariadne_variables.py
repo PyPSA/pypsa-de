@@ -2818,6 +2818,10 @@ def get_emissions(n, region, _energy_totals, _industry_demand):
     ccs_fraction = total_ccs / co2_storage.sum()
     ccu_fraction = 1 - ccs_fraction
 
+    assert ccs_fraction <= 1
+    var["Carbon Management|Carbon Capture and Storage"] = total_ccs
+    var["Carbon Management|Carbon Capture and Usage"] = co2_storage.sum() - total_ccs
+    var["Carbon Management|Carbon Capture"] = co2_storage.sum()
     # Correcting for fossil CCU (3.)
     # Step 1: Add the stored CO2 back to the emissions
     # Step 2 (below): CCU goes to e-fuels -> subtract from e-fuel users
