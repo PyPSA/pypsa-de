@@ -662,19 +662,38 @@ def unravel_gasbus(n, costs):
         marginal_cost=costs.at["gas", "fuel"],
     )
 
-    # add link for DE gas compressing
-    n.add(
-        "Link",
-        "DE gas compressing",
-        bus0="DE gas primary",
-        bus1="DE gas",
-        bus2="co2 atmosphere",
-        carrier="gas compressing",
-        p_nom=1e6,
-        efficiency=1 - snakemake.config["industry"]["gas_compression_losses"],
-        efficiency2=snakemake.config["industry"]["gas_compression_losses"]
-        * costs.at["gas", "CO2 intensity"],
-    )
+    # add link for DE gas compressing and Gas upstream emissions
+
+    upstream_co2_factor = snakemake.params.upstream_co2_factor
+
+    if upstream_co2_factor > 0:
+        n.add(
+            "Link",
+            "DE gas compressing",
+            bus0="DE gas primary",
+            bus1="DE gas",
+            bus2="co2 atmosphere",
+            bus3="co2 atmosphere",
+            carrier="gas compressing",
+            p_nom=1e6,
+            efficiency=1 - snakemake.config["industry"]["gas_compression_losses"],
+            efficiency2=snakemake.config["industry"]["gas_compression_losses"]
+            * costs.at["gas", "CO2 intensity"],
+            efficiency3=upstream_co2_factor
+        )
+    else:
+        n.add(
+            "Link",
+            "DE gas compressing",
+            bus0="DE gas primary",
+            bus1="DE gas",
+            bus2="co2 atmosphere",
+            carrier="gas compressing",
+            p_nom=1e6,
+            efficiency=1 - snakemake.config["industry"]["gas_compression_losses"],
+            efficiency2=snakemake.config["industry"]["gas_compression_losses"]
+            * costs.at["gas", "CO2 intensity"]
+        )
 
     ### create renewable gas buses
     n.add("Carrier", "renewable gas")

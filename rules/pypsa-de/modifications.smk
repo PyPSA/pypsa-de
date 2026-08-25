@@ -208,6 +208,7 @@ rule modify_prenetwork:
         shipping_oil_efficiency=config_provider("sector", "shipping_oil_efficiency"),
         shipping_methanol_share=config_provider("sector", "shipping_methanol_share"),
         scale_capacity=config_provider("scale_capacity"),
+        upstream_co2_factor=config_provider("industry", "gas_upstream_co2_factor"),
         bev_charge_rate=config_provider("sector", "bev_charge_rate"),
         bev_energy=config_provider("sector", "bev_energy"),
         bev_dsm_availability=config_provider("sector", "bev_dsm_availability"),

@@ -709,34 +709,39 @@ def add_carrier_buses(
                 unit=unit,
             )
 
-            n.add(
-                "Link",
-                nodes + " compressing",
-                bus0=nodes + " primary",
-                bus1=nodes,
-                bus2="co2 atmosphere",
-                location=location,
-                carrier=carrier + " compressing",
-                p_nom=1e6,
-                efficiency=1 - cf_industry["gas_compression_losses"],
-                efficiency2=cf_industry["gas_compression_losses"]
-                * costs.at[carrier, "CO2 intensity"],
-            )
             upstream_co2_factor = cf_industry.get("gas_upstream_co2_factor", 0.0)
 
-            if  upstream_co2_factor > 0:
+            if upstream_co2_factor > 0:
                 n.add(
                     "Link",
-                    nodes + " upstream emissions",
-                    bus0=nodes + " primary",    # zieht sich Referenzfluss vom Primärbus
-                    bus1=nodes + " primary",    # gibt ihn zurück (Durchfluss, kein Energieverlust)
-                    bus2="co2 atmosphere",      # Vorkettenemission
+                    nodes + " compressing",
+                    bus0=nodes + " primary",
+                    bus1=nodes,
+                    bus2="co2 atmosphere",
+                    bus3="co2 atmosphere",
                     location=location,
-                    carrier=carrier + " upstream",
+                    carrier=carrier + " compressing",
                     p_nom=1e6,
-                    efficiency=1.0,             # kein Energieverlust
-                    efficiency2=upstream_co2_factor,  # tCO2 pro MWh_gas
+                    efficiency=1 - cf_industry["gas_compression_losses"],
+                    efficiency2=cf_industry["gas_compression_losses"]
+                    * costs.at[carrier, "CO2 intensity"],
+                    efficiency3=upstream_co2_factor,
                 )
+            else:
+                n.add(
+                    "Link",
+                    nodes + " compressing",
+                    bus0=nodes + " primary",
+                    bus1=nodes,
+                    bus2="co2 atmosphere",
+                    location=location,
+                    carrier=carrier + " compressing",
+                    p_nom=1e6,
+                    efficiency=1 - cf_industry["gas_compression_losses"],
+                    efficiency2=cf_industry["gas_compression_losses"]
+                    * costs.at[carrier, "CO2 intensity"],
+                )
+
             suffix = " primary"
 
         n.add(

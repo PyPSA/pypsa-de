@@ -12,14 +12,12 @@ run:
   # - KN2045_Mix_HDD_Upstream
   # - KN2045_Mix_HighDecentralDiscount_GasCrisis
   # - KN2045_Mix_HDD_pseudo_foresight
-  # - KN2045_Mix_H2plantsEU
-  # - KN2045_Mix_no_H2_Force_Upstream
-    - endoretro
-    - endoretro_high_GT_cost
-    - endoretro_lowBiogas
-  #  - H2_force
-  #  - no_H2
-  #  - pure_endo_upstream  
+  # - KN2045_2026
+  # - KN2045_2023
+  # - endoretro
+  # - endoretro_high_GT_cost
+  # - endoretro_lowBiogas
+  # - endoretro_upstream
   # - KN2045_Elek
   # - KN2045_H2
   # - KN2045_NFniedrig
@@ -246,7 +244,7 @@ clustering:
     # 'ES': 0.0408
     # 'IT': 0.0408
   temporal:
-    resolution_sector: 6H
+    resolution_sector: 365H
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#co2-budget
 co2_budget:
@@ -423,6 +421,7 @@ industry:
     2050: 0.6
   waste_to_energy: true
   waste_to_energy_cc: true
+  gas_upstream_co2_factor: 0 # in t_CO2/MWh Gas
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#solving
 solving:
