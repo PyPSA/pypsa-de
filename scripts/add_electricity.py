@@ -578,7 +578,7 @@ def attach_wind_and_solar(
             else:
                 capital_cost = costs.at[car, "capital_cost"]
                 onight_cost = costs.at[car, "investment"]
-                connection_onight_cost = pd.NA
+                connection_onight_cost = np.nan
 
             buses = ds.indexes["bus_bin"].get_level_values("bus")
             bus_bins = ds.indexes["bus_bin"].map(flatten)
