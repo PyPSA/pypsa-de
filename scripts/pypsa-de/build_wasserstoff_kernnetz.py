@@ -366,15 +366,19 @@ def assign_locations(df, locations):
     # calc length of points
     length_factor = 1.0
     df["length_haversine"] = df.apply(
-        lambda p: length_factor
-        * haversine_pts([p.point0.x, p.point0.y], [p.point1.x, p.point1.y]),
+        lambda p: (
+            length_factor
+            * haversine_pts([p.point0.x, p.point0.y], [p.point1.x, p.point1.y])
+        ),
         axis=1,
     )
 
     # calc length ratio
     df["length_ratio"] = df.apply(
-        lambda row: max(row.length, row.length_haversine)
-        / (min(row.length, row.length_haversine) + 1),
+        lambda row: (
+            max(row.length, row.length_haversine)
+            / (min(row.length, row.length_haversine) + 1)
+        ),
         axis=1,
     )
 

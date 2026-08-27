@@ -4,15 +4,6 @@
 
 
 rule export_ariadne_variables:
-    params:
-        planning_horizons=config_provider("scenario", "planning_horizons"),
-        hours=config_provider("clustering", "temporal", "resolution_sector"),
-        config_industry=config_provider("industry"),
-        energy_totals_year=config_provider("energy", "energy_totals_year"),
-        co2_sequestration_cost=config_provider("sector", "co2_sequestration_cost"),
-        post_discretization=config_provider("solving", "options", "post_discretization"),
-        NEP_year=lambda w: config_provider("costs", "custom_cost_fn")(w)[-8:-4],
-        NEP_transmission=config_provider("costs", "transmission"),
     input:
         template="data/template_ariadne_database.xlsx",
         industry_demands=expand(
@@ -50,17 +41,66 @@ rule export_ariadne_variables:
     output:
         exported_variables=RESULTS + "ariadne/exported_variables.xlsx",
         exported_variables_full=RESULTS + "ariadne/exported_variables_full.xlsx",
-    resources:
-        mem_mb=32000,
     log:
         RESULTS + "logs/export_ariadne_variables.log",
+    resources:
+        mem_mb=32000,
+    params:
+        planning_horizons=config_provider("scenario", "planning_horizons"),
+        hours=config_provider("clustering", "temporal", "resolution_sector"),
+        config_industry=config_provider("industry"),
+        energy_totals_year=config_provider("energy", "energy_totals_year"),
+        co2_sequestration_cost=config_provider("sector", "co2_sequestration_cost"),
+        post_discretization=config_provider("solving", "options", "post_discretization"),
+        NEP_year=lambda w: config_provider("costs", "custom_cost_fn")(w)[-8:-4],
+        NEP_transmission=config_provider("costs", "transmission"),
     script:
         scripts("pypsa-de/export_ariadne_variables.py")
 
 
-rule plot_ariadne_variables:
+rule export_dynamic_variables:
+    input:
+        template="data/template_ariadne_database.xlsx",
+        networks=expand(
+            RESULTS
+            + "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
+            **config["scenario"],
+            allow_missing=True,
+        ),
+    output:
+        exported_variables=RESULTS + "ariadne/exported_dynamic_variables.xlsx",
+    log:
+        RESULTS + "logs/export_dynamic_variables.log",
+    resources:
+        mem_mb=8000,
     params:
-        reference_scenario=config_provider("pypsa-de", "reference_scenario"),
+        planning_horizons=config_provider("scenario", "planning_horizons"),
+    script:
+        scripts("pypsa-de/export_dynamic_variables.py")
+
+
+rule export_nuts_variables:
+    input:
+        template="data/template_ariadne_database.xlsx",
+        networks=expand(
+            RESULTS
+            + "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
+            **config["scenario"],
+            allow_missing=True,
+        ),
+    output:
+        exported_variables=RESULTS + "ariadne/exported_nuts_variables.xlsx",
+    log:
+        RESULTS + "logs/export_nuts_variables.log",
+    resources:
+        mem_mb=8000,
+    params:
+        planning_horizons=config_provider("scenario", "planning_horizons"),
+    script:
+        scripts("pypsa-de/export_nuts_variables.py")
+
+
+rule plot_ariadne_variables:
     input:
         exported_variables_full=RESULTS + "ariadne/exported_variables_full.xlsx",
         ariadne_database="data/ariadne_database.csv",
@@ -99,14 +139,13 @@ rule plot_ariadne_variables:
         trade_balance=RESULTS + "ariadne/trade-balance-DE.pdf",
     log:
         RESULTS + "logs/plot_ariadne_variables.log",
+    params:
+        reference_scenario=config_provider("pypsa-de", "reference_scenario"),
     script:
         scripts("pypsa-de/plot_ariadne_variables.py")
 
 
 rule plot_hydrogen_network_incl_kernnetz:
-    params:
-        plotting=config_provider("plotting"),
-        foresight=config_provider("foresight"),
     input:
         network=RESULTS
         + "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
@@ -114,9 +153,6 @@ rule plot_hydrogen_network_incl_kernnetz:
     output:
         map=RESULTS
         + "maps/base_s_{clusters}_{opts}_{sector_opts}-h2_network_incl_kernnetz_{planning_horizons}.pdf",
-    threads: 2
-    resources:
-        mem_mb=10000,
     log:
         RESULTS
         + "logs/plot_hydrogen_network_incl_kernnetz/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.log",
@@ -125,58 +161,64 @@ rule plot_hydrogen_network_incl_kernnetz:
             RESULTS
             + "benchmarks/plot_hydrogen_network_incl_kernnetz/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}"
         )
+    threads: 2
+    resources:
+        mem_mb=10000,
+    params:
+        plotting=config_provider("plotting"),
+        foresight=config_provider("foresight"),
     script:
         scripts("pypsa-de/plot_hydrogen_network_incl_kernnetz.py")
 
 
-#rule plot_ariadne_report:
-#    params:
-#       planning_horizons=config_provider("scenario", "planning_horizons"),
-#       plotting=config_provider("plotting"),
-#        run=config_provider("run", "name"),
-#        foresight=config_provider("foresight"),
-#        post_discretization=config_provider("solving", "options", "post_discretization"),
-#        NEP_year=lambda w: config_provider("costs", "custom_cost_fn")(w)[-8:-4],
-#        hours=config_provider("clustering", "temporal", "resolution_sector"),
-#        NEP_transmission=config_provider("costs", "transmission"),
-#    input:
-#        networks=expand(
-#            RESULTS
-#            + "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
-#            **config["scenario"],
-#            allow_missing=True,
-#        ),
-#        regions_onshore_clustered=expand(
-#            resources("regions_onshore_base_s_{clusters}.geojson"),
-#            clusters=config["scenario"]["clusters"],
-#            allow_missing=True,
-#        ),
-#        rc="matplotlibrc",
-#        costs=expand(
-#            resources("costs_{planning_horizons}_processed.csv"),
-#            **config["scenario"],
-#            allow_missing=True,
-#        ),
-#        exported_variables_full=RESULTS + "ariadne/exported_variables_full.xlsx",
-#    output:
-#        elec_price_duration_curve=RESULTS
-#        + "ariadne/report/elec_price_duration_curve.pdf",
-#        elec_price_duration_hist=RESULTS + "ariadne/report/elec_price_duration_hist.pdf",
-#        backup_capacity=RESULTS + "ariadne/report/backup_capacity.pdf",
-#        backup_generation=RESULTS + "ariadne/report/backup_generation.pdf",
-#        results=directory(RESULTS + "ariadne/report"),
-#        elec_transmission=directory(RESULTS + "ariadne/report/elec_transmission"),
-#        h2_transmission=directory(RESULTS + "ariadne/report/h2_transmission"),
-#        co2_transmission=directory(RESULTS + "ariadne/report/co2_transmission"),
-#        elec_balances=directory(RESULTS + "ariadne/report/elec_balance_timeseries"),
-#        heat_balances=directory(RESULTS + "ariadne/report/heat_balance_timeseries"),
-#        nodal_balances=directory(RESULTS + "ariadne/report/balance_timeseries_2045"),
-#    resources:
-#        mem_mb=32000,
-#    log:
-#        RESULTS + "logs/plot_ariadne_report.log",
-#    script:
-#        scripts("pypsa-de/plot_ariadne_report.py")
+rule plot_ariadne_report:
+    input:
+        networks=expand(
+            RESULTS
+            + "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
+            **config["scenario"],
+            allow_missing=True,
+        ),
+        regions_onshore_clustered=expand(
+            resources("regions_onshore_base_s_{clusters}.geojson"),
+            clusters=config["scenario"]["clusters"],
+            allow_missing=True,
+        ),
+        rc="matplotlibrc",
+        costs=expand(
+            resources("costs_{planning_horizons}_processed.csv"),
+            **config["scenario"],
+            allow_missing=True,
+        ),
+        exported_variables_full=RESULTS + "ariadne/exported_variables_full.xlsx",
+    output:
+        elec_price_duration_curve=RESULTS
+        + "ariadne/report/elec_price_duration_curve.pdf",
+        elec_price_duration_hist=RESULTS + "ariadne/report/elec_price_duration_hist.pdf",
+        backup_capacity=RESULTS + "ariadne/report/backup_capacity.pdf",
+        backup_generation=RESULTS + "ariadne/report/backup_generation.pdf",
+        results=directory(RESULTS + "ariadne/report"),
+        elec_transmission=directory(RESULTS + "ariadne/report/elec_transmission"),
+        h2_transmission=directory(RESULTS + "ariadne/report/h2_transmission"),
+        co2_transmission=directory(RESULTS + "ariadne/report/co2_transmission"),
+        elec_balances=directory(RESULTS + "ariadne/report/elec_balance_timeseries"),
+        heat_balances=directory(RESULTS + "ariadne/report/heat_balance_timeseries"),
+        nodal_balances=directory(RESULTS + "ariadne/report/balance_timeseries_2045"),
+    log:
+        RESULTS + "logs/plot_ariadne_report.log",
+    resources:
+        mem_mb=32000,
+    params:
+        planning_horizons=config_provider("scenario", "planning_horizons"),
+        plotting=config_provider("plotting"),
+        run=config_provider("run", "name"),
+        foresight=config_provider("foresight"),
+        post_discretization=config_provider("solving", "options", "post_discretization"),
+        NEP_year=lambda w: config_provider("costs", "custom_cost_fn")(w)[-8:-4],
+        hours=config_provider("clustering", "temporal", "resolution_sector"),
+        NEP_transmission=config_provider("costs", "transmission"),
+    script:
+        scripts("pypsa-de/plot_ariadne_report.py")
 
 
 rule ariadne_report_only:
@@ -203,25 +245,41 @@ rule plot_scenario_comparison:
 
 rule compare_scenarios:
     input:
-        price_carbon="results/"
-        + config["run"]["prefix"]
-        + "/scenario_comparison/Price-Carbon.png",
         # expand(
         #     RESULTS + "ariadne/capacity_detailed.png",
         #     run=config_provider("run", "name"),
         # ),
+        price_carbon="results/"
+        + config["run"]["prefix"]
+        + "/scenario_comparison/Price-Carbon.png",
+
+
+rule get_dynamic_variables:
+    input:
+        dynamic_variables=expand(
+            RESULTS + "ariadne/exported_dynamic_variables.xlsx",
+            run=config_provider("run", "name"),
+        ),
+
+
+rule get_nuts_variables:
+    input:
+        nuts_variables=expand(
+            RESULTS + "ariadne/exported_nuts_variables.xlsx",
+            run=config_provider("run", "name"),
+        ),
 
 
 rule ariadne_all:
     input:
-        expand(
-            RESULTS + "ariadne/report/elec_price_duration_curve.pdf",
-            run=config_provider("run", "name"),
-        ),
         # expand(
         #     RESULTS + "ariadne/capacity_detailed.png",
         #     run=config_provider("run", "name"),
         # ),
+        expand(
+            RESULTS + "ariadne/report/elec_price_duration_curve.pdf",
+            run=config_provider("run", "name"),
+        ),
         expand(
             RESULTS
             + "maps/base_s_{clusters}_{opts}_{sector_opts}-h2_network_incl_kernnetz_{planning_horizons}.pdf",

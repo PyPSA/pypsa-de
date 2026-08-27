@@ -8,14 +8,14 @@ if config["pypsa-de"]["use_internal_db"]:
     ] in ["primary"]:
 
         rule retrieve_ariadne_database_internal:
-            params:
-                source="internal",
             output:
                 data="data/ariadne_database.csv",
             log:
                 "logs/retrieve_ariadne_database_internal_primary.log",
             resources:
                 mem_mb=1000,
+            params:
+                source="internal",
             script:
                 scripts("pypsa-de/retrieve_ariadne_database.py")
 
@@ -25,14 +25,14 @@ else:
     ]:
 
         rule retrieve_ariadne_database:
-            params:
-                source="primary",
             output:
                 data="data/ariadne_database.csv",
             log:
                 "logs/retrieve_ariadne_database_primary.log",
             resources:
                 mem_mb=1000,
+            params:
+                source="primary",
             script:
                 scripts("pypsa-de/retrieve_ariadne_database.py")
 
@@ -41,9 +41,6 @@ else:
     ]:
 
         rule retrieve_ariadne_database:
-            params:
-                source="archive",
-                version=ARIADNE_DATABASE["version"],
             input:
                 raw_xlsx=storage(ARIADNE_DATABASE["url"]),
             output:
@@ -52,6 +49,9 @@ else:
                 "logs/retrieve_ariadne_database_archive.log",
             resources:
                 mem_mb=1000,
+            params:
+                source="archive",
+                version=ARIADNE_DATABASE["version"],
             script:
                 scripts("pypsa-de/retrieve_ariadne_database.py")
 
@@ -75,11 +75,11 @@ if (OPEN_MASTR := dataset_version("open_mastr"))["source"] in ["primary", "archi
     rule retrieve_open_mastr:
         input:
             storage(OPEN_MASTR["url"]),
-        params:
-            "data/mastr",
         output:
             "data/mastr/bnetza_open_mastr_2023-08-08_B_biomass.csv",
             "data/mastr/bnetza_open_mastr_2023-08-08_B_combustion.csv",
+        params:
+            "data/mastr",
         run:
             unpack_archive(input[0], params[0])
 
@@ -87,12 +87,12 @@ if (OPEN_MASTR := dataset_version("open_mastr"))["source"] in ["primary", "archi
 if (EGON := dataset_version("egon"))["source"] in ["build"]:
 
     rule retrieve_egon_data:
-        params:
-            url=EGON["url"],
-            folder=EGON["folder"],
         output:
             spatial=f"{EGON['folder']}/demandregio_spatial_2018.json",
             mapping=f"{EGON['folder']}/mapping_technologies.json",
+        params:
+            url=EGON["url"],
+            folder=EGON["folder"],
         shell:
             """
             mkdir -p {params.folder}

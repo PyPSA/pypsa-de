@@ -37,8 +37,14 @@ if __name__ == "__main__":
 
         snakemake = mock_snakemake(
             "build_industrial_energy_demand_per_node",
-            clusters=48,
-            planning_horizons=2030,
+            simpl="",
+            clusters=49,
+            opts="",
+            ll="vopt",
+            sector_opts="None",
+            run="KN2045_Bal_v5",
+            planning_horizons=2025,
+            configfiles="config/config.de.yaml",
         )
     configure_logging(snakemake)
     set_scenario_config(snakemake)

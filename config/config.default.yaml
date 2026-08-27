@@ -3,7 +3,7 @@
 # yaml-language-server: $schema=./schema.default.json
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#version
-version: v2026.02.0
+version: v2026.08.0
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#tutorial
 tutorial: false
@@ -30,6 +30,7 @@ run:
     policy: false
     exclude: []
   use_shadow_directory: false
+  default_target_rule: all
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#foresight
 foresight: overnight
@@ -187,7 +188,7 @@ electricity:
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#atlite
 atlite:
   default_cutout: "europe-2013-sarah3-era5"
-  nprocesses: 16
+  nprocesses: 1
   show_progress: false
   plot_availability_matrix: false
   cutouts:
@@ -582,7 +583,7 @@ solar_thermal:
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#existing_capacities
 existing_capacities:
   grouping_years_power:
-  - 1920
+  - 1900
   - 1950
   - 1955
   - 1960
@@ -612,7 +613,7 @@ existing_capacities:
   - 2019
   threshold_capacity: 10
   default_heating_lifetime: 20
-  solar_rooftop_ratio: 0.5
+  solar_rooftop_ratio: 0.6
   conventional_carriers:
   - lignite
   - coal
@@ -853,7 +854,6 @@ sector:
   regional_co2_sequestration_potential:
     enable: true
     attribute:
-    - conservative estimate Mt
     - conservative estimate GAS Mt
     - conservative estimate OIL Mt
     - conservative estimate aquifer Mt
@@ -874,7 +874,14 @@ sector:
   co2_spatial: true
   co2_network: true
   co2_network_cost_factor: 1
+  co2_network_liquefaction: false
   cc_fraction: 0.9
+  cc_capital_cost_factor:
+    gas: 2.0
+    biomass: 1.1
+    coal: 1.1
+    waste: 1.2
+    cement: 1.0
   hydrogen_underground_storage: true
   hydrogen_underground_storage_locations:
   - onshore
@@ -910,12 +917,16 @@ sector:
     enable:
     - DC
     - H2 pipeline
+    - H2 pipeline retrofitted
     - gas pipeline
     - electricity distribution grid
     DC:
       efficiency_static: 0.98
       efficiency_per_1000km: 0.977
     H2 pipeline:
+      efficiency_per_1000km: 1
+      compression_per_1000km: 0.018
+    H2 pipeline retrofitted:
       efficiency_per_1000km: 1
       compression_per_1000km: 0.018
     gas pipeline:
@@ -1111,6 +1122,7 @@ clustering:
     remove_stubs_across_borders: false
   cluster_network:
     algorithm: kmeans
+    allow_ac_dc_mixing_in_bus_clusters: false
     hac_features:
     - wnd100m
     - influx_direct
@@ -1147,7 +1159,16 @@ adjustments:
 solving:
   options:
     clip_p_max_pu: 0.01
-    load_shedding: false
+    load_shedding:
+      enable: false
+      default_cost: 100000
+      all_carriers: true
+      carriers: {}
+    load_sinks:
+      enable: false
+      default_cost: 100000
+      all_carriers: false
+      carriers: {}
     curtailment_mode: false
     noisy_costs: true
     skip_iterations: true
@@ -1210,8 +1231,15 @@ solving:
       primal_feasibility_tolerance: 1.0e-05
       dual_feasibility_tolerance: 1.0e-05
       random_seed: 123
+    "highs-hipo":
+      solver: hipo
+      parallel: 'on'
+      primal_feasibility_tolerance: 1.0e-05
+      dual_feasibility_tolerance: 1.0e-05
+      random_seed: 123
+      run_crossover: 'off'
     "gurobi-default":
-      threads: 32
+      threads: 16
       method: 2
       crossover: 0
       BarConvTol: 1.0e-05
@@ -1219,6 +1247,7 @@ solving:
       AggFill: 0
       PreDual: 0
       GURO_PAR_BARDENSETHRESH: 200
+      IISMethod: 1
     "gurobi-numeric-focus":
       NumericFocus: 3
       method: 2
@@ -1282,6 +1311,8 @@ solving:
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#data
 data:
+  version_files:
+  - data/versions.csv
   hotmaps_industrial_sites:
     source: archive
     version: latest

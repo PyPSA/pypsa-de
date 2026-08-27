@@ -3,7 +3,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
-from itertools import compress, islice
+from itertools import compress
 
 import cartopy
 import cartopy.crs as ccrs
@@ -60,7 +60,7 @@ backup_techs = {
     "Gas": [
         "OCGT",
         "CCGT",
-        "biogas",
+        "biogas CHP",
         "urban central gas CHP",
         "urban central gas CHP CC",
     ],
@@ -230,6 +230,7 @@ carriers_in_german = {
     "urban central water tanks": "Zentrale städtische Wassertanks",
     "urban central solar thermal": "Zentrale städtische Solarthermie",
     "biogas": "Biogas",
+    "biogas CHP": "Biogas-KWK",
     "solid biomass": "Biomasse",
     "methanol": "Methanol",
     "home battery": "Hausbatterie",
@@ -242,6 +243,7 @@ carriers_in_german = {
     "oil primary": "Primäröl",
     "solar rooftop": "Solar-Dach",
     "urban central heat vent": "Zentrale städtische Wärmeentlüftung",
+    "urban decentral heat vent": "Dezentrale städtische Wärmeentlüftung",
     "gas primary": "Primärgas",
     "solid biomass for industry": "Biomasse (Industrie)",
     "shipping oil": "Schiffsöl",
@@ -297,9 +299,9 @@ carriers_in_german = {
     "rural gas boiler": "Ländlicher Gaskessel",
     "process emissions CC": "Prozessemissionen mit CO2-Abscheidung",
     "urban decentral water tanks charger": "Ladung dezentraler städtischer Wassertanks",
-    "biogas to gas CC": "Biogas zu Gas mit CO2-Abscheidung",
+    "biogas to gas CC": "Biogas zu Biomethan mit CO2-Abscheidung",
     "urban decentral resistive heater": "Dezentrale städtische Widerstandsheizer",
-    "biogas to gas": "Biogas zu Gas",
+    "biogas to gas": "Biogas zu Biomethan",
     "OCGT": "Gas (OCGT)",
     "urban central solid biomass CHP": "Biomasse-KWK",
     "urban central gas boiler": "Zentraler städtischer Gaskessel",
@@ -461,10 +463,14 @@ def plot_nodal_elec_balance(
         "H2 OCGT",
         "H2 CHP",
         "urban central H2 retrofit CHP",
+        "OCGT",
         "CCGT",
         "gas CHP",
+        "lignite",
+        "coal",
         "waste CHP CC",
         "urban central biomass CHP",
+        "biogas CHP",
         "hydro",
         "PHS",
         "battery discharger",
@@ -493,10 +499,14 @@ def plot_nodal_elec_balance(
         "H2 OCGT": "#ff0000",
         "H2 CHP": "#bf3737",
         "urban central H2 retrofit CHP": "#ff8282",
+        "OCGT": "#f9a602",
         "CCGT": "#edc566",
+        "lignite": "#4c4c4c",
+        "coal": "#8c8c8c",
         "gas CHP": "#e67c12",
         "waste CHP CC": "#a85522",
         "urban central biomass CHP": "#9d9042",
+        "biogas CHP": "#a3b55d",
         "hydro": "#5379ad",
         "PHS": "#6999db",
         "battery discharger": "#76e388",
@@ -1153,11 +1163,6 @@ def plot_price_duration_curve(
     y_lim_values=[-50, 300],
     language="english",
 ):
-    # only plot 2030 onwards
-    years = years[2:]
-    networks = dict(islice(networks.items(), 2, None))
-    year_colors = year_colors[2:]
-
     fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(8, 6))
 
     for i, n in enumerate(networks.values()):
@@ -1218,10 +1223,6 @@ def plot_price_duration_hist(
     regions=["DE"],
     x_lim_values=[-50, 300],
 ):
-    # only plot 2030 onwards
-    years = years[2:]
-    networks = dict(islice(networks.items(), 2, None))
-    year_colors = year_colors[2:]
     fig, axes = plt.subplots(ncols=1, nrows=len(years), figsize=(8, 3 * len(years)))
     axes = axes.flatten()
 
@@ -1672,7 +1673,9 @@ def group_pipes(df, drop_direction=False):
     # there are pipes for each investment period rename to AC buses name for plotting
     df["index_orig"] = df.index
     df.index = df.apply(
-        lambda x: f"H2 pipeline {x.bus0.replace(' H2', '')} -> {x.bus1.replace(' H2', '')}",
+        lambda x: (
+            f"H2 pipeline {x.bus0.replace(' H2', '')} -> {x.bus1.replace(' H2', '')}"
+        ),
         axis=1,
     )
     return df.groupby(level=0).agg(
@@ -2874,6 +2877,9 @@ if __name__ == "__main__":
     tech_colors["H2 retrofit OCGT"] = "#9abbff"
     tech_colors["urban central H2 CHP"] = "#c9d7f0"
     tech_colors["urban central H2 retrofit CHP"] = "#edd1c2"
+    tech_colors["urban central heat vent"] = "#fdb462"
+    tech_colors["urban decentral heat vent"] = "#fdb462"
+    tech_colors["rural heat vent"] = "#fdb462"
 
     ### plotting
     for year in planning_horizons:

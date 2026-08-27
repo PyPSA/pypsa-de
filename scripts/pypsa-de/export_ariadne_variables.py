@@ -591,7 +591,7 @@ def _get_capacities(n, region, cap_func, cap_string="Capacity|"):
     )
 
     var[cap_string + "Electricity|Biomass|w/o CCS"] = capacities_electricity.reindex(
-        ["urban central solid biomass CHP", "solid biomass", "biogas"]
+        ["urban central solid biomass CHP", "solid biomass", "biogas CHP"]
     ).sum()
 
     var[cap_string + "Electricity|Biomass|Solids"] = capacities_electricity.filter(
@@ -599,7 +599,7 @@ def _get_capacities(n, region, cap_func, cap_string="Capacity|"):
     ).sum()
 
     var[cap_string + "Electricity|Biomass|Gases and Liquids"] = (
-        capacities_electricity.get("biogas", 0)
+        capacities_electricity.get("biogas CHP", 0)
     )
 
     var[cap_string + "Electricity|Biomass"] = (
@@ -1049,13 +1049,29 @@ def _get_capacities(n, region, cap_func, cap_string="Capacity|"):
         like="oil boiler"
     ).sum()
 
-    var[cap_string + "Heat|Storage Converter"] = capacities_central_heat[
-        capacities_central_heat.index.str.contains("water (?:tanks|pits) discharger")
+    var[cap_string + "Heat|Storage Converter|Tanks"] = capacities_central_heat[
+        capacities_central_heat.index.str.contains("water tanks discharger")
     ].sum()
 
-    var[cap_string + "Heat|Storage Reservoir"] = storage_capacities[
-        storage_capacities.index.str.contains("water (?:tanks|pits)")
+    var[cap_string + "Heat|Storage Converter|Pits"] = capacities_central_heat[
+        capacities_central_heat.index.str.contains("water pits discharger")
     ].sum()
+
+    var[cap_string + "Heat|Storage Converter"] = (
+        var[cap_string + "Heat|Storage Converter|Tanks"]
+        + var[cap_string + "Heat|Storage Converter|Pits"]
+    )
+    var[cap_string + "Heat|Storage Reservoir|Tanks"] = storage_capacities[
+        storage_capacities.index.str.contains("urban central water tanks")
+    ].sum()
+
+    var[cap_string + "Heat|Storage Reservoir|Pits"] = storage_capacities[
+        storage_capacities.index.str.contains("urban central water pits")
+    ].sum()
+    var[cap_string + "Heat|Storage Reservoir"] = (
+        var[cap_string + "Heat|Storage Reservoir|Tanks"]
+        + var[cap_string + "Heat|Storage Reservoir|Pits"]
+    )
 
     var[cap_string + "Heat"] = (
         var[cap_string + "Heat|Solar thermal"]
@@ -1465,9 +1481,7 @@ def get_primary_energy(n, region):
         n, "solid biomass", region
     )
 
-    var["Primary Energy|Biomass|Gases"] = biomass_usage.filter(
-        like="biogas to gas"
-    ).sum()
+    var["Primary Energy|Biomass|Gases"] = biomass_usage.filter(like="biogas").sum()
 
     # btl_efficiency = n.links.query(
     #         "carrier == 'biomass to liquid' and (build_year == 2020)"
@@ -1497,8 +1511,8 @@ def get_primary_energy(n, region):
         ~biomass_usage.index.str.contains("CC")
     ].sum()
 
-    var["Primary Energy|Biomass|Electricity"] = (
-        biomass_CHP_E_usage + biomass_usage.reindex(["solid biomass", "biogas"]).sum()
+    var["Primary Energy|Biomass|Electricity"] = biomass_CHP_E_usage + biomass_usage.get(
+        "solid biomass", 0
     )
     var["Primary Energy|Biomass|Heat"] = biomass_CHP_H_usage + biomass_usage.get(
         "urban central solid biomass boiler", 0
@@ -1653,24 +1667,24 @@ def get_secondary_energy(n, region, _industry_demand):
 
     gas_fractions = _get_fuel_fractions(n, region, "gas")
 
-    var["Secondary Energy|Electricity|Gas|Fossil"] = (
+    var["Secondary Energy|Electricity|Gas|Natural Gas"] = (
         var["Secondary Energy|Electricity|Gas"] * gas_fractions["Natural Gas"]
     )
     var["Secondary Energy|Electricity|Gas|Biomass"] = (
         var["Secondary Energy|Electricity|Gas"] * gas_fractions["Biomass"]
     )
-    var["Secondary Energy|Electricity|Gas|Hydrogen"] = (
+    var["Secondary Energy|Electricity|Gas|Efuel"] = (
         var["Secondary Energy|Electricity|Gas"] * gas_fractions["Efuel"]
     )
 
     var["Secondary Energy|Electricity|Fossil"] = (
-        var["Secondary Energy|Electricity|Gas|Fossil"]
+        var["Secondary Energy|Electricity|Gas|Natural Gas"]
         + var["Secondary Energy|Electricity|Oil"]
         + var["Secondary Energy|Electricity|Coal"]
     )
 
     var["Secondary Energy|Electricity|Biomass|w/o CCS"] = electricity_supply.reindex(
-        ["urban central solid biomass CHP", "solid biomass", "biogas"]
+        ["urban central solid biomass CHP", "solid biomass", "biogas CHP"]
     ).sum()
     var["Secondary Energy|Electricity|Biomass|w/ CCS"] = electricity_supply.get(
         "urban central solid biomass CHP CC", 0
@@ -1679,7 +1693,7 @@ def get_secondary_energy(n, region, _industry_demand):
         like="solid biomass"
     ).sum()
     var["Secondary Energy|Electricity|Biomass|Gaseous and Liquid"] = (
-        electricity_supply.get("biogas", 0)
+        electricity_supply.get("biogas CHP", 0)
     )
     var["Secondary Energy|Electricity|Biomass"] = (
         var["Secondary Energy|Electricity|Biomass|w/o CCS"]
@@ -1971,11 +1985,17 @@ def get_secondary_energy(n, region, _industry_demand):
         .sum()
         .drop(["renewable gas"], errors="ignore")
     )
+    biogas_supply = (
+        n.statistics.supply(bus_carrier="biogas", **kwargs)
+        .filter(like=region)
+        .groupby(["carrier"])
+        .sum()
+    )
 
     # Fraction supplied by Hydrogen conversion
     var["Secondary Energy|Gases|Hydrogen"] = gas_supply.get("Sabatier", 0)
 
-    var["Secondary Energy|Gases|Biomass"] = gas_supply.filter(like="bio").sum()
+    var["Secondary Energy|Gases|Biomass"] = biogas_supply.sum()
 
     var["Secondary Energy|Gases|Natural Gas"] = gas_supply.get("gas compressing", 0)
 
@@ -2203,7 +2223,16 @@ def get_final_energy(
     # var["Final Energy|Industry|Geothermal"] = \
     # Not implemented
 
-    var["Final Energy|Industry|Gases"] = sum_load(n, "gas for industry", region)
+    gas_usage = (
+        n.statistics.withdrawal(bus_carrier="gas", **kwargs)
+        .filter(like=region)
+        .groupby(["carrier"])
+        .sum()
+    )
+
+    var["Final Energy|Industry|Gases"] = gas_usage.get(
+        "gas for industry", 0
+    ) + gas_usage.get("gas for industry CC", 0)
 
     for gas_type in gas_fractions.index:
         var[f"Final Energy|Industry|Gases|{gas_type}"] = (
@@ -2261,20 +2290,36 @@ def get_final_energy(
     )
 
     var["Final Energy|Industry|Liquids"] = sum_load(n, "naphtha for industry", region)
+
+    assert isclose(
+        var["Final Energy|Industry|Liquids"],
+        var["Final Energy|Industry|Liquids|Petroleum"]
+        + var["Final Energy|Industry|Liquids|Efuel"]
+        + var["Final Energy|Industry|Liquids|Biomass"],
+    )
     # subtract non-energy used liquids from total liquid demand
     var["Final Energy|Industry excl Non-Energy Use|Liquids"] = (
         var["Final Energy|Industry|Liquids"]
         - var["Final Energy|Non-Energy Use|Liquids"]
     )
 
-    # var["Final Energy|Industry|Other"] = \
-
-    var["Final Energy|Industry|Solids|Biomass"] = sum_load(
-        n, "solid biomass for industry", region
+    solid_biomass_fe = (
+        n.statistics.withdrawal(
+            bus_carrier="solid biomass",
+            **kwargs,
+        )
+        .filter(
+            like=region,
+        )
+        .groupby("carrier")
+        .sum()
     )
+
     var["Final Energy|Industry excl Non-Energy Use|Solids|Biomass"] = var[
         "Final Energy|Industry|Solids|Biomass"
-    ]
+    ] = solid_biomass_fe.get("solid biomass for industry", 0) + solid_biomass_fe.get(
+        "solid biomass for industry CC", 0
+    )
 
     mwh_coal_per_mwh_coke = 1.366
 
@@ -2417,14 +2462,10 @@ def get_final_energy(
         sum_load(
             n, "urban central heat", region
         )  # For urban central Final Energy is delivered as Heat
-        + decentral_heat_supply_rescom.filter(like="solar thermal").sum()
-    )  # Assuming for solar thermal secondary energy == Final energy
-
-    gas_usage = (
-        n.statistics.withdrawal(bus_carrier="gas", **kwargs)
-        .filter(like=region)
-        .groupby(["carrier"])
-        .sum()
+        + decentral_heat_supply_rescom.filter(
+            like="solar thermal"
+        ).sum()  # Assuming for solar thermal secondary energy == Final energy
+        + decentral_heat_supply_rescom.filter(like="biogas CHP").sum()
     )
 
     # !!! Here the final is delivered as gas, not as heat
@@ -2505,9 +2546,9 @@ def get_final_energy(
 
     # var["Final Energy|Transportation|Other"] = \
 
-    var["Final Energy|Transportation|Electricity"] = low_voltage_electricity.get(
-        "BEV charger", 0
-    )
+    var["Final Energy|Transportation|Electricity"] = (
+        sum_load(n, "land transport EV", region) / 0.9
+    )  # Account for 90% efficiency of BEV chargers, to convert back to final energy demand
 
     # var["Final Energy|Transportation|Gases"] = \
     # var["Final Energy|Transportation|Gases|Natural Gas"] = \
@@ -2850,6 +2891,10 @@ def get_emissions(n, region, _energy_totals, _industry_demand):
     ccs_fraction = total_ccs / co2_storage.sum()
     ccu_fraction = 1 - ccs_fraction
 
+    assert ccs_fraction <= 1
+    var["Carbon Management|Carbon Capture and Storage"] = total_ccs
+    var["Carbon Management|Carbon Capture and Usage"] = co2_storage.sum() - total_ccs
+    var["Carbon Management|Carbon Capture"] = co2_storage.sum()
     # Correcting for fossil CCU (3.)
     # Step 1: Add the stored CO2 back to the emissions
     # Step 2 (below): CCU goes to e-fuels -> subtract from e-fuel users
@@ -3050,7 +3095,7 @@ def get_emissions(n, region, _energy_totals, _industry_demand):
 
     pe_fossil_fraction = (
         process_emissions.get("process emissions", 0)
-        + process_emissions.get("naptha for industry", 0) * oil_fossil_fraction
+        + process_emissions.get("naphtha for industry", 0) * oil_fossil_fraction
     ) / process_emissions.sum()
 
     var["Carbon Sequestration|DACCS"] = co2_negative_emissions.get("DAC", 0)
@@ -5049,6 +5094,9 @@ def get_trade(n, region):
     )
 
     biomass_imports = local_biomass_usage - local_biomass_potential
+    # if biomass_imports < 0, it means that the local biomass potential is not fully used, so there are no imports
+    # this does not imply that the remaining biomass potential is exported, as it could also be wasted or used for other purposes
+    biomass_imports = biomass_imports if biomass_imports > 0 else 0
 
     var["Trade|Primary Energy|Biomass|Net Imports"] = biomass_imports
 
@@ -5334,13 +5382,14 @@ def hack_DC_projects(n, p_nom_start, p_nom_planned, model_year, snakemake, costs
             )
 
     # Future projects should not have any capacity
-    assert isclose(n.links.loc[future_projects, "p_nom_opt"], 0).all()
+    assert isclose(n.links.loc[future_projects].query("active").p_nom_opt, 0).all()
 
     # Setting p_nom to 0 such that n.statistics does not compute negative expanded capex or capacity additions
     # Setting p_nom_min to 0 for the grid_expansion calculation
     # This is ONLY POSSIBLE IN POST-PROCESSING
     # We pretend that the model expanded the grid endogenously
     n.links.loc[future_projects, "p_nom"] = 0
+    n.links.loc[future_projects, "p_nom_opt"] = 0
     n.links.loc[future_projects, "p_nom_min"] = 0
 
     # Current projects should have their p_nom_opt bigger or equal to p_nom until the year 2030 (Startnetz that we force in)
@@ -5763,21 +5812,21 @@ if __name__ == "__main__":
     ac_projects_invest = df.query(
         "Variable == 'Investment|Energy Supply|Electricity|Transmission|AC|NEP|Onshore'"
     )[planning_horizons].values.sum()
+    available_years = [y for y in planning_horizons if y in [2025, 2030, 2035, 2040]]
+    df.loc[
+        df.query(
+            "Variable == 'Investment|Energy Supply|Electricity|Transmission|AC|Übernahme|Startnetz Delta'"
+        ).index,
+        available_years,
+    ] += (ac_startnetz - ac_projects_invest) / 4
 
-    # df.loc[
-    #     df.query(
-    #         "Variable == 'Investment|Energy Supply|Electricity|Transmission|AC|Übernahme|Startnetz Delta'"
-    #     ).index,
-    #     [2025, 2030, 2035, 2040],
-    # ] += (ac_startnetz - ac_projects_invest) / 4
-
-    # for suffix in ["|AC|NEP", "|AC", "", " and Distribution"]:
-    #     df.loc[
-    #         df.query(
-    #             f"Variable == 'Investment|Energy Supply|Electricity|Transmission{suffix}'"
-    #         ).index,
-    #         [2025, 2030, 2035, 2040],
-    #     ] += (ac_startnetz - ac_projects_invest) / 4
+    for suffix in ["|AC|NEP", "|AC", "", " and Distribution"]:
+        df.loc[
+            df.query(
+                f"Variable == 'Investment|Energy Supply|Electricity|Transmission{suffix}'"
+            ).index,
+            available_years,
+        ] += (ac_startnetz - ac_projects_invest) / 4
 
     logger.info("Assigning mean investments of year and year + 5 to year.")
     investment_rows = df.loc[df["Variable"].str.contains("Investment")]

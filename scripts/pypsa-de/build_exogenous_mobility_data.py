@@ -16,7 +16,6 @@ def get_mobility_data(
     db,
     year,
     non_land_liquids,
-    ageb_for_mobility=True,
     uba_for_mobility="",
 ):
     """
@@ -46,11 +45,10 @@ def get_mobility_data(
         mobility_data = mobility_data.div(3.6e-6)  # convert PJ to MWh
         mobility_data["million_EVs"] = 0.658407 + 0.120261  # BEV + PHEV
 
-        if ageb_for_mobility or uba_for_mobility:
-            if uba_for_mobility:
-                logger.warning(
-                    "For 2020, using historical AGEB and KBA data instead of UBA projections."
-                )
+        if int(year) in uba_for_mobility:
+            logger.warning(
+                "For 2020, using historical AGEB and KBA data instead of UBA projections."
+            )
             # AGEB 2020, https://ag-energiebilanzen.de/daten-und-fakten/bilanzen-1990-bis-2030/?_jahresbereich-bilanz=2011-2020
             mobility_data = pd.Series(
                 {
@@ -68,33 +66,43 @@ def get_mobility_data(
             mobility_data["million_EVs"] = 0.358498 + 0.280149
 
     elif year == "2025" and int(year) in uba_for_mobility:
-        # https://www.umweltbundesamt.de/sites/default/files/medien/11850/publikationen/projektionsbericht_2025.pdf, Abbildung 64 & 59,
+        logger.warning(
+            "For 2025, using historical AGEB and KBA data instead of UBA projections."
+        )
+
+        # AGEB 2025, https://ag-energiebilanzen.de/wp-content/uploads/EBD25p1.xlsx
         mobility_data = pd.Series(
             {
-                "Electricity": 21.0,
+                "Electricity": 41284.0 + 26416.0,  # Schiene + Straße
                 "Hydrogen": 0.0,
-                "Liquids": 524.0 + 51.0,
+                "Liquids": 133426.0
+                + 1210610.0
+                + 9883.0
+                + 705779.0,  # Bio Strasse + Diesel Strasse + Diesel Schiene + Otto Strasse
+            }
+        )
+        mobility_data = mobility_data.div(3.6e-3)  # convert PJ to MWH
+        # https://www.kba.de/DE/Statistik/Produktkatalog/produkte/Fahrzeuge/fz27_b_uebersicht.html
+        # FZ27_202101, table FZ 27.2, 1. January 2026:
+        mobility_data["million_EVs"] = 2.034260 + 1.112958
+
+    elif year == "2030" and int(year) in uba_for_mobility:
+        # https://www.umweltbundesamt.de/system/files/medien/11850/publikationen/2026-07/Projektionsbericht_2026_V2.pdf, Abb 59 & 54
+        mobility_data = pd.Series(
+            {
+                "Electricity": 41.0,
+                "Hydrogen": 0.0,
+                "Liquids": 429.0 + 61,
             }
         )
         mobility_data["Liquids"] -= non_land_liquids[
             int(year)
         ]  # remove domestic navigation and aviation from UBA data to avoid double counting
-        mobility_data = mobility_data.mul(1e6)  # convert TWh to MWh
-        mobility_data["million_EVs"] = 2.7 + 1.2  # BEV + PHEV
-
-    elif year == "2030" and int(year) in uba_for_mobility:
-        mobility_data = pd.Series(
-            {
-                "Electricity": 57.0,
-                "Hydrogen": 14.0,
-                "Liquids": 418.0 + 34.0 + 1.0,
-            }
-        )
-        mobility_data["Liquids"] -= non_land_liquids[int(year)]
         mobility_data = mobility_data.mul(1e6)
-        mobility_data["million_EVs"] = 8.7 + 1.8
+        mobility_data["million_EVs"] = 7 + 2  # BEV + PHEV
 
     elif year == "2035" and int(year) in uba_for_mobility:
+        # https://www.umweltbundesamt.de/sites/default/files/medien/11850/publikationen/projektionsbericht_2025.pdf, Abbildung 64 & 59,
         mobility_data = pd.Series(
             {
                 "Electricity": 117.0,
@@ -194,8 +202,11 @@ if __name__ == "__main__":
         db,
         snakemake.wildcards.planning_horizons,
         non_land_liquids,
-        ageb_for_mobility=snakemake.params.ageb_for_mobility,
         uba_for_mobility=snakemake.params.uba_for_mobility,
     )
+
+    # since these numbers are given in final energy not useful energy, account for the efficiency of BEV charger links, which is 0.9 in the current model
+
+    mobility_data["Electricity"] *= 0.9
 
     mobility_data.to_csv(snakemake.output.mobility_data, header=False)
