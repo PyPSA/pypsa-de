@@ -25,6 +25,8 @@ jobs:
 
     - name: Full resolve
       run: |
+        EXCLUDE_DATE=$(date -u -d '7 days ago' +%Y-%m-%dT00:00:00Z)
+        sed -i "/^\[workspace\]/a exclude-newer = \"$EXCLUDE_DATE\"" pixi.toml
         rm pixi.lock
         pixi install --all
         git checkout pixi.toml
