@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20260825_merge_master_aug_26
+  prefix: 20260828_no_early_GT
   name:
   - KN2045_Bal_v5
   scenarios:
