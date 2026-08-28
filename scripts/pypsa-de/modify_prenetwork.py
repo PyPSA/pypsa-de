@@ -1449,6 +1449,9 @@ def scale_capacity(n, scaling):
                 n.links.loc[links_i_current, "p_nom_min"] = n.links.loc[
                     links_i_current, "p_nom"
                 ]
+                # !!! eventually remove this again
+                # Do not allow further extension of assets for which the capacity has been scaled
+                n.links.loc[links_i, "p_nom_extendable"] = False
 
 
 def limit_cross_border_flows_ac(n, s_max_pu):

@@ -584,12 +584,12 @@ solving:
       electricity_import:
         DE:
           2020: -20
-          2025: 10
-          2030: 25
-          2035: 50
-          2040: 75
-          2045: 100
-          2050: 125
+          2025: 25
+          2030: 50
+          2035: 75
+          2040: 100
+          2045: 125
+          2050: 150
       h2_derivate_import:
       # boundary condition lower?
         DE:
@@ -733,10 +733,13 @@ offshore_nep_force:
   delay_years: 2
 
 scale_capacity:
+  # simultaneously sets p_nom_extendable to False
   2025:
     DE:
+      OCGT: 200  # at the moment there are way too little OCGT in ppm, this has to be fixed there. I am using this scaling function only to set extendable fals.
       CCGT: 10000
-      "urban central gas CHP": 22000
+      "urban central gas CHP": 21000
+      "urban central gas CHP CC": 0
 
 data:
   ariadne_database:
