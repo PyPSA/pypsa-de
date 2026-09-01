@@ -34,6 +34,43 @@ from scripts._helpers import configure_logging, mock_snakemake
 
 logger = logging.getLogger(__name__)
 
+# Nominal-capacity attribute per component type, used to detect the components
+# a scenario branch zeroes out (see _fill_zero_capacity_dispatch).
+NOM_ATTRS = {
+    "Generator": "p_nom",
+    "Line": "s_nom",
+    "Link": "p_nom",
+    "StorageUnit": "p_nom",
+    "Store": "e_nom",
+    "Transformer": "s_nom",
+}
+
+
+def _fill_zero_capacity_dispatch(n):
+    """Replace all-NaN dispatch time series of zero-capacity components with 0.
+
+    The joint two-stage stochastic solve does not emit per-scenario operational
+    values for components a given branch zeroes out (e.g. not-yet-built DC
+    projects with ``p_nom == 0`` in the "2025state" grid topology). After the
+    ``xs(scenario)`` slice in :func:`unstack_scenario` those columns come out
+    all-NaN, which then propagates into anything summing dispatch downstream
+    (trade-cost / energy-balance calculations). A component with no capacity
+    carries no flow, so filling the missing values with 0 is exact.
+    """
+    for c in n.components.values():
+        nom_attr = NOM_ATTRS.get(c.name)
+        if nom_attr is None or c.static.empty:
+            continue
+        opt_attr = f"{nom_attr}_opt"
+        capacity = c.static[opt_attr] if opt_attr in c.static else c.static[nom_attr]
+        zero_i = capacity.index[capacity.fillna(0.0) == 0.0]
+        if zero_i.empty:
+            continue
+        for df in c.dynamic.values():
+            cols = df.columns.intersection(zero_i)
+            if len(cols):
+                df.loc[:, cols] = df.loc[:, cols].fillna(0.0)
+
 
 def unstack_scenario(n, scenario):
     weight = n.scenario_weightings.loc[scenario, "weight"]
@@ -54,6 +91,8 @@ def unstack_scenario(n, scenario):
                 c.dynamic[k] = v.xs(scenario, level="scenario", axis=1)
             else:
                 c.dynamic[k].columns = c.dynamic[k].columns.droplevel("scenario")
+
+    _fill_zero_capacity_dispatch(n2)
 
     if len(n2.sub_networks):
         n2.remove("SubNetwork", n2.sub_networks.index.tolist())
