@@ -166,9 +166,9 @@ if __name__ == "__main__":
             clusters=27,
             opts="",
             sector_opts="none",
-            planning_horizons="2030",
-            portfolio="reduced_40",
-            grid_scenario="reduced_10",
+            planning_horizons="2035",
+            portfolio="2035_exogen",
+            grid_scenario="2025_exogen",
         )
 
     configure_logging(snakemake)

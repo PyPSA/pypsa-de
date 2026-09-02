@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 202600810-stoch-grid-2030-365h-27cl
+  prefix: 202600902-stoch-grid-2035-100h-27cl-new_scenarios
   name:
   # - ExPol
   - KN2045_Mix
@@ -240,7 +240,7 @@ clustering:
     # 'ES': 0.0408
     # 'IT': 0.0408
   temporal:
-    resolution_sector: 365H
+    resolution_sector: 100H
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#co2-budget
 co2_budget:
@@ -725,21 +725,17 @@ scale_capacity:
 
 stochastic_grid_scenarios:
   enable: true
-  planning_horizons: [2030]
+  planning_horizons: [2035]
   scenarios:
-    # exogenous2030:
-    #   probability: 0.5
-    #   links: data/pypsa-de/grid_scenarios/links_exogenous2030_de_and_interconnectors_126sn-70h_{clusters}.csv
-    #   lines: data/pypsa-de/grid_scenarios/lines_exogenous2030_de_and_interconnectors_126sn-70h_{clusters}.csv
-    reduced_40:
+    2025_exogen:
       probability: 0.5
-      links: data/pypsa-de/grid_scenarios/links_reduced_40_{clusters}.csv
-      lines: data/pypsa-de/grid_scenarios/lines_reduced_40_{clusters}.csv
-    reduced_10:
+      links: data/pypsa-de/grid_scenarios/links_2025_exogen_de+inter_{clusters}cl.csv
+      lines: data/pypsa-de/grid_scenarios/lines_2025_exogen_de+inter_{clusters}cl.csv
+    2035_exogen:
       probability: 0.5
-      links: data/pypsa-de/grid_scenarios/links_reduced_10_{clusters}.csv
-      lines: data/pypsa-de/grid_scenarios/lines_reduced_10_{clusters}.csv
-
+      links: data/pypsa-de/grid_scenarios/links_2035_exogen_de+inter_{clusters}cl.csv
+      lines: data/pypsa-de/grid_scenarios/lines_2035_exogen_de+inter_{clusters}cl.csv
+   
 data:
   ariadne_database:
     source: archive

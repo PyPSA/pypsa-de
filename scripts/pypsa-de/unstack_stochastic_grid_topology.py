@@ -51,7 +51,7 @@ def _fill_zero_capacity_dispatch(n):
 
     The joint two-stage stochastic solve does not emit per-scenario operational
     values for components a given branch zeroes out (e.g. not-yet-built DC
-    projects with ``p_nom == 0`` in the "2025state" grid topology). After the
+    projects with ``p_nom == 0`` in the "2025_exogen" grid topology). After the
     ``xs(scenario)`` slice in :func:`unstack_scenario` those columns come out
     all-NaN, which then propagates into anything summing dispatch downstream
     (trade-cost / energy-balance calculations). A component with no capacity
@@ -111,8 +111,8 @@ if __name__ == "__main__":
             clusters=27,
             opts="",
             sector_opts="none",
-            planning_horizons="2030",
-            grid_scenario="reduced_40",
+            planning_horizons="2035",
+            grid_scenario="2025_exogen",
         )
 
     configure_logging(snakemake)

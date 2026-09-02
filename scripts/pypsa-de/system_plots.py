@@ -3,9 +3,11 @@
 # SPDX-License-Identifier: MIT
 """
 Per-scenario system plots: storage capacity metrics/maps, energy balances,
-electricity capacity supply/demand comparison, and (new, beyond the source
-script) capacity-by-region maps for the other capa_groups categories
-(Wind + Solar / Backup / Storage Discharge / Demand-Side Flex, see utils.py).
+electricity capacity supply/demand comparison, capacity-by-region maps for the
+other capa_groups categories (Wind + Solar / Backup / Storage Discharge /
+Demand-Side Flex, see utils.py), and per-branch loading duration curves +
+summary table under `line_loadings/<year>/` (ported from
+notebooks/line_loading.ipynb).
 
 One output folder per `run` scenario (see the `system_plots` rule), covering
 that run's full myopic-pathway years. Ported ~1:1 from a sibling repo's
@@ -16,6 +18,7 @@ system_plots_scenario_comparison.py, which compare *across* scenarios).
 
 import logging
 import os
+import re
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -721,6 +724,173 @@ def plot_grid_topology_maps(
                 plt.close(fig)
 
 
+def _branch_loading_scope_mask(n, table, scope):
+    c0 = table.bus0.map(n.buses.country).eq("DE")
+    c1 = table.bus1.map(n.buses.country).eq("DE")
+    masks = {
+        "de_internal": c0 & c1,
+        "de_and_interconnectors": c0 | c1,
+        "whole_network": pd.Series(True, index=table.index),
+    }
+    if scope not in masks:
+        raise ValueError(f"unknown scope {scope!r}")
+    return masks[scope]
+
+
+def plot_branch_loading_duration_curves(
+    n, scenario, year, output_dir, scope="de_and_interconnectors"
+):
+    """Per-branch loading (|flow| / capacity) duration curves plus a summary
+    table, for every AC Line and every DC Link > 10 MW in `scope`. One PNG per
+    branch (`line_<name>.png` / `link_<name>.png`) plus `summary.png` /
+    `summary.csv`, written to `<output_dir>/line_loadings/<year>/`. Ported from
+    notebooks/line_loading.ipynb.
+    """
+    out = Path(output_dir) / "line_loadings" / str(year)
+    out.mkdir(parents=True, exist_ok=True)
+
+    w = (
+        n.snapshot_weightings.get("objective", pd.Series(1.0, index=n.snapshots))
+        .reindex(n.snapshots)
+        .fillna(0)
+    )
+
+    rows = []
+    for kind, table, pnl, nominal in [
+        ("Line", n.lines, n.lines_t, "s_nom"),
+        ("Link", n.links, n.links_t, "p_nom"),
+    ]:
+        for name in table.index[_branch_loading_scope_mask(n, table, scope)]:
+            opt = f"{nominal}_opt"
+            cap = (
+                table.at[name, opt]
+                if opt in table and pd.notna(table.at[name, opt])
+                else table.at[name, nominal]
+            )
+            # All Lines; only DC Links above 10 MW.
+            if cap <= 0 or (
+                kind == "Link"
+                and (table.at[name, "carrier"] != "DC" or cap <= 10)
+            ):
+                continue
+            if name not in pnl.p0.columns:
+                continue
+
+            if kind == "Line" and name in getattr(pnl, "q0", pd.DataFrame()):
+                flow = pd.Series(
+                    np.hypot(pnl.p0[name], pnl.q0[name]), index=n.snapshots
+                )
+            else:
+                flow = pnl.p0[name].abs()
+
+            load = (flow / cap).replace([np.inf, -np.inf], np.nan)
+            valid = load.notna() & w.gt(0)
+            load, ww = load[valid], w[valid]
+            if ww.sum() == 0:
+                continue
+
+            desc = np.argsort(-load.to_numpy())
+            y, yw = load.to_numpy()[desc], ww.to_numpy()[desc]
+            duration = 100 * (np.cumsum(yw) - yw / 2) / yw.sum()
+
+            asc = np.argsort(load.to_numpy())
+            x, xw = load.to_numpy()[asc], ww.to_numpy()[asc]
+            pos = (np.cumsum(xw) - xw / 2) / xw.sum()
+            q = lambda p: np.interp(p, pos, x)
+
+            row = {
+                "component": kind,
+                "name": name,
+                "capacity": cap,
+                "mean": np.average(load, weights=ww),
+                "median": q(0.5),
+                "p95": q(0.95),
+                "max": load.max(),
+            }
+            row |= {
+                f"over_{p}": 100 * ww[load > p / 100].sum() / ww.sum()
+                for p in (50, 75, 95, 99)
+            }
+            rows.append(row)
+
+            fig, ax = plt.subplots(figsize=(9, 5))
+            ax.plot(duration, 100 * y)
+            for p in (50, 80, 90):
+                ax.axvline(p, color="0.6", ls="--", lw=0.8)
+            ax.axhline(100, color="red", ls=":", lw=0.8)
+            ax.set(
+                xlim=(0, 100),
+                xlabel="Weighted duration [%]",
+                ylabel="Loading [%]",
+                title=f"{scenario} {year} - {kind}: {name}",
+            )
+            labels = ["Capacity", "Mean", ">50", ">75", ">95", ">99"]
+            values = [
+                f"{cap / 1000:.2f} GW",
+                f"{100 * row['mean']:.1f}%",
+                *[f"{row[f'over_{p}']:.1f}%" for p in (50, 75, 95, 99)],
+            ]
+            t = ax.table(
+                cellText=[values],
+                colLabels=labels,
+                cellLoc="center",
+                bbox=[0.25, 0.68, 0.73, 0.22],
+            )
+            t.auto_set_font_size(False)
+            t.set_fontsize(9)
+
+            safe = re.sub(r"\W+", "_", str(name))
+            fig.savefig(out / f"{kind.lower()}_{safe}.png", dpi=180, bbox_inches="tight")
+            plt.close(fig)
+
+    if not rows:
+        logger.warning(
+            f"No loaded branches for {scenario} {year} (scope={scope}); "
+            "skipping line-loading summary."
+        )
+        return None
+
+    summary = pd.DataFrame(rows).set_index(["component", "name"])
+    summary.to_csv(out / "summary.csv")
+
+    shown = summary[
+        ["capacity", "mean", "median", "p95", "max", "over_50", "over_95", "over_99"]
+    ].copy()
+    shown.capacity /= 1000
+    shown[["mean", "median", "p95", "max"]] *= 100
+    shown.columns = [
+        "Capacity [GW]", "Mean", "Median", "P95", "Max", ">50", ">95", ">99",
+    ]
+
+    cells = shown.reset_index()
+    cells["Capacity [GW]"] = cells["Capacity [GW]"].map(lambda x: f"{x:.2f}")
+    for c in shown.columns[1:]:
+        cells[c] = cells[c].map(lambda x: f"{x:.1f}%")
+
+    fig, ax = plt.subplots(figsize=(14, max(5, 0.42 * len(cells) + 1.5)))
+    ax.axis("off")
+    ax.set_title(f"Branch loading summary - {scenario} {year} ({scope})", pad=12)
+    t = ax.table(
+        cellText=cells.values,
+        colLabels=cells.columns,
+        cellLoc="right",
+        colLoc="center",
+        bbox=[0, 0, 1, 1],
+    )
+    t.auto_set_font_size(False)
+    t.set_fontsize(11)
+    for (r, _), cell in t.get_celld().items():
+        if r == 0:
+            cell.set_text_props(weight="bold")
+            cell.set_facecolor("#dddddd")
+        elif r % 2 == 0:
+            cell.set_facecolor("#f2f2f2")
+
+    fig.savefig(out / "summary.png", dpi=200, bbox_inches="tight", facecolor="white")
+    plt.close(fig)
+    return summary
+
+
 def plot_balance(nb, title="title", tech_colors=None, save_path=None):
     import matplotlib.colors as mcolors
 
@@ -1099,6 +1269,17 @@ if __name__ == "__main__":
         plot_grid_topology_maps(
             prenetworks.get(year), networks[year], onshore_regions, PLOT_DIR, scenario, year
         )
+
+    ### Branch loading duration curves + summary (per network) ###
+    for year in planning_horizons:
+        try:
+            plot_branch_loading_duration_curves(
+                networks[year], scenario, year, PLOT_DIR
+            )
+        except Exception:
+            logger.exception(
+                f"Branch loading plots failed for {scenario} {year}; continuing."
+            )
 
     for year in planning_horizons:
         n = networks[year]

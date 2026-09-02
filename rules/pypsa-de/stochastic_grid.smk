@@ -183,8 +183,8 @@ def evaluate_grid_portfolio_solving(wildcards):
     """`stochastic_grid_solving` plus load-shedding, for evaluate_grid_portfolio only.
 
     A portfolio sized for one grid topology can genuinely have no feasible
-    dispatch when frozen and re-solved on a worse one (e.g. reduced_10's own
-    portfolio evaluated against reduced_40's grid: less transmission, same
+    dispatch when frozen and re-solved on a worse one (e.g. 2035_exogen's own
+    portfolio evaluated against 2025_exogen's grid: less transmission, same
     fixed capacities) - a real capacity-adequacy shortfall, not a bug.
     Load-shedding turns that into a large-but-finite cost instead of a hard
     solver failure, so one infeasible cell doesn't take down the whole
@@ -358,7 +358,7 @@ rule export_ariadne_variables_grid_scenario:
     variant is a standalone one-year network. All variants share the same
     `run` wildcard/scenario name, so - unlike the main export rule - the
     output is distinguished by `network_id` (e.g. "topology-stochastic" or
-    "portfolio-eev_on-reduced_10_st") rather than by scenario.
+    "portfolio-eev_on-2025_exogen_st") rather than by scenario.
     """
     input:
         template="data/template_ariadne_database.xlsx",
@@ -539,8 +539,8 @@ def get_evaluation_networks(wildcards):
 rule compute_stochastic_metrics:
     input:
         # unpack() flattens each function's returned dict into named inputs
-        # directly (snakemake.input.topology_reduced_40,
-        # snakemake.input.eval_reduced_40__reduced_10, ...) - matches the
+        # directly (snakemake.input.topology_2025_exogen,
+        # snakemake.input.eval_2035_exogen__2025_exogen, ...) - matches the
         # existing `unpack(input_network_year)` pattern in solve_perfect.smk.
         unpack(get_topology_networks),
         unpack(get_evaluation_networks),
@@ -557,7 +557,7 @@ rule compute_stochastic_metrics:
         ),
     threads: 1
     resources:
-        mem_mb=16000,
+        mem_mb=32000,
     params:
         grid_scenario_names=GRID_SCENARIO_NAMES,
         grid_scenario_values=GRID_SCENARIO_VALUES,

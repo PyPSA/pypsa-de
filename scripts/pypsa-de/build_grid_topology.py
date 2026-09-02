@@ -9,7 +9,7 @@ notebooks/stochastic_grid_uncertainty.ipynb for the underlying methodology.
 Three kinds of `grid_scenario` wildcard value, all built from the same input
 network:
 
-- a named scenario (e.g. "reduced_40"): apply that scenario's CSV overrides
+- a named scenario (e.g. "2025_exogen"): apply that scenario's CSV overrides
   onto a deterministic (non-scenario) network - "perfect information" for
   that one topology.
 - "eev": apply the probability-weighted average of all scenarios' CSV
@@ -133,8 +133,8 @@ if __name__ == "__main__":
             clusters=27,
             opts="",
             sector_opts="none",
-            planning_horizons="2030",
-            grid_scenario="reduced_40",
+            planning_horizons="2035",
+            grid_scenario="2025_exogen",
         )
 
     configure_logging(snakemake)

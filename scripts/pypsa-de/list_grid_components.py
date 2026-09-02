@@ -10,8 +10,8 @@ resolution. Not part of the main pipeline DAG - run standalone, e.g.:
 
     python scripts/pypsa-de/list_grid_components.py \
         resources/.../base_s_27_..._2030_final.nc \
-        data/pypsa-de/grid_scenarios/lines_template_27.csv \
-        data/pypsa-de/grid_scenarios/links_template_27.csv
+        data/pypsa-de/grid_scenarios/lines_template_de+inter_27cl.csv \
+        data/pypsa-de/grid_scenarios/links_template_de+inter_27cl.csv
 """
 
 import logging

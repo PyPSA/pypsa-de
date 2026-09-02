@@ -1530,16 +1530,43 @@ def get_primary_energy(n, region):
 
     var["Primary Energy|Wind"] = renewable_electricity.filter(like="wind").sum()
 
+    # Load-shedding generators (carrier "load", present when
+    # solving.options.load_shedding is enabled - e.g. the
+    # evaluate_grid_portfolio networks of the stochastic-grid analysis) feed
+    # the electricity bus with an unpriced slack covering demand that
+    # generation + grid cannot meet. Not a real primary carrier, but it is
+    # kept in the balance (as Primary Energy|Other) rather than dropped, so
+    # the totals still close and the unserved energy stays visible.
+    var["Primary Energy|Other"] = renewable_electricity.get("load", 0)
+
+    # Flag the case that, before Primary Energy|Other was added to the
+    # reconciliation below, used to abort the export with a bare
+    # AssertionError: load shedding large enough to break the (hydro + solar
+    # + wind) == total renewable-electricity supply identity.
+    if not isclose(
+        renewable_electricity.sum() + solar_thermal_heat,
+        var["Primary Energy|Hydro"]
+        + var["Primary Energy|Solar"]
+        + var["Primary Energy|Wind"],
+    ):
+        logger.warning(
+            f"{region}: {var['Primary Energy|Other'] * MWh2TWh:.3f} TWh of "
+            "electricity demand met by load shedding (carrier 'load'), booked "
+            "as Primary Energy|Other / Secondary Energy|Electricity|Other. "
+            "This is expected for evaluate_grid_portfolio networks re-solved "
+            "on an inadequate grid (solving.options.load_shedding), but "
+            "unexpected for a normal pathway run - check the network if so."
+        )
+
     assert isclose(
         renewable_electricity.sum() + solar_thermal_heat,
         (
             var["Primary Energy|Hydro"]
             + var["Primary Energy|Solar"]
             + var["Primary Energy|Wind"]
+            + var["Primary Energy|Other"]
         ),
     )
-    # Primary Energy|Other
-    # Not implemented
 
     var["Primary Energy"] = (
         var["Primary Energy|Fossil"]
@@ -1549,6 +1576,7 @@ def get_primary_energy(n, region):
         + var["Primary Energy|Wind"]
         + var["Primary Energy|Nuclear"]
         + var["Primary Energy|Waste"]
+        + var["Primary Energy|Other"]
     )
 
     return var * MWh2TWh
@@ -1744,6 +1772,12 @@ def get_secondary_energy(n, region, _industry_demand):
 
     var["Secondary Energy|Electricity|Transmission Losses"] = acl + dcl + distril
 
+    # Load shedding on the electricity bus (carrier "load", see
+    # get_primary_energy) - an unpriced supply slack for unmet demand. Kept
+    # in the balance as Secondary Energy|Electricity|Other rather than
+    # dropped.
+    var["Secondary Energy|Electricity|Other"] = electricity_supply.get("load", 0)
+
     var["Secondary Energy|Electricity"] = (
         var[
             "Secondary Energy|Electricity|Gas"
@@ -1755,6 +1789,7 @@ def get_secondary_energy(n, region, _industry_demand):
         + var["Secondary Energy|Electricity|Nuclear"]
         + var["Secondary Energy|Electricity|Hydrogen"]
         + var["Secondary Energy|Electricity|Waste"]
+        + var["Secondary Energy|Electricity|Other"]
     )
 
     assert isclose(
@@ -1818,6 +1853,7 @@ def get_secondary_energy(n, region, _industry_demand):
             "H2 Electrolysis",
             "Sabatier",
             "methanolisation",
+            "load",  # load shedding on the heat bus (see get_primary_energy)
         ]
     ).sum()
     # TODO remember to specify in comments

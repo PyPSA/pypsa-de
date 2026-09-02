@@ -599,9 +599,12 @@ def df_to_png(df, filename="table.png"):
 # or by `network_id` for the stochastic-grid LT/ST comparison (see
 # plot_grid_scenario_comparison.py) - both can appear as plot legend/table
 # entries, so both live in the same dict. Grid-topology variants share one
-# base hue per "identity" (eev/reduced_10/reduced_40/stochastic); ST
-# (portfolio-{X}_on-{Y}_st) entries use X's hue since that's the capacity
-# decision being evaluated, shaded by which canvas Y they're dispatched on.
+# base hue per "identity"; ST (portfolio-{X}_on-{Y}_st) entries use X's hue
+# since that's the capacity decision being evaluated, shaded by which canvas Y
+# they're dispatched on. Only `topology-eev` is hand-picked here now - the
+# config's own grid_scenario names (e.g. topology-2025_exogen) fall through to
+# the deterministic hash color in scenario_color(), which is stable and
+# distinct without needing an entry.
 scenario_colors = {
     # Ariadne scenarios (this repo's `run` names)
     'ExPol': '#0d9488',
@@ -613,20 +616,6 @@ scenario_colors = {
 
     # Stochastic-grid LT (topology-*) network variants
     'topology-eev': '#2563eb',
-    'topology-reduced_10': '#f59e0b',
-    'topology-reduced_40': '#dc2626',
-    'topology-stochastic__reduced_10': '#7c3aed',
-    'topology-stochastic__reduced_40': '#4c1d95',
-
-    # Stochastic-grid ST (portfolio-{portfolio}_on-{grid_scenario}_st) network variants
-    'portfolio-eev_on-reduced_10_st': '#60a5fa',
-    'portfolio-eev_on-reduced_40_st': '#1e40af',
-    'portfolio-reduced_10_on-reduced_10_st': '#fbbf24',
-    'portfolio-reduced_10_on-reduced_40_st': '#b45309',
-    'portfolio-reduced_40_on-reduced_10_st': '#f87171',
-    'portfolio-reduced_40_on-reduced_40_st': '#991b1b',
-    'portfolio-stochastic_on-reduced_10_st': '#a78bfa',
-    'portfolio-stochastic_on-reduced_40_st': '#5b21b6',
 }
 
 # Short labels for the same network_ids/run names as scenario_colors, for
@@ -634,21 +623,12 @@ scenario_colors = {
 # stochastic program (the joint two-stage solve, matching the WS/SP/EEV/...
 # terminology in compute_stochastic_metrics.py); "@" reads as "dispatched
 # on" for the ST portfolio-{X}_on-{Y}_st networks.
+# Only `topology-eev` is hand-picked; every other grid-scenario network_id is
+# decomposed and composed from its parts by scenario_label() (e.g.
+# "topology-2025_exogen" -> "EXOG25", "portfolio-2035_exogen_on-2025_exogen_st"
+# -> "EXOG35@EXOG25"), so config scenario renames need no edit here.
 scenario_abbrev = {
     'topology-eev': 'EEV',
-    'topology-reduced_10': 'R10',
-    'topology-reduced_40': 'R40',
-    'topology-stochastic__reduced_10': 'SP-R10',
-    'topology-stochastic__reduced_40': 'SP-R40',
-
-    'portfolio-eev_on-reduced_10_st': 'EEV@R10',
-    'portfolio-eev_on-reduced_40_st': 'EEV@R40',
-    'portfolio-reduced_10_on-reduced_10_st': 'R10@R10',
-    'portfolio-reduced_10_on-reduced_40_st': 'R10@R40',
-    'portfolio-reduced_40_on-reduced_10_st': 'R40@R10',
-    'portfolio-reduced_40_on-reduced_40_st': 'R40@R40',
-    'portfolio-stochastic_on-reduced_10_st': 'SP@R10',
-    'portfolio-stochastic_on-reduced_40_st': 'SP@R40',
 }
 
 
@@ -657,16 +637,13 @@ scenario_abbrev = {
 # in stochastic_grid.smk - not a full network_id). scenario_label/
 # scenario_color compose full network_id labels/colors out of these parts
 # (see _RE_TOPOLOGY* / _RE_PORTFOLIO below) so a *new* grid_scenario entry
-# added to config (data/pypsa-de/grid_scenarios has several - e.g.
-# "exogenous2030", "optimal2025" - not yet wired into any config's
-# stochastic_grid_scenarios.scenarios) gets working abbreviations/colors for
-# every network_id it appears in (topology-*, topology-stochastic__*,
-# portfolio-*_on-*_st) automatically, without editing this dict - only add
-# an entry here if the auto-generated fallback (_auto_value_abbrev) isn't
-# good enough.
+# added to config (e.g. "2025_exogen" / "2035_exogen" - see
+# data/pypsa-de/grid_scenarios and notebooks/grid_topology.ipynb) gets working
+# abbreviations/colors for every network_id it appears in (topology-*,
+# topology-stochastic__*, portfolio-*_on-*_st) automatically, without editing
+# this dict - only add an entry here if the auto-generated fallback
+# (_auto_value_abbrev) isn't good enough.
 _grid_value_abbrev = {
-    "reduced_10": "R10",
-    "reduced_40": "R40",
     "eev": "EEV",
     "stochastic": "SP",
 }
@@ -679,8 +656,8 @@ _RE_PORTFOLIO = re.compile(r"^portfolio-(?P<p>.+?)_on-(?P<gs>.+)_st$")
 def _auto_value_abbrev(value):
     """Deterministic fallback abbreviation for a grid_scenario/portfolio
     value with no entry in _grid_value_abbrev: leading letters (max 4,
-    uppercased) + trailing digits (max 2) - e.g. "exogenous2030" -> "EXOG30",
-    "optimal2025" -> "OPTI25" (kept 4 letters rather than "OPT" specifically
+    uppercased) + trailing digits (max 2) - e.g. "2030_exogen" -> "EXOG30",
+    "2025_optimal" -> "OPTI25" (kept 4 letters rather than "OPT" specifically
     so it can't be confused with the unrelated "optimal"/"optimal_YYYY"
     pathway-network abbreviation, see scenario_label below).
     """

@@ -222,7 +222,7 @@ rule build_ship_raster:
     benchmark:
         benchmarks("build_ship_raster")
     resources:
-        mem_mb=5000,
+        mem_mb=16000,
     message:
         "Building ship density raster"
     script:
