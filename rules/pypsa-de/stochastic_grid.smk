@@ -343,7 +343,7 @@ rule unstack_stochastic_grid_topology:
         ),
     threads: 1
     resources:
-        mem_mb=4000,
+        mem_mb=8000,
     message:
         "Unstacking scenario '{wildcards.grid_scenario}' from the joint stochastic grid-topology network"
     script:
