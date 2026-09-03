@@ -67,43 +67,27 @@ all,hydrogen storage underground,investment,0.55,EUR/kWh,Langfristszenarien Szen
 2019,gas,fuel,16.0,EUR/MWh_th,Ariadne,
 2019,oil,fuel,33.2457,EUR2020/MWh,Ariadne,"$2020 = 0.8775 EUR2020, 1bbl = 1.6998MWh"
 2019,coal,fuel,6.7391,EUR2020/MWh,Ariadne,"$2020 = 0.8775 EUR2020, 1t = 8.06 MWh"
-2019,decentral air-sourced heat pump,investment,1685,EUR2020/kW_th,https://ariadneprojekt.de/media/2024/01/Ariadne-Analyse_HeizkostenEmissionenGebaeude_Januar2024.pdf https://www.enpal.de/waermepumpe/kosten/ https://www.bdew.de/media/documents/BDEW-HKV_Altbau.pdf
-2019,decentral ground-sourced heat pump,investment,2774,EUR2020/kW_th,https://ariadneprojekt.de/media/2024/01/Ariadne-Analyse_HeizkostenEmissionenGebaeude_Januar2024.pdf https://www.enpal.de/waermepumpe/kosten/ https://www.bdew.de/media/documents/BDEW-HKV_Altbau.pdf
 2020,gas,fuel,11.2,EUR/MWh_th,Ariadne,
 2020,oil,fuel,22.1982,EUR2020/MWh,Ariadne,"$2020 = 0.8775 EUR2020, 1bbl = 1.6998MWh"
 2020,coal,fuel,5.7048,EUR2020/MWh,Ariadne,"$2020 = 0.8775 EUR2020, 1t = 8.06 MWh"
-2020,decentral air-sourced heat pump,investment,1685,EUR2020/kW_th,https://ariadneprojekt.de/media/2024/01/Ariadne-Analyse_HeizkostenEmissionenGebaeude_Januar2024.pdf https://www.enpal.de/waermepumpe/kosten/ https://www.bdew.de/media/documents/BDEW-HKV_Altbau.pdf
-2020,decentral ground-sourced heat pump,investment,2774,EUR2020/kW_th,https://ariadneprojekt.de/media/2024/01/Ariadne-Analyse_HeizkostenEmissionenGebaeude_Januar2024.pdf https://www.enpal.de/waermepumpe/kosten/ https://www.bdew.de/media/documents/BDEW-HKV_Altbau.pdf
 2025,gas,fuel,30,EUR2020/MWh_th,Ariadne,Näherungsweise Durchschnittspreis 2025 (Annahme 36€) korrigiert für Inflation (Annahme 20%)
 2025,oil,fuel,32.9876,EUR2020/MWh,Ariadne,"$2020 = 0.8775 EUR2020, 1bbl = 1.6998MWh"
 2025,coal,fuel,10.6694,EUR2020/MWh,Ariadne,"$2020 = 0.8775 EUR2020, 1t = 8.06 MWh"
-2025,decentral air-sourced heat pump,investment,1604,EUR2020/kW_th,https://ariadneprojekt.de/media/2024/01/Ariadne-Analyse_HeizkostenEmissionenGebaeude_Januar2024.pdf https://www.enpal.de/waermepumpe/kosten/ https://www.bdew.de/media/documents/BDEW-HKV_Altbau.pdf and cost reduction from DEA
-2025,decentral ground-sourced heat pump,investment,2682,EUR2020/kW_th,https://ariadneprojekt.de/media/2024/01/Ariadne-Analyse_HeizkostenEmissionenGebaeude_Januar2024.pdf https://www.enpal.de/waermepumpe/kosten/ https://www.bdew.de/media/documents/BDEW-HKV_Altbau.pdf and cost reduction from DEA
 2030,gas,fuel,22.3,EUR/MWh_th,Ariadne,
 2030,oil,fuel,38.821,EUR2020/MWh,Ariadne,"$2020 = 0.8775 EUR2020, 1bbl = 1.6998MWh"
 2030,coal,fuel,6.2056,EUR2020/MWh,Ariadne,"$2020 = 0.8775 EUR2020, 1t = 8.06 MWh"
-2030,decentral air-sourced heat pump,investment,1523,EUR2020/kW_th,https://ariadneprojekt.de/media/2024/01/Ariadne-Analyse_HeizkostenEmissionenGebaeude_Januar2024.pdf https://www.enpal.de/waermepumpe/kosten/ https://www.bdew.de/media/documents/BDEW-HKV_Altbau.pdf and cost reduction from DEA
-2030,decentral ground-sourced heat pump,investment,2589,EUR2020/kW_th,https://ariadneprojekt.de/media/2024/01/Ariadne-Analyse_HeizkostenEmissionenGebaeude_Januar2024.pdf https://www.enpal.de/waermepumpe/kosten/ https://www.bdew.de/media/documents/BDEW-HKV_Altbau.pdf and cost reduction from DEA
 2035,gas,fuel,22.4,EUR/MWh_th,Ariadne,
 2035,oil,fuel,38.5629,EUR2020/MWh,Ariadne,"$2020 = 0.8775 EUR2020, 1bbl = 1.6998MWh"
 2035,coal,fuel,6.2601,EUR2020/MWh,Ariadne,"$2020 = 0.8775 EUR2020, 1t = 8.06 MWh"
-2035,decentral air-sourced heat pump,investment,1483,EUR2020/kW_th,https://ariadneprojekt.de/media/2024/01/Ariadne-Analyse_HeizkostenEmissionenGebaeude_Januar2024.pdf https://www.enpal.de/waermepumpe/kosten/ https://www.bdew.de/media/documents/BDEW-HKV_Altbau.pdf and cost reduction from DEA
-2035,decentral ground-sourced heat pump,investment,2497,EUR2020/kW_th,https://ariadneprojekt.de/media/2024/01/Ariadne-Analyse_HeizkostenEmissionenGebaeude_Januar2024.pdf https://www.enpal.de/waermepumpe/kosten/ https://www.bdew.de/media/documents/BDEW-HKV_Altbau.pdf and cost reduction from DEA
 2040,gas,fuel,22.6,EUR/MWh_th,Ariadne,
 2040,oil,fuel,38.3564,EUR2020/MWh,Ariadne,"$2020 = 0.8775 EUR2020, 1bbl = 1.6998MWh"
 2040,coal,fuel,6.3036,EUR2020/MWh,Ariadne,"$2020 = 0.8775 EUR2020, 1t = 8.06 MWh"
-2040,decentral air-sourced heat pump,investment,1442,EUR2020/kW_th,https://ariadneprojekt.de/media/2024/01/Ariadne-Analyse_HeizkostenEmissionenGebaeude_Januar2024.pdf https://www.enpal.de/waermepumpe/kosten/ https://www.bdew.de/media/documents/BDEW-HKV_Altbau.pdf and cost reduction from DEA
-2040,decentral ground-sourced heat pump,investment,2404,EUR2020/kW_th,https://ariadneprojekt.de/media/2024/01/Ariadne-Analyse_HeizkostenEmissionenGebaeude_Januar2024.pdf https://www.enpal.de/waermepumpe/kosten/ https://www.bdew.de/media/documents/BDEW-HKV_Altbau.pdf and cost reduction from DEA
 2045,gas,fuel,22.8,EUR/MWh_th,Ariadne,
 2045,oil,fuel,38.0983,EUR2020/MWh,Ariadne,"$2020 = 0.8775 EUR2020, 1bbl = 1.6998MWh"
 2045,coal,fuel,6.3472,EUR2020/MWh,Ariadne,"$2020 = 0.8775 EUR2020, 1t = 8.06 MWh"
-2045,decentral air-sourced heat pump,investment,1402,EUR2020/kW_th,https://ariadneprojekt.de/media/2024/01/Ariadne-Analyse_HeizkostenEmissionenGebaeude_Januar2024.pdf https://www.enpal.de/waermepumpe/kosten/ https://www.bdew.de/media/documents/BDEW-HKV_Altbau.pdf and cost reduction from DEA
-2045,decentral ground-sourced heat pump,investment,2312,EUR2020/kW_th,https://ariadneprojekt.de/media/2024/01/Ariadne-Analyse_HeizkostenEmissionenGebaeude_Januar2024.pdf https://www.enpal.de/waermepumpe/kosten/ https://www.bdew.de/media/documents/BDEW-HKV_Altbau.pdf and cost reduction from DEA
 2050,gas,fuel,22.9,EUR/MWh_th,Ariadne,
 2050,oil,fuel,37.8918,EUR2020/MWh,Ariadne,"$2020 = 0.8775 EUR2020, 1bbl = 1.6998MWh"
 2050,coal,fuel,6.4016,EUR2020/MWh,Ariadne,"$2020 = 0.8775 EUR2020, 1t = 8.06 MWh"
-2050,decentral air-sourced heat pump,investment,1362,EUR2020/kW_th,https://ariadneprojekt.de/media/2024/01/Ariadne-Analyse_HeizkostenEmissionenGebaeude_Januar2024.pdf https://www.enpal.de/waermepumpe/kosten/ https://www.bdew.de/media/documents/BDEW-HKV_Altbau.pdf and cost reduction from DEA
-2050,decentral ground-sourced heat pump,investment,2219,EUR2020/kW_th,https://ariadneprojekt.de/media/2024/01/Ariadne-Analyse_HeizkostenEmissionenGebaeude_Januar2024.pdf https://www.enpal.de/waermepumpe/kosten/ https://www.bdew.de/media/documents/BDEW-HKV_Altbau.pdf and cost reduction from DEA
 all,solar-utility,marginal_cost,0.01,EUR/MWh,Default value to prevent mathematical degeneracy in optimisation,
 all,onwind,marginal_cost,0.015,EUR/MWh,Default value to prevent mathematical degeneracy in optimisation,
 all,offwind,marginal_cost,0.015,EUR/MWh,Default value to prevent mathematical degeneracy in optimisation,
@@ -116,3 +100,28 @@ all,battery inverter,marginal_cost,0,EUR/MWh,Default value to prevent mathematic
 all,home battery storage,marginal_cost,0,EUR/MWh,Default value to prevent mathematical degeneracy in optimisation,
 all,water tank charger,marginal_cost,0.03,EUR/MWh,Default value to prevent mathematical degeneracy in optimisation,
 all,central water pit charger,marginal_cost,0.025,EUR/MWh,Default value to prevent mathematical degeneracy in optimisation,
+2025,biomass boiler,investment,2296.0,EUR2020/kW_th,https://api.kww-halle.de/fileadmin/PDFs/KWW-Technikkatalog-Waermeplanung_08-2026_Version_1.1.xlsx,"Source data is for 2026, assuming 25% inflation to convert to EUR2020. Average of 10 and 20 kW_th systems."
+2030,biomass boiler,investment,2296.0,EUR2020/kW_th,https://api.kww-halle.de/fileadmin/PDFs/KWW-Technikkatalog-Waermeplanung_08-2026_Version_1.1.xlsx,"Source data is for 2026, assuming 25% inflation to convert to EUR2020. Average of 10 and 20 kW_th systems."
+2035,biomass boiler,investment,2296.0,EUR2020/kW_th,https://api.kww-halle.de/fileadmin/PDFs/KWW-Technikkatalog-Waermeplanung_08-2026_Version_1.1.xlsx,"Source data is for 2026, assuming 25% inflation to convert to EUR2020. Average of 10 and 20 kW_th systems."
+2040,biomass boiler,investment,2296.0,EUR2020/kW_th,https://api.kww-halle.de/fileadmin/PDFs/KWW-Technikkatalog-Waermeplanung_08-2026_Version_1.1.xlsx,"Source data is for 2026, assuming 25% inflation to convert to EUR2020. Average of 10 and 20 kW_th systems."
+2045,biomass boiler,investment,2296.0,EUR2020/kW_th,https://api.kww-halle.de/fileadmin/PDFs/KWW-Technikkatalog-Waermeplanung_08-2026_Version_1.1.xlsx,"Source data is for 2026, assuming 25% inflation to convert to EUR2020. Average of 10 and 20 kW_th systems."
+2050,biomass boiler,investment,2296.0,EUR2020/kW_th,https://api.kww-halle.de/fileadmin/PDFs/KWW-Technikkatalog-Waermeplanung_08-2026_Version_1.1.xlsx,"Source data is for 2026, assuming 25% inflation to convert to EUR2020. Average of 10 and 20 kW_th systems."
+all,biomass boiler,efficiency,0.95,per unit,https://api.kww-halle.de/fileadmin/PDFs/KWW-Technikkatalog-Waermeplanung_08-2026_Version_1.1.xlsx,""
+2025,decentral gas boiler,investment,944.0,EUR2020/kW_th,https://api.kww-halle.de/fileadmin/PDFs/KWW-Technikkatalog-Waermeplanung_08-2026_Version_1.1.xlsx,"Source data is for 2026, assuming 25% inflation to convert to EUR2020. Average of 10 and 20 kW_th systems."
+2030,decentral gas boiler,investment,944.0,EUR2020/kW_th,https://api.kww-halle.de/fileadmin/PDFs/KWW-Technikkatalog-Waermeplanung_08-2026_Version_1.1.xlsx,"Source data is for 2026, assuming 25% inflation to convert to EUR2020. Average of 10 and 20 kW_th systems."
+2035,decentral gas boiler,investment,991.2,EUR2020/kW_th,https://api.kww-halle.de/fileadmin/PDFs/KWW-Technikkatalog-Waermeplanung_08-2026_Version_1.1.xlsx,"Source data is for 2026, assuming 25% inflation to convert to EUR2020. Average of 10 and 20 kW_th systems."
+2040,decentral gas boiler,investment,1038.4,EUR2020/kW_th,https://api.kww-halle.de/fileadmin/PDFs/KWW-Technikkatalog-Waermeplanung_08-2026_Version_1.1.xlsx,"Source data is for 2026, assuming 25% inflation to convert to EUR2020. Average of 10 and 20 kW_th systems."
+2045,decentral gas boiler,investment,1085.6,EUR2020/kW_th,https://api.kww-halle.de/fileadmin/PDFs/KWW-Technikkatalog-Waermeplanung_08-2026_Version_1.1.xlsx,"Source data is for 2026, assuming 25% inflation to convert to EUR2020. Average of 10 and 20 kW_th systems."
+2050,decentral gas boiler,investment,1132.7999999999997,EUR2020/kW_th,https://api.kww-halle.de/fileadmin/PDFs/KWW-Technikkatalog-Waermeplanung_08-2026_Version_1.1.xlsx,"Source data is for 2026, assuming 25% inflation to convert to EUR2020. Average of 10 and 20 kW_th systems."
+2025,decentral air-sourced heat pump,investment,1828.0,EUR2020/kW_th,https://api.kww-halle.de/fileadmin/PDFs/KWW-Technikkatalog-Waermeplanung_08-2026_Version_1.1.xlsx,"Source data is for 2026, assuming 25% inflation to convert to EUR2020. Average of 10 and 20 kW_th systems."
+2030,decentral air-sourced heat pump,investment,1791.44,EUR2020/kW_th,https://api.kww-halle.de/fileadmin/PDFs/KWW-Technikkatalog-Waermeplanung_08-2026_Version_1.1.xlsx,"Source data is for 2026, assuming 25% inflation to convert to EUR2020. Average of 10 and 20 kW_th systems."
+2035,decentral air-sourced heat pump,investment,1736.6,EUR2020/kW_th,https://api.kww-halle.de/fileadmin/PDFs/KWW-Technikkatalog-Waermeplanung_08-2026_Version_1.1.xlsx,"Source data is for 2026, assuming 25% inflation to convert to EUR2020. Average of 10 and 20 kW_th systems."
+2040,decentral air-sourced heat pump,investment,1700.04,EUR2020/kW_th,https://api.kww-halle.de/fileadmin/PDFs/KWW-Technikkatalog-Waermeplanung_08-2026_Version_1.1.xlsx,"Source data is for 2026, assuming 25% inflation to convert to EUR2020. Average of 10 and 20 kW_th systems."
+2045,decentral air-sourced heat pump,investment,1645.2,EUR2020/kW_th,https://api.kww-halle.de/fileadmin/PDFs/KWW-Technikkatalog-Waermeplanung_08-2026_Version_1.1.xlsx,"Source data is for 2026, assuming 25% inflation to convert to EUR2020. Average of 10 and 20 kW_th systems."
+2050,decentral air-sourced heat pump,investment,1590.3600000000001,EUR2020/kW_th,https://api.kww-halle.de/fileadmin/PDFs/KWW-Technikkatalog-Waermeplanung_08-2026_Version_1.1.xlsx,"Source data is for 2026, assuming 25% inflation to convert to EUR2020. Average of 10 and 20 kW_th systems."
+2025,decentral ground-sourced heat pump,investment,2876.0,EUR2020/kW_th,https://api.kww-halle.de/fileadmin/PDFs/KWW-Technikkatalog-Waermeplanung_08-2026_Version_1.1.xlsx,"Source data is for 2026, assuming 25% inflation to convert to EUR2020. Average of 10 and 20 kW_th systems."
+2030,decentral ground-sourced heat pump,investment,2818.48,EUR2020/kW_th,https://api.kww-halle.de/fileadmin/PDFs/KWW-Technikkatalog-Waermeplanung_08-2026_Version_1.1.xlsx,"Source data is for 2026, assuming 25% inflation to convert to EUR2020. Average of 10 and 20 kW_th systems."
+2035,decentral ground-sourced heat pump,investment,2732.2,EUR2020/kW_th,https://api.kww-halle.de/fileadmin/PDFs/KWW-Technikkatalog-Waermeplanung_08-2026_Version_1.1.xlsx,"Source data is for 2026, assuming 25% inflation to convert to EUR2020. Average of 10 and 20 kW_th systems."
+2040,decentral ground-sourced heat pump,investment,2674.68,EUR2020/kW_th,https://api.kww-halle.de/fileadmin/PDFs/KWW-Technikkatalog-Waermeplanung_08-2026_Version_1.1.xlsx,"Source data is for 2026, assuming 25% inflation to convert to EUR2020. Average of 10 and 20 kW_th systems."
+2045,decentral ground-sourced heat pump,investment,2588.4,EUR2020/kW_th,https://api.kww-halle.de/fileadmin/PDFs/KWW-Technikkatalog-Waermeplanung_08-2026_Version_1.1.xlsx,"Source data is for 2026, assuming 25% inflation to convert to EUR2020. Average of 10 and 20 kW_th systems."
+2050,decentral ground-sourced heat pump,investment,2502.1200000000003,EUR2020/kW_th,https://api.kww-halle.de/fileadmin/PDFs/KWW-Technikkatalog-Waermeplanung_08-2026_Version_1.1.xlsx,"Source data is for 2026, assuming 25% inflation to convert to EUR2020. Average of 10 and 20 kW_th systems."
