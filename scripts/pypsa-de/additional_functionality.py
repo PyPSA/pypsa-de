@@ -862,13 +862,13 @@ def add_decentral_heat_budgets(n, decentral_heat_budgets, investment_year):
             logger.warning(
                 f"No {asset_type}s found in the network. Skipping decentral {asset_type} budgets."
             )
-            return
+            continue
 
         if investment_year not in budget_dict["DE"].keys():
             logger.warning(
                 f"No decentral {asset_type} budget for {investment_year} found in the config file. Skipping."
             )
-            return
+            continue
 
         logger.info(f"Adding decentral {asset_type} budgets")
 
