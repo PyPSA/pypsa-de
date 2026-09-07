@@ -268,7 +268,7 @@ def write_to_scenario_yaml(input, output, scenarios, df):
         general_df = general_df.xs(reference_scenario, level="scenario")
         co2_budget_fractions = get_co2_budget(general_df, co2_budget_source)
 
-        if not config[scenario].get("sector"):
+        if "sector" not in config[scenario]:
             config[scenario]["sector"] = {}
 
         if config[scenario]["sector"].get("aviation_demand_factor") is not None:
@@ -285,7 +285,7 @@ def write_to_scenario_yaml(input, output, scenarios, df):
         st_primary_fraction = get_primary_steel_share(scenario_df, planning_horizons)
 
         dri_fraction = get_DRI_share(scenario_df, planning_horizons)
-        if not config[scenario].get("industry"):
+        if "industry" not in config[scenario]:
             config[scenario]["industry"] = {}
 
         if config[scenario]["industry"].get("St_primary_fraction") is not None:
@@ -307,7 +307,7 @@ def write_to_scenario_yaml(input, output, scenarios, df):
             config[scenario]["industry"]["DRI_fraction"][year] = round(
                 dri_fraction.loc["DRI_Steel_Share", year].item(), 4
             )
-        if not config[scenario].get("solving"):
+        if "solving" not in config[scenario]:
             config[scenario]["solving"] = {}
         if not config[scenario]["solving"].get("constraints"):
             config[scenario]["solving"]["constraints"] = {}
