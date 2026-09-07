@@ -236,7 +236,9 @@ def add_power_limits(n, investment_year, limits_power_max):
 
 def h2_import_limits(n, investment_year, limits_volume_max):
     if not h2_import_limits_enabled(n.config):
-        logger.info("Skipping H2 import limit constraints because pypsa-de.h2_import_limits.enable is False.")
+        logger.info(
+            "Skipping H2 import limit constraints because pypsa-de.h2_import_limits.enable is False."
+        )
         return
 
     for ct in limits_volume_max["h2_import"]:
