@@ -63,14 +63,16 @@ def _check_file_in_sync(existing_path: Path, generate_func, file_type: str):
         print("=" * 80)
         pytest.fail(
             f"{existing_path} is out of sync with the Pydantic schema. "
-            "Run 'pixi run generate-config' to update. See diff above."
+            "Run `pixi run generate-config` to update. See diff above."
         )
 
 
 @pytest.mark.skip(reason="pypsa-de config diverges from upstream Pydantic schema")
-def test_config_default_yaml_in_sync():
+def test_config_default_yaml_in_sync(config_file, pytestconfig):
     """Test that config/config.default.yaml is in sync with Pydantic schema."""
-
+    fix = pytestconfig.getoption("fix")
+    if fix:
+        generate_config_defaults(config_file.as_posix())
     _check_file_in_sync(
         config_file,
         generate_config_defaults,
@@ -79,9 +81,11 @@ def test_config_default_yaml_in_sync():
 
 
 @pytest.mark.skip(reason="pypsa-de config diverges from upstream Pydantic schema")
-def test_config_schema_json_in_sync():
+def test_config_schema_json_in_sync(schema_file, pytestconfig):
     """Test that config/schema.default.json is in sync with Pydantic schema."""
-
+    fix = pytestconfig.getoption("fix")
+    if fix:
+        generate_config_schema(schema_file.as_posix())
     _check_file_in_sync(
         schema_file,
         generate_config_schema,

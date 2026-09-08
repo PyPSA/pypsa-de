@@ -9,40 +9,40 @@ greenfield and battery and hydrogen storage to the clustered network.
 Description
 -----------
 
-The rule :mod:`add_electricity` ties all the different data inputs from the
+The rule [add_electricity][] ties all the different data inputs from the
 preceding rules together into a detailed PyPSA network that is stored in
-``networks/base_s_{clusters}_elec.nc``. It includes:
+`networks/base_s_{clusters}_elec.nc`. It includes:
 
 - today's transmission topology and transfer capacities (optionally including
   lines which are under construction according to the config settings ``lines:
-  under_construction`` and ``links: under_construction``),
+  under_construction` and `links: under_construction``),
 - today's thermal and hydro power generation capacities (for the technologies
-  listed in the config setting ``electricity: conventional_carriers``), and
+  listed in the config setting `electricity: conventional_carriers`), and
 - today's load time-series (upsampled in a top-down approach according to
   population and gross domestic product)
 
-It further adds extendable ``generators`` with **zero** capacity for
+It further adds extendable `generators` with **zero** capacity for
 
 - photovoltaic, onshore and AC- as well as DC-connected offshore wind
   installations with today's locational, hourly wind and solar capacity factors
   (but **no** current capacities),
-- additional open- and combined-cycle gas turbines (if ``OCGT`` and/or ``CCGT``
-  is listed in the config setting ``electricity: extendable_carriers``)
+- additional open- and combined-cycle gas turbines (if `OCGT` and/or `CCGT`
+  is listed in the config setting `electricity: extendable_carriers`)
 
 Furthermore, it attaches additional extendable components to the clustered
 network with **zero** initial capacity:
 
-- ``StorageUnits`` of carrier 'H2' and/or 'battery'. If this option is chosen,
-  every bus is given an extendable ``StorageUnit`` of the corresponding carrier.
+- `StorageUnits` of carrier 'H2' and/or 'battery'. If this option is chosen,
+  every bus is given an extendable `StorageUnit` of the corresponding carrier.
   The energy and power capacities are linked through a parameter that specifies
   the energy capacity as maximum hours at full dispatch power and is configured
-  in ``electricity: max_hours:``. This linkage leads to one investment variable
-  per storage unit. The default ``max_hours`` lead to long-term hydrogen and
+  in `electricity: max_hours:`. This linkage leads to one investment variable
+  per storage unit. The default `max_hours` lead to long-term hydrogen and
   short-term battery storage units.
 
-- ``Stores`` of carrier 'H2' and/or 'battery' in combination with ``Links``. If
+- `Stores` of carrier 'H2' and/or 'battery' in combination with `Links`. If
   this option is chosen, the script adds extra buses with corresponding carrier
-  where energy ``Stores`` are attached and which are connected to the
+  where energy `Stores` are attached and which are connected to the
   corresponding power buses via two links, one each for charging and
   discharging. This leads to three investment variables for the energy capacity,
   charging and discharging capacity of the storage unit.
@@ -578,7 +578,7 @@ def attach_wind_and_solar(
             else:
                 capital_cost = costs.at[car, "capital_cost"]
                 onight_cost = costs.at[car, "investment"]
-                connection_onight_cost = pd.NA
+                connection_onight_cost = np.nan
 
             buses = ds.indexes["bus_bin"].get_level_values("bus")
             bus_bins = ds.indexes["bus_bin"].map(flatten)
@@ -807,6 +807,7 @@ def attach_hydro(
     country = ppl["bus"].map(n.buses.country).rename("country")
 
     inflow_idx = ror.index.union(hydro.index)
+    inflow_t = pd.DataFrame()
     if not inflow_idx.empty:
         dist_key = ppl.loc[inflow_idx, "p_nom"].groupby(country).transform(normed)
 
@@ -841,7 +842,7 @@ def attach_hydro(
             onight_cost=costs.at["ror", "investment"],
             weight=ror["p_nom"],
             p_max_pu=(
-                inflow_t[ror.index]  # pylint: disable=E0606
+                inflow_t[ror.index]
                 .divide(ror["p_nom"], axis=1)
                 .where(lambda df: df <= 1.0, other=1.0)
             ),
@@ -1169,6 +1170,13 @@ def attach_stores(
             "Fuel Cell" if lookup_discharge == "fuel cell" else "discharger"
         )
 
+        discharge_capital_cost = (
+            0.0 if "bicharger" in lookup else costs.at[lookup_discharge, "capital_cost"]
+        )
+        if lookup_discharge == "fuel cell":
+            # NB: fuel cell investment cost is per MWel
+            discharge_capital_cost *= costs.at[lookup_discharge, "efficiency"]
+
         n.add(
             "Bus",
             bus_names,
@@ -1215,6 +1223,7 @@ def attach_stores(
             bus1=buses_i,
             carrier=f"{carrier} {discharge_name}",
             efficiency=costs.at[lookup_discharge, "efficiency"] ** roundtrip_correction,
+            capital_cost=discharge_capital_cost,
             p_nom_extendable=True,
             marginal_cost=costs.at[lookup_discharge, "marginal_cost"],
             lifetime=costs.at[lookup_discharge, "lifetime"],

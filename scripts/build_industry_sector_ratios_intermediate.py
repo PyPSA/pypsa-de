@@ -9,7 +9,7 @@ that interpolates between the current average energy consumption (from
 Description
 -------
 
-The config["industry"]["sector_ratios_fraction_future"] parameter determines the progress towards the future best-in-class consumption.
+The `config["industry"]["sector_ratios_fraction_future"]` parameter determines the progress towards the future best-in-class consumption.
 For each bus, the following industry subcategories
 
 - Electric arc
@@ -130,7 +130,14 @@ if __name__ == "__main__":
 
         snakemake = mock_snakemake(
             "build_industry_sector_ratios_intermediate",
-            planning_horizons="2030",
+            simpl="",
+            clusters=49,
+            opts="",
+            ll="vopt",
+            sector_opts="None",
+            run="KN2045_Bal_v5",
+            planning_horizons=2025,
+            configfiles="config/config.de.yaml",
         )
     configure_logging(snakemake)
     set_scenario_config(snakemake)

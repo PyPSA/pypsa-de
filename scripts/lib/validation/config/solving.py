@@ -167,7 +167,7 @@ class _SolvingOptionsConfig(BaseModel):
         3,
         description="Maximum number of solving iterations in between which resistance and reactence (`x/r`) are updated for branches according to `s_nom_opt` of the previous run.",
     )
-    transmission_losses: int = Field(
+    transmission_losses: dict | bool | int = Field(
         2,
         description="Add piecewise linear approximation of transmission losses based on n tangents. Defaults to 0, which means losses are ignored.",
     )
@@ -341,6 +341,14 @@ class SolvingConfig(BaseModel):
                 "dual_feasibility_tolerance": 1e-5,
                 "random_seed": 123,
             },
+            "highs-hipo": {
+                "solver": "hipo",
+                "parallel": "on",
+                "primal_feasibility_tolerance": 1e-5,
+                "dual_feasibility_tolerance": 1e-5,
+                "random_seed": 123,
+                "run_crossover": "off",
+            },
             "gurobi-default": {
                 "threads": 32,
                 "method": 2,
@@ -350,6 +358,7 @@ class SolvingConfig(BaseModel):
                 "AggFill": 0,
                 "PreDual": 0,
                 "GURO_PAR_BARDENSETHRESH": 200,
+                "IISMethod": 1,
             },
             "gurobi-numeric-focus": {
                 "NumericFocus": 3,
