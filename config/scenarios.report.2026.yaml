@@ -19,11 +19,11 @@ CurrentPolicies:
   co2_budget_DE_source: UBA
 
   co2_budget:
-    2030: 0.483 # midpoint of WEM and WAM
-    2035: 0.395
-    2040: 0.322
-    2045: 0.269
-    2050: 0.236
+    2030: 0.513
+    2035: 0.429
+    2040: 0.362
+    2045: 0.311
+    2050: 0.283
 
   costs:
     transmission: "underground" # either overhead line ("overhead") or underground cable ("underground")
