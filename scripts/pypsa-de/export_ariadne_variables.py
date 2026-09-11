@@ -2030,6 +2030,64 @@ def get_secondary_energy(n, region, _industry_demand):
     return var * MWh2TWh
 
 
+def get_capacity_factors(n, region):
+    var = pd.Series()
+    H2_carriers = [
+        "H2 pipeline (Kernnetz)",
+        "H2 pipeline",
+        "H2 pipeline retrofitted",
+    ]
+    for carrier in H2_carriers:
+        h2_pipes = n.links[
+            (n.links.carrier == carrier) & (n.links.bus0.str.startswith(region))
+        ]
+        var[f"Capacity Factor|Hydrogen|Transmission|{carrier}"] = n.links_t.p0[
+            h2_pipes.index
+        ].mul(n.snapshot_weightings.generators, axis=0).abs().values.sum() / (
+            h2_pipes.p_nom_opt.mul(n.snapshot_weightings.generators.sum()).sum()
+        )
+    h2_pipes_all = n.links[
+        n.links.carrier.isin(H2_carriers) & n.links.bus0.str.startswith(region)
+    ]
+    var["Capacity Factor|Hydrogen|Transmission"] = n.links_t.p0[h2_pipes_all.index].mul(
+        n.snapshot_weightings.generators, axis=0
+    ).abs().values.sum() / (
+        h2_pipes_all.p_nom_opt.mul(n.snapshot_weightings.generators.sum()).sum()
+    )
+
+    cfs = (
+        n.statistics.capacity_factor(groupby=["country", "carrier"], nice_names=False)
+        .xs(region, level="country")
+        .droplevel("component")
+    )
+
+    h2_carriers = [
+        "H2 retrofit OCGT",
+        "H2 OCGT",
+        "urban central H2 retrofit CHP",
+        "H2 retrofit CCGT",
+        "urban central H2 CHP",
+        "H2 CCGT",
+        "H2 Fuel Cell",
+        "H2 Electrolysis",
+    ]
+    for carrier in h2_carriers:
+        var[f"Capacity Factor|Hydrogen|{carrier}"] = cfs.get(carrier, 0)
+
+    res_carriers = [
+        "offwind-ac",
+        "offwind-dc",
+        "onwind",
+        "solar",
+        "solar rooftop",
+        "solar-hsat",
+    ]
+    for carrier in res_carriers:
+        var[f"Capacity Factor|Electricity|{carrier}"] = cfs.get(carrier, 0)
+
+    return var
+
+
 def get_final_energy(
     n,
     region,
@@ -5504,6 +5562,7 @@ def get_ariadne_var(
             get_trade(n, region),
             get_economy(n, region),
             get_system_cost(n, region),
+            get_capacity_factors(n, region),
         ]
     )
 
@@ -5621,7 +5680,7 @@ if __name__ == "__main__":
             opts="",
             ll="vopt",
             sector_opts="None",
-            run="KN2045_Bal_v5",
+            run="KN2045_Mix",
         )
     configure_logging(snakemake)
     set_scenario_config(snakemake)
