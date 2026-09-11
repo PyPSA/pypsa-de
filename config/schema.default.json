@@ -10283,6 +10283,33 @@
           },
           "type": "array"
         },
+        "freeze_out_de_capas": {
+          "default": false,
+          "description": "If true, fix every capacity outside Germany (foreign generators, storage units, stores, purely-foreign links/lines) to the optimised values of the plain 'optimal' network of the same planning horizon (base_s_<clusters>_<opts>_<sector_opts>_<year>.nc) and make them non-extendable, in every grid-topology variant (named scenarios, eev and stochastic). This keeps only within-DE capacities re-optimisable so foreign countries do not adapt to German grid delays.",
+          "type": "boolean"
+        },
+        "freeze_trade": {
+          "default": false,
+          "description": "Cap Germany's annual gross imports per carrier at the level they had in the plain 'optimal' network of the same planning horizon, added as a '<=' GlobalConstraint in additional_functionality.freeze_trade_imports for every grid-topology variant and portfolio evaluation. false or an empty list turns it off; true applies to all carriers; a list applies to the named subset. Bidirectional carriers (AC, DC, H2, gas) are capped via a positive-part auxiliary-variable split; the unidirectional efuel links (renewable gas, renewable oil, methanol) and oil (via the 'DE oil primary' generator, a de-facto import bus) are capped directly.",
+          "anyOf": [
+            { "type": "boolean" },
+            {
+              "type": "array",
+              "items": {
+                "enum": [
+                  "AC",
+                  "DC",
+                  "H2",
+                  "gas",
+                  "methanol",
+                  "renewable gas",
+                  "oil",
+                  "renewable oil"
+                ]
+              }
+            }
+          ]
+        },
         "scenarios": {
           "description": "Named grid-topology scenarios, each with a probability and CSV files (keyed by component name, may contain a literal {clusters} placeholder) overriding Line s_nom and/or DC Link p_nom.",
           "additionalProperties": {

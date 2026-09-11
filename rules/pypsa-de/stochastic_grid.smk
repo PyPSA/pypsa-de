@@ -149,6 +149,31 @@ def get_grid_scenario_csvs(wildcards):
     return _scenario_csv_paths(wildcards, names)
 
 
+def _freeze_out_de_optimal_network(wildcards):
+    """Solved plain "optimal" network of the same planning horizon, used by
+    build_grid_topology to freeze all non-DE capacities when
+    `stochastic_grid_scenarios: freeze_out_de_capas` is on. Empty otherwise."""
+    if not _sgs.get("freeze_out_de_capas", False):
+        return []
+    return (
+        RESULTS
+        + f"networks/base_s_{wildcards.clusters}_{wildcards.opts}_{wildcards.sector_opts}_{wildcards.planning_horizons}.nc"
+    )
+
+
+def _freeze_trade_optimal_network(wildcards):
+    """Solved plain "optimal" network of the same planning horizon, read by
+    additional_functionality.freeze_trade_imports to cap DE gross imports per
+    carrier when `stochastic_grid_scenarios: freeze_trade` is truthy (a carrier
+    list or `true`). Empty otherwise."""
+    if not _sgs.get("freeze_trade", False):
+        return []
+    return (
+        RESULTS
+        + f"networks/base_s_{wildcards.clusters}_{wildcards.opts}_{wildcards.sector_opts}_{wildcards.planning_horizons}.nc"
+    )
+
+
 def stochastic_grid_solving(wildcards):
     """`solving` config adjusted for PyPSA scenario-dimension gaps.
 
@@ -209,6 +234,9 @@ rule build_grid_topology:
             "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_final.nc"
         ),
         csvs=get_grid_scenario_csvs,
+        # Present only when freeze_out_de_capas is on (see
+        # _freeze_out_de_optimal_network / build_grid_topology.py).
+        optimal_network=_freeze_out_de_optimal_network,
     output:
         network=resources(
             "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_topology-{grid_scenario}.nc"
@@ -222,6 +250,9 @@ rule build_grid_topology:
         mem_mb=4000,
     params:
         stochastic_grid_scenarios=config_provider("stochastic_grid_scenarios"),
+        freeze_out_de_capas=config_provider(
+            "stochastic_grid_scenarios", "freeze_out_de_capas", default=False
+        ),
         grid_scenario=lambda w: w.grid_scenario,
     message:
         "Building grid-topology variant '{wildcards.grid_scenario}' for {wildcards.clusters} clusters, {wildcards.planning_horizons} planning horizon"
@@ -236,6 +267,9 @@ rule solve_grid_topology_network:
         ),
         co2_totals_name=resources("co2_totals.csv"),
         energy_totals=resources("energy_totals.csv"),
+        # Present only when freeze_trade is truthy (see
+        # _freeze_trade_optimal_network / additional_functionality.py).
+        freeze_trade_optimal_network=_freeze_trade_optimal_network,
     output:
         network=RESULTS
         + "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_topology-{grid_scenario}.nc",
@@ -273,6 +307,9 @@ rule solve_grid_topology_network:
         ),
         custom_extra_functionality=input_custom_extra_functionality,
         energy_year=config_provider("energy", "energy_totals_year"),
+        freeze_trade=config_provider(
+            "stochastic_grid_scenarios", "freeze_trade", default=False
+        ),
     message:
         "Solving grid-topology variant '{wildcards.grid_scenario}' for {wildcards.clusters} clusters, {wildcards.planning_horizons} planning horizon"
     script:
@@ -288,6 +325,9 @@ rule evaluate_grid_portfolio:
         ),
         co2_totals_name=resources("co2_totals.csv"),
         energy_totals=resources("energy_totals.csv"),
+        # Present only when freeze_trade is truthy (see
+        # _freeze_trade_optimal_network / additional_functionality.py).
+        freeze_trade_optimal_network=_freeze_trade_optimal_network,
     output:
         network=RESULTS
         + "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_portfolio-{portfolio}_on-{grid_scenario}_st.nc",
@@ -316,6 +356,9 @@ rule evaluate_grid_portfolio:
         ),
         custom_extra_functionality=input_custom_extra_functionality,
         energy_year=config_provider("energy", "energy_totals_year"),
+        freeze_trade=config_provider(
+            "stochastic_grid_scenarios", "freeze_trade", default=False
+        ),
     message:
         "Evaluating portfolio '{wildcards.portfolio}' capacities dispatched on grid topology '{wildcards.grid_scenario}'"
     script:

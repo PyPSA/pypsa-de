@@ -24,6 +24,7 @@ import logging
 
 import pandas as pd
 import pypsa
+from pypsa.descriptors import nominal_attrs
 
 from scripts._helpers import configure_logging, mock_snakemake
 
@@ -117,6 +118,74 @@ def build_stochastic_topology(n, scenarios_cfg, clusters):
     return n
 
 
+def _foreign_countries(n):
+    """Real (2-letter) non-DE country codes present in the network - excludes
+    DE itself and the empty-string country of EU-level fossil/CO2 buses."""
+    return {c for c in n.buses.country.dropna().unique() if c and c != "DE"}
+
+
+def freeze_foreign_capacities(n, n_optimal):
+    """Fix every capacity outside Germany to the plain "optimal" network's
+    optimised value and make it non-extendable.
+
+    "Outside Germany" means, per component:
+    - Generator / StorageUnit / Store: its bus sits in a non-DE country.
+    - Line / Link: neither end is in DE and at least one end is in a real
+      foreign country (so interconnectors with one DE end - controlled by the
+      grid_scenario CSV override - and purely EU-level links are left alone).
+
+    Called before build_grid_topology(), so for the "stochastic" variant
+    n.set_scenarios() afterwards simply replicates the frozen values across
+    every scenario slice. The CSV overrides only touch DE+interconnector grid
+    branches, which are disjoint from what is frozen here.
+    """
+    foreign = _foreign_countries(n)
+    country = n.buses.country
+    frozen = {}
+    for component, attr in nominal_attrs.items():
+        static = n.components[component].static
+        if static.empty:
+            continue
+        opt_static = n_optimal.components[component].static
+
+        if {"bus0", "bus1"}.issubset(static.columns):
+            c0, c1 = static.bus0.map(country), static.bus1.map(country)
+            mask = ~c0.eq("DE") & ~c1.eq("DE") & (c0.isin(foreign) | c1.isin(foreign))
+        elif "bus" in static.columns:
+            mask = static.bus.map(country).isin(foreign)
+        else:
+            continue
+
+        names = static.index[mask]
+        missing = names.difference(opt_static.index)
+        if len(missing):
+            logger.warning(
+                f"{component}: {len(missing)} foreign component(s) not in the optimal "
+                f"network, left extendable (e.g. {list(missing)[:3]})."
+            )
+            names = names.difference(missing)
+        if names.empty:
+            continue
+
+        opt_attr = f"{attr}_opt"
+        values = (
+            opt_static.loc[names, opt_attr]
+            if opt_attr in opt_static.columns
+            else opt_static.loc[names, attr]
+        )
+        static.loc[names, attr] = values
+        if opt_attr in static.columns:
+            static.loc[names, opt_attr] = values
+        static.loc[names, f"{attr}_extendable"] = False
+        frozen[component] = len(names)
+
+    logger.info(
+        "Froze non-DE capacities to the optimal network (%s).",
+        ", ".join(f"{k}: {v}" for k, v in frozen.items()) or "nothing matched",
+    )
+    return n
+
+
 def build_grid_topology(n, grid_scenario, scenarios_cfg, clusters):
     if grid_scenario == "stochastic":
         return build_stochastic_topology(n, scenarios_cfg, clusters)
@@ -144,6 +213,18 @@ if __name__ == "__main__":
     scenarios_cfg = snakemake.params.stochastic_grid_scenarios["scenarios"]
     grid_scenario = snakemake.params.grid_scenario
     clusters = snakemake.wildcards.clusters
+
+    if snakemake.params.get("freeze_out_de_capas", False):
+        optimal_network = snakemake.input.optimal_network
+        if not optimal_network:
+            raise ValueError(
+                "freeze_out_de_capas is enabled but no optimal_network input was "
+                "provided to build_grid_topology."
+            )
+        logger.info(
+            f"freeze_out_de_capas: freezing non-DE capacities to {optimal_network}"
+        )
+        freeze_foreign_capacities(n, pypsa.Network(optimal_network))
 
     build_grid_topology(n, grid_scenario, scenarios_cfg, clusters)
 

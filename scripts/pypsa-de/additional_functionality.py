@@ -131,51 +131,52 @@ def add_capacity_limits(n, investment_year, limits_capacity, sense="maximum"):
                     sys.exit()
 
 
+def add_pos_neg_aux_variables(n, idx, var_name, infix):
+    """
+    For every snapshot in the network `n` this functions adds auxiliary variables corresponding to the positive and negative parts of the dynamical variables of the network components specified in the index `idx`. The `infix` parameter is used to create unique names for the auxiliary variables and constraints.
+
+    Parameters
+    ----------
+    n : pypsa.Network
+        The PyPSA network object containing the model.
+    idx : pandas.Index
+        The index of the network component (e.g., lines or links) for which to create auxiliary variables.
+    infix : str
+        A string used to create unique names for the auxiliary variables and constraints.
+    """
+    var = n.model[var_name].sel({"name": idx})
+    # `var` (a dispatch variable) carries a `scenario` dim once
+    # `n.set_scenarios()` is active; without matching that here, the
+    # aux constraints below broadcast a single shared aux variable
+    # across all scenarios instead of one per scenario.
+    coords = [n.snapshots, idx]
+    if n.has_scenarios:
+        coords = [n.scenarios, *coords]
+    aux_pos = n.model.add_variables(
+        name=f"{var_name}-{infix}-aux-pos",
+        lower=0,
+        coords=coords,
+    )
+    aux_neg = n.model.add_variables(
+        name=f"{var_name}-{infix}-aux-neg",
+        upper=0,
+        coords=coords,
+    )
+    n.model.add_constraints(
+        aux_pos >= var,
+        name=f"{var_name}-{infix}-aux-pos-constr",
+    )
+    n.model.add_constraints(
+        aux_neg <= var,
+        name=f"{var_name}-{infix}-aux-neg-constr",
+    )
+    return aux_pos, aux_neg
+
+
 def add_power_limits(n, investment_year, limits_power_max):
     """
     " Restricts the maximum inflow/outflow of electricity from/to a country.
     """
-
-    def add_pos_neg_aux_variables(n, idx, var_name, infix):
-        """
-        For every snapshot in the network `n` this functions adds auxiliary variables corresponding to the positive and negative parts of the dynamical variables of the network components specified in the index `idx`. The `infix` parameter is used to create unique names for the auxiliary variables and constraints.
-
-        Parameters
-        ----------
-        n : pypsa.Network
-            The PyPSA network object containing the model.
-        idx : pandas.Index
-            The index of the network component (e.g., lines or links) for which to create auxiliary variables.
-        infix : str
-            A string used to create unique names for the auxiliary variables and constraints.
-        """
-        var = n.model[var_name].sel({"name": idx})
-        # `var` (a dispatch variable) carries a `scenario` dim once
-        # `n.set_scenarios()` is active; without matching that here, the
-        # aux constraints below broadcast a single shared aux variable
-        # across all scenarios instead of one per scenario.
-        coords = [n.snapshots, idx]
-        if n.has_scenarios:
-            coords = [n.scenarios, *coords]
-        aux_pos = n.model.add_variables(
-            name=f"{var_name}-{infix}-aux-pos",
-            lower=0,
-            coords=coords,
-        )
-        aux_neg = n.model.add_variables(
-            name=f"{var_name}-{infix}-aux-neg",
-            upper=0,
-            coords=coords,
-        )
-        n.model.add_constraints(
-            aux_pos >= var,
-            name=f"{var_name}-{infix}-aux-pos-constr",
-        )
-        n.model.add_constraints(
-            aux_neg <= var,
-            name=f"{var_name}-{infix}-aux-neg-constr",
-        )
-        return aux_pos, aux_neg
 
     for ct in limits_power_max:
         if investment_year not in limits_power_max[ct].keys():
@@ -897,6 +898,206 @@ def adapt_nuclear_output(n):
     )
 
 
+# carrier token -> network carriers of the DE<->non-DE branches carrying it.
+# "AC" are n.lines, everything else n.links. "oil" has no cross-border branch
+# (fossil oil enters DE only via the "DE oil primary" generator, which acts as
+# a de-facto import bus) and is handled separately below.
+FREEZE_TRADE_BIDIRECTIONAL = {
+    "AC": ("Line", "Line-s", ["AC"]),
+    "DC": ("Link", "Link-p", ["DC"]),
+    "H2": (
+        "Link",
+        "Link-p",
+        ["H2 pipeline", "H2 pipeline (Kernnetz)", "H2 pipeline retrofitted"],
+    ),
+    "gas": ("Link", "Link-p", ["gas pipeline", "gas pipeline new"]),
+}
+# carrier token -> the single unidirectional "EU ... -> DE ..." trade link whose
+# throughput *is* the gross import (p >= 0, exports run on a separate DE->EU link).
+FREEZE_TRADE_UNIDIRECTIONAL = {
+    "renewable gas": "EU renewable gas -> DE gas",
+    "renewable oil": "EU renewable oil -> DE oil",
+    "methanol": "EU methanol -> DE methanol",
+}
+FREEZE_TRADE_OIL_GENERATOR = "DE oil primary"
+FREEZE_TRADE_CARRIERS = (
+    list(FREEZE_TRADE_BIDIRECTIONAL)
+    + list(FREEZE_TRADE_UNIDIRECTIONAL)
+    + ["oil"]
+)
+
+
+def _load_get_export_import():
+    """`get_export_import` from export_ariadne_variables.py (same hyphenated
+    directory, so not reachable via a normal dotted import)."""
+    import importlib.util
+    import pathlib
+
+    path = pathlib.Path(__file__).parent / "export_ariadne_variables.py"
+    spec = importlib.util.spec_from_file_location("export_ariadne_variables", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.get_export_import
+
+
+def _register_global_constraint(n, cname, limit):
+    """Register a `<=` GlobalConstraint so its shadow price is inspectable,
+    dropping any pre-existing one of the same name (scenario-index aware)."""
+    if cname in component_names(n.global_constraints):
+        logger.warning(
+            f"Global constraint {cname} already exists. Dropping and adding it again."
+        )
+        if isinstance(n.global_constraints.index, pd.MultiIndex):
+            n.global_constraints.drop(cname, level="name", inplace=True)
+        else:
+            n.global_constraints.drop(cname, inplace=True)
+    n.add(
+        "GlobalConstraint",
+        cname,
+        constant=limit,
+        sense="<=",
+        type="",
+        carrier_attribute="",
+    )
+
+
+def freeze_trade_imports(n, snakemake):
+    """Cap Germany's annual *gross* imports per carrier at the level they had
+    in the plain "optimal" network of the same horizon.
+
+    Opt-in via `stochastic_grid_scenarios: freeze_trade` (a list of carrier
+    tokens, or `true` for all, or `false`/`[]` for off). Analogous to
+    `freeze_out_de_capas` but on dispatch instead of capacity: it stops a
+    constrained grid from being papered over by "just import more" (or dump
+    more abroad), so the topology comparison reflects the domestic system
+    response rather than a trade rebalancing.
+
+    All carriers get a `<=` cap (never an equality): for the bidirectional
+    branches (`AC`, `DC`, `H2`, `gas`) gross import is the sum of the positive
+    inflows into DE, which needs the positive/negative auxiliary-variable split
+    (`add_pos_neg_aux_variables`) and is only lower-bounded, so an equality is
+    not LP-expressible; the unidirectional efuel links and the oil-primary
+    generator could take an equality but use `<=` too for consistency. DE can
+    therefore import less than the optimal grid did, but not more.
+    """
+    freeze_trade = snakemake.params.get("freeze_trade", False)
+    if not freeze_trade:
+        return
+
+    carriers = (
+        FREEZE_TRADE_CARRIERS if freeze_trade is True else list(freeze_trade)
+    )
+    unknown = set(carriers) - set(FREEZE_TRADE_CARRIERS)
+    if unknown:
+        raise ValueError(
+            f"freeze_trade: unknown carrier(s) {sorted(unknown)}; "
+            f"allowed: {FREEZE_TRADE_CARRIERS}"
+        )
+
+    ref_path = snakemake.input.get("freeze_trade_optimal_network", None)
+    if not ref_path:
+        raise ValueError(
+            "freeze_trade is enabled but no freeze_trade_optimal_network input "
+            "was provided by the rule."
+        )
+    import pypsa
+
+    logger.info(f"freeze_trade: capping DE gross imports of {carriers} to {ref_path}")
+    n_ref = pypsa.Network(ref_path)
+    get_export_import = _load_get_export_import()
+
+    weightings = n.snapshot_weightings.generators
+
+    for carrier in carriers:
+        cname = f"Trade_freeze-{carrier}-DE"
+
+        if carrier == "oil":
+            if FREEZE_TRADE_OIL_GENERATOR not in n_ref.generators.index:
+                logger.warning(
+                    f"freeze_trade: generator '{FREEZE_TRADE_OIL_GENERATOR}' not in "
+                    "reference network, skipping oil."
+                )
+                continue
+            target = float(
+                n_ref.generators_t.p[FREEZE_TRADE_OIL_GENERATOR]
+                .mul(n_ref.snapshot_weightings.generators)
+                .sum()
+            )
+            gens = scenario_slice(n.generators)
+            if FREEZE_TRADE_OIL_GENERATOR not in gens.index:
+                logger.warning(
+                    f"freeze_trade: generator '{FREEZE_TRADE_OIL_GENERATOR}' not in "
+                    "network, skipping oil."
+                )
+                continue
+            lhs = sum_excl_scenario(
+                n.model["Generator-p"].loc[:, [FREEZE_TRADE_OIL_GENERATOR]]
+                * weightings
+            )
+            logger.info(f"freeze_trade: DE oil gross import <= {target / 1e6:.2f} TWh/a")
+            n.model.add_constraints(lhs <= target, name=f"GlobalConstraint-{cname}")
+            _register_global_constraint(n, cname, target)
+            continue
+
+        if carrier in FREEZE_TRADE_UNIDIRECTIONAL:
+            link = FREEZE_TRADE_UNIDIRECTIONAL[carrier]
+            _, importing = get_export_import(n_ref, "DE", [carrier])
+            target = float(importing)
+            links = scenario_slice(n.links)
+            if link not in links.index:
+                logger.warning(
+                    f"freeze_trade: link '{link}' not in network, skipping {carrier}."
+                )
+                continue
+            lhs = sum_excl_scenario(n.model["Link-p"].loc[:, [link]] * weightings)
+            logger.info(
+                f"freeze_trade: DE {carrier} gross import <= {target / 1e6:.2f} TWh/a"
+            )
+            n.model.add_constraints(lhs <= target, name=f"GlobalConstraint-{cname}")
+            _register_global_constraint(n, cname, target)
+            continue
+
+        # bidirectional branches: gross import = sum of positive inflows into DE
+        component, var_name, net_carriers = FREEZE_TRADE_BIDIRECTIONAL[carrier]
+        _, importing = get_export_import(n_ref, "DE", net_carriers)
+        target = float(importing)
+
+        static = scenario_slice(n.lines if component == "Line" else n.links)
+        branches = static[static.carrier.isin(net_carriers)]
+        incoming = branches.index[
+            (branches.bus0.str[:2] != "DE") & (branches.bus1.str[:2] == "DE")
+        ]
+        outgoing = branches.index[
+            (branches.bus0.str[:2] == "DE") & (branches.bus1.str[:2] != "DE")
+        ]
+        if incoming.empty and outgoing.empty:
+            logger.warning(
+                f"freeze_trade: no DE<->non-DE {net_carriers} branches found, "
+                f"skipping {carrier}."
+            )
+            continue
+
+        terms = []
+        if not incoming.empty:
+            in_pos, _ = add_pos_neg_aux_variables(
+                n, incoming, var_name, f"freeze-trade-{carrier}-in"
+            )
+            terms.append(sum_excl_scenario(in_pos * weightings))
+        if not outgoing.empty:
+            _, out_neg = add_pos_neg_aux_variables(
+                n, outgoing, var_name, f"freeze-trade-{carrier}-out"
+            )
+            # import into DE on an outgoing branch is the negative part of the flow
+            terms.append(sum_excl_scenario(-out_neg * weightings))
+
+        lhs = terms[0] if len(terms) == 1 else terms[0] + terms[1]
+        logger.info(
+            f"freeze_trade: DE {carrier} gross import <= {target / 1e6:.2f} TWh/a"
+        )
+        n.model.add_constraints(lhs <= target, name=f"GlobalConstraint-{cname}")
+        _register_global_constraint(n, cname, target)
+
+
 def additional_functionality(n, snapshots, snakemake):
     logger.info("Adding Ariadne-specific functionality")
 
@@ -917,6 +1118,8 @@ def additional_functionality(n, snapshots, snakemake):
         h2_import_limits(n, investment_year, constraints["limits_volume_max"])
 
         electricity_import_limits(n, investment_year, constraints["limits_volume_max"])
+
+    freeze_trade_imports(n, snakemake)
 
     if investment_year >= 2025:
         h2_production_limits(

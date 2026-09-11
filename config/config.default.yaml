@@ -486,6 +486,8 @@ transmission_projects:
 stochastic_grid_scenarios:
   enable: false
   planning_horizons: [] # subset of scenario.planning_horizons to build topology variants for
+  freeze_out_de_capas: false # fix all non-DE capacities to the plain "optimal" network of the same horizon (non-extendable) in every grid-topology variant
+  freeze_trade: false # cap DE annual gross imports per carrier at the plain "optimal" network's level; false/[] = off, true = all carriers, or a subset of [AC, DC, H2, methanol, gas, "renewable gas", oil, "renewable oil"]
   scenarios: {} # name -> {probability, links (csv path, optional), lines (csv path, optional)}
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#transformers

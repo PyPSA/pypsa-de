@@ -5,9 +5,12 @@
 Per-scenario system plots: storage capacity metrics/maps, energy balances,
 electricity capacity supply/demand comparison, capacity-by-region maps for the
 other capa_groups categories (Wind + Solar / Backup / Storage Discharge /
-Demand-Side Flex, see utils.py), and per-branch loading duration curves +
+Demand-Side Flex, see utils.py), per-branch loading duration curves +
 summary table under `line_loadings/<year>/` (ported from
-notebooks/line_loading.ipynb).
+notebooks/line_loading.ipynb), and cross-border electricity exchange plots
+(gross import / gross export / net import per German border region <->
+neighbour and aggregated per neighbouring country, plus a map with the yearly
+exchange written on each interconnector).
 
 One output folder per `run` scenario (see the `system_plots` rule), covering
 that run's full myopic-pathway years. Ported ~1:1 from a sibling repo's
@@ -891,6 +894,312 @@ def plot_branch_loading_duration_curves(
     return summary
 
 
+def _cross_border_branches(n):
+    """Every AC Line / DC Link connecting a German bus to a foreign one.
+
+    Yields ``(kind, name, de_bus, de_side, foreign_bus, foreign_country)`` where
+    ``de_side`` is 0 or 1 depending on whether the German bus is ``bus0`` or
+    ``bus1`` of the branch. DC Links come with their ``-reversed`` twins (see
+    ``compute_cross_border_flows`` - they are never simultaneously active, so
+    aggregating both per region-pair is fine).
+    """
+    for kind, table, carrier in [("Line", n.lines, "AC"), ("Link", n.links, "DC")]:
+        c0 = table.bus0.map(n.buses.country)
+        c1 = table.bus1.map(n.buses.country)
+        mask = (table.carrier == carrier) & (c0.eq("DE") ^ c1.eq("DE"))
+        for name in table.index[mask]:
+            b0, b1 = table.at[name, "bus0"], table.at[name, "bus1"]
+            if c0[name] == "DE":
+                yield kind, name, b0, 0, b1, c1[name]
+            else:
+                yield kind, name, b1, 1, b0, c0[name]
+
+
+def _cross_border_into_de_series(n):
+    """``dict[(de_bus, foreign_bus)] -> Series`` of power delivered into the
+    German bus [MW], summed over all parallel Lines/Links between that region
+    pair. Also returns a ``{key: foreign_country}`` map and the
+    snapshot-weighting Series [h].
+    """
+    w = (
+        n.snapshot_weightings.get("objective", pd.Series(1.0, index=n.snapshots))
+        .reindex(n.snapshots)
+        .fillna(0)
+    )
+    into_de = defaultdict(lambda: pd.Series(0.0, index=n.snapshots))
+    partner_country = {}
+    for kind, name, de_bus, de_side, foreign_bus, foreign_country in _cross_border_branches(n):
+        pnl = n.lines_t if kind == "Line" else n.links_t
+        if name not in pnl.p0.columns:
+            continue
+        flow_into_de = -(pnl.p0[name] if de_side == 0 else pnl.p1[name])
+        key = (de_bus, foreign_bus)
+        into_de[key] = into_de[key].add(flow_into_de, fill_value=0.0)
+        partner_country[key] = foreign_country
+    return into_de, partner_country, w
+
+
+def _split_import_export(flow_into_de, w):
+    """``(gross_import, gross_export, net_import)`` in TWh from a signed power
+    [MW] Series: the positive part is import into DE, the negative part export,
+    weighted by ``w`` [h]. The split happens *after* parallel flows are netted,
+    so simultaneous opposite flows on parallel lines cancel first.
+    """
+    gross_import = (w * flow_into_de.clip(lower=0)).sum() / 1e6
+    gross_export = (w * (-flow_into_de).clip(lower=0)).sum() / 1e6
+    return gross_import, gross_export, gross_import - gross_export
+
+
+def compute_cross_border_flows(n, level="region"):
+    """Yearly gross import / gross export / net import of electricity across the
+    German border. ``level="region"`` gives one row per (German border region,
+    neighbouring country) pair; ``level="country"`` aggregates all German
+    regions into one row per neighbouring country. Returns a DataFrame in TWh.
+    """
+    if level not in ("region", "country"):
+        raise ValueError(f"unknown level {level!r}")
+
+    into_de, partner_country, w = _cross_border_into_de_series(n)
+
+    grouped = defaultdict(lambda: pd.Series(0.0, index=n.snapshots))
+    for key, s in into_de.items():
+        de_bus, _ = key
+        home = "DE" if level == "country" else de_bus
+        gkey = (home, partner_country[key])
+        grouped[gkey] = grouped[gkey].add(s, fill_value=0.0)
+
+    rows = []
+    for (home, country), s in grouped.items():
+        gi, ge, net = _split_import_export(s, w)
+        rows.append(
+            {
+                "de_region": home,
+                "partner_country": country,
+                "gross_import": gi,
+                "gross_export": ge,
+                "net_import": net,
+            }
+        )
+    df = pd.DataFrame(
+        rows,
+        columns=["de_region", "partner_country", "gross_import", "gross_export", "net_import"],
+    )
+    return df.sort_values(["de_region", "partner_country"]).reset_index(drop=True)
+
+
+def plot_cross_border_electricity(n, scenario, year, output_dir, level="region"):
+    """Bar chart of cross-border electricity exchange - gross import, gross
+    export and net import for every German border region <-> neighbouring
+    country pair (``level="region"``) or per neighbouring country
+    (``level="country"``), parallel lines aggregated (see
+    ``compute_cross_border_flows``), plus a "DE total" group. Writes
+    ``cross_border_electricity_by_<level>_<scenario>_<year>.png`` and a ``.csv``.
+    """
+    suffix = "by_country" if level == "country" else "by_region"
+    df = compute_cross_border_flows(n, level=level)
+    if df.empty:
+        logger.warning(
+            f"No cross-border AC/DC branches for {scenario} {year}; "
+            "skipping cross-border electricity plot."
+        )
+        return None
+
+    out_csv = Path(output_dir) / f"cross_border_electricity_{suffix}_{scenario}_{year}.csv"
+    df.to_csv(out_csv, index=False)
+
+    country_level = (df.de_region == "DE").all()
+    tick_labels = (
+        df.partner_country.tolist()
+        if country_level
+        else (df.de_region + "  ↔  " + df.partner_country).tolist()
+    )
+
+    series = [
+        ("gross_import", "Gross import", "#2c7fb8", +1),
+        ("gross_export", "Gross export", "#d95f0e", -1),
+        ("net_import", "Net import", "#31a354", +1),
+    ]
+    bw = 0.27
+
+    # Two panels sharing the same style but independent y-axes: the DE-wide
+    # total is an order of magnitude larger than any single region-pair and
+    # would flatten them on a shared axis.
+    fig, (ax, ax_tot) = plt.subplots(
+        1, 2, figsize=(max(11, 0.7 * len(df) + 4), 6),
+        gridspec_kw={"width_ratios": [max(len(df), 4), 2.2], "wspace": 0.05},
+        layout="constrained",
+    )
+
+    def _bars(axis, frame, centers):
+        for (col, label, color, sign), off in zip(series, (-bw, 0.0, bw)):
+            vals = sign * frame[col].to_numpy()
+            axis.bar(centers + off, vals, bw, label=label, color=color)
+            for xi, v in zip(centers + off, vals):
+                if abs(v) > 1e-6:
+                    axis.annotate(
+                        f"{v:+.1f}", (xi, v), textcoords="offset points",
+                        xytext=(0, 3 if v >= 0 else -11), ha="center", fontsize=6,
+                    )
+
+    x = np.arange(len(df))
+    _bars(ax, df, x)
+    ax.axhline(0, color="black", linewidth=0.8)
+    ax.set_xticks(x)
+    ax.set_xticklabels(tick_labels, rotation=45, ha="right", fontsize=8)
+    ax.set_ylabel("Electricity [TWh/a]")
+    ax.grid(True, axis="y", alpha=0.3)
+    ax.legend(loc="upper left")
+
+    totals = df[["gross_import", "gross_export", "net_import"]].sum().to_frame().T
+    _bars(ax_tot, totals, np.array([0.0]))
+    ax_tot.axhline(0, color="black", linewidth=0.8)
+    ax_tot.set_xticks([0.0])
+    ax_tot.set_xticklabels(["DE total"], rotation=45, ha="right", fontsize=8)
+    ax_tot.grid(True, axis="y", alpha=0.3)
+    ax_tot.yaxis.tick_right()
+
+    grain = "neighbouring country" if country_level else "German border region"
+    fig.suptitle(
+        f"Cross-border electricity exchange - {scenario} {year}\n"
+        f"(gross import / gross export / net import, per {grain})"
+    )
+
+    out_png = Path(output_dir) / f"cross_border_electricity_{suffix}_{scenario}_{year}.png"
+    fig.savefig(out_png, dpi=200, bbox_inches="tight")
+    plt.close(fig)
+    logger.info(f"Saved plot: {out_png}")
+    return df
+
+
+def plot_cross_border_electricity_map(n, scenario, year, output_dir, regions=None):
+    """Map of the German cross-border interconnectors with the yearly exchange
+    written directly on each connection. One line per (German region,
+    neighbouring region) pair (parallel Lines/Links aggregated); line width
+    scales with the gross exchange, colour marks the net direction (green = net
+    import into DE, red = net export), and the midpoint label shows
+    ``net  (imp / exp)`` in TWh. Writes
+    ``cross_border_electricity_map_<scenario>_<year>.png``.
+    """
+    import cartopy.feature as cfeature
+
+    into_de, partner_country, w = _cross_border_into_de_series(n)
+    if not into_de:
+        logger.warning(
+            f"No cross-border AC/DC branches for {scenario} {year}; "
+            "skipping cross-border electricity map."
+        )
+        return None
+
+    recs = []
+    for (de_bus, foreign_bus), s in into_de.items():
+        gi, ge, net = _split_import_export(s, w)
+        recs.append(
+            {
+                "de_bus": de_bus,
+                "foreign_bus": foreign_bus,
+                "partner_country": partner_country[(de_bus, foreign_bus)],
+                "gross_import": gi,
+                "gross_export": ge,
+                "net_import": net,
+            }
+        )
+    rec_df = pd.DataFrame(recs)
+
+    xs = [n.buses.at[b, "x"] for b in pd.unique(rec_df[["de_bus", "foreign_bus"]].values.ravel())]
+    ys = [n.buses.at[b, "y"] for b in pd.unique(rec_df[["de_bus", "foreign_bus"]].values.ravel())]
+    extent = [min(xs) - 2.5, max(xs) + 2.5, min(ys) - 1.5, max(ys) + 1.5]
+
+    proj = ccrs.EqualEarth()
+    fig, ax = plt.subplots(figsize=(12, 13), subplot_kw={"projection": proj})
+    ax.add_feature(cfeature.OCEAN, facecolor="#d5e6f0", zorder=0)
+    ax.add_feature(cfeature.LAND, facecolor="#f7f4ee", zorder=0)
+    if regions is not None:
+        de = regions[regions.index.str.contains("DE")]
+        de.to_crs(epsg=4326).plot(
+            ax=ax, transform=ccrs.PlateCarree(), facecolor="#eae6da",
+            edgecolor="white", linewidth=0.5, zorder=0.5,
+        )
+    ax.add_feature(cfeature.BORDERS, linewidth=0.4, edgecolor="gray", zorder=1)
+    ax.coastlines(resolution="50m", linewidth=0.3, color="gray", zorder=1)
+    ax.set_extent(extent, crs=ccrs.PlateCarree())
+
+    max_gross = max((r["gross_import"] + r["gross_export"] for r in recs), default=1.0) or 1.0
+
+    # Connections that share a foreign country run close together (two DE<->AT,
+    # three DE<->FR, ...); spread their labels both along the line and
+    # perpendicular to it so the text boxes don't pile up.
+    by_country = defaultdict(list)
+    for i, r in enumerate(recs):
+        by_country[r["partner_country"]].append(i)
+    place = {}
+    for idxs in by_country.values():
+        k = len(idxs)
+        for j, i in enumerate(idxs):
+            centered = j - (k - 1) / 2
+            place[i] = (0.5 + 0.05 * centered, 1.3 * centered)  # (fraction, perp offset °)
+
+    for i, r in enumerate(recs):
+        x0, y0 = n.buses.at[r["de_bus"], "x"], n.buses.at[r["de_bus"], "y"]
+        x1, y1 = n.buses.at[r["foreign_bus"], "x"], n.buses.at[r["foreign_bus"], "y"]
+        net = r["net_import"]
+        color = "#31a354" if net >= 0 else "#d62728"
+        lw = 1.0 + 7.0 * (r["gross_import"] + r["gross_export"]) / max_gross
+        ax.plot(
+            [x0, x1], [y0, y1], transform=ccrs.PlateCarree(), color=color,
+            linewidth=lw, alpha=0.6, zorder=2, solid_capstyle="round",
+        )
+        frac, perp = place[i]
+        dx, dy = x1 - x0, y1 - y0
+        norm = np.hypot(dx, dy) or 1.0
+        lx = x0 + frac * dx - dy / norm * perp
+        ly = y0 + frac * dy + dx / norm * perp
+        text = f"net {net:+.1f}\n▲{r['gross_import']:.1f}  ▼{r['gross_export']:.1f}"
+        ax.text(
+            lx, ly, text, transform=ccrs.PlateCarree(), fontsize=6.5,
+            ha="center", va="center", zorder=4, linespacing=1.2,
+            bbox=dict(boxstyle="round,pad=0.15", facecolor="white", alpha=0.82,
+                      edgecolor=color, linewidth=0.6),
+        )
+
+    de_pts = rec_df["de_bus"].unique()
+    fr_pts = rec_df["foreign_bus"].unique()
+    ax.scatter(
+        [n.buses.at[b, "x"] for b in de_pts], [n.buses.at[b, "y"] for b in de_pts],
+        transform=ccrs.PlateCarree(), s=18, color="black", zorder=3,
+    )
+    ax.scatter(
+        [n.buses.at[b, "x"] for b in fr_pts], [n.buses.at[b, "y"] for b in fr_pts],
+        transform=ccrs.PlateCarree(), s=18, color="#555555", zorder=3,
+    )
+    for b in fr_pts:
+        ax.text(
+            n.buses.at[b, "x"] + 0.55, n.buses.at[b, "y"] + 0.55,
+            n.buses.at[b, "country"], transform=ccrs.PlateCarree(),
+            fontsize=10, fontweight="bold", ha="left", va="bottom", zorder=5,
+            path_effects=[pe.withStroke(linewidth=2.5, foreground="white")],
+        )
+
+    total_net = rec_df["net_import"].sum()
+    total_gi = rec_df["gross_import"].sum()
+    total_ge = rec_df["gross_export"].sum()
+    handles = [
+        plt.Line2D([0], [0], color="#31a354", lw=3, label="net import into DE"),
+        plt.Line2D([0], [0], color="#d62728", lw=3, label="net export from DE"),
+    ]
+    ax.legend(handles=handles, loc="upper left", fontsize=9, framealpha=0.9)
+    ax.set_title(
+        f"Cross-border electricity exchange - {scenario} {year}\n"
+        "line label: net exchange  /  ▲ gross import into DE  ▼ gross export from DE [TWh/a]\n"
+        f"DE totals: ▲{total_gi:.1f}  ▼{total_ge:.1f}  net {total_net:+.1f} TWh"
+    )
+
+    out_png = Path(output_dir) / f"cross_border_electricity_map_{scenario}_{year}.png"
+    fig.savefig(out_png, dpi=200, bbox_inches="tight")
+    plt.close(fig)
+    logger.info(f"Saved plot: {out_png}")
+    return rec_df
+
+
 def plot_balance(nb, title="title", tech_colors=None, save_path=None):
     import matplotlib.colors as mcolors
 
@@ -1279,6 +1588,23 @@ if __name__ == "__main__":
         except Exception:
             logger.exception(
                 f"Branch loading plots failed for {scenario} {year}; continuing."
+            )
+
+    ### Cross-border electricity exchange (gross/net import/export) ###
+    for year in planning_horizons:
+        try:
+            plot_cross_border_electricity(
+                networks[year], scenario, year, PLOT_DIR, level="region"
+            )
+            plot_cross_border_electricity(
+                networks[year], scenario, year, PLOT_DIR, level="country"
+            )
+            plot_cross_border_electricity_map(
+                networks[year], scenario, year, PLOT_DIR, regions=onshore_regions
+            )
+        except Exception:
+            logger.exception(
+                f"Cross-border electricity plot failed for {scenario} {year}; continuing."
             )
 
     for year in planning_horizons:

@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 202600903-stoch-2035-49cl-365h-2025exogenVS2035exogen
+  prefix: 202600907-stoch-2035-49cl-365h-2025exogenVS2035exogen-trade+capa-freeze
   name:
   # - ExPol
   - KN2045_Mix
@@ -726,6 +726,8 @@ scale_capacity:
 stochastic_grid_scenarios:
   enable: true
   planning_horizons: [2035]
+  freeze_out_de_capas: true
+  freeze_trade: ["AC", "DC", "H2"] # , "methanol", "gas", "renewable gas", "oil", "renewable oil"
   scenarios:
     2025_exogen:
       probability: 0.5
