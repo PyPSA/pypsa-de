@@ -551,6 +551,7 @@ rule plot_grid_scenario_comparison:
     threads: 1
     resources:
         mem_mb=32000,
+        runtime=480,  
     params:
         network_ids=lambda w: _comparison_network_ids(w),
         plotting=config_provider("plotting"),

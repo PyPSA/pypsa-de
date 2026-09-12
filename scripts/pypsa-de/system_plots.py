@@ -251,6 +251,33 @@ def calculate_storage_capacity(n, scenario, year, region="DE", save_plot=True, p
     return result
 
 
+# Coastline/border/ocean geometries projected to the map CRS once and reused
+# across every subplot. Added natively per axis, cartopy reprojects the global
+# OCEAN polygon on each draw; depending on the cartopy version its internal
+# cache may not persist across figures, so an LT diff-map run (~150 subplots)
+# can reproject it ~150 times - minutes to hours. Projecting once here is
+# cache-independent. Keyed by projection type (all callers share one extent).
+_basemap_cache = {}
+
+
+def _add_basemap(ax, display_projection):
+    """Draw the projected borders/coastline/ocean background on ``ax``."""
+    key = type(display_projection).__name__
+    if key not in _basemap_cache:
+        specs = [
+            (cartopy.feature.BORDERS, dict(facecolor="none", edgecolor="black", linewidth=0.5)),
+            (cartopy.feature.COASTLINE, dict(facecolor="none", edgecolor="black", linewidth=0.5)),
+            (cartopy.feature.OCEAN, dict(facecolor="azure", edgecolor="azure")),
+        ]
+        _basemap_cache[key] = [
+            ([display_projection.project_geometry(g, ccrs.PlateCarree()) for g in feat.geometries()], style)
+            for feat, style in specs
+        ]
+    ax.set_facecolor("white")
+    for geoms, style in _basemap_cache[key]:
+        ax.add_geometries(geoms, crs=display_projection, **style)
+
+
 def plot_storage_map(
     network,
     technologies,
@@ -342,10 +369,7 @@ def plot_storage_map(
         vmin, vmax = df[tech].min(), df[tech].max()
 
         # Background
-        ax.add_feature(cartopy.feature.BORDERS, edgecolor="black", linewidth=0.5)
-        ax.coastlines(edgecolor="black", linewidth=0.5)
-        ax.set_facecolor("white")
-        ax.add_feature(cartopy.feature.OCEAN, color="azure")
+        _add_basemap(ax, display_projection)
         ax.set_title(f"{tech}\nTotal: {total_capacity:.1f} GWh", fontsize=10, pad=15)
 
         # Plot
@@ -469,10 +493,7 @@ def plot_group_capacity_maps(
 
         vmin, vmax = df[tech_label].min(), df[tech_label].max()
 
-        ax.add_feature(cartopy.feature.BORDERS, edgecolor="black", linewidth=0.5)
-        ax.coastlines(edgecolor="black", linewidth=0.5)
-        ax.set_facecolor("white")
-        ax.add_feature(cartopy.feature.OCEAN, color="azure")
+        _add_basemap(ax, display_projection)
         ax.set_title(f"{tech_label}\nTotal: {total:.1f} GW", fontsize=10, pad=15)
 
         df_plot_crs = df.to_crs(display_projection.proj4_init)
@@ -645,10 +666,7 @@ def plot_group_capacity_diff_maps(
         vabs = max(df[tech_label].abs().max(), 0.05)
         vmin, vmax = -vabs, vabs
 
-        ax.add_feature(cartopy.feature.BORDERS, edgecolor="black", linewidth=0.5)
-        ax.coastlines(edgecolor="black", linewidth=0.5)
-        ax.set_facecolor("white")
-        ax.add_feature(cartopy.feature.OCEAN, color="azure")
+        _add_basemap(ax, display_projection)
         ax.set_title(f"{tech_label}\nTotal Δ: {total:+.1f} {unit}", fontsize=10, pad=15)
 
         df_plot_crs = df.to_crs(display_projection.proj4_init)
