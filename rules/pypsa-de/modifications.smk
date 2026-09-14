@@ -34,7 +34,6 @@ rule build_exogenous_mobility_data:
         reference_scenario=config_provider("pypsa-de", "reference_scenario"),
         planning_horizons=config_provider("scenario", "planning_horizons"),
         leitmodelle=config_provider("pypsa-de", "leitmodelle"),
-        ageb_for_mobility=config_provider("pypsa-de", "ageb_for_mobility"),
         uba_for_mobility=config_provider("pypsa-de", "uba_for_mobility"),
         shipping_oil_share=config_provider("sector", "shipping_oil_share"),
         aviation_demand_factor=config_provider("sector", "aviation_demand_factor"),
@@ -200,6 +199,9 @@ rule modify_prenetwork:
         industrial_demand=resources(
             "industrial_energy_demand_base_s_{clusters}_{planning_horizons}.csv"
         ),
+        industrial_demand_2025=resources(
+            "industrial_energy_demand_base_s_{clusters}_2025.csv"
+        ),
         industrial_production_per_country_tomorrow=resources(
             "industrial_production_per_country_tomorrow_{planning_horizons}-modified.csv"
         ),
@@ -259,6 +261,13 @@ rule modify_prenetwork:
         ),
         limit_cross_border_flows_ac=config_provider(
             "pypsa-de", "limit_cross_border_flows_ac"
+        ),
+        space_heat_DE_factor=config_provider("pypsa-de", "reduce_space_heat_DE_factor"),
+        space_heat_EU_factor=config_provider(
+            "sector", "reduce_space_heat_exogenously_factor"
+        ),
+        deactivate_early_transmission_expansion=config_provider(
+            "pypsa-de", "deactivate_early_transmission_expansion"
         ),
     script:
         scripts("pypsa-de/modify_prenetwork.py")

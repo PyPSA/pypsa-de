@@ -1,4 +1,14 @@
 # Changelog
+- the scenarios-2026 PR (https://github.com/PyPSA/pypsa-de/pull/174/) integrated the most recent state of the upstream repo pypsa-eur and importantly changed the following things:
+  - added dedicated biogas CHPs and refactored add_existing_baseyear accordingly
+  - pinned powerplantmatching to an old version because of problems with missing nuclear PPs
+  - recalibrated wind and solar costs and full load hours 
+  - updated FE demands
+  - restricted the models freedom in 2030 and oriented it towards the UBA projection
+  - improved the yearly co2 budgets
+  - switched to a higher discount rate for decentral assets
+  - improved capital cost assumptions in decentral heating
+  - various minor fixes and config improvements
 - Switched to new secant based transmission losses from pypsa 1.1
 - Switched to weather year 2013
 - in 2030 use UBA data for industry and mobility

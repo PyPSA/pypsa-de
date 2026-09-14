@@ -33,6 +33,14 @@ def clean_data(combustion, biomass, geodata):
         columns={"NameStromerzeugungseinheit": "NameKraftwerk"}, inplace=True
     )
     biomass["Einsatzort"] = ""
+    biomass["Biomasseart"] = biomass["Biomasseart"].replace(
+        {
+            "Feste Biomasse": "Biomasse",
+            "Gasförmige Biomasse": "Biogas",
+            "Flüssige Biomasse": "Biogas",
+        }
+    )
+    biomass["Energietraeger"] = biomass["Biomasseart"]
 
     data = pd.concat([biomass, combustion], join="inner", ignore_index=True)
 
@@ -94,7 +102,6 @@ def clean_data(combustion, biomass, geodata):
         "Steinkohle": "Coal",
         "Braunkohle": "Lignite",
         "andere Gase": "Natural Gas",
-        "nicht biogenere Abfälle": "Waste",
         "nicht biogener Abfall": "Waste",
         "Wärme": "Other",
         "Biomasse": "Bioenergy",
@@ -266,7 +273,7 @@ if __name__ == "__main__":
         snakemake = mock_snakemake(
             "build_existing_chp_de",
             clusters=27,
-            run="KN2045_Mix",
+            run="KN2045_Bal_v5",
         )
 
     configure_logging(snakemake)

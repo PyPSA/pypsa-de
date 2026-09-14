@@ -34,8 +34,8 @@ if __name__ == "__main__":
             opts="",
             ll="vopt",
             sector_opts="None",
-            run="KN2045_Mix",
-            planning_horizons=2020,
+            run="KN2045_Bal_v5",
+            planning_horizons=2025,
         )
 
     configure_logging(snakemake)

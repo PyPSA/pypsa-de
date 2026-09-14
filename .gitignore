@@ -32,6 +32,7 @@ gurobi.log
 /tmp
 doc/_build
 _build
+/site
 
 /scripts/old
 /scripts/create_scenarios.py
@@ -102,6 +103,11 @@ CLAUDE.md
 .claude/
 .github/copilot-instructions.md
 CLAUDE.local.md
+# generated DAGs for docs
+doc/img/dag_*.svg
+doc/img/workflow.svg
+doc/img/intro-workflow.svg
+
 # pixi environments
 .pixi/*
 !.pixi/config.toml
