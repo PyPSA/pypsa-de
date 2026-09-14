@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20260908_limit_bio
+  prefix: 20260914_one-node-per-country-prices
   name:
   - KN2045_Mix
   scenarios:
@@ -64,7 +64,7 @@ foresight: myopic
 # Wildcard docs in https://pypsa-eur.readthedocs.io/en/latest/wildcards.html
 scenario:
   clusters:
-  - 27 #current options: 27, 49
+  - adm #current options: 27, 49
   opts:
   - ''
   sector_opts:
@@ -195,9 +195,9 @@ lines:
     cutout: europe-2013-sarah3-era5
 
 clustering:
-  # mode: administrative
-  # administrative:
-  #   level: 0
+  mode: administrative
+  administrative:
+    level: 0
   #   DE: 2
   # Code snippet for editing focus_weights
   # fw = pd.Series(snakemake.config["clustering"]["focus_weights"])
