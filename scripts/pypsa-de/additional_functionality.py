@@ -179,6 +179,8 @@ def add_production_limits(n, investment_year, limits_production, sense="maximum"
         "limits_production only supports Link components"
     )
 
+    links = scenario_slice(n.links)
+
     for carrier in limits_production["Link"]:
         for ct in limits_production["Link"][carrier]:
             if investment_year not in limits_production["Link"][carrier][ct].keys():
@@ -189,23 +191,26 @@ def add_production_limits(n, investment_year, limits_production, sense="maximum"
                 f"Adding constraint on {'Link'} {carrier} production in {ct} to be {sense} {limit} MWh/a"
             )
 
-            valid_components = (n.links.index.str[:2] == ct) & (
-                n.links.carrier == carrier
+            valid_components = (links.index.str[:2] == ct) & (
+                links.carrier == carrier
             )
-            efficiency = n.links.loc[valid_components, "efficiency"]
-            lhs = (
+            efficiency = links.loc[valid_components, "efficiency"]
+            lhs = sum_excl_scenario(
                 n.model["Link-p"].loc[:, efficiency.index]
                 * n.snapshot_weightings.generators
                 * efficiency
-            ).sum()
+            )
 
             cname = f"production_{sense}-{ct}-Link-{carrier.replace(' ', '-')}"
 
-            if cname in n.global_constraints.index:
+            if cname in component_names(n.global_constraints):
                 logger.warning(
                     f"Global constraint {cname} already exists. Dropping and adding it again."
                 )
-                n.global_constraints.drop(cname, inplace=True)
+                if isinstance(n.global_constraints.index, pd.MultiIndex):
+                    n.global_constraints.drop(cname, level="name", inplace=True)
+                else:
+                    n.global_constraints.drop(cname, inplace=True)
 
             if sense == "maximum":
                 n.model.add_constraints(
@@ -1125,8 +1130,10 @@ def add_decentral_heat_budgets(n, decentral_heat_budgets, investment_year):
         ],
     }
 
+    links = scenario_slice(n.links)
+
     for asset_type, budget_dict in decentral_heat_budgets.items():
-        assets = n.links.index[n.links.carrier.isin(carrier_dict[asset_type])]
+        assets = links.index[links.carrier.isin(carrier_dict[asset_type])]
 
         if assets.empty:
             logger.warning(
@@ -1157,7 +1164,7 @@ def add_decentral_heat_budgets(n, decentral_heat_budgets, investment_year):
 
             lhs = []
 
-            efficiency = n.links.loc[assets, "efficiency"]
+            efficiency = links.loc[assets, "efficiency"]
 
             factor = 1
             if asset_type == "heat_pump":
@@ -1166,20 +1173,23 @@ def add_decentral_heat_budgets(n, decentral_heat_budgets, investment_year):
                 factor = -1 * efficiency
 
             lhs.append(
-                (
+                sum_excl_scenario(
                     factor
                     * n.model["Link-p"].loc[:, assets]
                     * n.snapshot_weightings.generators
-                ).sum()
+                )
             )
 
             lhs = sum(lhs)
             cname = f"decentral_{asset_type}_limit-{ct}"
-            if cname in n.global_constraints.index:
+            if cname in component_names(n.global_constraints):
                 logger.warning(
                     f"Global constraint {cname} already exists. Dropping and adding it again."
                 )
-                n.global_constraints.drop(cname, inplace=True)
+                if isinstance(n.global_constraints.index, pd.MultiIndex):
+                    n.global_constraints.drop(cname, level="name", inplace=True)
+                else:
+                    n.global_constraints.drop(cname, inplace=True)
 
             n.model.add_constraints(
                 lhs <= limit,

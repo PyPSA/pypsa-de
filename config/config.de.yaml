@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20260908_limit_bio
+  prefix: 20260921_merge_main_test-49cl-365h-2025EXO-vs-2035EXO-50-50
   name:
   - KN2045_Mix
   scenarios:
@@ -747,25 +747,10 @@ scale_capacity:
   # simultaneously sets p_nom_extendable to False
   2025:
     DE:
-      OCGT: 200  # at the moment there are way too little OCGT in ppm, this has to be fixed there. I am using this scaling function only to set extendable fals.
+      OCGT: 200  # at the moment there are way too little OCGT in ppm, this has to be fixed there. I am using this scaling function only to set extendable false
       CCGT: 10000
       "urban central gas CHP": 21000
-
-stochastic_grid_scenarios:
-  enable: true
-  planning_horizons: [2035]
-  freeze_out_de_capas: true
-  freeze_trade: ["AC", "DC", "H2"] # , "methanol", "gas", "renewable gas", "oil", "renewable oil"
-  scenarios:
-    2025_exogen:
-      probability: 0.5
-      links: data/pypsa-de/grid_scenarios/links_2025_exogen_de+inter_{clusters}cl.csv
-      lines: data/pypsa-de/grid_scenarios/lines_2025_exogen_de+inter_{clusters}cl.csv
-    2035_exogen:
-      probability: 0.5
-      links: data/pypsa-de/grid_scenarios/links_2035_exogen_de+inter_{clusters}cl.csv
-      lines: data/pypsa-de/grid_scenarios/lines_2035_exogen_de+inter_{clusters}cl.csv
-         "urban central gas CHP CC": 0
+      "urban central gas CHP CC": 0
 
 data:
   ariadne_database:
@@ -789,3 +774,21 @@ data:
   powerplants:
     source: primary
     version: latest
+    
+
+stochastic_grid_scenarios:
+  enable: true
+  planning_horizons: [2035]
+  freeze_out_de_capas: true
+  freeze_trade: ["AC", "DC", "H2"] # , "methanol", "gas", "renewable gas", "oil", "renewable oil"
+  # CSVs are auto-generated per run from the current topology by
+  # build_grid_scenario_csvs (name = <year>_<exogen|optimal>); set explicit
+  # `links:`/`lines:` paths on a scenario to override with a hand-made file.
+  scope: de_and_interconnectors
+  scenarios:
+    2025_exogen:
+      probability: 0.5
+    2035_exogen:
+      probability: 0.5
+
+

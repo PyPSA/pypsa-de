@@ -5799,24 +5799,26 @@ if __name__ == "__main__":
         # apply_pathway_hacks above), so skipped for those.
         ac_startnetz = 14.5 / 5 / EUR20TOEUR23  # billion EUR
 
-    ac_projects_invest = df.query(
-        "Variable == 'Investment|Energy Supply|Electricity|Transmission|AC|NEP|Onshore'"
-    )[planning_horizons].values.sum()
-    available_years = [y for y in planning_horizons if y in [2025, 2030, 2035, 2040]]
-    df.loc[
-        df.query(
-            "Variable == 'Investment|Energy Supply|Electricity|Transmission|AC|Übernahme|Startnetz Delta'"
-        ).index,
-        available_years,
-    ] += (ac_startnetz - ac_projects_invest) / 4
-
-    for suffix in ["|AC|NEP", "|AC", "", " and Distribution"]:
+        ac_projects_invest = df.query(
+            "Variable == 'Investment|Energy Supply|Electricity|Transmission|AC|NEP|Onshore'"
+        )[planning_horizons].values.sum()
+        available_years = [
+            y for y in planning_horizons if y in [2025, 2030, 2035, 2040]
+        ]
         df.loc[
             df.query(
-                f"Variable == 'Investment|Energy Supply|Electricity|Transmission{suffix}'"
+                "Variable == 'Investment|Energy Supply|Electricity|Transmission|AC|Übernahme|Startnetz Delta'"
             ).index,
             available_years,
         ] += (ac_startnetz - ac_projects_invest) / 4
+
+        for suffix in ["|AC|NEP", "|AC", "", " and Distribution"]:
+            df.loc[
+                df.query(
+                    f"Variable == 'Investment|Energy Supply|Electricity|Transmission{suffix}'"
+                ).index,
+                available_years,
+            ] += (ac_startnetz - ac_projects_invest) / 4
 
     logger.info("Assigning mean investments of year and year + 5 to year.")
     investment_rows = df.loc[df["Variable"].str.contains("Investment")]

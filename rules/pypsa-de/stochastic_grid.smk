@@ -14,6 +14,14 @@ _sgs = config.get("stochastic_grid_scenarios", {})
 GRID_SCENARIO_NAMES = list(_sgs.get("scenarios", {}).keys())
 GRID_SCENARIO_VALUES = GRID_SCENARIO_NAMES + ["eev", "stochastic"]
 
+# First myopic-pathway horizon - the pristine, never-solved prenetwork used as
+# the "grid stays put" baseline when auto-generating `*_exogen` scenario CSVs.
+_GRID_FIRST_HORIZON = (
+    str(min(config["scenario"]["planning_horizons"]))
+    if config.get("scenario", {}).get("planning_horizons")
+    else None
+)
+
 
 # "topology-stochastic" itself is excluded: it's the actual two-stage
 # stochastic solve, kept on PyPSA's native scenario dimension (MultiIndex
@@ -129,24 +137,82 @@ def _grid_prenetwork_path(clusters, opts, sector_opts, network_id, fallback_year
     )
 
 
-def _scenario_csv_paths(wildcards, names):
-    cfg = config["stochastic_grid_scenarios"]["scenarios"]
-    paths = []
-    for name in names:
-        for key in ("links", "lines"):
-            path = cfg.get(name, {}).get(key)
-            if path:
-                paths.append(path.format(clusters=wildcards.clusters))
-    return paths
+def _grid_scenario_generated_csv(wildcards, name, key):
+    """Per-run resources path of an auto-generated scenario CSV (see
+    build_grid_scenario_csvs). Used whenever a scenario has no explicit CSV
+    path in config, so overrides are re-derived from the current topology
+    instead of a hand-maintained file that goes stale on reclustering."""
+    template = resources(
+        "grid_scenarios/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_"
+        + f"{name}_{key}.csv"
+    )
+    path = (
+        template.replace("{clusters}", wildcards.clusters)
+        .replace("{opts}", wildcards.opts)
+        .replace("{sector_opts}", wildcards.sector_opts)
+        .replace("{planning_horizons}", wildcards.planning_horizons)
+    )
+    # resources() leaves the {run} scenario wildcard for snakemake to expand,
+    # which it does for input strings but not inside the nested params dict this
+    # feeds (params.scenario_csvs in build_grid_topology), so resolve it here.
+    return path.replace("{run}", wildcards.run) if "{run}" in path else path
 
 
-def get_grid_scenario_csvs(wildcards):
+def _grid_scenario_csv_map(wildcards):
+    """{scenario: {'links': path, 'lines': path}} for the scenarios this
+    build_grid_topology instance needs. Explicit config paths win (manual
+    override); otherwise the auto-generated per-run resources path is used."""
     names = (
         [wildcards.grid_scenario]
         if wildcards.grid_scenario in GRID_SCENARIO_NAMES
         else GRID_SCENARIO_NAMES
     )
-    return _scenario_csv_paths(wildcards, names)
+    cfg = config["stochastic_grid_scenarios"]["scenarios"]
+    result = {}
+    for name in names:
+        entry = {}
+        for key in ("links", "lines"):
+            explicit = cfg.get(name, {}).get(key)
+            entry[key] = (
+                explicit.format(clusters=wildcards.clusters)
+                if explicit
+                else _grid_scenario_generated_csv(wildcards, name, key)
+            )
+        result[name] = entry
+    return result
+
+
+def get_grid_scenario_csvs(wildcards):
+    return [p for entry in _grid_scenario_csv_map(wildcards).values() for p in entry.values()]
+
+
+def _grid_scenario_csv_source_networks(wildcards):
+    """Networks build_grid_scenario_csvs reads: the canvas (target-year
+    prenetwork the CSV is applied to) plus either the pristine first-horizon
+    prenetwork (kind 'exogen') or the solved postnetwork of the scenario's own
+    year (kind 'optimal')."""
+    year, kind = wildcards.grid_scenario.rsplit("_", 1)
+    ins = {
+        "canvas": resources(
+            "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_final.nc"
+        )
+    }
+    if kind == "optimal":
+        ins["solved"] = (
+            RESULTS
+            + f"networks/base_s_{wildcards.clusters}_{wildcards.opts}_{wildcards.sector_opts}_{year}.nc"
+        )
+    else:
+        ins["pristine"] = (
+            resources(
+                "networks/base_s_{clusters}_{opts}_{sector_opts}_"
+                + f"{_GRID_FIRST_HORIZON}_final.nc"
+            )
+            .replace("{clusters}", wildcards.clusters)
+            .replace("{opts}", wildcards.opts)
+            .replace("{sector_opts}", wildcards.sector_opts)
+        )
+    return ins
 
 
 def _freeze_out_de_optimal_network(wildcards):
@@ -228,6 +294,33 @@ def evaluate_grid_portfolio_solving(wildcards):
     return solving
 
 
+rule build_grid_scenario_csvs:
+    input:
+        unpack(_grid_scenario_csv_source_networks),
+    output:
+        lines=resources(
+            "grid_scenarios/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_{grid_scenario}_lines.csv"
+        ),
+        links=resources(
+            "grid_scenarios/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_{grid_scenario}_links.csv"
+        ),
+    log:
+        logs(
+            "build_grid_scenario_csvs_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_{grid_scenario}.log"
+        ),
+    threads: 1
+    resources:
+        mem_mb=4000,
+    params:
+        scope=config_provider(
+            "stochastic_grid_scenarios", "scope", default="de_and_interconnectors"
+        ),
+    message:
+        "Generating grid-scenario CSVs for '{wildcards.grid_scenario}' at {wildcards.clusters} clusters, {wildcards.planning_horizons} planning horizon"
+    script:
+        scripts("pypsa-de/build_grid_scenario_csvs.py")
+
+
 rule build_grid_topology:
     input:
         network=resources(
@@ -254,6 +347,7 @@ rule build_grid_topology:
             "stochastic_grid_scenarios", "freeze_out_de_capas", default=False
         ),
         grid_scenario=lambda w: w.grid_scenario,
+        scenario_csvs=_grid_scenario_csv_map,
     message:
         "Building grid-topology variant '{wildcards.grid_scenario}' for {wildcards.clusters} clusters, {wildcards.planning_horizons} planning horizon"
     script:
