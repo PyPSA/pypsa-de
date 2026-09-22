@@ -749,7 +749,7 @@ data:
     source: primary
     version: latest
   ariadne_template:
-    source: archive
+    source: primary
     version: latest
   open_mastr:
     source: archive
