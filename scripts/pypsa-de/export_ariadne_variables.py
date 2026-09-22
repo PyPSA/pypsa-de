@@ -1601,9 +1601,9 @@ def get_secondary_energy(n, region, _industry_demand):
     var["Secondary Energy|Electricity|Gas|Natural Gas"] = (
         var["Secondary Energy|Electricity|Gas"] * gas_fractions["Natural Gas"]
     )
-    var["Secondary Energy|Electricity|Gas|Biomass"] = (
-        var["Secondary Energy|Electricity|Gas"] * gas_fractions["Biomass"]
-    )
+    var["Secondary Energy|Electricity|Gas|Biomass"] = var[
+        "Secondary Energy|Electricity|Gas|Biomethane"
+    ] = var["Secondary Energy|Electricity|Gas"] * gas_fractions["Biomass"]
     var["Secondary Energy|Electricity|Gas|Efuel"] = (
         var["Secondary Energy|Electricity|Gas"] * gas_fractions["Efuel"]
     )
