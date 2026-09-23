@@ -1510,6 +1510,56 @@ def deactivate_early_transmission_expansion(n, current_year):
     n.links.loc[n.links.carrier == "DC", "p_nom_extendable"] = False
 
 
+def add_daily_fuel_prices(n, fn, fuels, base_year=2020):
+    """
+    Override fossil supply prices with real daily commodity prices.
+
+    Replaces the constant marginal cost of the fossil supply generators
+    (carrier ``<fuel>`` or ``<fuel> primary``) with the daily price of the
+    network's weather year, mapped onto the snapshots. The prices are read from
+    the precomputed real ``base_year`` EUR column ``<fuel>_real<base_year>``,
+    deflated with the German GDP deflator to match the cost data (see the
+    ``deflate_daily_fuel_prices`` script and ``build_monthly_prices``).
+
+    Parameters
+    ----------
+    n : pypsa.Network
+        Network whose fossil supply generators are modified in-place.
+    fn : str
+        Path to a daily fuel price CSV: a date index, a nominal ``<fuel>``
+        column and a deflated ``<fuel>_real<base_year>`` column per fuel (gas
+        per MWh_LHV, others per MWh_th).
+    fuels : list of str
+        Fuels to override, e.g. ``["gas"]``.
+    base_year : int
+        Reference year of the precomputed deflated price column.
+    """
+    weather_year = n.snapshots[0].year
+
+    raw = pd.read_csv(fn, index_col=0, parse_dates=True)
+    cols = {fuel: f"{fuel}_real{base_year}" for fuel in fuels}
+    if missing := set(cols.values()) - set(raw.columns):
+        raise ValueError(f"{fn} is missing deflated columns {sorted(missing)}.")
+
+    prices = raw[list(cols.values())].rename(columns={v: k for k, v in cols.items()})
+    prices = prices.loc[str(weather_year)].reindex(n.snapshots, method="ffill")
+    if prices.isna().any().any():
+        raise ValueError(
+            f"Daily fuel prices in {fn} do not cover all snapshots of weather year {weather_year}."
+        )
+
+    for fuel in fuels:
+        gens = n.generators.index[n.generators.carrier.isin([fuel, f"{fuel} primary"])]
+        if gens.empty:
+            logger.warning(f"No fossil supply generators found for fuel '{fuel}'.")
+            continue
+        for g in gens:
+            n.generators_t.marginal_cost[g] = prices[fuel].values
+        logger.info(
+            f"Set real {weather_year} daily prices on {len(gens)} '{fuel}' generators."
+        )
+
+
 if __name__ == "__main__":
     if "snakemake" not in globals():
         snakemake = mock_snakemake(
@@ -1619,5 +1669,11 @@ if __name__ == "__main__":
 
     if current_year in snakemake.params.deactivate_early_transmission_expansion:
         deactivate_early_transmission_expansion(n, current_year)
+
+    daily_fuel_prices = snakemake.params.daily_fuel_prices
+    if daily_fuel_prices["enable"] and current_year == daily_fuel_prices["horizon"]:
+        add_daily_fuel_prices(
+            n, snakemake.input.daily_fuel_prices, daily_fuel_prices["fuels"]
+        )
 
     n.export_to_netcdf(snakemake.output.network)

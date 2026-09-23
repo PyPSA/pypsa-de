@@ -35,12 +35,23 @@ if __name__ == "__main__":
         )
         data_years = snapshots.year.unique()
     else:
-        data_years = int(config["energy_totals_year"])
+        data_years = pd.Index([int(config["energy_totals_year"])])
 
     pop_layout = pd.read_csv(snakemake.input.clustered_pop_layout, index_col=0)
 
     totals = pd.read_csv(snakemake.input.energy_totals, index_col=[0, 1])
-    totals = totals.loc[idx[:, data_years], :].groupby("country").mean()
+
+    available = totals.index.get_level_values(1).unique()
+    years = data_years.intersection(available)
+    if years.empty:
+        fallback = available.max()
+        logger.warning(
+            f"Energy totals unavailable for years {list(data_years)}; "
+            f"falling back to nearest available year {fallback}."
+        )
+        years = pd.Index([fallback])
+
+    totals = totals.loc[idx[:, years], :].groupby("country").mean()
 
     nodal_totals = totals.loc[pop_layout.ct].fillna(0.0)
     nodal_totals.index = pop_layout.index

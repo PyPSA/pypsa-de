@@ -4,15 +4,23 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20260914_one-node-per-country-prices
+  prefix: 20260923_one-node-per-country-prices-2025-365h-daily-gas-prices
   name:
-  - KN2045_Mix
+  # - KN2045_Mix_1996
+  # - KN2045_Mix_2010
+  # - KN2045_Mix_2013
+  # - KN2045_Mix_2019
+  # - KN2045_Mix_2020
+  # - KN2045_Mix_2021
+  # - KN2045_Mix_2023
+  # - KN2045_Mix_2024 
+  - KN2045_Mix_2025 
   scenarios:
     enable: true
     manual_file: config/scenarios.manual.yaml
     file: config/scenarios.automated.yaml
   shared_resources:
-    policy: base #stops recalculating
+    policy: false #stops recalculating
     exclude:
     - existing_heating.csv   # specify files which should not be shared between scenarios
     - costs
@@ -23,6 +31,11 @@ run:
   disable_progressbar: true
 
 pypsa-de:
+  daily_fuel_prices: # Override fossil supply prices with real daily commodity prices of the weather year
+    enable: true
+    horizon: 2025  # only apply to the network of this planning horizon
+    fuels:
+    - gas
   leitmodelle: # Model data downloaded from public IIASA database 'ariadne2'
     general: REMIND-EU v1.1
     transport: Aladin v1

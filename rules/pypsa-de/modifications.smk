@@ -216,6 +216,11 @@ rule modify_prenetwork:
         regions_offshore=resources("regions_offshore_base_s_{clusters}.geojson"),
         offshore_connection_points="data/pypsa-de/offshore_connection_points.csv",
         new_industrial_energy_demand="data/pypsa-de/UBA_Projektionsbericht2025_Abbildung31_MWMS.csv",
+        daily_fuel_prices=lambda w: (
+            "data/pypsa-de/daily_fuel_prices.csv"
+            if config_provider("pypsa-de", "daily_fuel_prices", "enable")(w)
+            else []
+        ),
     output:
         network=resources(
             "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_final.nc"
@@ -269,6 +274,7 @@ rule modify_prenetwork:
         deactivate_early_transmission_expansion=config_provider(
             "pypsa-de", "deactivate_early_transmission_expansion"
         ),
+        daily_fuel_prices=config_provider("pypsa-de", "daily_fuel_prices"),
     script:
         scripts("pypsa-de/modify_prenetwork.py")
 
