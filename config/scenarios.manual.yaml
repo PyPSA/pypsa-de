@@ -52,7 +52,7 @@ ExPol:
       potential: 0.1
 
 
-KN2045_Mix_2013:
+Mix_2013:
 # Default scenario, defined in pypsa.de.yaml
 # Ausgewogener Mix an Technologien zur Dekarbonisierung der Sektoren
 # Breites Energieträgerportfolio in der Endenergie (Strom, Wasserstoff, synthetische Kraftstoffe)
@@ -220,8 +220,73 @@ KN2045_NFhoch:
       2045: 0.39
       2050: 0.43
 
+Mix_1996:
+  snapshots:
+    start: "1996-01-01"
+    end: "1997-01-01"
+    inclusive: 'left'
 
-KN2045_Mix_2019:
+  atlite:
+    default_cutout: europe-1996-sarah3-era5
+    cutouts:
+      europe-1996-sarah3-era5:
+        module: [sarah, era5] # in priority order
+        x: [-12., 42.]
+        y: [33., 72]
+        dx: 0.3
+        dy: 0.3
+        time: ['1996', '1996']
+
+  renewable:
+    onwind:
+      cutout: europe-1996-sarah3-era5
+    offwind-ac:
+      cutout: europe-1996-sarah3-era5
+    offwind-dc:
+      cutout: europe-1996-sarah3-era5
+    offwind-float: # disabled at the moment
+      cutout: europe-1996-sarah3-era5
+    solar:
+      cutout: europe-1996-sarah3-era5
+    solar-hsat:
+      cutout: europe-1996-sarah3-era5
+    hydro:
+      cutout: europe-1996-sarah3-era5
+
+Mix_2010:
+  snapshots:
+    start: "2010-01-01"
+    end: "2011-01-01"
+    inclusive: 'left'
+
+  atlite:
+    default_cutout: europe-2010-sarah3-era5
+    cutouts:
+      europe-2010-sarah3-era5:
+        module: [sarah, era5] # in priority order
+        x: [-12., 42.]
+        y: [33., 72]
+        dx: 0.3
+        dy: 0.3
+        time: ['2010', '2010']
+
+  renewable:
+    onwind:
+      cutout: europe-2010-sarah3-era5
+    offwind-ac:
+      cutout: europe-2010-sarah3-era5
+    offwind-dc:
+      cutout: europe-2010-sarah3-era5
+    offwind-float: # disabled at the moment
+      cutout: europe-2010-sarah3-era5
+    solar:
+      cutout: europe-2010-sarah3-era5
+    solar-hsat:
+      cutout: europe-2010-sarah3-era5
+    hydro:
+      cutout: europe-2010-sarah3-era5
+
+Mix_2019:
   snapshots:
     start: "2019-01-01"
     end: "2020-01-01"
@@ -254,7 +319,7 @@ KN2045_Mix_2019:
     hydro:
       cutout: europe-2019-sarah3-era5
 
-KN2045_Mix_2020:
+Mix_2020:
   snapshots:
     start: "2020-01-01"
     end: "2021-01-01"
@@ -287,7 +352,7 @@ KN2045_Mix_2020:
     hydro:
       cutout: europe-2020-sarah3-era5
 
-KN2045_Mix_2021:
+Mix_2021:
   snapshots:
     start: "2021-01-01"
     end: "2022-01-01"
@@ -321,8 +386,7 @@ KN2045_Mix_2021:
       cutout: europe-2021-sarah3-era5
 
 
-
-KN2045_Mix_2023:
+Mix_2023:
   snapshots:
     start: "2023-01-01"
     end: "2024-01-01"
@@ -355,7 +419,7 @@ KN2045_Mix_2023:
     hydro:
       cutout: europe-2023-sarah3-era5
 
-KN2045_Mix_2024:
+Mix_2024:
   snapshots:
     start: "2024-01-01"
     end: "2025-01-01"
@@ -388,7 +452,7 @@ KN2045_Mix_2024:
     hydro:
       cutout: europe-2024-sarah3-era5
 
-KN2045_Mix_2025:
+Mix_2025:
   snapshots:
     start: "2025-01-01"
     end: "2026-01-01"

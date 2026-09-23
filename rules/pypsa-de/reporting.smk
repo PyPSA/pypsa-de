@@ -44,7 +44,7 @@ rule export_ariadne_variables:
     log:
         RESULTS + "logs/export_ariadne_variables.log",
     resources:
-        mem_mb=16000,
+        mem_mb=32000,
     params:
         planning_horizons=config_provider("scenario", "planning_horizons"),
         hours=config_provider("clustering", "temporal", "resolution_sector"),

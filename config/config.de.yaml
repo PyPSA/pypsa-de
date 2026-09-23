@@ -6,15 +6,15 @@
 run:
   prefix: 20260923_one-node-per-country-prices-2025-365h-daily-gas-prices
   name:
-  # - KN2045_Mix_1996
-  # - KN2045_Mix_2010
-  # - KN2045_Mix_2013
-  # - KN2045_Mix_2019
-  # - KN2045_Mix_2020
-  # - KN2045_Mix_2021
-  # - KN2045_Mix_2023
-  # - KN2045_Mix_2024 
-  - KN2045_Mix_2025 
+  # - Mix_1996
+  # - Mix_2010
+  # - Mix_2013
+  # - Mix_2019
+  # - Mix_2020
+  # - Mix_2021
+  # - Mix_2023
+  # - Mix_2024 
+  - Mix_2025 
   scenarios:
     enable: true
     manual_file: config/scenarios.manual.yaml
