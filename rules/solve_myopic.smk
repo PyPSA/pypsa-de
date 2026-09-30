@@ -104,7 +104,7 @@ rule add_brownfield:
         )
     threads: 4
     resources:
-        mem_mb=10000,
+        mem_mb=15000,
     params:
         H2_retrofit=config_provider("sector", "H2_retrofit"),
         H2_retrofit_capacity_per_CH4=config_provider(

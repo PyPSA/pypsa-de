@@ -1,4 +1,5 @@
 # Changelog
+- extend `stochastic_grid_scenarios` names with optional filters `<year>_<kind>[_<carrier>][_<direction>]`: a `carrier` (`AC`/`DC`) delays only that carrier and a `direction` (`NS`/`WE`) delays only north-south / west-east branches, while the rest stay at their fully built-out capacity. Any integer `year` works as a build-year cutoff (not just planning horizons). See `build_grid_scenario_csvs.parse_grid_scenario`.
 - auto-generate the `stochastic_grid_scenarios` `*_exogen` capacity-override CSVs per run from the current topology (new rule `build_grid_scenario_csvs`), instead of maintaining them by hand; this keeps them from going stale when reclustering renumbers AC lines. Scenario CSV paths in the config are now optional (omit to auto-generate, set to override with a hand-made file); a new `stochastic_grid_scenarios: scope` selects the covered branches.
 - the scenarios-2026 PR (https://github.com/PyPSA/pypsa-de/pull/174/) integrated the most recent state of the upstream repo pypsa-eur and importantly changed the following things:
   - added dedicated biogas CHPs and refactored add_existing_baseyear accordingly

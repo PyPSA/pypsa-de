@@ -190,8 +190,10 @@ def _grid_scenario_csv_source_networks(wildcards):
     """Networks build_grid_scenario_csvs reads: the canvas (target-year
     prenetwork the CSV is applied to) plus either the pristine first-horizon
     prenetwork (kind 'exogen') or the solved postnetwork of the scenario's own
-    year (kind 'optimal')."""
-    year, kind = wildcards.grid_scenario.rsplit("_", 1)
+    year (kind 'optimal'). Name is '<year>_<kind>[_<carrier>][_<direction>]';
+    only year and kind pick the source network, so trailing filters are ignored
+    here (see build_grid_scenario_csvs.parse_grid_scenario)."""
+    year, kind = wildcards.grid_scenario.split("_")[:2]
     ins = {
         "canvas": resources(
             "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_final.nc"
@@ -340,7 +342,7 @@ rule build_grid_topology:
         ),
     threads: 1
     resources:
-        mem_mb=4000,
+        mem_mb=16000,
     params:
         stochastic_grid_scenarios=config_provider("stochastic_grid_scenarios"),
         freeze_out_de_capas=config_provider(

@@ -782,13 +782,26 @@ stochastic_grid_scenarios:
   freeze_out_de_capas: true
   freeze_trade: ["AC", "DC", "H2"] # , "methanol", "gas", "renewable gas", "oil", "renewable oil"
   # CSVs are auto-generated per run from the current topology by
-  # build_grid_scenario_csvs (name = <year>_<exogen|optimal>); set explicit
-  # `links:`/`lines:` paths on a scenario to override with a hand-made file.
+  # build_grid_scenario_csvs; set explicit `links:`/`lines:` paths on a scenario
+  # to override with a hand-made file. Scenario name is
+  #   <year>_<kind>[_<carrier>][_<direction>]
+  #   kind      exogen | optimal
+  #   carrier   AC | DC  - delay only that carrier (the other stays fully built)
+  #   direction NS | WE  - delay only north-south / west-east branches
+  # both qualifiers optional and order-free (e.g. 2030_exogen, 2030_exogen_AC,
+  # 2030_exogen_DC_NS). Probabilities must sum to 1 across all scenarios.
   scope: de_and_interconnectors
   scenarios:
     2025_exogen:
       probability: 0.5
     2035_exogen:
       probability: 0.5
+    # Examples - uncomment and re-balance probabilities to sum to 1:
+    # 2030_exogen:            # delay every branch built after 2030
+    #   probability: 0.33
+    # 2030_exogen_AC:         # delay only AC lines built after 2030
+    #   probability: 0.33
+    # 2030_exogen_DC_NS:      # delay only north-south DC links built after 2030
+    #   probability: 0.34
 
 
