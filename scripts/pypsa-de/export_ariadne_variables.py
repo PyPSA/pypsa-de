@@ -18,7 +18,6 @@ from scripts._helpers import (
     configure_logging,
     mock_snakemake,
     set_scenario_config,
-    update_config_from_wildcards,
 )
 from scripts.add_electricity import calculate_annuity, load_costs
 
@@ -5616,16 +5615,10 @@ if __name__ == "__main__":
     if "snakemake" not in globals():
         snakemake = mock_snakemake(
             "export_ariadne_variables",
-            simpl="",
-            clusters=27,
-            opts="",
-            ll="vopt",
-            sector_opts="None",
             run="KN2045_Bal_v5",
         )
     configure_logging(snakemake)
     set_scenario_config(snakemake)
-    update_config_from_wildcards(snakemake.config, snakemake.wildcards)
     config_industry = snakemake.params.config_industry
     planning_horizons = snakemake.params.planning_horizons
     post_discretization = snakemake.params.post_discretization

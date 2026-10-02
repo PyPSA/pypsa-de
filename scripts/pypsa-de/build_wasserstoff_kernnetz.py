@@ -23,7 +23,6 @@ from scripts._helpers import (
     configure_logging,
     mock_snakemake,
     set_scenario_config,
-    update_config_from_wildcards,
 )
 from scripts.build_gas_network import diameter_to_capacity
 
@@ -573,7 +572,6 @@ if __name__ == "__main__":
 
     configure_logging(snakemake)
     set_scenario_config(snakemake)
-    update_config_from_wildcards(snakemake.config, snakemake.wildcards)
 
     kernnetz_cf = snakemake.params.kernnetz
 

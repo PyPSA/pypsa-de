@@ -23,16 +23,13 @@ rule build_exogenous_mobility_data:
         ariadne="data/ariadne_database.csv",
         energy_totals=resources("energy_totals.csv"),
     output:
-        mobility_data=resources(
-            "modified_mobility_data_{clusters}_{planning_horizons}.csv"
-        ),
+        mobility_data=resources("modified_mobility_data_{horizon}.csv"),
     log:
-        logs("build_exogenous_mobility_data_{clusters}_{planning_horizons}.log"),
+        logs("build_exogenous_mobility_data_{horizon}.log"),
     resources:
         mem_mb=1000,
     params:
         reference_scenario=config_provider("pypsa-de", "reference_scenario"),
-        planning_horizons=config_provider("scenario", "planning_horizons"),
         leitmodelle=config_provider("pypsa-de", "leitmodelle"),
         uba_for_mobility=config_provider("pypsa-de", "uba_for_mobility"),
         shipping_oil_share=config_provider("sector", "shipping_oil_share"),
@@ -62,7 +59,7 @@ rule build_egon_data:
 rule prepare_district_heating_subnodes:
     input:
         heating_technologies_nuts3=resources("heating_technologies_nuts3.geojson"),
-        regions_onshore=resources("regions_onshore_base_s_{clusters}.geojson"),
+        regions_onshore=resources("onshore_regions.geojson"),
         fernwaermeatlas="data/fernwaermeatlas/fernwaermeatlas.xlsx",
         cities="data/fernwaermeatlas/cities_geolocations.geojson",
         lau_regions=rules.retrieve_lau_regions.output["zip"],
@@ -80,66 +77,57 @@ rule prepare_district_heating_subnodes:
             keep_local=True,
         ),
     output:
-        district_heating_subnodes=resources(
-            "district_heating_subnodes_base_s_{clusters}.geojson"
-        ),
-        regions_onshore_extended=resources(
-            "regions_onshore_base-extended_s_{clusters}.geojson"
-        ),
-        regions_onshore_restricted=resources(
-            "regions_onshore_base-restricted_s_{clusters}.geojson"
-        ),
+        district_heating_subnodes=resources("district_heating_subnodes.geojson"),
+        regions_onshore_extended=resources("onshore_regions_extended.geojson"),
+        regions_onshore_restricted=resources("onshore_regions_restricted.geojson"),
     resources:
         mem_mb=20000,
     params:
         district_heating=config_provider("sector", "district_heating"),
-        baseyear=config_provider("scenario", "planning_horizons", 0),
+        baseyear=config_provider("planning_horizons", 0),
     script:
         scripts("pypsa-de/prepare_district_heating_subnodes.py")
 
 
-def baseyear_value(wildcards):
-    return config_provider("scenario", "planning_horizons", 0)(wildcards)
+rule extend_existing_heating_distribution:
+    input:
+        existing_heating_distribution=resources(
+            f"existing_heating_distribution_{config['planning_horizons'][0]}.csv"
+        ),
+        subnodes=resources("district_heating_subnodes.geojson"),
+    output:
+        existing_heating_distribution_extended=resources(
+            f"existing_heating_distribution_extended_{config['planning_horizons'][0]}.csv"
+        ),
+        district_heating_subnodes_selected=resources(
+            "district_heating_subnodes_selected.geojson"
+        ),
+    params:
+        nlargest=config_provider("sector", "district_heating", "subnodes", "nlargest"),
+    script:
+        scripts("pypsa-de/extend_existing_heating_distribution.py")
 
 
 rule add_district_heating_subnodes:
     input:
         unpack(input_heat_source_power),
-        network=resources(
-            "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc"
-        ),
-        subnodes=resources("district_heating_subnodes_base_s_{clusters}.geojson"),
+        network=resources("networks/composed_{horizon}.nc"),
+        subnodes=resources("district_heating_subnodes.geojson"),
         nuts3=resources("nuts3_shapes.geojson"),
-        regions_onshore=resources("regions_onshore_base_s_{clusters}.geojson"),
+        regions_onshore=resources("onshore_regions.geojson"),
         fernwaermeatlas="data/fernwaermeatlas/fernwaermeatlas.xlsx",
         cities="data/fernwaermeatlas/cities_geolocations.geojson",
-        cop_profiles=resources("cop_profiles_base_s_{clusters}_{planning_horizons}.nc"),
+        cop_profiles=resources("cop_profiles_{horizon}.nc"),
         direct_heat_source_utilisation_profiles=resources(
-            "direct_heat_source_utilisation_profiles_base_s_{clusters}_{planning_horizons}.nc"
-        ),
-        existing_heating_distribution=lambda w: resources(
-            f"existing_heating_distribution_base_s_{{clusters}}_{baseyear_value(w)}.csv"
+            "direct_heat_source_utilisation_profiles_{horizon}.nc"
         ),
         lau_regions=rules.retrieve_lau_regions.output["zip"],
     output:
-        network=resources(
-            "networks/base-extended_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc"
-        ),
-        district_heating_subnodes=resources(
-            "district_heating_subnodes_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.geojson"
-        ),
-        existing_heating_distribution_extended=(
-            resources(
-                "existing_heating_distribution_base-extended_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.csv"
-            )
-            if baseyear_value != "{planning_horizons}"
-            else []
-        ),
+        network=resources("networks/composed_with_subnodes_{horizon}.nc"),
     resources:
         mem_mb=10000,
     params:
         district_heating=config_provider("sector", "district_heating"),
-        baseyear=config_provider("scenario", "planning_horizons", 0),
         sector=config_provider("sector"),
         heat_pump_sources=config_provider(
             "sector", "heat_pump_sources", "urban central"
@@ -161,116 +149,18 @@ ruleorder: modify_district_heat_share > build_district_heat_share
 rule modify_district_heat_share:
     input:
         heating_technologies_nuts3=resources("heating_technologies_nuts3.geojson"),
-        regions_onshore=resources("regions_onshore_base_s_{clusters}.geojson"),
-        district_heat_share=resources(
-            "district_heat_share_base_s_{clusters}_{planning_horizons}.csv"
-        ),
+        regions_onshore=resources("onshore_regions.geojson"),
+        district_heat_share=resources("district_heat_share_{horizon}.csv"),
     output:
-        district_heat_share=resources(
-            "district_heat_share_base_s_{clusters}_{planning_horizons}-modified.csv"
-        ),
+        district_heat_share=resources("district_heat_share_{horizon}-modified.csv"),
     log:
-        logs("modify_district_heat_share_{clusters}_{planning_horizons}.log"),
+        logs("modify_district_heat_share_{horizon}.log"),
     resources:
         mem_mb=1000,
     params:
         district_heating=config_provider("sector", "district_heating"),
     script:
         scripts("pypsa-de/modify_district_heat_share.py")
-
-
-rule modify_prenetwork:
-    input:
-        network=resources(
-            "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_brownfield.nc"
-        ),
-        wkn=lambda w: (
-            resources("wasserstoff_kernnetz_base_s_{clusters}.csv")
-            if config_provider("wasserstoff_kernnetz", "enable")(w)
-            else []
-        ),
-        costs=resources("costs_{planning_horizons}_processed.csv"),
-        modified_mobility_data=resources(
-            "modified_mobility_data_{clusters}_{planning_horizons}.csv"
-        ),
-        biomass_potentials=resources(
-            "biomass_potentials_s_{clusters}_{planning_horizons}.csv"
-        ),
-        industrial_demand=resources(
-            "industrial_energy_demand_base_s_{clusters}_{planning_horizons}.csv"
-        ),
-        industrial_demand_2025=resources(
-            "industrial_energy_demand_base_s_{clusters}_2025.csv"
-        ),
-        industrial_production_per_country_tomorrow=resources(
-            "industrial_production_per_country_tomorrow_{planning_horizons}-modified.csv"
-        ),
-        industry_sector_ratios=resources(
-            "industry_sector_ratios_{planning_horizons}.csv"
-        ),
-        pop_weighted_energy_totals=resources(
-            "pop_weighted_energy_totals_s_{clusters}.csv"
-        ),
-        shipping_demand=resources("shipping_demand_s_{clusters}.csv"),
-        regions_onshore=resources("regions_onshore_base_s_{clusters}.geojson"),
-        regions_offshore=resources("regions_offshore_base_s_{clusters}.geojson"),
-        offshore_connection_points="data/pypsa-de/offshore_connection_points.csv",
-        new_industrial_energy_demand="data/pypsa-de/UBA_Projektionsbericht2025_Abbildung31_MWMS.csv",
-    output:
-        network=resources(
-            "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_final.nc"
-        ),
-    log:
-        RESULTS
-        + "logs/modify_prenetwork_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.log",
-    resources:
-        mem_mb=4000,
-    params:
-        efuel_export_ban=config_provider("solving", "constraints", "efuel_export_ban"),
-        enable_kernnetz=config_provider("wasserstoff_kernnetz", "enable"),
-        technology_occurrence=config_provider("first_technology_occurrence"),
-        fossil_boiler_ban=config_provider("new_decentral_fossil_boiler_ban"),
-        coal_ban=config_provider("coal_generation_ban"),
-        nuclear_ban=config_provider("nuclear_generation_ban"),
-        planning_horizons=config_provider("scenario", "planning_horizons"),
-        H2_transmission_efficiency=config_provider(
-            "sector", "transmission_efficiency", "H2 pipeline"
-        ),
-        H2_retrofit=config_provider("sector", "H2_retrofit"),
-        H2_retrofit_capacity_per_CH4=config_provider(
-            "sector", "H2_retrofit_capacity_per_CH4"
-        ),
-        transmission_costs=config_provider("costs", "transmission"),
-        must_run=config_provider("must_run"),
-        clustering=config_provider("clustering", "temporal", "resolution_sector"),
-        H2_plants=config_provider("electricity", "H2_plants"),
-        onshore_nep_force=config_provider("onshore_nep_force"),
-        offshore_nep_force=config_provider("offshore_nep_force"),
-        shipping_methanol_efficiency=config_provider(
-            "sector", "shipping_methanol_efficiency"
-        ),
-        shipping_oil_efficiency=config_provider("sector", "shipping_oil_efficiency"),
-        shipping_methanol_share=config_provider("sector", "shipping_methanol_share"),
-        scale_capacity=config_provider("scale_capacity"),
-        bev_charge_rate=config_provider("sector", "bev_charge_rate"),
-        bev_energy=config_provider("sector", "bev_energy"),
-        bev_dsm_availability=config_provider("sector", "bev_dsm_availability"),
-        uba_for_industry=config_provider("pypsa-de", "uba_for_industry", "enable"),
-        scale_industry_non_energy=config_provider(
-            "pypsa-de", "uba_for_industry", "scale_industry_non_energy"
-        ),
-        limit_cross_border_flows_ac=config_provider(
-            "pypsa-de", "limit_cross_border_flows_ac"
-        ),
-        space_heat_DE_factor=config_provider("pypsa-de", "reduce_space_heat_DE_factor"),
-        space_heat_EU_factor=config_provider(
-            "sector", "reduce_space_heat_exogenously_factor"
-        ),
-        deactivate_early_transmission_expansion=config_provider(
-            "pypsa-de", "deactivate_early_transmission_expansion"
-        ),
-    script:
-        scripts("pypsa-de/modify_prenetwork.py")
 
 
 ruleorder: modify_industry_production > build_industrial_production_per_country_tomorrow
@@ -298,16 +188,16 @@ rule build_existing_chp_de:
             "https://raw.githubusercontent.com/WZBSocialScienceCenter/plz_geocoord/master/plz_geocoord.csv",
             keep_local=True,
         ),
-        regions=resources("regions_onshore_base_s_{clusters}.geojson"),
+        regions=resources("onshore_regions.geojson"),
         district_heating_subnodes=lambda w: (
-            resources("district_heating_subnodes_base_s_{clusters}.geojson")
+            resources("district_heating_subnodes.geojson")
             if config_provider("sector", "district_heating", "subnodes", "enable")(w)
             else []
         ),
     output:
-        german_chp=resources("german_chp_base_s_{clusters}.csv"),
+        german_chp=resources("german_chp.csv"),
     log:
-        logs("build_existing_chp_de_{clusters}.log"),
+        logs("build_existing_chp_de.log"),
     resources:
         mem_mb=4000,
     params:
@@ -322,14 +212,14 @@ rule modify_industry_production:
     input:
         ariadne="data/ariadne_database.csv",
         industrial_production_per_country_tomorrow=resources(
-            "industrial_production_per_country_tomorrow_{planning_horizons}.csv"
+            "industrial_production_per_country_tomorrow_{horizon}.csv"
         ),
     output:
         industrial_production_per_country_tomorrow=resources(
-            "industrial_production_per_country_tomorrow_{planning_horizons}-modified.csv"
+            "industrial_production_per_country_tomorrow_{horizon}-modified.csv"
         ),
     log:
-        logs("modify_industry_production_{planning_horizons}.log"),
+        logs("modify_industry_production_{horizon}.log"),
     resources:
         mem_mb=1000,
     params:
@@ -357,8 +247,8 @@ rule build_wasserstoff_kernnetz:
             keep_local=True,
         ),
         locations="data/pypsa-de/wasserstoff_kernnetz/locations_wasserstoff_kernnetz.csv",
-        regions_onshore=resources("regions_onshore_base_s.geojson"),
-        regions_offshore=resources("regions_offshore_base_s.geojson"),
+        regions_onshore=resources("onshore_regions_base.geojson"),
+        regions_offshore=resources("offshore_regions_base.geojson"),
     output:
         cleaned_wasserstoff_kernnetz=resources("wasserstoff_kernnetz.csv"),
     log:
@@ -372,12 +262,12 @@ rule build_wasserstoff_kernnetz:
 rule cluster_wasserstoff_kernnetz:
     input:
         cleaned_h2_network=resources("wasserstoff_kernnetz.csv"),
-        regions_onshore=resources("regions_onshore_base_s_{clusters}.geojson"),
-        regions_offshore=resources("regions_offshore_base_s_{clusters}.geojson"),
+        regions_onshore=resources("onshore_regions.geojson"),
+        regions_offshore=resources("offshore_regions.geojson"),
     output:
-        clustered_h2_network=resources("wasserstoff_kernnetz_base_s_{clusters}.csv"),
+        clustered_h2_network=resources("wasserstoff_kernnetz_clustered.csv"),
     log:
-        logs("cluster_wasserstoff_kernnetz_{clusters}.log"),
+        logs("cluster_wasserstoff_kernnetz.log"),
     params:
         kernnetz=config_provider("wasserstoff_kernnetz"),
     script:

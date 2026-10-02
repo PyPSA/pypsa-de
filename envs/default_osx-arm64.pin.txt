@@ -70,7 +70,7 @@ https://conda.anaconda.org/conda-forge/noarch/requests-2.34.2-pyhcf101f3_0.conda
 https://conda.anaconda.org/conda-forge/noarch/pyjwt-2.11.0-pyhd8ed1ab_0.conda#f9517d2fe1501919d7a236aba73409bb
 https://conda.anaconda.org/conda-forge/osx-arm64/cryptography-46.0.5-py312h3fef973_0.conda#32a1800587ad5f93389ea271f15bdedd
 https://conda.anaconda.org/conda-forge/noarch/blinker-1.9.0-pyhff2d567_0.conda#42834439227a4551b939beeeb8a4b085
-https://conda.anaconda.org/conda-forge/noarch/oauthlib-3.3.1-pyhd8ed1ab_0.conda#d4f3f31ee39db3efecb96c0728d4bdbf
+https://conda.anaconda.org/conda-forge/noarch/oauthlib-3.3.1-pyh5ded981_1.conda#5878c9a87282fd74d4913ee8c3952ed0
 https://conda.anaconda.org/conda-forge/noarch/requests-oauthlib-1.4.0-pyhd8ed1ab_0.conda#a55b220de8970208f583e38639cfbecc
 https://conda.anaconda.org/bioconda/noarch/snakemake-storage-plugin-http-0.3.0-pyhdfd78af_0.tar.bz2#269943ac6637718947763b4f989710fc
 https://conda.anaconda.org/conda-forge/noarch/platformdirs-4.9.2-pyhcf101f3_0.conda#4fefefb892ce9cc1539405bec2f1a6cd

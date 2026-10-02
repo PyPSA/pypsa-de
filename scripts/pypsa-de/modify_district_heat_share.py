@@ -17,7 +17,7 @@ Parameters
 ----------
     - sector.district_heating["potential"]: Maximum potential district heating share.
     - sector.district_heating["progress"]: Progress of district heating share over planning horizons.
-    - wildcards.planning_horizons: Planning horizon year.
+    - wildcards.horizon: Planning horizon year.
 """
 
 import logging
@@ -29,7 +29,6 @@ from scripts._helpers import (
     configure_logging,
     mock_snakemake,
     set_scenario_config,
-    update_config_from_wildcards,
 )
 
 logger = logging.getLogger(__name__)
@@ -85,7 +84,7 @@ def update_district_heat_share(heat_techs_clustered, dh_shares):
     urban_fraction = dh_shares["urban fraction"]
     max_dh_share = snakemake.params.district_heating["potential"]
     progress = snakemake.params.district_heating["progress"][
-        int(snakemake.wildcards.planning_horizons)
+        int(snakemake.wildcards.horizon)
     ]
 
     diff = ((urban_fraction * max_dh_share) - nodal_dh_shares).clip(lower=0).dropna()
@@ -103,18 +102,12 @@ if __name__ == "__main__":
     if "snakemake" not in globals():
         snakemake = mock_snakemake(
             "modify_district_heat_share",
-            simpl="",
-            clusters=44,
-            opts="",
-            ll="vopt",
-            sector_opts="none",
-            planning_horizons="2020",
+            horizon="2020",
             run="KN2045_Mix",
         )
 
     configure_logging(snakemake)
     set_scenario_config(snakemake)
-    update_config_from_wildcards(snakemake.config, snakemake.wildcards)
     logger.info("Updating district heating shares with egon data")
 
     heat_techs = gpd.read_file(snakemake.input.heating_technologies_nuts3)

@@ -484,10 +484,10 @@ def add_national_co2_budgets(n, snakemake, national_co2_budgets, investment_year
 
         # Aviation demand
         domestic_aviation = energy_totals.loc[
-            (ct, snakemake.params.energy_year), "total domestic aviation"
+            (ct, snakemake.params.energy_totals_year), "total domestic aviation"
         ]
         international_aviation = energy_totals.loc[
-            (ct, snakemake.params.energy_year), "total international aviation"
+            (ct, snakemake.params.energy_totals_year), "total international aviation"
         ]
         domestic_aviation_factor = domestic_aviation / (
             domestic_aviation + international_aviation
@@ -509,10 +509,10 @@ def add_national_co2_budgets(n, snakemake, national_co2_budgets, investment_year
 
         # Shipping oil
         domestic_navigation = energy_totals.loc[
-            (ct, snakemake.params.energy_year), "total domestic navigation"
+            (ct, snakemake.params.energy_totals_year), "total domestic navigation"
         ]
         international_navigation = energy_totals.loc[
-            (ct, snakemake.params.energy_year), "total international navigation"
+            (ct, snakemake.params.energy_totals_year), "total international navigation"
         ]
         domestic_navigation_factor = domestic_navigation / (
             domestic_navigation + international_navigation
