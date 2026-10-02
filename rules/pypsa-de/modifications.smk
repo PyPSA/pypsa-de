@@ -163,96 +163,6 @@ rule modify_district_heat_share:
         scripts("pypsa-de/modify_district_heat_share.py")
 
 
-rule modify_prenetwork:
-    input:
-        network=resources(
-            "networks/base_s_{clusters}_{opts}_{sector_opts}_{horizon}_brownfield.nc"
-        ),
-        wkn=lambda w: (
-            resources("wasserstoff_kernnetz_clustered.csv")
-            if config_provider("wasserstoff_kernnetz", "enable")(w)
-            else []
-        ),
-        costs=resources("costs_{horizon}_processed.csv"),
-        modified_mobility_data=resources("modified_mobility_data_{horizon}.csv"),
-        biomass_potentials=resources("biomass_potentials_s_{clusters}_{horizon}.csv"),
-        industrial_demand=resources(
-            "industrial_energy_demand_base_s_{clusters}_{horizon}.csv"
-        ),
-        industrial_demand_2025=resources(
-            "industrial_energy_demand_base_s_{clusters}_2025.csv"
-        ),
-        industrial_production_per_country_tomorrow=resources(
-            "industrial_production_per_country_tomorrow_{horizon}-modified.csv"
-        ),
-        industry_sector_ratios=resources("industry_sector_ratios_{horizon}.csv"),
-        pop_weighted_energy_totals=resources(
-            "pop_weighted_energy_totals_s_{clusters}.csv"
-        ),
-        shipping_demand=resources("shipping_demand_s_{clusters}.csv"),
-        regions_onshore=resources("regions_onshore_base_s_{clusters}.geojson"),
-        regions_offshore=resources("regions_offshore_base_s_{clusters}.geojson"),
-        offshore_connection_points="data/pypsa-de/offshore_connection_points.csv",
-        new_industrial_energy_demand="data/pypsa-de/UBA_Projektionsbericht2025_Abbildung31_MWMS.csv",
-    output:
-        network=resources(
-            "networks/base_s_{clusters}_{opts}_{sector_opts}_{horizon}_final.nc"
-        ),
-    log:
-        RESULTS
-        + "logs/modify_prenetwork_base_s_{clusters}_{opts}_{sector_opts}_{horizon}.log",
-    resources:
-        mem_mb=4000,
-    params:
-        efuel_export_ban=config_provider("solving", "constraints", "efuel_export_ban"),
-        enable_kernnetz=config_provider("wasserstoff_kernnetz", "enable"),
-        technology_occurrence=config_provider("first_technology_occurrence"),
-        fossil_boiler_ban=config_provider("new_decentral_fossil_boiler_ban"),
-        coal_ban=config_provider("coal_generation_ban"),
-        nuclear_ban=config_provider("nuclear_generation_ban"),
-        planning_horizons=config_provider("planning_horizons"),
-        industry=config_provider("industry"),
-        renewable=config_provider("renewable"),
-        H2_transmission_efficiency=config_provider(
-            "sector", "transmission_efficiency", "H2 pipeline"
-        ),
-        H2_retrofit=config_provider("sector", "H2_retrofit"),
-        H2_retrofit_capacity_per_CH4=config_provider(
-            "sector", "H2_retrofit_capacity_per_CH4"
-        ),
-        transmission_costs=config_provider("costs", "transmission"),
-        must_run=config_provider("must_run"),
-        clustering=config_provider("clustering", "temporal", "resolution_sector"),
-        H2_plants=config_provider("electricity", "H2_plants"),
-        onshore_nep_force=config_provider("onshore_nep_force"),
-        offshore_nep_force=config_provider("offshore_nep_force"),
-        shipping_methanol_efficiency=config_provider(
-            "sector", "shipping_methanol_efficiency"
-        ),
-        shipping_oil_efficiency=config_provider("sector", "shipping_oil_efficiency"),
-        shipping_methanol_share=config_provider("sector", "shipping_methanol_share"),
-        scale_capacity=config_provider("scale_capacity"),
-        bev_charge_rate=config_provider("sector", "bev_charge_rate"),
-        bev_energy=config_provider("sector", "bev_energy"),
-        bev_dsm_availability=config_provider("sector", "bev_dsm_availability"),
-        uba_for_industry=config_provider("pypsa-de", "uba_for_industry", "enable"),
-        scale_industry_non_energy=config_provider(
-            "pypsa-de", "uba_for_industry", "scale_industry_non_energy"
-        ),
-        limit_cross_border_flows_ac=config_provider(
-            "pypsa-de", "limit_cross_border_flows_ac"
-        ),
-        space_heat_DE_factor=config_provider("pypsa-de", "reduce_space_heat_DE_factor"),
-        space_heat_EU_factor=config_provider(
-            "sector", "reduce_space_heat_exogenously_factor"
-        ),
-        deactivate_early_transmission_expansion=config_provider(
-            "pypsa-de", "deactivate_early_transmission_expansion"
-        ),
-    script:
-        scripts("pypsa-de/modify_prenetwork.py")
-
-
 ruleorder: modify_industry_production > build_industrial_production_per_country_tomorrow
 
 
@@ -337,8 +247,8 @@ rule build_wasserstoff_kernnetz:
             keep_local=True,
         ),
         locations="data/pypsa-de/wasserstoff_kernnetz/locations_wasserstoff_kernnetz.csv",
-        regions_onshore=resources("regions_onshore_base_s.geojson"),
-        regions_offshore=resources("regions_offshore_base_s.geojson"),
+        regions_onshore=resources("onshore_regions_base.geojson"),
+        regions_offshore=resources("offshore_regions_base.geojson"),
     output:
         cleaned_wasserstoff_kernnetz=resources("wasserstoff_kernnetz.csv"),
     log:

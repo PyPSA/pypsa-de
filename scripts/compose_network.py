@@ -7,6 +7,8 @@ Compose network by combining all electricity and sector components.
 """
 
 import logging
+from importlib.util import module_from_spec, spec_from_file_location
+from pathlib import Path
 
 import pypsa
 
@@ -35,6 +37,16 @@ from scripts.prepare_perfect_foresight import main as prepare_perfect_foresight
 from scripts.prepare_sector_network import (
     main as add_sector_components,
 )
+
+modify_prenetwork_spec = spec_from_file_location(
+    "pypsa_de_modify_prenetwork",
+    Path(__file__).parent / "pypsa-de" / "modify_prenetwork.py",
+)
+if modify_prenetwork_spec is None or modify_prenetwork_spec.loader is None:
+    raise ImportError("Could not load the PyPSA-DE pre-network customizations")
+modify_prenetwork = module_from_spec(modify_prenetwork_spec)
+modify_prenetwork_spec.loader.exec_module(modify_prenetwork)
+apply_pypsa_de_modifications = modify_prenetwork.main
 
 logger = logging.getLogger(__name__)
 
@@ -103,6 +115,8 @@ if __name__ == "__main__":
         apply_brownfield(
             n, n_previous, inputs, params, current_horizon, renewable_carriers
         )
+
+    apply_pypsa_de_modifications(n, inputs, params, costs, current_horizon)
 
     if foresight == "perfect":
         n = prepare_perfect_foresight(n, n_previous, params, current_horizon)

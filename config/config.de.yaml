@@ -23,6 +23,7 @@ run:
   disable_progressbar: true
 
 pypsa-de:
+  enable: true # Enable PyPSA-DE-specific network modifications
   leitmodelle: # Model data downloaded from public IIASA database 'ariadne2'
     general: REMIND-EU v1.1
     transport: Aladin v1

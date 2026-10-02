@@ -5,7 +5,11 @@
 
 rule solve_network:
     input:
-        network=resources("networks/composed_{horizon}.nc"),
+        network=lambda w: resources(
+            f"networks/composed_with_subnodes_{w.horizon}.nc"
+            if config_provider("sector", "district_heating", "subnodes", "enable")(w)
+            else f"networks/composed_{w.horizon}.nc"
+        ),
     output:
         network=RESULTS + "networks/solved_{horizon}.nc",
         model=(

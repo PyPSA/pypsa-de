@@ -164,20 +164,17 @@ rule plot_hydrogen_network_incl_kernnetz:
 rule plot_ariadne_report:
     input:
         networks=expand(
-            RESULTS
-            + "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
-            **config["scenario"],
+            RESULTS + "networks/solved_{horizon}.nc",
+            run=config_provider("run", "name"),
+            horizon=config["planning_horizons"],
             allow_missing=True,
         ),
-        regions_onshore_clustered=expand(
-            resources("regions_onshore_base_s_{clusters}.geojson"),
-            clusters=config["scenario"]["clusters"],
-            allow_missing=True,
-        ),
+        regions_onshore_clustered=resources("onshore_regions.geojson"),
         rc="matplotlibrc",
         costs=expand(
-            resources("costs_{planning_horizons}_processed.csv"),
-            **config["scenario"],
+            resources("costs_{horizon}_processed.csv"),
+            run=config_provider("run", "name"),
+            horizon=config["planning_horizons"],
             allow_missing=True,
         ),
         exported_variables_full=RESULTS + "ariadne/exported_variables_full.xlsx",
@@ -199,7 +196,7 @@ rule plot_ariadne_report:
     resources:
         mem_mb=32000,
     params:
-        planning_horizons=config_provider("scenario", "planning_horizons"),
+        planning_horizons=config_provider("planning_horizons"),
         plotting=config_provider("plotting"),
         run=config_provider("run", "name"),
         foresight=config_provider("foresight"),

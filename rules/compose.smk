@@ -108,7 +108,7 @@ def get_compose_inputs(w):
             industrial_demand=resources("industrial_energy_demand_{horizon}.csv"),
             hourly_heat_demand_total=resources("hourly_heat_demand_total.nc"),
             industrial_production=resources("industrial_production_{horizon}.csv"),
-            district_heat_share=resources("district_heat_share_{horizon}.csv"),
+            district_heat_share=resources("district_heat_share_{horizon}-modified.csv"),
             heating_efficiencies=resources("heating_efficiencies.csv"),
             existing_heating_distribution=(
                 resources("existing_heating_distribution_{horizon}.csv")
@@ -186,6 +186,45 @@ def get_compose_inputs(w):
             ),
         )
         inputs.update(sector_inputs)
+        # pypsa-de specific inputs
+        uba_industry_enabled = horizon in cfg["pypsa-de"]["uba_for_industry"]["enable"]
+        inputs.update(
+            modified_mobility_data=(
+                resources(f"modified_mobility_data_{horizon}.csv")
+                if sector["transport"]
+                else []
+            ),
+            industrial_demand_2025=(
+                resources("industrial_energy_demand_2025.csv")
+                if sector["industry"]
+                else []
+            ),
+            industrial_production_per_country_tomorrow=(
+                resources(
+                    f"industrial_production_per_country_tomorrow_{horizon}-modified.csv"
+                )
+                if sector["industry"] and uba_industry_enabled
+                else []
+            ),
+            industry_sector_ratios=(
+                resources(f"industry_sector_ratios_{horizon}.csv")
+                if sector["industry"] and uba_industry_enabled
+                else []
+            ),
+            new_industrial_energy_demand=(
+                "data/pypsa-de/UBA_Projektionsbericht2025_Abbildung31_MWMS.csv"
+                if sector["industry"] and uba_industry_enabled
+                else []
+            ),
+            regions_onshore=resources("onshore_regions.geojson"),
+            regions_offshore=resources("offshore_regions.geojson"),
+            offshore_connection_points="data/pypsa-de/offshore_connection_points.csv",
+            wkn=(
+                rules.cluster_wasserstoff_kernnetz.output.clustered_h2_network
+                if config_provider("wasserstoff_kernnetz", "enable")(w)
+                else []
+            ),
+        )
 
     # Add brownfield inputs for non-first horizons
     if foresight == "overnight" and len(horizons) > 1:
@@ -216,6 +255,7 @@ def get_compose_inputs(w):
         "scripts/prepare_network.py",
         "scripts/prepare_perfect_foresight.py",
         "scripts/prepare_sector_network.py",
+        "scripts/pypsa-de/modify_prenetwork.py",
         "scripts/_helpers.py",
     ]
 
@@ -284,6 +324,47 @@ rule compose_network:
         ),
         co2_budget=config_provider("co2_budget"),
         adjustments=config_provider("adjustments"),
+        # pypsa-de specific
+        planning_horizons=config_provider("planning_horizons"),
+        efuel_export_ban=config_provider("solving", "constraints", "efuel_export_ban"),
+        enable_kernnetz=config_provider("wasserstoff_kernnetz", "enable"),
+        pypsa_de_enabled=config_provider("pypsa-de", "enable"),
+        technology_occurrence=config_provider("first_technology_occurrence"),
+        fossil_boiler_ban=config_provider("new_decentral_fossil_boiler_ban"),
+        coal_ban=config_provider("coal_generation_ban"),
+        nuclear_ban=config_provider("nuclear_generation_ban"),
+        H2_transmission_efficiency=config_provider(
+            "sector", "transmission_efficiency", "H2 pipeline"
+        ),
+        H2_retrofit=config_provider("sector", "H2_retrofit"),
+        transmission_costs=config_provider("costs", "transmission"),
+        must_run=config_provider("must_run"),
+        H2_plants=config_provider("electricity", "H2_plants"),
+        onshore_nep_force=config_provider("onshore_nep_force"),
+        offshore_nep_force=config_provider("offshore_nep_force"),
+        shipping_methanol_efficiency=config_provider(
+            "sector", "shipping_methanol_efficiency"
+        ),
+        shipping_oil_efficiency=config_provider("sector", "shipping_oil_efficiency"),
+        shipping_methanol_share=config_provider("sector", "shipping_methanol_share"),
+        scale_capacity=config_provider("scale_capacity"),
+        bev_charge_rate=config_provider("sector", "bev_charge_rate"),
+        bev_energy=config_provider("sector", "bev_energy"),
+        bev_dsm_availability=config_provider("sector", "bev_dsm_availability"),
+        uba_for_industry=config_provider("pypsa-de", "uba_for_industry", "enable"),
+        scale_industry_non_energy=config_provider(
+            "pypsa-de", "uba_for_industry", "scale_non_energy"
+        ),
+        limit_cross_border_flows_ac=config_provider(
+            "pypsa-de", "limit_cross_border_flows_ac"
+        ),
+        space_heat_DE_factor=config_provider("pypsa-de", "reduce_space_heat_DE_factor"),
+        space_heat_EU_factor=config_provider(
+            "sector", "reduce_space_heat_exogenously_factor"
+        ),
+        deactivate_early_transmission_expansion=config_provider(
+            "pypsa-de", "deactivate_early_transmission_expansion"
+        ),
     message:
         "Composing network for horizon {wildcards.horizon}"
     script:
