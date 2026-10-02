@@ -22,7 +22,6 @@ from scripts._helpers import (
     configure_logging,
     mock_snakemake,
     set_scenario_config,
-    update_config_from_wildcards,
 )
 from scripts.add_electricity import load_costs
 from scripts.make_summary import assign_locations
@@ -2776,17 +2775,11 @@ if __name__ == "__main__":
     if "snakemake" not in globals():
         snakemake = mock_snakemake(
             "plot_ariadne_report",
-            simpl="",
-            clusters=49,
-            opts="",
-            ll="vopt",
-            sector_opts="None",
             run="KN2045_Mix",
         )
 
     configure_logging(snakemake)
     set_scenario_config(snakemake)
-    update_config_from_wildcards(snakemake.config, snakemake.wildcards)
 
     ### Modify postnetworks (this might be moved to a separate script)
 

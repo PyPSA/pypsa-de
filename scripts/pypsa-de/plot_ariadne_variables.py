@@ -9,7 +9,6 @@ from scripts._helpers import (
     configure_logging,
     mock_snakemake,
     set_scenario_config,
-    update_config_from_wildcards,
 )
 
 
@@ -802,19 +801,12 @@ if __name__ == "__main__":
     if "snakemake" not in globals():
         snakemake = mock_snakemake(
             "plot_ariadne_variables",
-            simpl="",
-            clusters=49,
-            opts="",
-            ll="v1.2",
-            sector_opts="None",
-            planning_horizons="2045",
             run="KN2045_Mix",
             # configfiles="config/config.public.yaml"
         )
 
     configure_logging(snakemake)
     set_scenario_config(snakemake)
-    update_config_from_wildcards(snakemake.config, snakemake.wildcards)
 
     df = (
         pd.read_excel(

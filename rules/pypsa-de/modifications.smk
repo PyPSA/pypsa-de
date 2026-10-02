@@ -23,16 +23,13 @@ rule build_exogenous_mobility_data:
         ariadne="data/ariadne_database.csv",
         energy_totals=resources("energy_totals.csv"),
     output:
-        mobility_data=resources(
-            "modified_mobility_data_{clusters}_{planning_horizons}.csv"
-        ),
+        mobility_data=resources("modified_mobility_data_{horizon}.csv"),
     log:
-        logs("build_exogenous_mobility_data_{clusters}_{planning_horizons}.log"),
+        logs("build_exogenous_mobility_data_{horizon}.log"),
     resources:
         mem_mb=1000,
     params:
         reference_scenario=config_provider("pypsa-de", "reference_scenario"),
-        planning_horizons=config_provider("scenario", "planning_horizons"),
         leitmodelle=config_provider("pypsa-de", "leitmodelle"),
         uba_for_mobility=config_provider("pypsa-de", "uba_for_mobility"),
         shipping_oil_share=config_provider("sector", "shipping_oil_share"),
@@ -152,16 +149,12 @@ ruleorder: modify_district_heat_share > build_district_heat_share
 rule modify_district_heat_share:
     input:
         heating_technologies_nuts3=resources("heating_technologies_nuts3.geojson"),
-        regions_onshore=resources("regions_onshore_base_s_{clusters}.geojson"),
-        district_heat_share=resources(
-            "district_heat_share_base_s_{clusters}_{planning_horizons}.csv"
-        ),
+        regions_onshore=resources("onshore_regions.geojson"),
+        district_heat_share=resources("district_heat_share_{horizon}.csv"),
     output:
-        district_heat_share=resources(
-            "district_heat_share_base_s_{clusters}_{planning_horizons}-modified.csv"
-        ),
+        district_heat_share=resources("district_heat_share_{horizon}-modified.csv"),
     log:
-        logs("modify_district_heat_share_{clusters}_{planning_horizons}.log"),
+        logs("modify_district_heat_share_{horizon}.log"),
     resources:
         mem_mb=1000,
     params:
@@ -173,32 +166,26 @@ rule modify_district_heat_share:
 rule modify_prenetwork:
     input:
         network=resources(
-            "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_brownfield.nc"
+            "networks/base_s_{clusters}_{opts}_{sector_opts}_{horizon}_brownfield.nc"
         ),
         wkn=lambda w: (
-            resources("wasserstoff_kernnetz_base_s_{clusters}.csv")
+            resources("wasserstoff_kernnetz_clustered.csv")
             if config_provider("wasserstoff_kernnetz", "enable")(w)
             else []
         ),
-        costs=resources("costs_{planning_horizons}_processed.csv"),
-        modified_mobility_data=resources(
-            "modified_mobility_data_{clusters}_{planning_horizons}.csv"
-        ),
-        biomass_potentials=resources(
-            "biomass_potentials_s_{clusters}_{planning_horizons}.csv"
-        ),
+        costs=resources("costs_{horizon}_processed.csv"),
+        modified_mobility_data=resources("modified_mobility_data_{horizon}.csv"),
+        biomass_potentials=resources("biomass_potentials_s_{clusters}_{horizon}.csv"),
         industrial_demand=resources(
-            "industrial_energy_demand_base_s_{clusters}_{planning_horizons}.csv"
+            "industrial_energy_demand_base_s_{clusters}_{horizon}.csv"
         ),
         industrial_demand_2025=resources(
             "industrial_energy_demand_base_s_{clusters}_2025.csv"
         ),
         industrial_production_per_country_tomorrow=resources(
-            "industrial_production_per_country_tomorrow_{planning_horizons}-modified.csv"
+            "industrial_production_per_country_tomorrow_{horizon}-modified.csv"
         ),
-        industry_sector_ratios=resources(
-            "industry_sector_ratios_{planning_horizons}.csv"
-        ),
+        industry_sector_ratios=resources("industry_sector_ratios_{horizon}.csv"),
         pop_weighted_energy_totals=resources(
             "pop_weighted_energy_totals_s_{clusters}.csv"
         ),
@@ -209,11 +196,11 @@ rule modify_prenetwork:
         new_industrial_energy_demand="data/pypsa-de/UBA_Projektionsbericht2025_Abbildung31_MWMS.csv",
     output:
         network=resources(
-            "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_final.nc"
+            "networks/base_s_{clusters}_{opts}_{sector_opts}_{horizon}_final.nc"
         ),
     log:
         RESULTS
-        + "logs/modify_prenetwork_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.log",
+        + "logs/modify_prenetwork_base_s_{clusters}_{opts}_{sector_opts}_{horizon}.log",
     resources:
         mem_mb=4000,
     params:
@@ -223,7 +210,9 @@ rule modify_prenetwork:
         fossil_boiler_ban=config_provider("new_decentral_fossil_boiler_ban"),
         coal_ban=config_provider("coal_generation_ban"),
         nuclear_ban=config_provider("nuclear_generation_ban"),
-        planning_horizons=config_provider("scenario", "planning_horizons"),
+        planning_horizons=config_provider("planning_horizons"),
+        industry=config_provider("industry"),
+        renewable=config_provider("renewable"),
         H2_transmission_efficiency=config_provider(
             "sector", "transmission_efficiency", "H2 pipeline"
         ),
@@ -289,16 +278,16 @@ rule build_existing_chp_de:
             "https://raw.githubusercontent.com/WZBSocialScienceCenter/plz_geocoord/master/plz_geocoord.csv",
             keep_local=True,
         ),
-        regions=resources("regions_onshore_base_s_{clusters}.geojson"),
+        regions=resources("onshore_regions.geojson"),
         district_heating_subnodes=lambda w: (
             resources("district_heating_subnodes.geojson")
             if config_provider("sector", "district_heating", "subnodes", "enable")(w)
             else []
         ),
     output:
-        german_chp=resources("german_chp_base_s_{clusters}.csv"),
+        german_chp=resources("german_chp.csv"),
     log:
-        logs("build_existing_chp_de_{clusters}.log"),
+        logs("build_existing_chp_de.log"),
     resources:
         mem_mb=4000,
     params:
@@ -313,14 +302,14 @@ rule modify_industry_production:
     input:
         ariadne="data/ariadne_database.csv",
         industrial_production_per_country_tomorrow=resources(
-            "industrial_production_per_country_tomorrow_{planning_horizons}.csv"
+            "industrial_production_per_country_tomorrow_{horizon}.csv"
         ),
     output:
         industrial_production_per_country_tomorrow=resources(
-            "industrial_production_per_country_tomorrow_{planning_horizons}-modified.csv"
+            "industrial_production_per_country_tomorrow_{horizon}-modified.csv"
         ),
     log:
-        logs("modify_industry_production_{planning_horizons}.log"),
+        logs("modify_industry_production_{horizon}.log"),
     resources:
         mem_mb=1000,
     params:
@@ -363,12 +352,12 @@ rule build_wasserstoff_kernnetz:
 rule cluster_wasserstoff_kernnetz:
     input:
         cleaned_h2_network=resources("wasserstoff_kernnetz.csv"),
-        regions_onshore=resources("regions_onshore_base_s_{clusters}.geojson"),
-        regions_offshore=resources("regions_offshore_base_s_{clusters}.geojson"),
+        regions_onshore=resources("onshore_regions.geojson"),
+        regions_offshore=resources("offshore_regions.geojson"),
     output:
-        clustered_h2_network=resources("wasserstoff_kernnetz_base_s_{clusters}.csv"),
+        clustered_h2_network=resources("wasserstoff_kernnetz_clustered.csv"),
     log:
-        logs("cluster_wasserstoff_kernnetz_{clusters}.log"),
+        logs("cluster_wasserstoff_kernnetz.log"),
     params:
         kernnetz=config_provider("wasserstoff_kernnetz"),
     script:

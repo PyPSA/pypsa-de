@@ -10,7 +10,6 @@ from scripts._helpers import (
     configure_logging,
     mock_snakemake,
     set_scenario_config,
-    update_config_from_wildcards,
 )
 
 
@@ -27,20 +26,10 @@ def scenario_plot(df, var, output_dir):
 
 if __name__ == "__main__":
     if "snakemake" not in globals():
-        snakemake = mock_snakemake(
-            "plot_scenario_comparison",
-            # simpl="",
-            # clusters=22,
-            # opts="",
-            # ll="vopt",
-            # sector_opts="None",
-            # planning_horizons="2050",
-            # run="KN2045_Mix"
-        )
+        snakemake = mock_snakemake("plot_scenario_comparison")
 
     configure_logging(snakemake)
     set_scenario_config(snakemake)
-    update_config_from_wildcards(snakemake.config, snakemake.wildcards)
 
     dfs = []
     for file in snakemake.input.exported_variables:

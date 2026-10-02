@@ -11,7 +11,6 @@ from scripts._helpers import (
     mock_snakemake,
     sanitize_custom_columns,
     set_scenario_config,
-    update_config_from_wildcards,
 )
 from scripts.add_electricity import load_costs
 from scripts.prepare_sector_network import lossy_bidirectional_links
@@ -26,7 +25,7 @@ def first_technology_occurrence(n):
 
     for c, carriers in snakemake.params.technology_occurrence.items():
         for carrier, first_year in carriers.items():
-            if int(snakemake.wildcards.planning_horizons) < first_year:
+            if int(snakemake.wildcards.horizon) < first_year:
                 to_drop = n.df(c).query(f"carrier == '{carrier}'").index
                 if to_drop.empty:
                     continue
@@ -80,7 +79,7 @@ def remove_old_boiler_profiles(n):
 
 
 def new_boiler_ban(n):
-    year = int(snakemake.wildcards.planning_horizons)
+    year = int(snakemake.wildcards.horizon)
 
     for ct in snakemake.params.fossil_boiler_ban:
         ban_year = int(snakemake.params.fossil_boiler_ban[ct])
@@ -102,7 +101,7 @@ def new_boiler_ban(n):
 
 
 def coal_generation_ban(n):
-    year = int(snakemake.wildcards.planning_horizons)
+    year = int(snakemake.wildcards.horizon)
 
     for ct in snakemake.params.coal_ban:
         ban_year = int(snakemake.params.coal_ban[ct])
@@ -119,7 +118,7 @@ def coal_generation_ban(n):
 
 
 def nuclear_generation_ban(n):
-    year = int(snakemake.wildcards.planning_horizons)
+    year = int(snakemake.wildcards.horizon)
 
     for ct in snakemake.params.nuclear_ban:
         ban_year = int(snakemake.params.nuclear_ban[ct])
@@ -230,11 +229,11 @@ def reduce_capacity(
 def add_wasserstoff_kernnetz(n, wkn, costs):
     logger.info("adding wasserstoff kernnetz")
 
-    investment_year = int(snakemake.wildcards.planning_horizons)
+    investment_year = int(snakemake.wildcards.horizon)
 
     # get previous planning horizon
     planning_horizons = snakemake.params.planning_horizons
-    i = planning_horizons.index(int(snakemake.wildcards.planning_horizons))
+    i = planning_horizons.index(int(snakemake.wildcards.horizon))
     previous_investment_year = int(planning_horizons[i - 1]) if i != 0 else 2015  # noqa
 
     # use only pipes added since the previous investment period
@@ -404,10 +403,10 @@ def unravel_carbonaceous_fuels(n):
         p_nom=1e6,
         efficiency=1
         - (
-            snakemake.config["industry"]["oil_refining_emissions"]
+            snakemake.params.industry["oil_refining_emissions"]
             / costs.at["oil", "CO2 intensity"]
         ),
-        efficiency2=snakemake.config["industry"]["oil_refining_emissions"],
+        efficiency2=snakemake.params.industry["oil_refining_emissions"],
     )
 
     ### renewable oil
@@ -623,9 +622,7 @@ def unravel_carbonaceous_fuels(n):
         )
         # get share of shipping done with methanol
         p_set = (
-            snakemake.params.shipping_methanol_share[
-                int(snakemake.wildcards.planning_horizons)
-            ]
+            snakemake.params.shipping_methanol_share[int(snakemake.wildcards.horizon)]
             * p_set
             * efficiency
         )
@@ -715,8 +712,8 @@ def unravel_gasbus(n, costs):
         bus2="co2 atmosphere",
         carrier="gas compressing",
         p_nom=1e6,
-        efficiency=1 - snakemake.config["industry"]["gas_compression_losses"],
-        efficiency2=snakemake.config["industry"]["gas_compression_losses"]
+        efficiency=1 - snakemake.params.industry["gas_compression_losses"],
+        efficiency2=snakemake.params.industry["gas_compression_losses"]
         * costs.at["gas", "CO2 intensity"],
     )
 
@@ -847,9 +844,9 @@ def must_run(n, params):
     Set p_min_pu for links to the specified value or reset to 0 if not specified.
     """
 
-    investment_year = int(snakemake.wildcards.planning_horizons)
+    investment_year = int(snakemake.wildcards.horizon)
     planning_horizons = snakemake.params.planning_horizons
-    i = planning_horizons.index(int(snakemake.wildcards.planning_horizons))
+    i = planning_horizons.index(int(snakemake.wildcards.horizon))
     previous_investment_year = int(planning_horizons[i - 1]) if i != 0 else np.nan
 
     # Get params for the current and previous years
@@ -1218,7 +1215,7 @@ def force_connection_nep_offshore(n, current_year, costs):
     # WARNING this code adds a new generator for the offwind connection
     # at an onshore locations. These extra capacities are not accounted
     # for in the land use constraint
-    if not snakemake.config["renewable"]["offwind-dc"]["resource_classes"] == 1:
+    if not snakemake.params.renewable["offwind-dc"]["resource_classes"] == 1:
         logger.warning(
             "Number of offshore wind resource classes are not equal to 0. Assigning all offshore wind from NEP to class 0."
         )
@@ -1403,7 +1400,7 @@ def scale_capacity(n, scaling):
     - scaling: A dictionary with scaling limits structured as
                {year: {region: {carrier: limit}}}.
     """
-    investment_year = int(snakemake.wildcards.planning_horizons)
+    investment_year = int(snakemake.wildcards.horizon)
     if investment_year in scaling.keys():
         for region in scaling[investment_year].keys():
             for carrier in scaling[investment_year][region].keys():
@@ -1519,13 +1516,12 @@ if __name__ == "__main__":
             opts="",
             ll="vopt",
             sector_opts="none",
-            planning_horizons="2030",
+            horizon="2030",
             run="KN2045_Bal_v5",
         )
 
     configure_logging(snakemake)
     set_scenario_config(snakemake)
-    update_config_from_wildcards(snakemake.config, snakemake.wildcards)
     logger.info("Adding PyPSA-DE specific functionality")
 
     n = pypsa.Network(snakemake.input.network)
@@ -1568,16 +1564,12 @@ if __name__ == "__main__":
         must_run(n, snakemake.params.must_run)
 
     if snakemake.params.H2_plants["enable"]:
-        if snakemake.params.H2_plants["start"] <= int(
-            snakemake.wildcards.planning_horizons
-        ):
+        if snakemake.params.H2_plants["start"] <= int(snakemake.wildcards.horizon):
             add_hydrogen_turbines(n, snakemake.params.H2_plants)
-        if snakemake.params.H2_plants["force"] <= int(
-            snakemake.wildcards.planning_horizons
-        ):
+        if snakemake.params.H2_plants["force"] <= int(snakemake.wildcards.horizon):
             force_retrofit(n, snakemake.params.H2_plants)
 
-    current_year = int(snakemake.wildcards.planning_horizons)
+    current_year = int(snakemake.wildcards.horizon)
 
     enforce_transmission_project_build_years(n, current_year)
 

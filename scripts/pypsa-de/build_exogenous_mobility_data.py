@@ -6,7 +6,6 @@ from scripts._helpers import (
     configure_logging,
     mock_snakemake,
     set_scenario_config,
-    update_config_from_wildcards,
 )
 
 logger = logging.getLogger(__name__)
@@ -149,17 +148,11 @@ if __name__ == "__main__":
     if "snakemake" not in globals():
         snakemake = mock_snakemake(
             "build_exogenous_mobility_data",
-            simpl="",
-            clusters=27,
-            opts="",
-            ll="vopt",
-            sector_opts="none",
-            planning_horizons="2020",
+            horizon="2020",
             run="KN2045_Mix",
         )
     configure_logging(snakemake)
     set_scenario_config(snakemake)
-    update_config_from_wildcards(snakemake.config, snakemake.wildcards)
 
     db = pd.read_csv(
         snakemake.input.ariadne,
@@ -200,7 +193,7 @@ if __name__ == "__main__":
     # get mobility_data data
     mobility_data = get_mobility_data(
         db,
-        snakemake.wildcards.planning_horizons,
+        snakemake.wildcards.horizon,
         non_land_liquids,
         uba_for_mobility=snakemake.params.uba_for_mobility,
     )

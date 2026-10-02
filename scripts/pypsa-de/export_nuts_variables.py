@@ -16,7 +16,6 @@ from scripts._helpers import (
     configure_logging,
     mock_snakemake,
     set_scenario_config,
-    update_config_from_wildcards,
 )
 
 pypsa.options.params.statistics.round = 10
@@ -39,16 +38,10 @@ if __name__ == "__main__":
     if "snakemake" not in globals():
         snakemake = mock_snakemake(
             "export_nuts_variables",
-            simpl="",
-            clusters=27,
-            opts="",
-            ll="vopt",
-            sector_opts="None",
             run="KN2045_Bal_v5",
         )
     configure_logging(snakemake)
     set_scenario_config(snakemake)
-    update_config_from_wildcards(snakemake.config, snakemake.wildcards)
 
     ariadne_template = pd.read_excel(snakemake.input.template, sheet_name=None)
     var2unit = ariadne_template["variable_definitions"].set_index("Variable")["Unit"]

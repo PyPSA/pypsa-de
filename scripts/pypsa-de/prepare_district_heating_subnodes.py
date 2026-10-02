@@ -19,7 +19,6 @@ from rasterio.windows import Window
 from scripts._helpers import (
     configure_logging,
     set_scenario_config,
-    update_config_from_wildcards,
 )
 
 logger = logging.getLogger(__name__)
@@ -604,18 +603,11 @@ if __name__ == "__main__":
 
         snakemake = mock_snakemake(
             "prepare_district_heating_subnodes",
-            simpl="",
-            clusters=27,
-            opts="",
-            ll="vopt",
-            sector_opts="none",
-            planning_horizons="2045",
             run="LowGroundWaterDepth",
         )
 
     configure_logging(snakemake)
     set_scenario_config(snakemake)
-    update_config_from_wildcards(snakemake.config, snakemake.wildcards)
     logger.info("Adding SysGF-specific functionality")
 
     heat_techs = gpd.read_file(snakemake.input.heating_technologies_nuts3).set_index(

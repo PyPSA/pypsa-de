@@ -1169,7 +1169,7 @@ rule build_industrial_production_per_node:
     input:
         industrial_distribution_key=resources("industrial_distribution_key.csv"),
         industrial_production_per_country_tomorrow=resources(
-            "industrial_production_per_country_tomorrow_{planning_horizons}.csv"
+            "industrial_production_per_country_tomorrow_{horizon}.csv"
         ),
     output:
         industrial_production_per_node=resources("industrial_production_{horizon}.csv"),

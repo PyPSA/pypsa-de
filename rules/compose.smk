@@ -117,7 +117,7 @@ def get_compose_inputs(w):
                     f"existing_heating_distribution_extended_{horizons[0]}.csv"
                 )
             ),
-            german_chps=resources("german_chp_{clusters}.csv"),
+            german_chps=resources("german_chp.csv"),
             co2_totals_name=resources("co2_totals.csv"),
             energy_totals=resources("energy_totals.csv"),
             temp_soil_total=resources("temp_soil_total.nc"),
