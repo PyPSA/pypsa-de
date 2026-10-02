@@ -130,19 +130,12 @@ if __name__ == "__main__":
 
         snakemake = mock_snakemake(
             "build_industry_sector_ratios_intermediate",
-            simpl="",
-            clusters=49,
-            opts="",
-            ll="vopt",
-            sector_opts="None",
-            run="KN2045_Bal_v5",
-            planning_horizons=2025,
-            configfiles="config/config.de.yaml",
+            horizon="2030",
         )
     configure_logging(snakemake)
     set_scenario_config(snakemake)
 
-    year = int(snakemake.wildcards.planning_horizons)
+    year = int(snakemake.wildcards.horizon)
 
     params = snakemake.params.industry
 

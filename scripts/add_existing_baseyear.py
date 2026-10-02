@@ -17,14 +17,6 @@ import powerplantmatching as pm
 import pypsa
 import xarray as xr
 
-from scripts._helpers import (
-    configure_logging,
-    load_costs,
-    sanitize_custom_columns,
-    set_scenario_config,
-    update_config_from_wildcards,
-)
-from scripts.add_electricity import sanitize_carriers
 from scripts.build_energy_totals import cartesian
 from scripts.definitions.heat_system import HeatSystem
 from scripts.prepare_sector_network import (
@@ -35,7 +27,6 @@ from scripts.prepare_sector_network import (
 logger = logging.getLogger(__name__)
 cc = coco.CountryConverter()
 idx = pd.IndexSlice
-spatial = SimpleNamespace()
 
 
 def add_build_year_to_new_assets(n: pypsa.Network, baseyear: int) -> None:
@@ -165,6 +156,7 @@ def add_power_capacities_installed_before_baseyear(
     lifetime_values: dict[str, float],
     lifetime_gas_chp: int,
     renewable_carriers: list[str],
+    spatial: SimpleNamespace,
     options: dict,
     solar_rooftop_ratio: float = 0.5,
 ) -> None:
@@ -195,6 +187,8 @@ def add_power_capacities_installed_before_baseyear(
         Lifetime for gas CHPs if missing
     renewable_carriers: list[str]
         List of renewable carriers in the network
+    spatial: SimpleNamespace
+        Container of spatial data
     options: dict,
     solar_rooftop_ratio: float
         Ratio of solar capacity to assign to rooftop vs utility-scale (between 0 and 1)
@@ -280,6 +274,7 @@ def add_power_capacities_installed_before_baseyear(
         lifetime_values,
         lifetime_gas_chp,
         capacity_threshold,
+        spatial,
         options,
     )
 
@@ -317,7 +312,8 @@ def add_power_capacities_installed_before_baseyear(
         aggfunc="sum",
     )
 
-    if solar_rooftop_ratio != 0:
+    has_solar_rooftop = (n.generators.carrier == "solar rooftop").any()
+    if solar_rooftop_ratio != 0 and has_solar_rooftop:
         mask = df.index.get_level_values("Fueltype") == "solar"
         solar = df.loc[mask] * (1 - solar_rooftop_ratio)
         solar_rooftop = df.loc[mask] * solar_rooftop_ratio
@@ -429,12 +425,16 @@ def add_power_capacities_installed_before_baseyear(
             # check for missing bus
             missing_bus = pd.Index(bus0).difference(n.buses.index)
             if not missing_bus.empty:
-                logger.info(f"add buses {bus0}")
+                logger.info(f"add buses {missing_bus}")
+                spatial_carrier = vars(spatial)[carrier[generator]]
+                locations = pd.Series(
+                    list(spatial_carrier.locations), index=list(spatial_carrier.nodes)
+                )
                 n.add(
                     "Bus",
-                    bus0,
+                    missing_bus,
                     carrier=generator,
-                    location=vars(spatial)[carrier[generator]].locations,
+                    location=locations[missing_bus].values,
                     unit="MWh_el",
                 )
 
@@ -532,6 +532,7 @@ def add_german_chp_plants(
     lifetime_values,
     lifetime_gas_chp,
     capacity_threshold,
+    spatial,
     options,
 ):
     # rename fuel of CHPs - lignite not in DEA database
@@ -852,6 +853,7 @@ def add_heating_capacities_installed_before_baseyear(
     energy_totals_year: int,
     capacity_threshold: float,
     use_electricity_distribution_grid: bool,
+    spatial: SimpleNamespace,
 ) -> None:
     """
     Add heating capacities installed before base year.
@@ -884,6 +886,8 @@ def add_heating_capacities_installed_before_baseyear(
         Minimum capacity threshold
     use_electricity_distribution_grid : bool
         Whether to use electricity distribution grid
+    spatial : SimpleNamespace
+        Container of spatial data
     """
     logger.debug(f"Adding heating capacities installed before {baseyear}")
 
@@ -1122,96 +1126,64 @@ def add_heating_capacities_installed_before_baseyear(
             )
 
 
-if __name__ == "__main__":
-    if "snakemake" not in globals():
-        from scripts._helpers import mock_snakemake
+def main(
+    n: pypsa.Network,
+    inputs,
+    params,
+    costs: pd.DataFrame,
+) -> None:
+    logger.info("Adding existing capacities")
+    baseyear = params.horizons[0]
+    renewable_carriers = set(params.renewable_carriers)
 
-        snakemake = mock_snakemake(
-            "add_existing_baseyear",
-            clusters="49",
-            ll="vopt",
-            opts="",
-            sector_opts="none",
-            planning_horizons="2025",
-            run="KN2045_Bal_v5",
-        )
-
-    configure_logging(snakemake)  # pylint: disable=E0606
-    set_scenario_config(snakemake)
-
-    update_config_from_wildcards(snakemake.config, snakemake.wildcards)
-
-    options = snakemake.params.sector
-
-    renewable_carriers = snakemake.params.carriers
-
-    baseyear = snakemake.params.baseyear
-
-    n = pypsa.Network(snakemake.input.network)
+    options = params.sector
 
     # define spatial resolution of carriers
     spatial = define_spatial(n.buses[n.buses.carrier == "AC"].index, options)
     add_build_year_to_new_assets(n, baseyear)
 
-    costs = load_costs(snakemake.input.costs)
-
-    grouping_years_power = snakemake.params.existing_capacities["grouping_years_power"]
-    grouping_years_heat = snakemake.params.existing_capacities["grouping_years_heat"]
+    grouping_years_power = params.existing_capacities["grouping_years_power"]
+    grouping_years_heat = params.existing_capacities["grouping_years_heat"]
     add_power_capacities_installed_before_baseyear(
         n=n,
         costs=costs,
         grouping_years=grouping_years_power,
         baseyear=baseyear,
-        powerplants_file=snakemake.input.powerplants,
-        german_chps_file=snakemake.input.get("german_chps", ""),
-        countries=snakemake.config["countries"],
-        capacity_threshold=snakemake.params.existing_capacities["threshold_capacity"],
-        lifetime_values=snakemake.params.costs["fill_values"],
-        lifetime_gas_chp=snakemake.params.existing_capacities[
-            "fill_value_gas_chp_lifetime"
-        ],
+        powerplants_file=inputs.powerplants,
+        german_chps_file=inputs.get("german_chps", ""),
+        countries=params.countries,
+        capacity_threshold=params.existing_capacities["threshold_capacity"],
+        lifetime_values=params.costs["fill_values"],
+        lifetime_gas_chp=params.existing_capacities["fill_value_gas_chp_lifetime"],
         renewable_carriers=renewable_carriers,
+        spatial=spatial,
         options=options,
-        solar_rooftop_ratio=snakemake.params.existing_capacities["solar_rooftop_ratio"],
+        solar_rooftop_ratio=params.existing_capacities["solar_rooftop_ratio"],
     )
 
     if options["heating"]:
-        # one could use baseyear here instead (but dangerous if no data)
-        fn = snakemake.input.heating_efficiencies
-        year = int(snakemake.params["energy_totals_year"])
-        heating_efficiencies = pd.read_csv(fn, index_col=[1, 0]).loc[year]
-
         add_heating_capacities_installed_before_baseyear(
             n=n,
             costs=costs,
             baseyear=baseyear,
             grouping_years=grouping_years_heat,
-            heat_pump_cop=xr.open_dataarray(snakemake.input.cop_profiles),
+            heat_pump_cop=xr.open_dataarray(inputs.cop_profiles),
             use_time_dependent_cop=options["time_dep_hp_cop"],
-            default_lifetime=snakemake.params.existing_capacities[
-                "default_heating_lifetime"
-            ],
+            default_lifetime=params.existing_capacities["default_heating_lifetime"],
             existing_capacities=pd.read_csv(
-                snakemake.input.existing_heating_distribution,
+                inputs.existing_heating_distribution,
                 header=[0, 1],
                 index_col=0,
             ),
-            heat_pump_source_types=snakemake.params.heat_pump_sources,
-            efficiency_file=snakemake.input.heating_efficiencies,
-            energy_totals_year=snakemake.params["energy_totals_year"],
-            capacity_threshold=snakemake.params.existing_capacities[
-                "threshold_capacity"
-            ],
+            heat_pump_source_types=params.heat_pump_sources,
+            efficiency_file=inputs.heating_efficiencies,
+            energy_totals_year=params["energy_totals_year"],
+            capacity_threshold=params.existing_capacities["threshold_capacity"],
             use_electricity_distribution_grid=options["electricity_distribution_grid"],
+            spatial=spatial,
         )
 
     # Set defaults for missing missing values
 
     if options.get("cluster_heat_buses", False):
         cluster_heat_buses(n)
-
-    n.meta = dict(snakemake.config, **dict(wildcards=dict(snakemake.wildcards)))
-
-    sanitize_custom_columns(n)
-    sanitize_carriers(n, snakemake.config)
-    n.export_to_netcdf(snakemake.output[0])

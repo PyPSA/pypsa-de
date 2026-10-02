@@ -17,7 +17,7 @@ Inputs:
 
 Outputs:
 --------
-- Existing heat generation capacities distributed to nodes: `resources/{run_name}/existing_heating_distribution_base_s_{clusters}_{planning_horizons}.csv`
+- Existing heat generation capacities distributed to nodes: `resources/{run}/existing_heating_distribution_{horizon}.csv`
 
 
 Notes
@@ -68,10 +68,12 @@ def build_existing_heating():
         snakemake.input.existing_heating, index_col=0, header=0
     )
 
-    # data for Albania, Montenegro and Macedonia not included in database
+    # data for Albania, Montenegro, Macedonia, Cyprus, Malta not included in database
     existing_heating.loc["Albania"] = np.nan
     existing_heating.loc["Montenegro"] = np.nan
     existing_heating.loc["Macedonia"] = np.nan
+    existing_heating.loc["Cyprus"] = np.nan
+    existing_heating.loc["Malta"] = np.nan
 
     existing_heating.fillna(0.0, inplace=True)
 
@@ -166,8 +168,7 @@ if __name__ == "__main__":
 
         snakemake = mock_snakemake(
             "build_existing_heating_distribution",
-            clusters=48,
-            planning_horizons=2050,
+            horizon=2050,
         )
     configure_logging(snakemake)
     set_scenario_config(snakemake)

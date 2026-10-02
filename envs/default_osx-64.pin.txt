@@ -69,7 +69,7 @@ https://conda.anaconda.org/conda-forge/noarch/requests-2.34.2-pyhcf101f3_0.conda
 https://conda.anaconda.org/conda-forge/noarch/pyjwt-2.11.0-pyhd8ed1ab_0.conda#f9517d2fe1501919d7a236aba73409bb
 https://conda.anaconda.org/conda-forge/osx-64/cryptography-46.0.5-py312h45fac9f_0.conda#0cf8ac6e84b189f80b6352b91de24f65
 https://conda.anaconda.org/conda-forge/noarch/blinker-1.9.0-pyhff2d567_0.conda#42834439227a4551b939beeeb8a4b085
-https://conda.anaconda.org/conda-forge/noarch/oauthlib-3.3.1-pyhd8ed1ab_0.conda#d4f3f31ee39db3efecb96c0728d4bdbf
+https://conda.anaconda.org/conda-forge/noarch/oauthlib-3.3.1-pyh5ded981_1.conda#5878c9a87282fd74d4913ee8c3952ed0
 https://conda.anaconda.org/conda-forge/noarch/requests-oauthlib-1.4.0-pyhd8ed1ab_0.conda#a55b220de8970208f583e38639cfbecc
 https://conda.anaconda.org/bioconda/noarch/snakemake-storage-plugin-http-0.3.0-pyhdfd78af_0.tar.bz2#269943ac6637718947763b4f989710fc
 https://conda.anaconda.org/conda-forge/noarch/platformdirs-4.9.2-pyhcf101f3_0.conda#4fefefb892ce9cc1539405bec2f1a6cd
@@ -150,8 +150,8 @@ https://conda.anaconda.org/conda-forge/noarch/aiosqlite-0.21.0-pyhaa4b35c_0.cond
 https://conda.anaconda.org/bioconda/noarch/snkmt-0.4.0-pyhdfd78af_0.conda#38ba1f1279491d848303cd050dfe56cc
 https://conda.anaconda.org/bioconda/noarch/snakemake-logger-plugin-snkmt-0.1.6-pyhdfd78af_0.conda#8fbd31325e6fbb325e15625471b44dfc
 https://conda.anaconda.org/bioconda/noarch/snakemake-logger-plugin-pypsa-0.2.0-pyhdfd78af_0.conda#99b9953692a58a31aa94c0d127e71c32
-https://conda.anaconda.org/bioconda/noarch/snakemake-executor-plugin-slurm-jobstep-0.6.1-pyhdfd78af_0.conda#a69ecf8f00a9d1780a2a8c4f57492e90
-https://conda.anaconda.org/bioconda/noarch/snakemake-executor-plugin-slurm-2.8.0-pyhdfd78af_0.conda#f9a172b956e049e181d3fcc6f47cde95
+https://conda.anaconda.org/bioconda/noarch/snakemake-executor-plugin-slurm-jobstep-0.4.0-pyhdfd78af_0.conda#7d4f2bf739967798eb4d8c02d59cf36c
+https://conda.anaconda.org/bioconda/noarch/snakemake-executor-plugin-slurm-2.7.1-pyhdfd78af_1.conda#48ea673e4d98ec7e753fdd3e7c6a8bb6
 https://conda.anaconda.org/bioconda/noarch/snakemake-executor-plugin-cluster-generic-1.0.9-pyhdfd78af_0.tar.bz2#9b1db7127119f513696d620eefe7bf67
 https://conda.anaconda.org/conda-forge/osx-64/ruff-0.15.2-h8ee721d_0.conda#a94639422d80dfa08221193f95edc49a
 https://conda.anaconda.org/conda-forge/osx-64/ruamel.yaml.clib-0.2.15-py312hf7082af_1.conda#1febc2f58c009405f5111fba9b97ba69
