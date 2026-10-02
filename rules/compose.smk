@@ -113,7 +113,9 @@ def get_compose_inputs(w):
             existing_heating_distribution=(
                 resources("existing_heating_distribution_{horizon}.csv")
                 if not cfg["sector"]["district_heating"]["subnodes"]["enable"]
-                else resources("existing_heating_distribution-extended_{horizon}.csv")
+                else resources(
+                    f"existing_heating_distribution_extended_{horizons[0]}.csv"
+                )
             ),
             german_chps=resources("german_chp_{clusters}.csv"),
             co2_totals_name=resources("co2_totals.csv"),

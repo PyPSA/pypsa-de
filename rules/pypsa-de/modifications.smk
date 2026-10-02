@@ -62,7 +62,7 @@ rule build_egon_data:
 rule prepare_district_heating_subnodes:
     input:
         heating_technologies_nuts3=resources("heating_technologies_nuts3.geojson"),
-        regions_onshore=resources("regions_onshore_base_s_{clusters}.geojson"),
+        regions_onshore=resources("onshore_regions.geojson"),
         fernwaermeatlas="data/fernwaermeatlas/fernwaermeatlas.xlsx",
         cities="data/fernwaermeatlas/cities_geolocations.geojson",
         lau_regions=rules.retrieve_lau_regions.output["zip"],
@@ -80,66 +80,57 @@ rule prepare_district_heating_subnodes:
             keep_local=True,
         ),
     output:
-        district_heating_subnodes=resources(
-            "district_heating_subnodes_base_s_{clusters}.geojson"
-        ),
-        regions_onshore_extended=resources(
-            "regions_onshore_base-extended_s_{clusters}.geojson"
-        ),
-        regions_onshore_restricted=resources(
-            "regions_onshore_base-restricted_s_{clusters}.geojson"
-        ),
+        district_heating_subnodes=resources("district_heating_subnodes.geojson"),
+        regions_onshore_extended=resources("onshore_regions_extended.geojson"),
+        regions_onshore_restricted=resources("onshore_regions_restricted.geojson"),
     resources:
         mem_mb=20000,
     params:
         district_heating=config_provider("sector", "district_heating"),
-        baseyear=config_provider("scenario", "planning_horizons", 0),
+        baseyear=config_provider("planning_horizons", 0),
     script:
         scripts("pypsa-de/prepare_district_heating_subnodes.py")
 
 
-def baseyear_value(wildcards):
-    return config_provider("scenario", "planning_horizons", 0)(wildcards)
+rule extend_existing_heating_distribution:
+    input:
+        existing_heating_distribution=resources(
+            f"existing_heating_distribution_{config['planning_horizons'][0]}.csv"
+        ),
+        subnodes=resources("district_heating_subnodes.geojson"),
+    output:
+        existing_heating_distribution_extended=resources(
+            f"existing_heating_distribution_extended_{config['planning_horizons'][0]}.csv"
+        ),
+        district_heating_subnodes_selected=resources(
+            "district_heating_subnodes_selected.geojson"
+        ),
+    params:
+        nlargest=config_provider("sector", "district_heating", "subnodes", "nlargest"),
+    script:
+        scripts("pypsa-de/extend_existing_heating_distribution.py")
 
 
 rule add_district_heating_subnodes:
     input:
         unpack(input_heat_source_power),
-        network=resources(
-            "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc"
-        ),
-        subnodes=resources("district_heating_subnodes_base_s_{clusters}.geojson"),
+        network=resources("networks/composed_{horizon}.nc"),
+        subnodes=resources("district_heating_subnodes.geojson"),
         nuts3=resources("nuts3_shapes.geojson"),
-        regions_onshore=resources("regions_onshore_base_s_{clusters}.geojson"),
+        regions_onshore=resources("onshore_regions.geojson"),
         fernwaermeatlas="data/fernwaermeatlas/fernwaermeatlas.xlsx",
         cities="data/fernwaermeatlas/cities_geolocations.geojson",
-        cop_profiles=resources("cop_profiles_base_s_{clusters}_{planning_horizons}.nc"),
+        cop_profiles=resources("cop_profiles_{horizon}.nc"),
         direct_heat_source_utilisation_profiles=resources(
-            "direct_heat_source_utilisation_profiles_base_s_{clusters}_{planning_horizons}.nc"
-        ),
-        existing_heating_distribution=lambda w: resources(
-            f"existing_heating_distribution_base_s_{{clusters}}_{baseyear_value(w)}.csv"
+            "direct_heat_source_utilisation_profiles_{horizon}.nc"
         ),
         lau_regions=rules.retrieve_lau_regions.output["zip"],
     output:
-        network=resources(
-            "networks/base-extended_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc"
-        ),
-        district_heating_subnodes=resources(
-            "district_heating_subnodes_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.geojson"
-        ),
-        existing_heating_distribution_extended=(
-            resources(
-                "existing_heating_distribution_base-extended_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.csv"
-            )
-            if baseyear_value != "{planning_horizons}"
-            else []
-        ),
+        network=resources("networks/composed_with_subnodes_{horizon}.nc"),
     resources:
         mem_mb=10000,
     params:
         district_heating=config_provider("sector", "district_heating"),
-        baseyear=config_provider("scenario", "planning_horizons", 0),
         sector=config_provider("sector"),
         heat_pump_sources=config_provider(
             "sector", "heat_pump_sources", "urban central"
@@ -300,7 +291,7 @@ rule build_existing_chp_de:
         ),
         regions=resources("regions_onshore_base_s_{clusters}.geojson"),
         district_heating_subnodes=lambda w: (
-            resources("district_heating_subnodes_base_s_{clusters}.geojson")
+            resources("district_heating_subnodes.geojson")
             if config_provider("sector", "district_heating", "subnodes", "enable")(w)
             else []
         ),
