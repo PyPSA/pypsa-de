@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20260908_limit_bio
+  prefix: 20261005_restructure_workflow
   name:
   - KN2045_Mix
   scenarios:
@@ -12,7 +12,7 @@ run:
     manual_file: config/scenarios.manual.yaml
     file: config/scenarios.automated.yaml
   shared_resources:
-    policy: base #stops recalculating
+    policy: false #stops recalculating
     exclude:
     - existing_heating.csv   # specify files which should not be shared between scenarios
     - costs
