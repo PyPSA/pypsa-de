@@ -37,8 +37,8 @@ dependencies:
 - openpyxl >=3.1.5
 - pandas >=3
 - plotly >=6.4.0
-- powerplantmatching ==0.6.1
 - pydantic >=2.12
+- powerplantmatching ==0.6.1
 - python-dotenv >=1.0
 - proj >=9.6.2
 - pydeck >0.6
