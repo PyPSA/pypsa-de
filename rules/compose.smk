@@ -118,8 +118,6 @@ def get_compose_inputs(w):
                 )
             ),
             german_chps=resources("german_chp.csv"),
-            co2_totals_name=resources("co2_totals.csv"),
-            energy_totals=resources("energy_totals.csv"),
             temp_soil_total=resources("temp_soil_total.nc"),
             temp_air_total=resources("temp_air_total.nc"),
             cop_profiles=resources("cop_profiles_{horizon}.nc"),
@@ -216,7 +214,7 @@ def get_compose_inputs(w):
                 if sector["industry"] and uba_industry_enabled
                 else []
             ),
-            regions_onshore=resources("onshore_regions.geojson"),
+            onshore_regions=resources("onshore_regions.geojson"),
             regions_offshore=resources("offshore_regions.geojson"),
             offshore_connection_points="data/pypsa-de/offshore_connection_points.csv",
             wkn=(

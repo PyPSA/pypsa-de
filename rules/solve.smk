@@ -10,6 +10,8 @@ rule solve_network:
             if config_provider("sector", "district_heating", "subnodes", "enable")(w)
             else f"networks/composed_{w.horizon}.nc"
         ),
+        energy_totals=resources("energy_totals.csv"),
+        co2_totals_name=resources("co2_totals.csv"),
     output:
         network=RESULTS + "networks/solved_{horizon}.nc",
         model=(
@@ -33,11 +35,13 @@ rule solve_network:
         solving=config_provider("solving"),
         foresight=config_provider("foresight"),
         planning_horizons=config_provider("planning_horizons"),
+        n_clusters=config_provider("clustering", "cluster_network", "n_clusters"),
         sector=config_provider("sector"),
         co2_sequestration_potential=config_provider(
             "sector", "co2_sequestration_potential"
         ),
         custom_extra_functionality=input_custom_extra_functionality,
+        energy_totals_year=config_provider("energy", "energy_totals_year"),
     script:
         scripts("solve_network.py")
 
@@ -63,6 +67,7 @@ rule solve_operations_network:
         solving=config_provider("solving"),
         foresight=config_provider("foresight"),
         planning_horizons=config_provider("planning_horizons"),
+        n_clusters=config_provider("clustering", "cluster_network", "n_clusters"),
         sector=config_provider("sector"),
         co2_sequestration_potential=config_provider(
             "sector", "co2_sequestration_potential"
