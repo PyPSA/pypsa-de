@@ -194,7 +194,7 @@ rule build_hourly_heat_demand:
 rule build_temperature_profiles:
     input:
         pop_layout=resources("pop_layout_total.nc"),
-        regions_onshore=resources("onshore_regions.geojson"),
+        onshore_regions=resources("onshore_regions.geojson"),
         cutout=lambda w: input_cutout(
             w, config_provider("sector", "heat_demand_cutout")(w)
         ),
@@ -220,7 +220,7 @@ rule build_temperature_profiles:
 rule build_central_heating_temperature_profiles:
     input:
         temp_air_total=resources("temp_air_total.nc"),
-        regions_onshore=resources("onshore_regions.geojson"),
+        onshore_regions=resources("onshore_regions.geojson"),
     output:
         central_heating_forward_temperature_profiles=resources(
             "central_heating_forward_temperature_profiles_{horizon}.nc"
@@ -307,7 +307,7 @@ rule build_geothermal_heat_potential:
         isi_heat_potentials=rules.retrieve_geothermal_heat_utilisation_potentials.output[
             "isi_heat_potentials"
         ],
-        regions_onshore=resources("onshore_regions.geojson"),
+        onshore_regions=resources("onshore_regions.geojson"),
         lau_regions=rules.retrieve_lau_regions.output["zip"],
     output:
         heat_source_power=resources("heat_source_power_geothermal.csv"),
@@ -626,7 +626,7 @@ rule build_cop_profiles:
         central_heating_return_temperature_profiles=resources(
             "central_heating_return_temperature_profiles_{horizon}.nc"
         ),
-        regions_onshore=resources("onshore_regions.geojson"),
+        onshore_regions=resources("onshore_regions.geojson"),
     output:
         cop_profiles=resources("cop_profiles_{horizon}.nc"),
     log:

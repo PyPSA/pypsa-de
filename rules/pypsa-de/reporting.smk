@@ -169,7 +169,7 @@ rule plot_ariadne_report:
             horizon=config["planning_horizons"],
             allow_missing=True,
         ),
-        regions_onshore_clustered=resources("onshore_regions.geojson"),
+        onshore_regions_clustered=resources("onshore_regions.geojson"),
         rc="matplotlibrc",
         costs=expand(
             resources("costs_{horizon}_processed.csv"),

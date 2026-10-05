@@ -603,7 +603,7 @@ if __name__ == "__main__":
         sheet_name="Fernwärmeatlas_öffentlich",
     )
     cities = gpd.read_file(snakemake.input.cities)
-    regions_onshore = gpd.read_file(snakemake.input.regions_onshore).set_index("name")
+    onshore_regions = gpd.read_file(snakemake.input.onshore_regions).set_index("name")
 
     subnodes = gpd.read_file(snakemake.input.subnodes)
 

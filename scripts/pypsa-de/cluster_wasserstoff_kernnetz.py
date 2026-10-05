@@ -206,7 +206,7 @@ if __name__ == "__main__":
         df[col] = df[col].apply(wkt.loads)
 
     bus_regions = load_bus_regions(
-        snakemake.input.regions_onshore, snakemake.input.regions_offshore
+        snakemake.input.onshore_regions, snakemake.input.regions_offshore
     )
     logger.info(f"Clustering Wasserstoff Kernnetz for {list(bus_regions.index)}")
     kernnetz_cf = snakemake.params.kernnetz

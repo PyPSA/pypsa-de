@@ -928,7 +928,7 @@ def add_decentral_heat_budgets(n, decentral_heat_budgets, investment_year):
 def additional_functionality(n, snapshots, snakemake):
     logger.info("Adding Ariadne-specific functionality")
 
-    investment_year = int(snakemake.wildcards.planning_horizons[-4:])
+    investment_year = int(snakemake.wildcards.horizon)
     constraints = snakemake.params.solving["constraints"]
 
     add_capacity_limits(
@@ -949,7 +949,7 @@ def additional_functionality(n, snapshots, snakemake):
 
     add_power_limits(n, investment_year, constraints["limits_power_max"])
 
-    if snakemake.wildcards.clusters != "1":
+    if snakemake.params.n_clusters != 1:
         h2_import_limits(n, investment_year, constraints["limits_volume_max"])
 
         electricity_import_limits(n, investment_year, constraints["limits_volume_max"])

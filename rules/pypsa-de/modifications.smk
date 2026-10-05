@@ -59,7 +59,7 @@ rule build_egon_data:
 rule prepare_district_heating_subnodes:
     input:
         heating_technologies_nuts3=resources("heating_technologies_nuts3.geojson"),
-        regions_onshore=resources("onshore_regions.geojson"),
+        onshore_regions=resources("onshore_regions.geojson"),
         fernwaermeatlas="data/fernwaermeatlas/fernwaermeatlas.xlsx",
         cities="data/fernwaermeatlas/cities_geolocations.geojson",
         lau_regions=rules.retrieve_lau_regions.output["zip"],
@@ -78,8 +78,8 @@ rule prepare_district_heating_subnodes:
         ),
     output:
         district_heating_subnodes=resources("district_heating_subnodes.geojson"),
-        regions_onshore_extended=resources("onshore_regions_extended.geojson"),
-        regions_onshore_restricted=resources("onshore_regions_restricted.geojson"),
+        onshore_regions_extended=resources("onshore_regions_extended.geojson"),
+        onshore_regions_restricted=resources("onshore_regions_restricted.geojson"),
     resources:
         mem_mb=20000,
     params:
@@ -114,7 +114,7 @@ rule add_district_heating_subnodes:
         network=resources("networks/composed_{horizon}.nc"),
         subnodes=resources("district_heating_subnodes.geojson"),
         nuts3=resources("nuts3_shapes.geojson"),
-        regions_onshore=resources("onshore_regions.geojson"),
+        onshore_regions=resources("onshore_regions.geojson"),
         fernwaermeatlas="data/fernwaermeatlas/fernwaermeatlas.xlsx",
         cities="data/fernwaermeatlas/cities_geolocations.geojson",
         cop_profiles=resources("cop_profiles_{horizon}.nc"),
@@ -149,7 +149,7 @@ ruleorder: modify_district_heat_share > build_district_heat_share
 rule modify_district_heat_share:
     input:
         heating_technologies_nuts3=resources("heating_technologies_nuts3.geojson"),
-        regions_onshore=resources("onshore_regions.geojson"),
+        onshore_regions=resources("onshore_regions.geojson"),
         district_heat_share=resources("district_heat_share_{horizon}.csv"),
     output:
         district_heat_share=resources("district_heat_share_{horizon}-modified.csv"),
@@ -247,7 +247,7 @@ rule build_wasserstoff_kernnetz:
             keep_local=True,
         ),
         locations="data/pypsa-de/wasserstoff_kernnetz/locations_wasserstoff_kernnetz.csv",
-        regions_onshore=resources("onshore_regions_base.geojson"),
+        onshore_regions=resources("onshore_regions_base.geojson"),
         regions_offshore=resources("offshore_regions_base.geojson"),
     output:
         cleaned_wasserstoff_kernnetz=resources("wasserstoff_kernnetz.csv"),
@@ -262,7 +262,7 @@ rule build_wasserstoff_kernnetz:
 rule cluster_wasserstoff_kernnetz:
     input:
         cleaned_h2_network=resources("wasserstoff_kernnetz.csv"),
-        regions_onshore=resources("onshore_regions.geojson"),
+        onshore_regions=resources("onshore_regions.geojson"),
         regions_offshore=resources("offshore_regions.geojson"),
     output:
         clustered_h2_network=resources("wasserstoff_kernnetz_clustered.csv"),

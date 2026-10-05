@@ -2823,7 +2823,7 @@ if __name__ == "__main__":
     # file_list.sort()
     # networks = [pypsa.Network(diry+"/"+fn) for fn in file_list]
     # modelyears = [fn[-7:-3] for fn in snakemake.input.networks]
-    # regions = gpd.read_file("path-to-file/regions_onshore_base_s_49.geojson").set_index("name")
+    # regions = gpd.read_file("path-to-file/onshore_regions_base_s_49.geojson").set_index("name")
 
     # ensure output directory exist
     for dir in snakemake.output[5:]:
@@ -3065,7 +3065,7 @@ if __name__ == "__main__":
     )
 
     # load regions
-    regions = gpd.read_file(snakemake.input.regions_onshore_clustered).set_index("name")
+    regions = gpd.read_file(snakemake.input.onshore_regions_clustered).set_index("name")
 
     for year in planning_horizons:
         plot_elec_prices_spatial(

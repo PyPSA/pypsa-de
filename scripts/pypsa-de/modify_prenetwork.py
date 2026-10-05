@@ -627,7 +627,6 @@ def unravel_carbonaceous_fuels(
         efficiency = shipping_oil_efficiency / shipping_methanol_efficiency
         # get share of shipping done with methanol
         p_set = shipping_methanol_share[current_horizon] * p_set * efficiency
-    if not efuel_export_ban:
         n.add(
             "Load",
             "DE shipping methanol",
@@ -1214,7 +1213,7 @@ def force_connection_nep_offshore(
     renewable,
     offshore_nep_force,
     offshore_connection_points,
-    regions_onshore_file,
+    onshore_regions_file,
     regions_offshore_file,
 ):
     # WARNING this code adds a new generator for the offwind connection
@@ -1249,11 +1248,11 @@ def force_connection_nep_offshore(
         crs="EPSG:4326",
     )
 
-    regions_onshore = gpd.read_file(regions_onshore_file).set_index("name")
+    onshore_regions = gpd.read_file(onshore_regions_file).set_index("name")
     regions_offshore = gpd.read_file(regions_offshore_file).set_index("name")
 
     # find connection point nodes for each project
-    goffshore = gpd.sjoin(goffshore, regions_onshore, how="inner", predicate="within")
+    goffshore = gpd.sjoin(goffshore, onshore_regions, how="inner", predicate="within")
 
     # use for offshore profile of nodes connected in non-offshore nodes
     # point is chosen far out in EEZ duck
@@ -1600,7 +1599,7 @@ def main(n, inputs, params, costs, current_horizon: int) -> pypsa.Network:
         params.renewable,
         params.offshore_nep_force,
         inputs.offshore_connection_points,
-        inputs.regions_onshore,
+        inputs.onshore_regions,
         inputs.regions_offshore,
     )
     scale_capacity(n, params.scale_capacity, current_horizon)
