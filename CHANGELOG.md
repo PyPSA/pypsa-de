@@ -1,4 +1,5 @@
 # Changelog
+- MAJOR CHANGES due to the workflow refactor of upstream pypsa-eur. Make sure to read: https://pypsa-eur.readthedocs.io/en/latest/migration
 - the scenarios-2026 PR (https://github.com/PyPSA/pypsa-de/pull/174/) integrated the most recent state of the upstream repo pypsa-eur and importantly changed the following things:
   - added dedicated biogas CHPs and refactored add_existing_baseyear accordingly
   - pinned powerplantmatching to an old version because of problems with missing nuclear PPs
