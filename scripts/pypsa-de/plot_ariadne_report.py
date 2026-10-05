@@ -20,10 +20,10 @@ from pypsa.plot import add_legend_circles, add_legend_lines, add_legend_patches
 
 from scripts._helpers import (
     configure_logging,
+    load_costs,
     mock_snakemake,
     set_scenario_config,
 )
-from scripts.add_electricity import load_costs
 from scripts.make_summary import assign_locations
 
 logger = logging.getLogger(__name__)
