@@ -1405,9 +1405,18 @@ def scale_capacity(n, scaling):
     """
     investment_year = int(snakemake.wildcards.planning_horizons)
     if investment_year in scaling.keys():
-        for region in scaling[investment_year].keys():
-            for carrier in scaling[investment_year][region].keys():
-                limit = scaling[investment_year][region][carrier]
+        year_scaling = scaling[investment_year]
+        # `keep_extendable: true` corrects the capacities (the existing fleet from
+        # add_existing_baseyear is wrong, e.g. too little OCGT in ppm) but leaves
+        # the links extendable, for projection years where the model may still
+        # expand on top. Absent/false freezes them non-extendable (base-year
+        # behaviour). It is not a region, so skip it when iterating.
+        keep_extendable = bool(year_scaling.get("keep_extendable", False))
+        for region in year_scaling.keys():
+            if region == "keep_extendable":
+                continue
+            for carrier in year_scaling[region].keys():
+                limit = year_scaling[region][carrier]
                 logger.info(
                     f"Scaling output capacity (bus1) of {carrier} in region {region} to {limit} MW"
                 )
@@ -1449,9 +1458,16 @@ def scale_capacity(n, scaling):
                 n.links.loc[links_i_current, "p_nom_min"] = n.links.loc[
                     links_i_current, "p_nom"
                 ]
-                # !!! eventually remove this again
-                # Do not allow further extension of assets for which the capacity has been scaled
-                n.links.loc[links_i, "p_nom_extendable"] = False
+                # Freeze the scaled (base-year) fleet non-extendable, unless
+                # keep_extendable is set - then the corrected capacity stays
+                # extendable so the model can still expand on top.
+                if not keep_extendable:
+                    n.links.loc[links_i, "p_nom_extendable"] = False
+    else:
+        logger.info(
+            f"scale_capacity: no entry for planning_horizons={investment_year}; "
+            "existing fleet from add_existing_baseyear left uncorrected."
+        )
 
 
 def limit_cross_border_flows_ac(n, s_max_pu):

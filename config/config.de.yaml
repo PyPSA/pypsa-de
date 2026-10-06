@@ -738,10 +738,19 @@ offshore_nep_force:
   delay_years: 2
 
 scale_capacity:
-  # simultaneously sets p_nom_extendable to False
+  # corrects the DE gas fleet to the target output capacity (ppm under-represents
+  # it) at the modelled planning_horizons year; freezes it non-extendable unless
+  # `keep_extendable: true` is set (projection years where the model may expand).
   2025:
     DE:
       OCGT: 200  # at the moment there are way too little OCGT in ppm, this has to be fixed there. I am using this scaling function only to set extendable false
+      CCGT: 10000
+      "urban central gas CHP": 21000
+      "urban central gas CHP CC": 0
+  2035:
+    keep_extendable: true  # correct the existing fleet but leave it extendable for the 2035 projection year
+    DE:
+      OCGT: 200
       CCGT: 10000
       "urban central gas CHP": 21000
       "urban central gas CHP CC": 0
