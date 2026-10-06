@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20261006-single-year-49cl-365h-2025EXO-2030EXO-2035EXO-10-30-60
+  prefix: 20261006-per-scenario-kvl-49cl-365h-2025EXO-2030EXO-2035EXO-10-50-40
   name:
   - KN2045_Mix
   scenarios:
@@ -787,7 +787,7 @@ stochastic_grid_scenarios:
   outside_de_grid: 2035_exogen # transmission grid outside DE: "<year>_exogen" (committed by <year>, non-extendable) or "endogenous" (freely extendable)
   solve_endogenous_optimal: false # also build the endogenous all-free reference network (no grid override); opt-in, not part of the WS/SP/EEV/EVPI/ECIU comparison
   stochastic_solve_resources: # resource overrides for the "stochastic" grid-topology solve only (its scenario-dimension LP is much larger and scales super-linearly in the number of scenarios); each empty = fall back to the general solving.mem_mb / solving.runtime, which every other variant always uses
-    mem_mb: 70000 # e.g. 420000
+    mem_mb: 70000 # cl/h/s: mem_mb/runtime -> 27/3/2: 100000/3h; 27/3/3: 250000/?h; 49/3/2: 300000/?h; 49/3/3: 450000/16h; 
     runtime: 12h # e.g. 12h
   # CSVs are auto-generated per run from the current topology by
   # build_grid_scenario_csvs; set explicit `links:`/`lines:` paths on a scenario
@@ -803,9 +803,9 @@ stochastic_grid_scenarios:
     2025_exogen:
       probability: 0.1
     2030_exogen:
-      probability: 0.3
+      probability: 0.4
     2035_exogen:
-      probability: 0.6
+      probability: 0.5
     # Examples - uncomment and re-balance probabilities to sum to 1:
     # 2030_exogen:            # delay every branch built after 2030
     #   probability: 0.33

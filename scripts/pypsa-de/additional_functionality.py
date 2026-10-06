@@ -1005,6 +1005,44 @@ def add_decentral_heat_budgets(n, decentral_heat_budgets, investment_year):
             )
 
 
+def add_scenario_kvl(n, sns):
+    """Replace PyPSA's single KVL by one Kirchhoff constraint per scenario.
+
+    PyPSA's native scenario dimension builds a single cycle basis weighted with
+    the first scenario's reactances and keeps ``s_nom=0`` lines in it, so a
+    not-yet-built corridor fixes its flow to zero and angle-locks its endpoints
+    across every scenario. Here each scenario's cycle basis is built from that
+    scenario's own reactances, with its zero-capacity corridors removed, so a
+    corridor realised only in some scenarios neither distorts the others nor
+    carries the wrong impedance where it is built (see
+    build_grid_topology._scale_scenario_line_capacity).
+
+    Requires a PyPSA with scenario-indexed optimization model builders
+    (PyPSA/PyPSA#1951, unreleased as of PyPSA 1.3.0 - install from master).
+    Single-period, line-only models (no transformers).
+    """
+    if not n.c.transformers.static.empty or n.has_investment_periods:
+        raise NotImplementedError(
+            "add_scenario_kvl supports lines in single-period models only."
+        )
+    m = n.model
+    if "Kirchhoff-Voltage-Law" in m.constraints:
+        m.remove_constraints("Kirchhoff-Voltage-Law")
+    for s in n.scenarios:
+        n_s = n.get_scenario(s)
+        lines = n_s.c.lines.static
+        n_s.remove("Line", lines.index[(lines.s_nom == 0) & ~lines.s_nom_extendable])
+        C = n_s.cycle_matrix(apply_weights=True)
+        if C.empty:
+            continue
+        flow = m["Line-s"].sel(scenario=s, snapshot=sns, name=C.loc["Line"].index)
+        m.add_constraints(
+            flow @ DataArray(C.loc["Line"]) * 1e5 == 0,
+            name=f"Kirchhoff-Voltage-Law-{s}",
+        )
+    logger.info("Added per-scenario Kirchhoff-Voltage-Law for %d scenarios", len(n.scenarios))
+
+
 def additional_functionality(n, snapshots, snakemake):
     logger.info("Adding Ariadne-specific functionality")
 
@@ -1058,3 +1096,6 @@ def additional_functionality(n, snapshots, snakemake):
 
     if investment_year == 2020:
         adapt_nuclear_output(n)
+
+    if n.has_scenarios:
+        add_scenario_kvl(n, snapshots)

@@ -5,9 +5,9 @@
 """
 Tests the functionalities of scripts/pypsa-de/build_grid_topology.py, in
 particular the scenario-specific scaling of line num_parallel/reactance/
-resistance and the dropping of zeroed corridors in the deterministic/eev
-variants, versus the canvas-impedance behaviour of the native stochastic
-variant.
+resistance. The deterministic/eev variants also drop zeroed corridors; the
+stochastic variant scales impedance per scenario slice and keeps zeroed
+corridors (they are dropped per scenario at solve time by add_scenario_kvl).
 
 Lines carry a standard ``type``, so ``n.calculate_dependent_values()``
 recomputes ``x``/``r`` from ``num_parallel`` - exactly as the solver does -
@@ -18,7 +18,6 @@ import importlib.util
 import pathlib
 import sys
 
-import numpy as np
 import pandas as pd
 import pypsa
 import pytest
@@ -180,7 +179,7 @@ def test_outside_de_grid_rejects_bad_spec():
         bgt.apply_outside_de_grid(n, "2030_optimal")
 
 
-def test_stochastic_keeps_canvas_impedance(tmp_path):
+def test_stochastic_scales_impedance_per_scenario(tmp_path):
     for sub, s1 in {"a": 100.0, "b": 0.0}.items():
         _write_csvs(tmp_path / sub, {"L1": s1}, {"K1": 500.0})
     n = _canvas()
@@ -194,13 +193,16 @@ def test_stochastic_keeps_canvas_impedance(tmp_path):
     bgt.build_stochastic_topology(n, scenarios, clusters="x")
     n.calculate_dependent_values()
 
-    # canvas num_parallel (-> canvas x) preserved for every scenario slice
     np_by_scen = n.lines.xs("L1", level="name")["num_parallel"]
     x_by_scen = n.lines.xs("L1", level="name")["x"]
-    assert np.allclose(np_by_scen.to_numpy(), 2.0)
-    assert np.allclose(x_by_scen.to_numpy(), x_canvas)
-    assert x_by_scen.std() == 0.0
-    # but s_nom still overridden per scenario, and nothing dropped
+    # scenario "a": s_nom 200 -> 100 (frac 0.5) scales num_parallel 2 -> 1, x doubled
+    assert np_by_scen["a"] == pytest.approx(1.0)
+    assert x_by_scen["a"] == pytest.approx(x_canvas * 2.0)
+    # scenario "b": s_nom -> 0 keeps canvas impedance (dropped per scenario at solve)
+    assert np_by_scen["b"] == pytest.approx(2.0)
+    assert x_by_scen["b"] == pytest.approx(x_canvas)
+    # impedance is genuinely scenario-specific, and nothing is dropped here
+    assert x_by_scen.std() > 0.0
     assert n.lines.xs("L1", level="name")["s_nom"].to_dict() == pytest.approx(
         {"a": 100.0, "b": 0.0}
     )
