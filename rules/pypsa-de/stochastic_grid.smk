@@ -482,7 +482,7 @@ rule unstack_stochastic_grid_topology:
         ),
     threads: 1
     resources:
-        mem_mb=8000,
+        mem_mb=16000,
     message:
         "Unstacking scenario '{wildcards.grid_scenario}' from the joint stochastic grid-topology network"
     script:
@@ -646,7 +646,7 @@ rule plot_grid_scenario_comparison:
         ),
     threads: 1
     resources:
-        mem_mb=32000,
+        mem_mb=50000,
         runtime=480,  
     params:
         network_ids=lambda w: _comparison_network_ids(w),
@@ -697,7 +697,7 @@ rule compute_stochastic_metrics:
         ),
     threads: 1
     resources:
-        mem_mb=32000,
+        mem_mb=80000,
     params:
         grid_scenario_names=GRID_SCENARIO_NAMES,
         grid_scenario_values=GRID_SCENARIO_VALUES,

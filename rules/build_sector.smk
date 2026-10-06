@@ -844,7 +844,7 @@ rule build_co2_totals:
         benchmarks("build_co2_totals")
     threads: 1
     resources:
-        mem_mb=1000,
+        mem_mb=2000,
     params:
         countries=config_provider("countries"),
         energy=config_provider("energy"),
@@ -863,7 +863,7 @@ rule build_transformation_output_coke:
         benchmarks("build_transformation_output_coke")
     threads: 1
     resources:
-        mem_mb=1000,
+        mem_mb=2000,
     script:
         scripts("build_transformation_output_coke.py")
 
