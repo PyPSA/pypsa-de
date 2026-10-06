@@ -1888,9 +1888,14 @@ def get_secondary_energy(n, region, _industry_demand):
         ["SMR", "SMR CC"]
     ).sum()
 
+    # "load" is H2-bus load shedding (carrier "load", present on the
+    # evaluate_grid_portfolio networks solved on an inadequate grid; see
+    # get_primary_energy). Booked into |Other rather than dropped, so the
+    # unserved H2 stays visible in the exported variables and the balance below
+    # still closes.
     var["Secondary Energy|Hydrogen|Other"] = hydrogen_production.get(
         "H2 for industry", 0
-    )
+    ) + hydrogen_production.get("load", 0)
 
     var["Secondary Energy|Hydrogen"] = (
         var["Secondary Energy|Hydrogen|Electricity"]

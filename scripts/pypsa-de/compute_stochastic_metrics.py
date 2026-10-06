@@ -9,8 +9,11 @@ here):
 
 - WS  (wait-and-see): expected cost if the grid outcome were known before
   investing = sum_s probability_s * total_cost(solved topology-s)
-- SP  (stochastic solution): total_cost(solved topology-stochastic), PyPSA's
-  own expected-cost objective for a scenario-enabled network
+- SP  (stochastic solution): the stochastic portfolio re-dispatched on each real
+  grid (cost matrix "stochastic" row = capex + correct-physics expected opex),
+  NOT total_cost(topology-stochastic): the native scenario-dimension objective
+  prices dispatch with phantom-cycle physics (per-scenario line reactance is not
+  honoured), so it is not comparable to the deterministic WS/EEV below
 - EEV (expected-value planner): capex(topology-eev) + expected opex of
   dispatching the eev portfolio under each real topology
 - EVPI = SP - WS   (value of perfect information about the grid)
@@ -140,16 +143,31 @@ def compute_metrics(
     ws = sum(
         probabilities[s] * total_cost(topologies[s]) for s in grid_scenario_names
     )
-    sp = total_cost(topologies["stochastic"])
+    # SP from the cost matrix (stochastic portfolio re-dispatched on each real grid,
+    # correct physics), on the same basis as EEV - not total_cost(topologies[
+    # "stochastic"]), whose native scenario-dimension objective prices dispatch with
+    # phantom-cycle physics and can sit above EEV. The stochastic *plan* is still
+    # sized by that degraded solve, so a residual ECIU < 0 is a genuine signal (the
+    # plan underperforms the naive one), not a measurement artefact.
+    sp = cost_matrix.loc["stochastic", "expected"]
     eev = cost_matrix.loc["eev", "expected"]
     evpi = sp - ws
     eciu = eev - sp
 
-    if not (ws <= sp + 1e-3 <= eev + 1e-3):
+    tol = 1e-3
+    negative = {
+        name: val
+        for name, val in {"EVPI (SP-WS)": evpi, "ECIU (EEV-SP)": eciu}.items()
+        if val < -tol
+    }
+    if negative:
+        detail = ", ".join(f"{k} = {v / 1e9:+.3f} bn EUR" for k, v in negative.items())
         logger.warning(
-            f"Expected WS <= SP <= EEV, got WS={ws:.3e}, SP={sp:.3e}, EEV={eev:.3e}. "
-            "This may indicate a bug in the scenario-awareness of a custom constraint "
-            "(see scripts/solve_network.py / additional_functionality.py)."
+            f"Negative stochastic metric(s), expected >= 0: {detail} "
+            f"(WS={ws / 1e9:.3f}, SP={sp / 1e9:.3f}, EEV={eev / 1e9:.3f} bn EUR). "
+            "A negative ECIU means the stochastic plan underperforms the naive EEV "
+            "plan - expected when the phantom-cycle physics of the native scenario "
+            "solve dominate (see stochastic_grid_uncertainty.ipynb)."
         )
 
     return pd.Series(

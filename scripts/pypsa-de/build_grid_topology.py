@@ -33,7 +33,6 @@ import logging
 
 import pandas as pd
 import pypsa
-from pypsa.descriptors import nominal_attrs
 
 from scripts._helpers import configure_logging, mock_snakemake
 
@@ -199,64 +198,52 @@ def _foreign_countries(n):
     return {c for c in n.buses.country.dropna().unique() if c and c != "DE"}
 
 
-def freeze_foreign_capacities(n, n_optimal):
-    """Fix every capacity outside Germany to the plain "optimal" network's
-    optimised value and make it non-extendable.
-
-    "Outside Germany" means, per component:
-    - Generator / StorageUnit / Store: its bus sits in a non-DE country.
-    - Line / Link: neither end is in DE and at least one end is in a real
-      foreign country (so interconnectors with one DE end - controlled by the
-      grid_scenario CSV override - and purely EU-level links are left alone).
-
-    Called before build_grid_topology(), so for the "stochastic" variant
-    n.set_scenarios() afterwards simply replicates the frozen values across
-    every scenario slice. The CSV overrides only touch DE+interconnector grid
-    branches, which are disjoint from what is frozen here.
+def apply_outside_de_grid(n, spec):
     """
-    foreign = _foreign_countries(n)
-    country = n.buses.country
-    frozen = {}
-    for component, attr in nominal_attrs.items():
-        static = n.components[component].static
-        if static.empty:
-            continue
-        opt_static = n_optimal.components[component].static
+    Fix the transmission grid *outside* Germany to a committed exogen year, or
+    leave it endogenously extendable.
 
-        if {"bus0", "bus1"}.issubset(static.columns):
-            c0, c1 = static.bus0.map(country), static.bus1.map(country)
-            mask = ~c0.eq("DE") & ~c1.eq("DE") & (c0.isin(foreign) | c1.isin(foreign))
-        elif "bus" in static.columns:
-            mask = static.bus.map(country).isin(foreign)
-        else:
-            continue
-
-        names = static.index[mask]
-        missing = names.difference(opt_static.index)
-        if len(missing):
-            logger.warning(
-                f"{component}: {len(missing)} foreign component(s) not in the optimal "
-                f"network, left extendable (e.g. {list(missing)[:3]})."
-            )
-            names = names.difference(missing)
-        if names.empty:
-            continue
-
-        opt_attr = f"{attr}_opt"
-        values = (
-            opt_static.loc[names, opt_attr]
-            if opt_attr in opt_static.columns
-            else opt_static.loc[names, attr]
+    ``spec`` is ``"endogenous"`` (foreign grid stays as prepared, i.e. freely
+    optimisable) or ``"<year>_exogen"`` (foreign AC lines and DC links are
+    floored to the capacity committed by ``<year>``, i.e. ``build_year <= year``,
+    and made non-extendable; not-yet-committed foreign branches are dropped). Only
+    foreign-foreign branches are touched - DE and interconnector branches are the
+    uncertain grid set by the scenario override and are left to
+    build_grid_topology. Must run on the plain network before set_scenarios.
+    """
+    if spec in (None, "endogenous"):
+        return n
+    tokens = spec.split("_")
+    if len(tokens) != 2 or tokens[1] != "exogen":
+        raise ValueError(
+            f"outside_de_grid {spec!r} must be 'endogenous' or '<year>_exogen'."
         )
-        static.loc[names, attr] = values
-        if opt_attr in static.columns:
-            static.loc[names, opt_attr] = values
-        static.loc[names, f"{attr}_extendable"] = False
-        frozen[component] = len(names)
+    year = int(tokens[0])
+
+    country = n.buses.country
+    foreign = _foreign_countries(n)
+
+    def foreign_mask(static):
+        c0, c1 = static.bus0.map(country), static.bus1.map(country)
+        return ~c0.eq("DE") & ~c1.eq("DE") & (c0.isin(foreign) | c1.isin(foreign))
+
+    lines = n.components["Line"].static
+    fl = lines.index[foreign_mask(lines)]
+    s_nom_new = lines.loc[fl, "s_nom"].where(lines.loc[fl, "build_year"] <= year, 0.0)
+    _set_line_capacity(n, s_nom_new)
+
+    links = n.components["Link"].static
+    fk = links.index[foreign_mask(links) & (links.carrier == "DC")]
+    p_nom_new = links.loc[fk, "p_nom"].where(links.loc[fk, "build_year"] <= year, 0.0)
+    links.loc[fk, "p_nom"] = p_nom_new
+    links.loc[fk, "p_nom_extendable"] = False
 
     logger.info(
-        "Froze non-DE capacities to the optimal network (%s).",
-        ", ".join(f"{k}: {v}" for k, v in frozen.items()) or "nothing matched",
+        "outside_de_grid=%s: fixed %d foreign AC line(s) and %d foreign DC link(s) "
+        "to the committed grid, non-extendable.",
+        spec,
+        len(fl),
+        len(fk),
     )
     return n
 
@@ -297,17 +284,7 @@ if __name__ == "__main__":
         for name, cfg in snakemake.params.stochastic_grid_scenarios["scenarios"].items()
     }
 
-    if snakemake.params.get("freeze_out_de_capas", False):
-        optimal_network = snakemake.input.optimal_network
-        if not optimal_network:
-            raise ValueError(
-                "freeze_out_de_capas is enabled but no optimal_network input was "
-                "provided to build_grid_topology."
-            )
-        logger.info(
-            f"freeze_out_de_capas: freezing non-DE capacities to {optimal_network}"
-        )
-        freeze_foreign_capacities(n, pypsa.Network(optimal_network))
+    apply_outside_de_grid(n, snakemake.params.get("outside_de_grid", "endogenous"))
 
     build_grid_topology(n, grid_scenario, scenarios_cfg, clusters)
 

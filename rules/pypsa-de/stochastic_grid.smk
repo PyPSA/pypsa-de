@@ -14,6 +14,14 @@ _sgs = config.get("stochastic_grid_scenarios", {})
 GRID_SCENARIO_NAMES = list(_sgs.get("scenarios", {}).keys())
 GRID_SCENARIO_VALUES = GRID_SCENARIO_NAMES + ["eev", "stochastic"]
 
+# Investigation year(s) the grid analysis is built and solved for. Single source
+# of truth = scenario.planning_horizons (for the standalone single-year analysis,
+# set that to one year); an explicit stochastic_grid_scenarios.planning_horizons
+# still overrides it with a subset if given.
+_GRID_HORIZONS = _sgs.get("planning_horizons") or config.get("scenario", {}).get(
+    "planning_horizons", []
+)
+
 # First myopic-pathway horizon - the pristine, never-solved prenetwork used as
 # the "grid stays put" baseline when auto-generating `*_exogen` scenario CSVs.
 _GRID_FIRST_HORIZON = (
@@ -59,17 +67,22 @@ def _grid_pathway_years(target_year):
 _GRID_PATHWAY_YEARS_ALL = sorted(
     {
         y
-        for target in _sgs.get("planning_horizons", [])
+        for target in _GRID_HORIZONS
         for y in _grid_pathway_years(target)
         if y != target
     }
 )
 
-GRID_EXPORT_NETWORK_IDS_LT = (
-    GRID_EXPORT_NETWORK_IDS_LT_TOPOLOGY
-    + ["optimal"]
-    + [f"optimal_{y}" for y in _GRID_PATHWAY_YEARS_ALL]
+# The endogenous "optimal"/"optimal_YYYY" reference networks are only built,
+# solved and compared when opted into (see solve_endogenous_optimal); otherwise
+# the comparison is purely over the grid-topology variants.
+_GRID_SOLVE_OPTIMAL = _sgs.get("solve_endogenous_optimal", False)
+_GRID_OPTIMAL_IDS = (
+    ["optimal"] + [f"optimal_{y}" for y in _GRID_PATHWAY_YEARS_ALL]
+    if _GRID_SOLVE_OPTIMAL
+    else []
 )
+GRID_EXPORT_NETWORK_IDS_LT = GRID_EXPORT_NETWORK_IDS_LT_TOPOLOGY + _GRID_OPTIMAL_IDS
 GRID_EXPORT_NETWORK_IDS_ST = [
     f"portfolio-{p}_on-{gs}_st"
     for p in GRID_SCENARIO_VALUES
@@ -217,31 +230,6 @@ def _grid_scenario_csv_source_networks(wildcards):
     return ins
 
 
-def _freeze_out_de_optimal_network(wildcards):
-    """Solved plain "optimal" network of the same planning horizon, used by
-    build_grid_topology to freeze all non-DE capacities when
-    `stochastic_grid_scenarios: freeze_out_de_capas` is on. Empty otherwise."""
-    if not _sgs.get("freeze_out_de_capas", False):
-        return []
-    return (
-        RESULTS
-        + f"networks/base_s_{wildcards.clusters}_{wildcards.opts}_{wildcards.sector_opts}_{wildcards.planning_horizons}.nc"
-    )
-
-
-def _freeze_trade_optimal_network(wildcards):
-    """Solved plain "optimal" network of the same planning horizon, read by
-    additional_functionality.freeze_trade_imports to cap DE gross imports per
-    carrier when `stochastic_grid_scenarios: freeze_trade` is truthy (a carrier
-    list or `true`). Empty otherwise."""
-    if not _sgs.get("freeze_trade", False):
-        return []
-    return (
-        RESULTS
-        + f"networks/base_s_{wildcards.clusters}_{wildcards.opts}_{wildcards.sector_opts}_{wildcards.planning_horizons}.nc"
-    )
-
-
 def stochastic_grid_solving(wildcards):
     """`solving` config adjusted for PyPSA scenario-dimension gaps.
 
@@ -329,9 +317,6 @@ rule build_grid_topology:
             "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_final.nc"
         ),
         csvs=get_grid_scenario_csvs,
-        # Present only when freeze_out_de_capas is on (see
-        # _freeze_out_de_optimal_network / build_grid_topology.py).
-        optimal_network=_freeze_out_de_optimal_network,
     output:
         network=resources(
             "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_topology-{grid_scenario}.nc"
@@ -345,8 +330,8 @@ rule build_grid_topology:
         mem_mb=16000,
     params:
         stochastic_grid_scenarios=config_provider("stochastic_grid_scenarios"),
-        freeze_out_de_capas=config_provider(
-            "stochastic_grid_scenarios", "freeze_out_de_capas", default=False
+        outside_de_grid=config_provider(
+            "stochastic_grid_scenarios", "outside_de_grid", default="endogenous"
         ),
         grid_scenario=lambda w: w.grid_scenario,
         scenario_csvs=_grid_scenario_csv_map,
@@ -356,6 +341,33 @@ rule build_grid_topology:
         scripts("pypsa-de/build_grid_topology.py")
 
 
+def grid_topology_solve_mem_mb(wildcards):
+    """Solver memory for solve_grid_topology_network.
+
+    The "stochastic" variant carries PyPSA's native scenario dimension, so its LP is
+    much larger - and scales super-linearly in the number of scenarios - than the
+    single-scenario variants. Its memory is set explicitly via
+    `stochastic_grid_scenarios: stochastic_solve_resources: mem_mb`; unset (or any
+    other variant) falls back to the general `solving: mem_mb`.
+    """
+    override = (_sgs.get("stochastic_solve_resources") or {}).get("mem_mb")
+    if wildcards.grid_scenario == "stochastic" and override is not None:
+        return override
+    return config_provider("solving", "mem_mb")(wildcards)
+
+
+def grid_topology_solve_runtime(wildcards):
+    """Runtime for solve_grid_topology_network, analogous to
+    grid_topology_solve_mem_mb: the "stochastic" variant may set
+    `stochastic_grid_scenarios: stochastic_solve_resources: runtime`, otherwise the
+    general `solving: runtime` applies (as it does for every other variant).
+    """
+    override = (_sgs.get("stochastic_solve_resources") or {}).get("runtime")
+    if wildcards.grid_scenario == "stochastic" and override is not None:
+        return override
+    return config_provider("solving", "runtime", default="6h")(wildcards)
+
+
 rule solve_grid_topology_network:
     input:
         network=resources(
@@ -363,9 +375,6 @@ rule solve_grid_topology_network:
         ),
         co2_totals_name=resources("co2_totals.csv"),
         energy_totals=resources("energy_totals.csv"),
-        # Present only when freeze_trade is truthy (see
-        # _freeze_trade_optimal_network / additional_functionality.py).
-        freeze_trade_optimal_network=_freeze_trade_optimal_network,
     output:
         network=RESULTS
         + "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_topology-{grid_scenario}.nc",
@@ -393,8 +402,8 @@ rule solve_grid_topology_network:
         shadow_config
     threads: solver_threads
     resources:
-        mem_mb=config_provider("solving", "mem_mb"),
-        runtime=config_provider("solving", "runtime", default="6h"),
+        mem_mb=grid_topology_solve_mem_mb,
+        runtime=grid_topology_solve_runtime,
     params:
         solving=stochastic_grid_solving,
         foresight=config_provider("foresight"),
@@ -403,9 +412,6 @@ rule solve_grid_topology_network:
         ),
         custom_extra_functionality=input_custom_extra_functionality,
         energy_year=config_provider("energy", "energy_totals_year"),
-        freeze_trade=config_provider(
-            "stochastic_grid_scenarios", "freeze_trade", default=False
-        ),
     message:
         "Solving grid-topology variant '{wildcards.grid_scenario}' for {wildcards.clusters} clusters, {wildcards.planning_horizons} planning horizon"
     script:
@@ -421,9 +427,6 @@ rule evaluate_grid_portfolio:
         ),
         co2_totals_name=resources("co2_totals.csv"),
         energy_totals=resources("energy_totals.csv"),
-        # Present only when freeze_trade is truthy (see
-        # _freeze_trade_optimal_network / additional_functionality.py).
-        freeze_trade_optimal_network=_freeze_trade_optimal_network,
     output:
         network=RESULTS
         + "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_portfolio-{portfolio}_on-{grid_scenario}_st.nc",
@@ -452,9 +455,6 @@ rule evaluate_grid_portfolio:
         ),
         custom_extra_functionality=input_custom_extra_functionality,
         energy_year=config_provider("energy", "energy_totals_year"),
-        freeze_trade=config_provider(
-            "stochastic_grid_scenarios", "freeze_trade", default=False
-        ),
     message:
         "Evaluating portfolio '{wildcards.portfolio}' capacities dispatched on grid topology '{wildcards.grid_scenario}'"
     script:
@@ -597,10 +597,12 @@ rule system_plots_grid_scenario:
 
 def _lt_network_ids(wildcards):
     """LT comparison set for one rule instance: the grid-topology variants
-    (all at the instance's own {planning_horizons} year) plus one
-    suffix-less pathway network per configured year up to and including
-    that target year - "optimal" for the target year itself, "optimal_YYYY"
-    for each earlier one (see _grid_pathway_years above)."""
+    (all at the instance's own {planning_horizons} year), plus - only when
+    solve_endogenous_optimal is on - one suffix-less endogenous pathway network
+    per configured year up to and including that target year ("optimal" for the
+    target year itself, "optimal_YYYY" for each earlier one)."""
+    if not _GRID_SOLVE_OPTIMAL:
+        return GRID_EXPORT_NETWORK_IDS_LT_TOPOLOGY
     target_year = int(wildcards.planning_horizons)
     pathway_ids = [
         "optimal" if y == target_year else f"optimal_{y}"
@@ -717,23 +719,27 @@ rule stochastic_grid_analysis:
             clusters=config["scenario"]["clusters"],
             opts=config["scenario"]["opts"],
             sector_opts=config["scenario"]["sector_opts"],
-            planning_horizons=_sgs.get("planning_horizons", []),
+            planning_horizons=_GRID_HORIZONS,
         ),
-        # Unconstrained reference network (no grid_scenario override, so grid
-        # Lines/DC-Links stay freely extendable rather than fixed to a
-        # reduced-capacity CSV) - "no delay, grid can expand to its own
-        # optimum". Not part of the WS/SP/EEV/EVPI/ECIU comparison (it isn't
-        # capex-comparable - grid buildout cost is endogenous here but
-        # excluded-as-exogenous everywhere else), just produced alongside it
-        # for manual inspection.
-        expand(
-            RESULTS
-            + "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
-            run=config["run"]["name"],
-            clusters=config["scenario"]["clusters"],
-            opts=config["scenario"]["opts"],
-            sector_opts=config["scenario"]["sector_opts"],
-            planning_horizons=_sgs.get("planning_horizons", []),
+        # Endogenous "optimal" reference network (no grid_scenario override, so
+        # grid Lines/DC-Links stay freely extendable rather than fixed to a
+        # reduced-capacity CSV) - "no delay, grid can expand to its own optimum".
+        # Opt-in via `stochastic_grid_scenarios: solve_endogenous_optimal`; not
+        # part of the WS/SP/EEV/EVPI/ECIU comparison (grid buildout cost is
+        # endogenous here but excluded-as-exogenous everywhere else), just
+        # produced alongside it for manual inspection.
+        (
+            expand(
+                RESULTS
+                + "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
+                run=config["run"]["name"],
+                clusters=config["scenario"]["clusters"],
+                opts=config["scenario"]["opts"],
+                sector_opts=config["scenario"]["sector_opts"],
+                planning_horizons=_GRID_HORIZONS,
+            )
+            if _sgs.get("solve_endogenous_optimal", False)
+            else []
         ),
         # Ariadne-variable export (LT topology + ST portfolio-evaluation
         # networks), one xlsx per network variant since they all share the
@@ -745,7 +751,7 @@ rule stochastic_grid_analysis:
             clusters=config["scenario"]["clusters"],
             opts=config["scenario"]["opts"],
             sector_opts=config["scenario"]["sector_opts"],
-            planning_horizons=_sgs.get("planning_horizons", []),
+            planning_horizons=_GRID_HORIZONS,
             network_id=GRID_EXPORT_NETWORK_IDS,
         ),
         # LT/ST scenario-comparison plots.
@@ -756,7 +762,7 @@ rule stochastic_grid_analysis:
             clusters=config["scenario"]["clusters"],
             opts=config["scenario"]["opts"],
             sector_opts=config["scenario"]["sector_opts"],
-            planning_horizons=_sgs.get("planning_horizons", []),
+            planning_horizons=_GRID_HORIZONS,
             variant=["LT", "ST"],
         ),
         # Per-network-variant system plots (storage/capacity maps, energy
@@ -768,7 +774,7 @@ rule stochastic_grid_analysis:
             clusters=config["scenario"]["clusters"],
             opts=config["scenario"]["opts"],
             sector_opts=config["scenario"]["sector_opts"],
-            planning_horizons=_sgs.get("planning_horizons", []),
+            planning_horizons=_GRID_HORIZONS,
             network_id=GRID_EXPORT_NETWORK_IDS,
         ),
     message:

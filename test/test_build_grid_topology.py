@@ -127,6 +127,59 @@ def test_eev_blends_and_scales(tmp_path):
     assert n.links.at["K1", "p_nom"] == pytest.approx(250.0)
 
 
+def _canvas_with_countries():
+    """
+    DE + foreign (FR) buses, with DE-internal, foreign AC, and foreign DC
+    branches carrying build_years, for the outside_de_grid feature.
+    """
+    n = pypsa.Network()
+    n.add(
+        "LineType", "t", r_per_length=0.01, x_per_length=0.1, c_per_length=10.0,
+        f_nom=50.0, i_nom=1.0,
+    )
+    for b, c in [("DE1", "DE"), ("DE2", "DE"), ("FR1", "FR"), ("FR2", "FR")]:
+        n.add("Bus", b, v_nom=380.0, carrier="AC", country=c)
+    kw = dict(type="t", length=100.0, carrier="AC", s_nom_extendable=True)
+    n.add("Line", "de", bus0="DE1", bus1="DE2", num_parallel=2.0, s_nom=200.0, build_year=2020, **kw)
+    n.add("Line", "fr_old", bus0="FR1", bus1="FR2", num_parallel=2.0, s_nom=200.0, build_year=2025, **kw)
+    n.add("Line", "fr_new", bus0="FR1", bus1="FR2", num_parallel=4.0, s_nom=400.0, build_year=2035, **kw)
+    n.add("Link", "fr_dc_old", bus0="FR1", bus1="FR2", p_nom=500.0, carrier="DC", build_year=2025, p_nom_extendable=True)
+    n.add("Link", "fr_dc_new", bus0="FR1", bus1="FR2", p_nom=700.0, carrier="DC", build_year=2040, p_nom_extendable=True)
+    n.calculate_dependent_values()
+    return n
+
+
+def test_outside_de_grid_endogenous_is_noop():
+    n = _canvas_with_countries()
+    before = n.lines[["s_nom", "s_nom_extendable"]].copy()
+    bgt.apply_outside_de_grid(n, "endogenous")
+    assert n.lines[["s_nom", "s_nom_extendable"]].equals(before)
+    assert n.links["p_nom_extendable"].all()
+
+
+def test_outside_de_grid_exogen_fixes_foreign_grid():
+    n = _canvas_with_countries()
+    bgt.apply_outside_de_grid(n, "2030_exogen")
+
+    # foreign committed-by-2030 branches: fixed, non-extendable
+    assert n.lines.at["fr_old", "s_nom"] == pytest.approx(200.0)
+    assert not n.lines.at["fr_old", "s_nom_extendable"]
+    assert n.links.at["fr_dc_old", "p_nom"] == pytest.approx(500.0)
+    assert not n.links.at["fr_dc_old", "p_nom_extendable"]
+    # foreign not-yet-committed: AC line dropped, DC link floored to 0
+    assert "fr_new" not in n.lines.index
+    assert n.links.at["fr_dc_new", "p_nom"] == pytest.approx(0.0)
+    assert not n.links.at["fr_dc_new", "p_nom_extendable"]
+    # DE-internal branch untouched (still extendable)
+    assert n.lines.at["de", "s_nom_extendable"]
+
+
+def test_outside_de_grid_rejects_bad_spec():
+    n = _canvas_with_countries()
+    with pytest.raises(ValueError):
+        bgt.apply_outside_de_grid(n, "2030_optimal")
+
+
 def test_stochastic_keeps_canvas_impedance(tmp_path):
     for sub, s1 in {"a": 100.0, "b": 0.0}.items():
         _write_csvs(tmp_path / sub, {"L1": s1}, {"K1": 500.0})

@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20260930_test-49cl-365h-2025EXO-2030EXO-2035EXO-10-30-60
+  prefix: 20261006-single-year-49cl-365h-2025EXO-2030EXO-2035EXO-10-30-60
   name:
   - KN2045_Mix
   scenarios:
@@ -69,13 +69,7 @@ scenario:
   - ''
   sector_opts:
   - none
-  planning_horizons:
-  - 2025
-  - 2030
-  - 2035
-  - 2040
-  - 2045
-  - 2050
+  planning_horizons: [2035]
 
 existing_capacities:
   grouping_years_power: [1900, 1950, 1955, 1960, 1965, 1970, 1975, 1980, 1985, 1990, 1995, 2000, 2005, 2010, 2015, 2020, 2025]
@@ -778,9 +772,14 @@ data:
 
 stochastic_grid_scenarios:
   enable: true
-  planning_horizons: [2035]
-  freeze_out_de_capas: true
-  freeze_trade: ["AC", "DC", "H2"] # , "methanol", "gas", "renewable gas", "oil", "renewable oil"
+  # investigation year(s) default to scenario.planning_horizons above (set that to
+  # a single year for the standalone analysis); set planning_horizons here only to
+  # override with a subset.
+  outside_de_grid: 2035_exogen # transmission grid outside DE: "<year>_exogen" (committed by <year>, non-extendable) or "endogenous" (freely extendable)
+  solve_endogenous_optimal: false # also build the endogenous all-free reference network (no grid override); opt-in, not part of the WS/SP/EEV/EVPI/ECIU comparison
+  stochastic_solve_resources: # resource overrides for the "stochastic" grid-topology solve only (its scenario-dimension LP is much larger and scales super-linearly in the number of scenarios); each empty = fall back to the general solving.mem_mb / solving.runtime, which every other variant always uses
+    mem_mb: 70000 # e.g. 420000
+    runtime: 12h # e.g. 12h
   # CSVs are auto-generated per run from the current topology by
   # build_grid_scenario_csvs; set explicit `links:`/`lines:` paths on a scenario
   # to override with a hand-made file. Scenario name is

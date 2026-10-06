@@ -464,6 +464,8 @@ plotting:
     residential urban decentral oil boiler: '#a1a1a1'
     urban central oil boiler: '#9d9d9d'
     services urban decentral oil boiler: '#999999'
+    rural oil boiler: '#a7a7a7'
+    urban decentral oil boiler: '#9b9b9b'
     agriculture machinery oil: '#949494'
     agriculture machinery electric: '#444578'
     shipping oil: "#808080"
