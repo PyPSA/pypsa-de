@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20260921_merge_main_test-49cl-365h-2025EXO-vs-2035EXO-50-50
+  prefix: 20260930_test-49cl-365h-2025EXO-2030EXO-2035EXO-10-30-60
   name:
   - KN2045_Mix
   scenarios:
@@ -793,9 +793,11 @@ stochastic_grid_scenarios:
   scope: de_and_interconnectors
   scenarios:
     2025_exogen:
-      probability: 0.5
+      probability: 0.1
+    2030_exogen:
+      probability: 0.3
     2035_exogen:
-      probability: 0.5
+      probability: 0.6
     # Examples - uncomment and re-balance probabilities to sum to 1:
     # 2030_exogen:            # delay every branch built after 2030
     #   probability: 0.33

@@ -18,6 +18,15 @@ network:
 - "stochastic": call n.set_scenarios(...) and apply every scenario's own
   CSV overrides onto its own (scenario, name) slice - the joint two-stage
   stochastic program PyPSA solves natively.
+
+For the deterministic and eev (single-scenario) variants a reduced AC line also
+has its reactance/resistance scaled (x, r ~ 1/num_parallel ~ 1/s_nom, so a
+smaller corridor is more reactive and more resistive) and lines delayed to zero
+capacity are dropped from the network - and thus from the Kirchhoff cycle -
+rather than left as a phantom cycle. The native stochastic variant keeps the
+canvas (fully-built) impedance for all scenarios: PyPSA's scenario-dimension KVL
+reads line impedance from scenarios[0] only, so per-scenario x/r cannot be
+honoured there (see build_stochastic_topology / _set_line_capacity).
 """
 
 import logging
@@ -57,6 +66,53 @@ def _apply_overrides(static, df, component, csv_path):
         static.loc[df.index, f"{nom_attr}_extendable"] = False
 
 
+def _set_line_capacity(n, s_nom_new):
+    """
+    Override AC-line ``s_nom`` and co-scale the physical line parameters.
+
+    A line's series reactance and resistance scale inversely with the number of
+    parallel circuits (``x = x_per_length * length / num_parallel``, likewise
+    ``r``), hence inversely with ``s_nom``. Every line carries a standard
+    ``type``, so ``n.calculate_dependent_values()`` recomputes ``x``/``r`` from
+    ``num_parallel`` at solve time: scaling ``num_parallel`` by the
+    scenario/canvas capacity ratio is therefore the single lever that makes a
+    delayed corridor correctly more reactive *and* more resistive.
+
+    A corridor delayed to ``s_nom=0`` is absent, so it is removed from the
+    network - and thus from the Kirchhoff cycle - rather than left as a
+    phantom cycle that would distort flows on the rest of its loop.
+
+    ``n`` must still hold the canvas (fully-built) values when called; only
+    deterministic/eev single-scenario networks are passed here - the native
+    stochastic network keeps canvas parameters for all scenarios (see
+    build_stochastic_topology).
+
+    Parameters
+    ----------
+    n : pypsa.Network
+        Single-scenario network whose lines carry canvas values.
+    s_nom_new : pandas.Series
+        Target ``s_nom`` per line name (canvas value for undelayed lines, a
+        reduced value for delayed ones, 0 for lines not yet built).
+    """
+    lines = n.components["Line"].static
+    frac = s_nom_new.where(s_nom_new > 0) / lines.loc[s_nom_new.index, "s_nom"]
+    live = frac.dropna().index
+    dropped = s_nom_new.index.difference(live)
+
+    lines.loc[live, "num_parallel"] *= frac[live]
+    lines.loc[live, "s_nom"] = s_nom_new[live]
+    lines.loc[live, "s_nom_extendable"] = False
+    if len(dropped):
+        n.remove("Line", list(dropped))
+    logger.info(
+        "Lines: scaled num_parallel (-> x/r) on %d reduced corridor(s), dropped "
+        "%d zeroed corridor(s).",
+        len(live),
+        len(dropped),
+    )
+
+
 def build_deterministic_topology(n, scenario_cfg, clusters):
     """Apply a single scenario's overrides onto a plain deterministic network."""
     for component, key in CSV_KEYS.items():
@@ -64,7 +120,11 @@ def build_deterministic_topology(n, scenario_cfg, clusters):
         if not path:
             continue
         df = _read_csv(path, clusters)
-        _apply_overrides(n.components[component].static, df, component, path)
+        if component == "Line":
+            _check_names_exist(df, n.components["Line"].static.index, "Line", path)
+            _set_line_capacity(n, df["s_nom"])
+        else:
+            _apply_overrides(n.components[component].static, df, component, path)
     return n
 
 
@@ -94,8 +154,11 @@ def build_eev_topology(n, scenarios_cfg, clusters):
             values = values.reindex(touched).fillna(baseline)
             blended += cfg["probability"] * values
 
-        static.loc[touched, nom_attr] = blended
-        static.loc[touched, f"{nom_attr}_extendable"] = False
+        if component == "Line":
+            _set_line_capacity(n, blended)
+        else:
+            static.loc[touched, nom_attr] = blended
+            static.loc[touched, f"{nom_attr}_extendable"] = False
     return n
 
 
@@ -115,6 +178,18 @@ def build_stochastic_topology(n, scenarios_cfg, clusters):
             _check_names_exist(df, own_names, component, path)
             idx = pd.MultiIndex.from_product([[name], df.index])
             _apply_overrides(static, df.set_axis(idx), component, path)
+
+    logger.warning(
+        "stochastic variant: keeping canvas (fully-built) line x/r for every "
+        "scenario. PyPSA's native scenario KVL reads impedance from the first "
+        "scenario only (scenarios[0] = %r here), so per-scenario x/r cannot be "
+        "honoured - unlike the deterministic/eev variants, which rescale "
+        "num_parallel (and so x/r) and drop zeroed lines. Delayed corridors "
+        "therefore keep a (conservative) phantom-cycle bias, and "
+        "transmission_losses must stay disabled (post_processing crashes on the "
+        "scenario dimension; PyPSA #1819, fixed in #1892, unreleased as of 1.3.0).",
+        n.scenarios[0],
+    )
     return n
 
 
