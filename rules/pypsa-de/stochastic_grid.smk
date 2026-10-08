@@ -12,7 +12,29 @@
 
 _sgs = config.get("stochastic_grid_scenarios", {})
 GRID_SCENARIO_NAMES = list(_sgs.get("scenarios", {}).keys())
-GRID_SCENARIO_VALUES = GRID_SCENARIO_NAMES + ["eev", "stochastic"]
+
+# Run scope - trade completeness for speed:
+# - "full": LT topology variants (incl. the native stochastic solve), the ST
+#   portfolio evaluations, the WS/SP/EEV/EVPI/ECIU metrics, and the LT + ST
+#   scenario-comparison plots.
+# - "lt_only": only the LT topology variants (deterministic, eev AND the
+#   stochastic solve) with their system / LT-comparison plots. No ST portfolio
+#   evaluations and no stochastic metrics (both need the ST re-dispatch runs).
+# - "lt_deterministic": like lt_only but the native stochastic solve is skipped
+#   too, so no PyPSA scenario dimension is built at all - only the deterministic
+#   + eev single-scenario topologies. The fastest path to topology results (and
+#   it needs no PyPSA #1951 / grid-master env, since nothing is scenario-indexed).
+_GRID_RUN_MODE = _sgs.get("run_mode", "full")
+assert _GRID_RUN_MODE in {"full", "lt_only", "lt_deterministic"}, (
+    "stochastic_grid_scenarios.run_mode must be one of "
+    f"'full'/'lt_only'/'lt_deterministic', got {_GRID_RUN_MODE!r}"
+)
+_GRID_INCLUDE_STOCHASTIC = _GRID_RUN_MODE != "lt_deterministic"
+_GRID_INCLUDE_ST = _GRID_RUN_MODE == "full"
+
+GRID_SCENARIO_VALUES = (
+    GRID_SCENARIO_NAMES + ["eev"] + (["stochastic"] if _GRID_INCLUDE_STOCHASTIC else [])
+)
 
 # Investigation year(s) the grid analysis is built and solved for. Single source
 # of truth = scenario.planning_horizons (for the standalone single-year analysis,
@@ -45,7 +67,11 @@ _GRID_FIRST_HORIZON = (
 # single-scenario networks and are exported directly.
 GRID_EXPORT_NETWORK_IDS_LT_TOPOLOGY = [
     f"topology-{gs}" for gs in GRID_SCENARIO_NAMES + ["eev"]
-] + [f"topology-stochastic__{gs}" for gs in GRID_SCENARIO_NAMES]
+] + (
+    [f"topology-stochastic__{gs}" for gs in GRID_SCENARIO_NAMES]
+    if _GRID_INCLUDE_STOCHASTIC
+    else []
+)
 
 
 def _grid_pathway_years(target_year):
@@ -83,11 +109,15 @@ _GRID_OPTIMAL_IDS = (
     else []
 )
 GRID_EXPORT_NETWORK_IDS_LT = GRID_EXPORT_NETWORK_IDS_LT_TOPOLOGY + _GRID_OPTIMAL_IDS
-GRID_EXPORT_NETWORK_IDS_ST = [
-    f"portfolio-{p}_on-{gs}_st"
-    for p in GRID_SCENARIO_VALUES
-    for gs in GRID_SCENARIO_NAMES
-]
+GRID_EXPORT_NETWORK_IDS_ST = (
+    [
+        f"portfolio-{p}_on-{gs}_st"
+        for p in GRID_SCENARIO_VALUES
+        for gs in GRID_SCENARIO_NAMES
+    ]
+    if _GRID_INCLUDE_ST
+    else []
+)
 GRID_EXPORT_NETWORK_IDS = GRID_EXPORT_NETWORK_IDS_LT + GRID_EXPORT_NETWORK_IDS_ST
 
 
@@ -329,7 +359,13 @@ rule build_grid_topology:
     resources:
         mem_mb=16000,
     params:
-        stochastic_grid_scenarios=config_provider("stochastic_grid_scenarios"),
+        # Only the `scenarios` sub-dict, NOT the whole stochastic_grid_scenarios
+        # block: sibling keys (run_mode, solve_endogenous_optimal,
+        # stochastic_solve_resources, ...) don't affect the built topology
+        # network, so passing them here would needlessly rerun this rule (and
+        # the expensive downstream solve) via snakemake's `params` rerun-trigger
+        # whenever one is toggled - e.g. switching run_mode lt_only -> full.
+        grid_scenarios=config_provider("stochastic_grid_scenarios", "scenarios"),
         outside_de_grid=config_provider(
             "stochastic_grid_scenarios", "outside_de_grid", default="endogenous"
         ),
@@ -712,14 +748,20 @@ rule compute_stochastic_metrics:
 
 rule stochastic_grid_analysis:
     input:
-        expand(
-            RESULTS
-            + "stochastic_grid_metrics_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.csv",
-            run=config["run"]["name"],
-            clusters=config["scenario"]["clusters"],
-            opts=config["scenario"]["opts"],
-            sector_opts=config["scenario"]["sector_opts"],
-            planning_horizons=_GRID_HORIZONS,
+        # WS/SP/EEV/EVPI/ECIU metrics - only in the "full" run_mode (they need
+        # the ST portfolio-evaluation re-dispatch runs).
+        (
+            expand(
+                RESULTS
+                + "stochastic_grid_metrics_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.csv",
+                run=config["run"]["name"],
+                clusters=config["scenario"]["clusters"],
+                opts=config["scenario"]["opts"],
+                sector_opts=config["scenario"]["sector_opts"],
+                planning_horizons=_GRID_HORIZONS,
+            )
+            if _GRID_INCLUDE_ST
+            else []
         ),
         # Endogenous "optimal" reference network (no grid_scenario override, so
         # grid Lines/DC-Links stay freely extendable rather than fixed to a
@@ -754,7 +796,7 @@ rule stochastic_grid_analysis:
             planning_horizons=_GRID_HORIZONS,
             network_id=GRID_EXPORT_NETWORK_IDS,
         ),
-        # LT/ST scenario-comparison plots.
+        # Scenario-comparison plots - always LT; ST only in the "full" run_mode.
         expand(
             RESULTS
             + "scenario_comparison/{variant}/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}",
@@ -763,7 +805,7 @@ rule stochastic_grid_analysis:
             opts=config["scenario"]["opts"],
             sector_opts=config["scenario"]["sector_opts"],
             planning_horizons=_GRID_HORIZONS,
-            variant=["LT", "ST"],
+            variant=(["LT", "ST"] if _GRID_INCLUDE_ST else ["LT"]),
         ),
         # Per-network-variant system plots (storage/capacity maps, energy
         # balances, capacity comparison) - one folder per network variant.

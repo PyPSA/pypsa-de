@@ -10351,6 +10351,12 @@
           },
           "type": "array"
         },
+        "run_mode": {
+          "default": "full",
+          "description": "Scope of the stochastic-grid analysis, trading completeness for speed. 'full': LT topology variants (incl. the native stochastic solve), the ST portfolio-evaluation re-dispatch runs, the WS/SP/EEV/EVPI/ECIU metrics, and LT + ST scenario-comparison plots. 'lt_only': only the LT topology variants (deterministic, eev and the stochastic solve) and their system / LT-comparison plots - no ST runs and no stochastic metrics (both need the ST re-dispatch). 'lt_deterministic': like lt_only but also skips the native stochastic solve, so no PyPSA scenario dimension is built - only the deterministic + eev single-scenario topologies (fastest, and needs no scenario-indexed solve).",
+          "type": "string",
+          "enum": ["full", "lt_only", "lt_deterministic"]
+        },
         "outside_de_grid": {
           "default": "endogenous",
           "description": "Treatment of the transmission grid outside Germany in every grid-topology variant. 'endogenous' leaves foreign AC lines and DC links freely extendable; '<year>_exogen' fixes them to the capacity committed by <year> (build_year <= year), non-extendable, dropping not-yet-committed foreign branches. Applied on the plain network before set_scenarios, so it is identical across stochastic scenarios. Only foreign-foreign branches are touched; DE and interconnector branches are the uncertain grid set by the scenario override.",

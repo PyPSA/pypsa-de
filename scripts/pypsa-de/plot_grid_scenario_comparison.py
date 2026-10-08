@@ -1297,6 +1297,69 @@ def make_system_cost_tables(networks, network_ids, output_dir, region="DE"):
     return var_all, var_plot, tsc_all
 
 
+def grid_capacity_volume(n, tol=1e-3):
+    """Active DE AC-line / DC-link capacity [GW] and volume [TW*km] for one
+    single-scenario network.
+
+    Scope = DE internal (both ends DE) + DE interconnectors (one end DE).
+    Active = optimised capacity > ``tol``. Volume = capacity * line length.
+    Returns a (asset, scope) frame with AC/DC subtotals ("Sum") and a grand
+    total ("TOTAL", "de_and_interconnectors").
+    """
+    country = n.buses["country"]
+
+    def part(df, cap_col):
+        c0, c1 = df.bus0.map(country), df.bus1.map(country)
+        both, one = (c0 == "DE") & (c1 == "DE"), (c0 == "DE") ^ (c1 == "DE")
+        act = df[cap_col] > tol
+        rows = {}
+        for scope, m in [("DE internal", both & act), ("DE interconnector", one & act)]:
+            cap, length = df.loc[m, cap_col], df.loc[m, "length"]
+            rows[scope] = {"capacity_GW": cap.sum() / 1e3,
+                           "volume_TWkm": (cap * length).sum() / 1e6, "n": int(m.sum())}
+        return pd.DataFrame(rows).T
+
+    ac = part(n.lines, "s_nom_opt")
+    dc = part(n.links[n.links.carrier == "DC"], "p_nom_opt")
+    out = pd.concat({"AC line": ac, "DC link": dc}, names=["asset", "scope"])
+    out.loc[("AC line", "Sum"), :] = ac.sum()
+    out.loc[("DC link", "Sum"), :] = dc.sum()
+    out.loc[("TOTAL", "de_and_interconnectors"), :] = ac.sum() + dc.sum()
+    out["n"] = out["n"].astype(int)
+    return out
+
+
+def make_grid_volume_tables(networks, network_ids, output_dir):
+    """Two capacity/volume PNG tables for the LT grid-scenario comparison.
+
+    - ``grid_capacity_volume_stochastic.png``: the stochastic solve's
+      per-scenario (per-year) slices (``topology-stochastic__*``), full
+      breakdown plus AC/DC subtotals and grand total per year.
+    - ``grid_capacity_volume_variants.png``: all other LT variants
+      (deterministic ``topology-*`` and ``eev``) in one table, same columns.
+
+    Both: active AC lines + DC links, scope de_and_interconnectors (see
+    grid_capacity_volume).
+    """
+    stoch = {nid.split("__")[-1]: networks[nid]
+             for nid in network_ids
+             if nid.startswith("topology-stochastic__") and networks.get(nid) is not None}
+    other = {scenario_label(nid): networks[nid]
+             for nid in network_ids
+             if not nid.startswith("topology-stochastic__") and networks.get(nid) is not None}
+
+    def stack(net_map):
+        frames = {label: grid_capacity_volume(n) for label, n in net_map.items()}
+        df = pd.concat(frames, names=["variant", "asset", "scope"]).round(3)
+        df.index = [" | ".join(map(str, ix)) for ix in df.index]  # flatten for df_to_png
+        return df
+
+    if stoch:
+        df_to_png(stack(stoch), f"{output_dir}/grid_capacity_volume_stochastic.png")
+    if other:
+        df_to_png(stack(other), f"{output_dir}/grid_capacity_volume_variants.png")
+
+
 if __name__ == "__main__":
     if "snakemake" not in globals():
         snakemake = mock_snakemake(
@@ -1413,6 +1476,13 @@ if __name__ == "__main__":
 
     # CAPACITIES TABLES
     make_capacity_tables(networks, network_ids, output_dir, kwargs)
+
+    # GRID CAPACITY / VOLUME TABLES (LT only): active DE lines+links and
+    # interconnectors, capacity [GW] and volume [TW*km] - one table for the
+    # stochastic solve's per-year slices, one for the other variants.
+    if variant == "LT":
+        logger.info("Building grid capacity/volume tables...")
+        make_grid_volume_tables(networks, network_ids, output_dir)
 
     # CAPACITY COMPARISON (stacked, grouped by tech category) - one row per
     # pathway year (just `year` for ST, `year` plus every earlier pathway

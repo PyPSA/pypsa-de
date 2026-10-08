@@ -304,7 +304,7 @@ if __name__ == "__main__":
     scenario_csvs = snakemake.params.scenario_csvs
     scenarios_cfg = {
         name: {**cfg, **scenario_csvs.get(name, {})}
-        for name, cfg in snakemake.params.stochastic_grid_scenarios["scenarios"].items()
+        for name, cfg in snakemake.params.grid_scenarios.items()
     }
 
     apply_outside_de_grid(n, snakemake.params.get("outside_de_grid", "endogenous"))

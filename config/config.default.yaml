@@ -486,6 +486,7 @@ transmission_projects:
 # see notebooks/stochastic_grid_uncertainty.ipynb for the underlying methodology
 stochastic_grid_scenarios:
   enable: false
+  run_mode: full # full = LT topologies + ST portfolio evals + WS/SP/EEV/EVPI/ECIU metrics + LT&ST comparison plots; lt_only = only the LT topology variants (incl. the stochastic solve) + their plots, no ST runs/metrics; lt_deterministic = only the deterministic + eev topologies (no stochastic solve), the fastest option
   planning_horizons: [] # investigation year(s); empty = use scenario.planning_horizons, or set a subset to override
   outside_de_grid: endogenous # transmission grid outside DE: "<year>_exogen" (committed by <year>, non-extendable) or "endogenous" (freely extendable)
   solve_endogenous_optimal: false # also build the endogenous all-free reference network (no grid override); opt-in, not part of the WS/SP/EEV/EVPI/ECIU comparison
