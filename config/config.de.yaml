@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20261008-partial-workflow-nuts-test-nuts2-365h-2025EXO-2030EXO-2035EXO-10-50-40
+  prefix: 20261009-solver-config-KN2045_Bal_v5-365h-2025EXO-2030EXO-2035EXO-10-50-40
   name:
   - KN2045_Mix
   scenarios:
@@ -27,8 +27,8 @@ pypsa-de:
     general: REMIND-EU v1.1
     transport: Aladin v1
     industry: FORECAST v1.0
-  use_internal_db: false
-  reference_scenario: KN2045_Mix  # KN2045_Bal_v4
+  use_internal_db: true # false
+  reference_scenario: KN2045_Bal_v5 # KN2045_Mix
   region: Deutschland
   uba_for_mobility: # Available for 2020–2035; uses AGEB/KBA for 2020-2025 and MWMS scenario from UBA Projektionsbericht 2025 for 2030-2035
   - 2025
@@ -408,6 +408,7 @@ industry:
 solving:
   runtime: 12h # cl/h: mem_mb/runtime -> 27/3: 50000/3h; 49/5: ?/?h; 49/3: ?/?h; 
   mem_mb: 70000 #30000 is OK for 22 nodes, 365H; 140000 for 22 nodes 3H; 400000 for 44 nodes 3H
+  mem_logging_frequency: 5
   options:
     load_shedding:
       enable: false
@@ -787,9 +788,14 @@ stochastic_grid_scenarios:
   # override with a subset.
   outside_de_grid: 2035_exogen # transmission grid outside DE: "<year>_exogen" (committed by <year>, non-extendable) or "endogenous" (freely extendable)
   solve_endogenous_optimal: true # also build the endogenous all-free reference network (no grid override); opt-in, not part of the WS/SP/EEV/EVPI/ECIU comparison
-  stochastic_solve_resources: # resource overrides for the "stochastic" grid-topology solve only (its scenario-dimension LP is much larger and scales super-linearly in the number of scenarios); each empty = fall back to the general solving.mem_mb / solving.runtime, which every other variant always uses
-    mem_mb: 70000 # cl/h/s: mem_mb/runtime -> 27/3/2: 100000/3h; 27/3/3: 100000/6h; 49/3/2: 300000/?h; 49/3/3: 450000/16h; 
+  stochastic_solve_resources: # resource overrides for the "stochastic" grid-topology solve only (its scenario-dimension LP is much larger and scales super-linearly in the number of scenarios); each empty = fall back to the general solving.mem_mb / solving.runtime / solver_threads, which every other variant always uses
+    mem_mb: 70000 # cl/h/s: mem_mb/runtime -> 27/3/2: 100000/3h; 27/3/3: 100000/6h; 49/3/2: 300000/?h; 49/3/3: 450000/16h;
     runtime: 12h # e.g. 12h
+    threads: 32 # snakemake cores reserved for the stochastic job (scheduler side)
+  stochastic_solving: # partial `solving:` block deep-merged into solving for the "stochastic" solve only (gurobi); every other variant keeps solving.solver_options.gurobi-default
+    solver_options:
+      gurobi-default:
+        threads: 32 # make gurobi actually use 32 threads on the stochastic solve (overrides the global gurobi-default threads here only)
   # CSVs are auto-generated per run from the current topology by
   # build_grid_scenario_csvs; set explicit `links:`/`lines:` paths on a scenario
   # to override with a hand-made file. Scenario name is

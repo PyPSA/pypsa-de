@@ -490,9 +490,11 @@ stochastic_grid_scenarios:
   planning_horizons: [] # investigation year(s); empty = use scenario.planning_horizons, or set a subset to override
   outside_de_grid: endogenous # transmission grid outside DE: "<year>_exogen" (committed by <year>, non-extendable) or "endogenous" (freely extendable)
   solve_endogenous_optimal: false # also build the endogenous all-free reference network (no grid override); opt-in, not part of the WS/SP/EEV/EVPI/ECIU comparison
-  stochastic_solve_resources: # resource overrides for the "stochastic" grid-topology solve only (its scenario-dimension LP is much larger and scales super-linearly in the number of scenarios); each empty = fall back to the general solving.mem_mb / solving.runtime, which every other variant always uses
+  stochastic_solve_resources: # cluster-resource overrides for the "stochastic" grid-topology solve only (its scenario-dimension LP is much larger and scales super-linearly in the number of scenarios); each empty = fall back to the general solving.mem_mb / solving.runtime / solver_threads, which every other variant always uses
     mem_mb: # e.g. 420000
     runtime: # e.g. 12h
+    threads: # e.g. 32
+  stochastic_solving: {} # partial `solving:` block deep-merged into solving for the "stochastic" solve only (free-form; e.g. solver_options.<name>.* or options.*) - lets you give the stochastic run its own solver settings without any code change
   scenarios: {} # name -> {probability, links (csv path, optional), lines (csv path, optional)}
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#transformers

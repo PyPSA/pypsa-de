@@ -260,33 +260,53 @@ def _grid_scenario_csv_source_networks(wildcards):
     return ins
 
 
+def _deep_update(base, override):
+    """Recursively merge ``override`` into ``base`` (in place) and return it."""
+    for k, v in (override or {}).items():
+        if isinstance(v, dict) and isinstance(base.get(k), dict):
+            _deep_update(base[k], v)
+        else:
+            base[k] = v
+    return base
+
+
 def stochastic_grid_solving(wildcards):
     """`solving` config adjusted for PyPSA scenario-dimension gaps.
 
-    Two PyPSA limitations with the `n.set_scenarios()` scenario dimension
-    used by the "stochastic" grid_scenario/portfolio, both worked around
-    here for all grid-topology variants (not just the scenario-bearing one)
-    for consistency across the comparison:
+    Two PyPSA limitations with the `n.set_scenarios()` scenario dimension used
+    by the "stochastic" grid_scenario:
 
-    - `assign_all_duals`: dual-assignment for custom (non-native)
-      constraints doesn't support the scenario dimension (raises inside
+    - `assign_all_duals`: dual-assignment for custom (non-native) constraints
+      doesn't support the scenario dimension (raises inside
       `pypsa.optimization.optimize.assign_duals`). Nothing in this analysis
-      (WS/SP/EEV/EVPI/ECIU metrics) reads shadow prices, so this is free to
-      switch off.
+      (WS/SP/EEV/EVPI/ECIU metrics) reads those shadow prices, so it is forced
+      off for the stochastic solve ONLY; the single-scenario variants
+      (deterministic, eev, portfolio evaluations) keep the configured
+      `solving.options.assign_all_duals` - it works fine without a scenario
+      dimension and it does not change the optimum, only whether duals are
+      stored.
     - `transmission_losses`: post-processing of piecewise-linear line losses
       doesn't support the scenario dimension either (raises inside
       `pypsa.optimization.optimize.post_processing`; reported upstream at
       https://github.com/PyPSA/PyPSA/issues, not yet fixed as of PyPSA
-      master). Disabled here rather than blocking on an upstream fix - at
-      this pipeline's 27-cluster resolution and given this analysis compares
-      *differences* in cost across grid-topology scenarios rather than
-      absolute system cost, the lost fidelity is a reasonable tradeoff.
+      master). Disabled here for *all* variants (unlike assign_all_duals): it
+      changes the physics/optimum, so keeping it uniform across the comparison
+      matters, and this analysis compares *differences* in cost across
+      grid-topology scenarios rather than absolute system cost.
     """
     import copy
 
     solving = copy.deepcopy(config["solving"])
-    solving["options"]["assign_all_duals"] = False
     solving["options"]["transmission_losses"] = 0
+    if wildcards.grid_scenario == "stochastic":
+        # `assign_all_duals` is forced off for the scenario-dimension solve
+        # only (it raises there); single-scenario variants keep the configured
+        # solving.options.assign_all_duals. Then apply any stochastic-only
+        # `solving` overrides (e.g. solver_options, options.*), deep-merged for
+        # this solve alone - free-form, so new solver settings need no rule
+        # change (add them under `stochastic_grid_scenarios: stochastic_solving`).
+        solving["options"]["assign_all_duals"] = False
+        _deep_update(solving, _sgs.get("stochastic_solving") or {})
     return solving
 
 
@@ -404,6 +424,17 @@ def grid_topology_solve_runtime(wildcards):
     return config_provider("solving", "runtime", default="6h")(wildcards)
 
 
+def grid_topology_solve_threads(wildcards):
+    """Thread count for solve_grid_topology_network, analogous to
+    grid_topology_solve_mem_mb: the "stochastic" variant may set
+    `stochastic_grid_scenarios: stochastic_solve_resources: threads`, otherwise
+    the general `solver_threads` applies (as for every other variant)."""
+    override = (_sgs.get("stochastic_solve_resources") or {}).get("threads")
+    if wildcards.grid_scenario == "stochastic" and override is not None:
+        return override
+    return solver_threads(wildcards)
+
+
 rule solve_grid_topology_network:
     input:
         network=resources(
@@ -436,7 +467,7 @@ rule solve_grid_topology_network:
         )
     shadow:
         shadow_config
-    threads: solver_threads
+    threads: grid_topology_solve_threads
     resources:
         mem_mb=grid_topology_solve_mem_mb,
         runtime=grid_topology_solve_runtime,
@@ -449,7 +480,9 @@ rule solve_grid_topology_network:
         custom_extra_functionality=input_custom_extra_functionality,
         energy_year=config_provider("energy", "energy_totals_year"),
     message:
-        "Solving grid-topology variant '{wildcards.grid_scenario}' for {wildcards.clusters} clusters, {wildcards.planning_horizons} planning horizon"
+        "Solving grid-topology variant '{wildcards.grid_scenario}' for {wildcards.clusters} clusters, "
+        "{wildcards.planning_horizons} planning horizon "
+        "(threads={threads}, mem_mb={resources.mem_mb}, runtime={resources.runtime} min)"
     script:
         scripts("solve_network.py")
 
