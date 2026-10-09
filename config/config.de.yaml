@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20261005_restructure_workflow
+  prefix: 20261008_fix_rhein_main_link
   name:
   - KN2045_Mix
   scenarios:
