@@ -844,7 +844,7 @@ rule build_co2_totals:
         benchmarks("build_co2_totals")
     threads: 1
     resources:
-        mem_mb=2000,
+        mem_mb=4000,
     params:
         countries=config_provider("countries"),
         energy=config_provider("energy"),

@@ -13,7 +13,7 @@ if config["pypsa-de"]["use_internal_db"]:
             log:
                 "logs/retrieve_ariadne_database_internal_primary.log",
             resources:
-                mem_mb=1000,
+                mem_mb=6000,
             params:
                 source="internal",
             script:
