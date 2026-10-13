@@ -4,9 +4,9 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20261009-solver-config-KN2045_Bal_v5-365h-2025EXO-2030EXO-2035EXO-10-50-40
+  prefix: 20261012-KN2045_Bal_v5-49cl-365h-2025EXO-2030EXO-2035EXO-10-50-40
   name:
-  - KN2045_Mix
+  - KN2045_Bal_v5  # KN2045_Mix
   scenarios:
     enable: true
     manual_file: config/scenarios.manual.yaml
@@ -32,11 +32,11 @@ pypsa-de:
   region: Deutschland
   uba_for_mobility: # Available for 2020–2035; uses AGEB/KBA for 2020-2025 and MWMS scenario from UBA Projektionsbericht 2025 for 2030-2035
   - 2025
+  - 2030
   uba_for_industry: # Available for 2025–2035; uses MWMS scenario from UBA Projektionsbericht 2025
     scale_non_energy: false # Scale non-energy demand directly proportional to energy demand
     enable: # Allowed values are "false" or a subset of [2025, 2030, 2035]
-    - 2025
-    - 2030
+    - 0
   limit_cross_border_flows_ac:  # relevant if only one node per country is used
     2020: 0.4
     2025: 0.4
@@ -64,12 +64,12 @@ foresight: myopic
 # Wildcard docs in https://pypsa-eur.readthedocs.io/en/latest/wildcards.html
 scenario:
   clusters:
-  - adm #current options: 27, 49, adm (for NUTS2 investigation of DE)
+  - 49 #current options: 27, 49, adm (for NUTS2 investigation of DE)
   opts:
   - ''
   sector_opts:
   - none
-  planning_horizons: [2035]
+  planning_horizons: [2025, 2030, 2035]
 
 existing_capacities:
   grouping_years_power: [1900, 1950, 1955, 1960, 1965, 1970, 1975, 1980, 1985, 1990, 1995, 2000, 2005, 2010, 2015, 2020, 2025]
@@ -189,10 +189,10 @@ lines:
     cutout: europe-2013-sarah3-era5
 
 clustering:
-  mode: administrative
-  administrative: # DE levels: 0 (country,cl=1), 1 (state,cl=16), 2 (district,cl=38), 3 (municipality,cl=401)
-    level: 0
-    DE: 2
+  # mode: administrative
+  # administrative: # DE levels: 0 (country,cl=1), 1 (state,cl=16), 2 (district,cl=38), 3 (municipality,cl=401)
+  #   level: 0
+  #   DE: 2
   # Code snippet for editing focus_weights
   # fw = pd.Series(snakemake.config["clustering"]["focus_weights"])
   # fw = fw.div(fw.min()).round()
@@ -245,6 +245,7 @@ co2_budget:
   2040: 0.142
   2045: 0.030
   2050: -0.024
+
 wasserstoff_kernnetz:
   enable: true
   reload_locations: false
@@ -739,22 +740,18 @@ offshore_nep_force:
   delay_years: 2
 
 scale_capacity:
-  # corrects the DE gas fleet to the target output capacity (ppm under-represents
-  # it) at the modelled planning_horizons year; freezes it non-extendable unless
-  # `keep_extendable: true` is set (projection years where the model may expand).
-  2025:
-    DE:
-      OCGT: 200  # at the moment there are way too little OCGT in ppm, this has to be fixed there. I am using this scaling function only to set extendable false
-      CCGT: 10000
-      "urban central gas CHP": 21000
-      "urban central gas CHP CC": 0
-  2035:
-    keep_extendable: true  # correct the existing fleet but leave it extendable for the 2035 projection year
-    DE:
-      OCGT: 200
-      CCGT: 10000
-      "urban central gas CHP": 21000
-      "urban central gas CHP CC": 0
+  # Corrects the existing DE gas fleet that add_existing_baseyear installs (ppm
+  # under-represents it) to its real current output capacity. Year-independent:
+  # applied at the base year (min planning_horizons) of any run - myopic [2025, ...]
+  # fires at 2025 and freezes the fleet non-extendable (historical start), direct
+  # [2030]/[2035]/[2040] fires at that single year and leaves it extendable (gives
+  # today's fleet, lets the model optimise on top). Later myopic brownfield years
+  # are left to the pathway.
+  DE:
+    OCGT: 200  # at the moment there are way too little OCGT in ppm, this has to be fixed there. I am using this scaling function only to set extendable false
+    CCGT: 10000
+    "urban central gas CHP": 21000
+    "urban central gas CHP CC": 0
 
 data:
   ariadne_database:
@@ -782,11 +779,19 @@ data:
 
 stochastic_grid_scenarios:
   enable: true
-  run_mode: full # full | lt_only (LT topologies incl. stochastic, no ST/metrics) | lt_deterministic (deterministic+eev only, no stochastic solve, fastest)
-  # investigation year(s) default to scenario.planning_horizons above (set that to
-  # a single year for the standalone analysis); set planning_horizons here only to
-  # override with a subset.
+  run_mode: lt_only # full | lt_only (LT topologies incl. stochastic, no ST/metrics) | lt_deterministic (deterministic+eev only, no stochastic solve, fastest) | opt_only (only the endogenous optimal network at the target year; forces solve_endogenous_optimal true)
+  # Pathway selection = scenario.planning_horizons above (foresight: myopic):
+  #   [2035]              -> optimise the target year directly (standalone, via
+  #                          add_existing_baseyear; "as it is now")
+  #   [2025, 2030, 2035]  -> myopic pathway, the target (last) year brownfielded
+  #                          off the solved prior year (2030)
+  # Either way the grid analysis targets only the final year. Set planning_horizons
+  # here only to override that target with an explicit subset.
+  planning_horizons: [2035] # grid-analysis target year; empty = max(scenario.planning_horizons) (the final/target year), or set an explicit subset to override
   outside_de_grid: 2035_exogen # transmission grid outside DE: "<year>_exogen" (committed by <year>, non-extendable) or "endogenous" (freely extendable)
+  freeze_outside_de_capacities: false # freeze foreign (non-DE) NON-grid capacities (generation/storage/conversion, gas+H2 pipelines, distribution - NOT the AC lines / DC links outside_de_grid controls) to a solved reference, non-extendable: false (off) | "optimal" (the plain solved network) | "<grid_scenario>" (that solved deterministic topology variant, e.g. "2035_exogen"); always at the analysis year. Applied to every variant except the source itself, so the stochastic solve waits for that deterministic/optimal solve.
+  freeze_trade: false # cap DE gross imports per carrier at a reference level times a margin; false (off) or a {carrier: "<ref><±margin>"} mapping. carriers: AC, DC, H2, gas, "renewable gas", "renewable oil", methanol, oil. ref: "optimal" or a grid_scenario (solved, at the analysis year). margin: "<ref>" (1.0x), "<ref>+10"/"<ref>-10" (1.10x/0.90x), "1.1<ref>" (scenario refs must use the +/-pct form). Each grid solve gets the cap; a carrier whose ref is this variant is skipped, so the stochastic solve waits for the referenced solve. Example:
+  #   freeze_trade: {AC: optimal, DC: optimal, H2: "optimal+10", gas: "optimal-10"}
   solve_endogenous_optimal: true # also build the endogenous all-free reference network (no grid override); opt-in, not part of the WS/SP/EEV/EVPI/ECIU comparison
   stochastic_solve_resources: # resource overrides for the "stochastic" grid-topology solve only (its scenario-dimension LP is much larger and scales super-linearly in the number of scenarios); each empty = fall back to the general solving.mem_mb / solving.runtime / solver_threads, which every other variant always uses
     mem_mb: 70000 # cl/h/s: mem_mb/runtime -> 27/3/2: 100000/3h; 27/3/3: 100000/6h; 49/3/2: 300000/?h; 49/3/3: 450000/16h;

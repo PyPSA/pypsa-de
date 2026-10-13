@@ -1395,79 +1395,89 @@ def drop_duplicate_transmission_projects(n):
 
 def scale_capacity(n, scaling):
     """
-    Scale the output capacity of energy system links based on predefined scaling limits.
+    Correct the existing fleet to a target output capacity at the base year.
+
+    The existing fleet installed by add_existing_baseyear is wrong for some
+    carriers (e.g. ppm under-represents DE gas), so its output capacity is
+    corrected to the configured target. This applies only at the base year
+    (min planning_horizons), where add_existing_baseyear runs; later myopic
+    brownfield years are a pathway result and are left untouched. The corrected
+    fleet is frozen non-extendable for a myopic start year (base < target) and
+    left extendable for a direct run (base == target), so the single-period model
+    may still expand on top.
 
     Parameters
     ----------
     - n: The network/model object representing the energy system.
-    - scaling: A dictionary with scaling limits structured as
-               {year: {region: {carrier: limit}}}.
+    - scaling: A dictionary {region: {carrier: limit}} of target output
+               capacities (MW) for the existing fleet (year-independent).
     """
+    horizons = snakemake.params.planning_horizons
     investment_year = int(snakemake.wildcards.planning_horizons)
-    if investment_year in scaling.keys():
-        year_scaling = scaling[investment_year]
-        # `keep_extendable: true` corrects the capacities (the existing fleet from
-        # add_existing_baseyear is wrong, e.g. too little OCGT in ppm) but leaves
-        # the links extendable, for projection years where the model may still
-        # expand on top. Absent/false freezes them non-extendable (base-year
-        # behaviour). It is not a region, so skip it when iterating.
-        keep_extendable = bool(year_scaling.get("keep_extendable", False))
-        for region in year_scaling.keys():
-            if region == "keep_extendable":
-                continue
-            for carrier in year_scaling[region].keys():
-                limit = year_scaling[region][carrier]
-                logger.info(
-                    f"Scaling output capacity (bus1) of {carrier} in region {region} to {limit} MW"
-                )
-
-                links_i = n.links[
-                    (n.links.carrier == carrier) & n.links.index.str.contains(region)
-                ].index
-
-                installed_cap = n.links.loc[links_i].eval("p_nom * efficiency").sum()
-                if installed_cap == 0:
-                    logger.warning(
-                        f"No installed capacity for {carrier} in region {region}. Skipping adjustment."
-                    )
-                    continue
-
-                diff_cap = limit - installed_cap
-                avg_efficiency = n.links.loc[links_i, "efficiency"].mean()
-                if avg_efficiency == 0 or np.isnan(avg_efficiency):
-                    logger.warning(
-                        f"Invalid average efficiency for {carrier} in region {region}. Skipping adjustment."
-                    )
-                    continue
-
-                diff_cap_0 = diff_cap / avg_efficiency
-                p_nom_sum = n.links.loc[links_i, "p_nom"].sum()
-                if p_nom_sum == 0:
-                    logger.warning(
-                        f"Zero total p_nom for {carrier} in region {region}. Skipping adjustment."
-                    )
-                    continue
-
-                scaling_factors = n.links.loc[links_i].eval("p_nom / @p_nom_sum")
-                n.links.loc[links_i, "p_nom"] += scaling_factors * diff_cap_0
-
-                links_i_current = n.links.loc[links_i][
-                    (n.links.loc[links_i].p_nom_min != 0)
-                    & n.links.loc[links_i].p_nom_extendable
-                ].index
-                n.links.loc[links_i_current, "p_nom_min"] = n.links.loc[
-                    links_i_current, "p_nom"
-                ]
-                # Freeze the scaled (base-year) fleet non-extendable, unless
-                # keep_extendable is set - then the corrected capacity stays
-                # extendable so the model can still expand on top.
-                if not keep_extendable:
-                    n.links.loc[links_i, "p_nom_extendable"] = False
-    else:
+    base_year = min(horizons)
+    if investment_year != base_year:
         logger.info(
-            f"scale_capacity: no entry for planning_horizons={investment_year}; "
+            f"scale_capacity: skipping planning_horizons={investment_year}; the "
+            f"base-year fleet correction applies only at the base year {base_year}."
+        )
+        return
+    if not scaling:
+        logger.info(
+            f"scale_capacity: no target fleet configured; base-year {base_year} "
             "existing fleet from add_existing_baseyear left uncorrected."
         )
+        return
+
+    keep_extendable = base_year == max(horizons)
+    for region in scaling.keys():
+        for carrier in scaling[region].keys():
+            limit = scaling[region][carrier]
+            logger.info(
+                f"Scaling output capacity (bus1) of {carrier} in region {region} to {limit} MW"
+            )
+
+            links_i = n.links[
+                (n.links.carrier == carrier) & n.links.index.str.contains(region)
+            ].index
+
+            installed_cap = n.links.loc[links_i].eval("p_nom * efficiency").sum()
+            if installed_cap == 0:
+                logger.warning(
+                    f"No installed capacity for {carrier} in region {region}. Skipping adjustment."
+                )
+                continue
+
+            diff_cap = limit - installed_cap
+            avg_efficiency = n.links.loc[links_i, "efficiency"].mean()
+            if avg_efficiency == 0 or np.isnan(avg_efficiency):
+                logger.warning(
+                    f"Invalid average efficiency for {carrier} in region {region}. Skipping adjustment."
+                )
+                continue
+
+            diff_cap_0 = diff_cap / avg_efficiency
+            p_nom_sum = n.links.loc[links_i, "p_nom"].sum()
+            if p_nom_sum == 0:
+                logger.warning(
+                    f"Zero total p_nom for {carrier} in region {region}. Skipping adjustment."
+                )
+                continue
+
+            scaling_factors = n.links.loc[links_i].eval("p_nom / @p_nom_sum")
+            n.links.loc[links_i, "p_nom"] += scaling_factors * diff_cap_0
+
+            links_i_current = n.links.loc[links_i][
+                (n.links.loc[links_i].p_nom_min != 0)
+                & n.links.loc[links_i].p_nom_extendable
+            ].index
+            n.links.loc[links_i_current, "p_nom_min"] = n.links.loc[
+                links_i_current, "p_nom"
+            ]
+            # Myopic start year (base < target): freeze the corrected fleet
+            # non-extendable. Direct run (base == target): leave it extendable so
+            # the model can still expand on top.
+            if not keep_extendable:
+                n.links.loc[links_i, "p_nom_extendable"] = False
 
 
 def limit_cross_border_flows_ac(n, s_max_pu):

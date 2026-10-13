@@ -1043,6 +1043,218 @@ def add_scenario_kvl(n, sns):
     logger.info("Added per-scenario Kirchhoff-Voltage-Law for %d scenarios", len(n.scenarios))
 
 
+# carrier token -> (component, model variable, carriers) for the bidirectional
+# DE<->non-DE trade branches; gross import is the sum of positive inflows into DE.
+FREEZE_TRADE_BIDIRECTIONAL = {
+    "AC": ("Line", "Line-s", ["AC"]),
+    "DC": ("Link", "Link-p", ["DC"]),
+    "H2": (
+        "Link",
+        "Link-p",
+        ["H2 pipeline", "H2 pipeline (Kernnetz)", "H2 pipeline retrofitted"],
+    ),
+    "gas": ("Link", "Link-p", ["gas pipeline", "gas pipeline new"]),
+}
+# carrier token -> the single unidirectional "EU ... -> DE ..." trade link whose
+# throughput *is* the gross import (p >= 0; exports run on a separate DE->EU link).
+FREEZE_TRADE_UNIDIRECTIONAL = {
+    "renewable gas": "EU renewable gas -> DE gas",
+    "renewable oil": "EU renewable oil -> DE oil",
+    "methanol": "EU methanol -> DE methanol",
+}
+FREEZE_TRADE_OIL_GENERATOR = "DE oil primary"
+FREEZE_TRADE_CARRIERS = (
+    list(FREEZE_TRADE_BIDIRECTIONAL) + list(FREEZE_TRADE_UNIDIRECTIONAL) + ["oil"]
+)
+
+
+def parse_trade_spec(spec):
+    """Parse a freeze_trade spec into ``(reference, factor)``.
+
+    Forms: ``"<ref>"`` -> factor 1.0; ``"<ref>+<pct>"`` / ``"<ref>-<pct>"`` ->
+    ``1 +/- pct/100`` (e.g. ``optimal+10`` -> 1.10, ``optimal-10`` -> 0.90);
+    ``"<factor><ref>"`` -> that factor (e.g. ``1.1optimal`` -> 1.10). ``<ref>`` is
+    ``"optimal"`` or a grid_scenario name. Scenario refs (which start with a
+    digit) must use the ``+/-<pct>`` form, not the leading-factor form.
+    """
+    import re
+
+    s = str(spec).strip()
+    m = re.fullmatch(r"([0-9]*\.?[0-9]+)([A-Za-z].*)", s)  # "1.1optimal"
+    if m:
+        return m.group(2).strip(), float(m.group(1))
+    m = re.fullmatch(r"(.+?)\s*([+-]\s*[0-9]*\.?[0-9]+)", s)  # "optimal+10"
+    if m:
+        return m.group(1).strip(), 1.0 + float(m.group(2).replace(" ", "")) / 100.0
+    return s, 1.0  # plain "<ref>"
+
+
+def _trade_ref_name_from_path(path):
+    """Reference name for a solved freeze_trade reference network path:
+    "..._topology-<ref>.nc" -> <ref>, otherwise (plain "..._<year>.nc") ->
+    "optimal"."""
+    import os
+
+    base = os.path.basename(path)
+    if "_topology-" in base:
+        return base.split("_topology-")[1].removesuffix(".nc")
+    return "optimal"
+
+
+def _load_get_export_import():
+    """`get_export_import` from export_ariadne_variables.py (same hyphenated
+    directory, so not reachable via a normal dotted import)."""
+    import importlib.util
+    import pathlib
+
+    path = pathlib.Path(__file__).parent / "export_ariadne_variables.py"
+    spec = importlib.util.spec_from_file_location("export_ariadne_variables", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.get_export_import
+
+
+def _register_global_constraint(n, cname, limit):
+    """Register a `<=` GlobalConstraint so its shadow price is inspectable,
+    dropping any pre-existing one of the same name (scenario-index aware)."""
+    if cname in component_names(n.global_constraints):
+        logger.warning(
+            f"Global constraint {cname} already exists. Dropping and adding it again."
+        )
+        if isinstance(n.global_constraints.index, pd.MultiIndex):
+            n.global_constraints.drop(cname, level="name", inplace=True)
+        else:
+            n.global_constraints.drop(cname, inplace=True)
+    n.add(
+        "GlobalConstraint",
+        cname,
+        constant=limit,
+        sense="<=",
+        type="",
+        carrier_attribute="",
+    )
+
+
+def freeze_trade_imports(n, snakemake):
+    """Cap Germany's annual *gross* imports per carrier at a reference level
+    scaled by a margin.
+
+    Opt-in via ``stochastic_grid_scenarios: freeze_trade``, a mapping
+    ``{carrier: "<ref><±margin>"}`` (see ``parse_trade_spec``): each carrier's
+    cap is that reference network's DE gross import of the carrier times the
+    margin factor (``optimal+10`` -> 1.10x, ``optimal-10`` -> 0.90x, ...). The
+    reference networks arrive as ``snakemake.input.freeze_trade_refs``; a carrier
+    whose reference is this very variant is skipped (self-reference). Analogous
+    to ``freeze_outside_de_capacities`` but on dispatch: it stops a constrained
+    grid from being papered over by "just import more", so the topology
+    comparison reflects the domestic response rather than a trade rebalancing.
+
+    All carriers get a ``<=`` cap (never an equality): the bidirectional branches
+    (``AC``/``DC``/``H2``/``gas``) measure gross import as the sum of positive
+    inflows into DE, which needs the positive/negative auxiliary-variable split
+    and is only lower-bounded, so an equality is not LP-expressible; the
+    unidirectional efuel links and the oil-primary generator use ``<=`` too.
+    """
+    freeze_trade = snakemake.params.get("freeze_trade", False)
+    if not freeze_trade:
+        return
+    if not isinstance(freeze_trade, dict):
+        raise ValueError(
+            "freeze_trade must be a {carrier: '<ref><±margin>'} mapping or false."
+        )
+    unknown = set(freeze_trade) - set(FREEZE_TRADE_CARRIERS)
+    if unknown:
+        raise ValueError(
+            f"freeze_trade: unknown carrier(s) {sorted(unknown)}; "
+            f"allowed: {FREEZE_TRADE_CARRIERS}"
+        )
+
+    import pypsa
+
+    ref_paths = list(snakemake.input.get("freeze_trade_refs", []))
+    ref_nets = {_trade_ref_name_from_path(p): pypsa.Network(p) for p in ref_paths}
+    get_export_import = _load_get_export_import()
+    weightings = n.snapshot_weightings.generators
+
+    for carrier, spec in freeze_trade.items():
+        ref, factor = parse_trade_spec(spec)
+        if ref not in ref_nets:
+            logger.info(
+                f"freeze_trade: reference '{ref}' not available for this variant "
+                f"(self-reference?), skipping {carrier}."
+            )
+            continue
+        n_ref = ref_nets[ref]
+        cname = f"Trade_freeze-{carrier}-DE"
+
+        if carrier == "oil":
+            if FREEZE_TRADE_OIL_GENERATOR not in n_ref.generators.index:
+                logger.warning(
+                    f"freeze_trade: '{FREEZE_TRADE_OIL_GENERATOR}' not in reference, "
+                    "skipping oil."
+                )
+                continue
+            target = factor * float(
+                n_ref.generators_t.p[FREEZE_TRADE_OIL_GENERATOR]
+                .mul(n_ref.snapshot_weightings.generators)
+                .sum()
+            )
+            gens = scenario_slice(n.generators)
+            if FREEZE_TRADE_OIL_GENERATOR not in gens.index:
+                logger.warning(
+                    f"freeze_trade: '{FREEZE_TRADE_OIL_GENERATOR}' not in network, "
+                    "skipping oil."
+                )
+                continue
+            lhs = sum_excl_scenario(
+                n.model["Generator-p"].loc[:, [FREEZE_TRADE_OIL_GENERATOR]] * weightings
+            )
+        elif carrier in FREEZE_TRADE_UNIDIRECTIONAL:
+            link = FREEZE_TRADE_UNIDIRECTIONAL[carrier]
+            _, importing = get_export_import(n_ref, "DE", [carrier])
+            target = factor * float(importing)
+            if link not in scenario_slice(n.links).index:
+                logger.warning(f"freeze_trade: link '{link}' not in network, skipping {carrier}.")
+                continue
+            lhs = sum_excl_scenario(n.model["Link-p"].loc[:, [link]] * weightings)
+        else:
+            component, var_name, net_carriers = FREEZE_TRADE_BIDIRECTIONAL[carrier]
+            _, importing = get_export_import(n_ref, "DE", net_carriers)
+            target = factor * float(importing)
+            static = scenario_slice(n.lines if component == "Line" else n.links)
+            branches = static[static.carrier.isin(net_carriers)]
+            incoming = branches.index[
+                (branches.bus0.str[:2] != "DE") & (branches.bus1.str[:2] == "DE")
+            ]
+            outgoing = branches.index[
+                (branches.bus0.str[:2] == "DE") & (branches.bus1.str[:2] != "DE")
+            ]
+            if incoming.empty and outgoing.empty:
+                logger.warning(
+                    f"freeze_trade: no DE<->non-DE {net_carriers} branches, skipping {carrier}."
+                )
+                continue
+            terms = []
+            if not incoming.empty:
+                in_pos, _ = add_pos_neg_aux_variables(
+                    n, incoming, var_name, f"freeze-trade-{carrier}-in"
+                )
+                terms.append(sum_excl_scenario(in_pos * weightings))
+            if not outgoing.empty:
+                _, out_neg = add_pos_neg_aux_variables(
+                    n, outgoing, var_name, f"freeze-trade-{carrier}-out"
+                )
+                terms.append(sum_excl_scenario(-out_neg * weightings))
+            lhs = terms[0] if len(terms) == 1 else terms[0] + terms[1]
+
+        logger.info(
+            f"freeze_trade: DE {carrier} gross import <= {target / 1e6:.2f} TWh/a "
+            f"({spec} of '{ref}')"
+        )
+        n.model.add_constraints(lhs <= target, name=f"GlobalConstraint-{cname}")
+        _register_global_constraint(n, cname, target)
+
+
 def additional_functionality(n, snapshots, snakemake):
     logger.info("Adding Ariadne-specific functionality")
 
@@ -1096,6 +1308,10 @@ def additional_functionality(n, snapshots, snakemake):
 
     if investment_year == 2020:
         adapt_nuclear_output(n)
+
+    # Only active for grid-topology solves that pass a `freeze_trade` param
+    # (stochastic_grid_scenarios); a no-op for every other solve.
+    freeze_trade_imports(n, snakemake)
 
     if n.has_scenarios:
         add_scenario_kvl(n, snapshots)

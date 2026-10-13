@@ -35,6 +35,7 @@ import logging
 
 import pandas as pd
 import pypsa
+from pypsa.descriptors import nominal_attrs
 
 from scripts._helpers import configure_logging, mock_snakemake
 
@@ -271,6 +272,75 @@ def apply_outside_de_grid(n, spec):
     return n
 
 
+def freeze_outside_de_capacities(n, n_source):
+    """Fix foreign (non-DE) non-grid capacities to a solved reference network
+    and make them non-extendable.
+
+    Frozen (bus / both ends in a real non-DE country), to the reference's
+    optimised value:
+    - Generator / StorageUnit / Store (bus in a foreign country);
+    - Link with ``carrier != "DC"`` (foreign conversion links, gas / H2
+      pipelines, distribution - everything but the DC interconnectors/backbone).
+
+    Left untouched, so this never interferes with ``outside_de_grid`` or the
+    grid_scenario CSV override: all Lines (AC grid) and DC Links - exactly the
+    transmission grid that ``apply_outside_de_grid`` controls.
+
+    Run before build_grid_topology(): for the "stochastic" variant the later
+    n.set_scenarios() replicates the frozen values across every scenario slice.
+    """
+    foreign = _foreign_countries(n)
+    country = n.buses.country
+    frozen = {}
+    for component, attr in nominal_attrs.items():
+        if component in ("Line", "Transformer"):
+            continue  # AC grid -> left to outside_de_grid
+        static = n.components[component].static
+        if static.empty:
+            continue
+        src_static = n_source.components[component].static
+
+        if {"bus0", "bus1"}.issubset(static.columns):
+            c0, c1 = static.bus0.map(country), static.bus1.map(country)
+            mask = ~c0.eq("DE") & ~c1.eq("DE") & (c0.isin(foreign) | c1.isin(foreign))
+            if component == "Link":
+                mask &= static.carrier != "DC"  # DC grid -> left to outside_de_grid
+        elif "bus" in static.columns:
+            mask = static.bus.map(country).isin(foreign)
+        else:
+            continue
+
+        names = static.index[mask]
+        missing = names.difference(src_static.index)
+        if len(missing):
+            logger.warning(
+                f"{component}: {len(missing)} foreign component(s) absent from the "
+                f"freeze source, left extendable (e.g. {list(missing)[:3]})."
+            )
+            names = names.difference(missing)
+        if names.empty:
+            continue
+
+        opt_attr = f"{attr}_opt"
+        values = (
+            src_static.loc[names, opt_attr]
+            if opt_attr in src_static.columns
+            else src_static.loc[names, attr]
+        )
+        static.loc[names, attr] = values
+        if opt_attr in static.columns:
+            static.loc[names, opt_attr] = values
+        static.loc[names, f"{attr}_extendable"] = False
+        frozen[component] = len(names)
+
+    logger.info(
+        "freeze_outside_de_capacities: froze foreign non-grid capacities to the "
+        "reference (%s).",
+        ", ".join(f"{k}: {v}" for k, v in frozen.items()) or "nothing matched",
+    )
+    return n
+
+
 def build_grid_topology(n, grid_scenario, scenarios_cfg, clusters):
     if grid_scenario == "stochastic":
         return build_stochastic_topology(n, scenarios_cfg, clusters)
@@ -308,6 +378,11 @@ if __name__ == "__main__":
     }
 
     apply_outside_de_grid(n, snakemake.params.get("outside_de_grid", "endogenous"))
+
+    freeze_source = snakemake.input.get("freeze_source")
+    if freeze_source:
+        logger.info(f"Freezing foreign non-grid capacities to {freeze_source}")
+        freeze_outside_de_capacities(n, pypsa.Network(freeze_source))
 
     build_grid_topology(n, grid_scenario, scenarios_cfg, clusters)
 

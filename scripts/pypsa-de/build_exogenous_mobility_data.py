@@ -125,6 +125,7 @@ def get_mobility_data(
 
         df = db[year].loc[snakemake.params.leitmodelle["transport"]]
 
+        raw_upstream = {}
         for fuel in fuels:
             for subsector in subsectors:
                 key = f"Final Energy|Transportation|{subsector}|{fuel}"
@@ -132,15 +133,22 @@ def get_mobility_data(
                 if unit not in df.index.get_level_values("unit").unique():
                     unit = "PJ/yr"
                 increment = df.get((key, unit), 0.0)
+                raw_upstream[f"{key} [{unit}]"] = increment
                 if unit == "PJ/yr":
                     increment /= 3.6  # convert PJ to TWh
                 mobility_data.loc[fuel] += increment
 
-        mobility_data = mobility_data.mul(1e6)  # convert TWh to MWh
-        mobility_data["million_EVs"] = (
-            df.loc["Stock|Transportation|LDV|BEV", "million"]
-            + df.loc["Stock|Transportation|LDV|PHEV", "million"]
+        bev = df.loc["Stock|Transportation|LDV|BEV", "million"]
+        phev = df.loc["Stock|Transportation|LDV|PHEV", "million"]
+        raw_upstream["Stock|Transportation|LDV|BEV [million]"] = bev
+        raw_upstream["Stock|Transportation|LDV|PHEV [million]"] = phev
+        logger.info(
+            f"Upstream {snakemake.params.leitmodelle['transport']} rows read for "
+            f"{year} (scenario '{snakemake.params.reference_scenario}'): {raw_upstream}"
         )
+
+        mobility_data = mobility_data.mul(1e6)  # convert TWh to MWh
+        mobility_data["million_EVs"] = bev + phev
 
     return mobility_data
 
@@ -208,5 +216,12 @@ if __name__ == "__main__":
     # since these numbers are given in final energy not useful energy, account for the efficiency of BEV charger links, which is 0.9 in the current model
 
     mobility_data["Electricity"] *= 0.9
+
+    logger.info(
+        f"Land transport demand used for {snakemake.wildcards.planning_horizons} "
+        f"(transport model '{snakemake.params.leitmodelle['transport']}', "
+        f"scenario '{snakemake.params.reference_scenario}'; fuels in MWh/yr, "
+        f"million_EVs in millions): {mobility_data.round(2).to_dict()}"
+    )
 
     mobility_data.to_csv(snakemake.output.mobility_data, header=False)

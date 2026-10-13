@@ -486,9 +486,11 @@ transmission_projects:
 # see notebooks/stochastic_grid_uncertainty.ipynb for the underlying methodology
 stochastic_grid_scenarios:
   enable: false
-  run_mode: full # full = LT topologies + ST portfolio evals + WS/SP/EEV/EVPI/ECIU metrics + LT&ST comparison plots; lt_only = only the LT topology variants (incl. the stochastic solve) + their plots, no ST runs/metrics; lt_deterministic = only the deterministic + eev topologies (no stochastic solve), the fastest option
-  planning_horizons: [] # investigation year(s); empty = use scenario.planning_horizons, or set a subset to override
+  run_mode: full # full = LT topologies + ST portfolio evals + WS/SP/EEV/EVPI/ECIU metrics + LT&ST comparison plots; lt_only = only the LT topology variants (incl. the stochastic solve) + their plots, no ST runs/metrics; lt_deterministic = only the deterministic + eev topologies (no stochastic solve), the fastest option; opt_only = only the endogenous optimal network at the target year (forces solve_endogenous_optimal true)
+  planning_horizons: [] # investigation (target) year; empty = max(scenario.planning_horizons), or set a subset to override. Pathway (direct single-year vs myopic multi-year) = scenario.planning_horizons
   outside_de_grid: endogenous # transmission grid outside DE: "<year>_exogen" (committed by <year>, non-extendable) or "endogenous" (freely extendable)
+  freeze_outside_de_capacities: false # freeze foreign non-grid capacities (gen/storage/conversion/pipelines/distribution, NOT the AC lines/DC links of outside_de_grid) to a solved reference, non-extendable: false | "optimal" | "<grid_scenario>" (its solved topology variant); at the analysis year; applied to all variants except the source, so the stochastic solve waits for it
+  freeze_trade: false # cap DE gross imports per carrier: false or a {carrier: "<ref><±margin>"} mapping (carriers: AC/DC/H2/gas/"renewable gas"/"renewable oil"/methanol/oil; ref: "optimal" or a grid_scenario; margin e.g. "optimal+10"=1.10x, "optimal-10"=0.90x, "1.1optimal"). Cap = reference solved network's DE import x margin; a carrier whose ref is this variant is skipped, so the stochastic solve waits for the referenced solve
   solve_endogenous_optimal: false # also build the endogenous all-free reference network (no grid override); opt-in, not part of the WS/SP/EEV/EVPI/ECIU comparison
   stochastic_solve_resources: # cluster-resource overrides for the "stochastic" grid-topology solve only (its scenario-dimension LP is much larger and scales super-linearly in the number of scenarios); each empty = fall back to the general solving.mem_mb / solving.runtime / solver_threads, which every other variant always uses
     mem_mb: # e.g. 420000

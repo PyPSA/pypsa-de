@@ -10345,7 +10345,7 @@
           "type": "boolean"
         },
         "planning_horizons": {
-          "description": "Investigation year(s) for which stochastic grid-topology variants are built and solved. Empty (the default) falls back to scenario.planning_horizons, the single source of truth; set an explicit subset to override.",
+          "description": "Investigation (target) year for which stochastic grid-topology variants are built and solved. Empty (the default) targets max(scenario.planning_horizons), the final pathway year; set an explicit subset to override. The pathway itself (direct single-year vs myopic multi-year) is scenario.planning_horizons.",
           "items": {
             "type": "integer"
           },
@@ -10353,18 +10353,31 @@
         },
         "run_mode": {
           "default": "full",
-          "description": "Scope of the stochastic-grid analysis, trading completeness for speed. 'full': LT topology variants (incl. the native stochastic solve), the ST portfolio-evaluation re-dispatch runs, the WS/SP/EEV/EVPI/ECIU metrics, and LT + ST scenario-comparison plots. 'lt_only': only the LT topology variants (deterministic, eev and the stochastic solve) and their system / LT-comparison plots - no ST runs and no stochastic metrics (both need the ST re-dispatch). 'lt_deterministic': like lt_only but also skips the native stochastic solve, so no PyPSA scenario dimension is built - only the deterministic + eev single-scenario topologies (fastest, and needs no scenario-indexed solve).",
+          "description": "Scope of the stochastic-grid analysis, trading completeness for speed. 'full': LT topology variants (incl. the native stochastic solve), the ST portfolio-evaluation re-dispatch runs, the WS/SP/EEV/EVPI/ECIU metrics, and LT + ST scenario-comparison plots. 'lt_only': only the LT topology variants (deterministic, eev and the stochastic solve) and their system / LT-comparison plots - no ST runs and no stochastic metrics (both need the ST re-dispatch). 'lt_deterministic': like lt_only but also skips the native stochastic solve, so no PyPSA scenario dimension is built - only the deterministic + eev single-scenario topologies (fastest, and needs no scenario-indexed solve). 'opt_only': build and solve only the endogenous all-free reference network at the target year (forces solve_endogenous_optimal true) with its ariadne export and system plots - no grid-topology variants, no stochastic solve, no ST runs, no metrics, no comparison plots; follows the pathway selection (scenario.planning_horizons: a single year solves directly, a multi-year pathway solves the myopic chain).",
           "type": "string",
-          "enum": ["full", "lt_only", "lt_deterministic"]
+          "enum": ["full", "lt_only", "lt_deterministic", "opt_only"]
         },
         "outside_de_grid": {
           "default": "endogenous",
           "description": "Treatment of the transmission grid outside Germany in every grid-topology variant. 'endogenous' leaves foreign AC lines and DC links freely extendable; '<year>_exogen' fixes them to the capacity committed by <year> (build_year <= year), non-extendable, dropping not-yet-committed foreign branches. Applied on the plain network before set_scenarios, so it is identical across stochastic scenarios. Only foreign-foreign branches are touched; DE and interconnector branches are the uncertain grid set by the scenario override.",
           "type": "string"
         },
+        "freeze_outside_de_capacities": {
+          "default": false,
+          "description": "Freeze foreign (non-DE) NON-grid capacities to a solved reference network, non-extendable, so the stochastic DE-grid comparison is not confounded by foreign capacity re-optimisation. false (off); 'optimal' (freeze to the plain solved network base_s_<...>_<year>.nc); or a grid_scenario name (freeze to that solved deterministic 'topology-<scenario>' variant, e.g. '2035_exogen'); the reference is always at the analysis year. Complementary to outside_de_grid: it freezes foreign generators/storage/stores and foreign Links with carrier != 'DC' (conversion, gas/H2 pipelines, distribution) but leaves the foreign AC lines and DC links that outside_de_grid controls. Applied to every grid-topology variant except the source scenario itself (left unfrozen to define the capacities), so the stochastic solve waits for the chosen deterministic/optimal solve to finish.",
+          "anyOf": [{ "type": "boolean" }, { "type": "string" }]
+        },
+        "freeze_trade": {
+          "default": false,
+          "description": "Cap Germany's annual gross imports per carrier at a reference solved network's import level scaled by a margin, so a constrained grid cannot be papered over by importing more. false (off) or a {carrier: '<ref><margin>'} mapping. Carriers: AC, DC, H2, gas, 'renewable gas', 'renewable oil', methanol, oil. Each value is '<ref>' (factor 1.0), '<ref>+<pct>' / '<ref>-<pct>' (e.g. 'optimal+10' = 1.10x, 'optimal-10' = 0.90x) or '<factor><ref>' (e.g. '1.1optimal'); <ref> is 'optimal' (the plain solved network) or a grid_scenario name (its solved 'topology-<scenario>' variant), always at the analysis year, and scenario refs (start with a digit) must use the +/-<pct> form. The cap (a <= GlobalConstraint, so DE may import less but not more) is applied in every grid-topology solve; a carrier whose reference is this very variant is skipped, so the stochastic solve waits for the referenced deterministic/optimal solve.",
+          "anyOf": [
+            { "type": "boolean" },
+            { "type": "object", "additionalProperties": { "type": "string" } }
+          ]
+        },
         "solve_endogenous_optimal": {
           "default": false,
-          "description": "If true, also build and solve the endogenous all-free reference network (base_s_<clusters>_<opts>_<sector_opts>_<year>.nc, no grid override, grid freely extendable) alongside the grid-topology variants. Opt-in and not part of the WS/SP/EEV/EVPI/ECIU comparison; produced for manual inspection.",
+          "description": "If true, also build and solve the endogenous all-free reference network (base_s_<clusters>_<opts>_<sector_opts>_<year>.nc, no grid override, grid freely extendable) alongside the grid-topology variants. Opt-in and not part of the WS/SP/EEV/EVPI/ECIU comparison; produced for manual inspection. Forced true by run_mode 'opt_only' (which builds only this network).",
           "type": "boolean"
         },
         "stochastic_solve_resources": {
