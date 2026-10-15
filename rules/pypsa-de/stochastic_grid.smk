@@ -881,11 +881,29 @@ rule compute_stochastic_metrics:
         unpack(get_evaluation_networks),
     output:
         capacities=RESULTS
-        + "stochastic_grid_capacities_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.csv",
+        + "scenario_comparison/stochastic_metrics/capacities_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.csv",
         cost_matrix=RESULTS
-        + "stochastic_grid_cost_matrix_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.csv",
+        + "scenario_comparison/stochastic_metrics/cost_matrix_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.csv",
         metrics=RESULTS
-        + "stochastic_grid_metrics_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.csv",
+        + "scenario_comparison/stochastic_metrics/metrics_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.csv",
+        capacities_de=RESULTS
+        + "scenario_comparison/stochastic_metrics/capacities_de_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.csv",
+        cost_matrix_de=RESULTS
+        + "scenario_comparison/stochastic_metrics/cost_matrix_de_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.csv",
+        metrics_de=RESULTS
+        + "scenario_comparison/stochastic_metrics/metrics_de_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.csv",
+        capacities_png=RESULTS
+        + "scenario_comparison/stochastic_metrics/capacities_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.png",
+        cost_matrix_png=RESULTS
+        + "scenario_comparison/stochastic_metrics/cost_matrix_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.png",
+        metrics_png=RESULTS
+        + "scenario_comparison/stochastic_metrics/metrics_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.png",
+        capacities_de_png=RESULTS
+        + "scenario_comparison/stochastic_metrics/capacities_de_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.png",
+        cost_matrix_de_png=RESULTS
+        + "scenario_comparison/stochastic_metrics/cost_matrix_de_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.png",
+        metrics_de_png=RESULTS
+        + "scenario_comparison/stochastic_metrics/metrics_de_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.png",
     log:
         logs(
             "compute_stochastic_metrics_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.log"
@@ -910,7 +928,7 @@ rule stochastic_grid_analysis:
         (
             expand(
                 RESULTS
-                + "stochastic_grid_metrics_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.csv",
+                + "scenario_comparison/stochastic_metrics/metrics_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.csv",
                 run=config["run"]["name"],
                 clusters=config["scenario"]["clusters"],
                 opts=config["scenario"]["opts"],
