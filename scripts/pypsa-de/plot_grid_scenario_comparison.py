@@ -166,7 +166,22 @@ CARRIER_GROUPS = {
 # ---------------------------------------------------------------------------
 
 
-def get_generation_consumption(networks, network_ids, carrier_name, config, region="DE", kwargs=None):
+def _filter_region(s, region, exclude=False):
+    """Keep (default) or, with ``exclude``, drop index labels containing ``region``.
+
+    ``exclude=True`` selects everything outside the region (e.g. the rest of
+    Europe outside DE). Mirrors ``Series.filter(like=region)``'s stringified
+    substring match on the (bus-carrying) MultiIndex.
+    """
+    if not exclude:
+        return s.filter(like=region)
+    mask = s.index.map(lambda label: region in str(label))
+    return s[~mask]
+
+
+def get_generation_consumption(
+    networks, network_ids, carrier_name, config, region="DE", kwargs=None, exclude=False
+):
     if kwargs is None:
         kwargs = {
             "groupby": pypsa.statistics.groupers["name", "bus", "carrier"],
@@ -179,9 +194,8 @@ def get_generation_consumption(networks, network_ids, carrier_name, config, regi
         n = networks.get(network_id)
         if n is None:
             continue
-        result = (
-            n.statistics.supply(bus_carrier=config["bus_carrier"], **kwargs)
-            .filter(like=region)
+        result = _filter_region(
+            n.statistics.supply(bus_carrier=config["bus_carrier"], **kwargs), region, exclude
         )
         if config["drop_stores"]:
             result = result.drop(["Store"], errors="ignore")
@@ -194,9 +208,8 @@ def get_generation_consumption(networks, network_ids, carrier_name, config, regi
         n = networks.get(network_id)
         if n is None:
             continue
-        result = (
-            n.statistics.withdrawal(bus_carrier=config["bus_carrier"], **kwargs)
-            .filter(like=region)
+        result = _filter_region(
+            n.statistics.withdrawal(bus_carrier=config["bus_carrier"], **kwargs), region, exclude
         )
         if config["drop_stores"]:
             result = result.drop(["Store"], errors="ignore")
@@ -709,7 +722,7 @@ def plot_curtailment(networks, network_ids, tech_colors, output_dir=None, region
     plt.close(fig)
 
 
-def get_capacities(networks, network_ids, years, year_of=None, max_usage=None):
+def get_capacities(networks, network_ids, years, year_of=None, max_usage=None, region="DE", exclude=False):
     """Extract and group capacities for all network_ids and years.
 
     Parameters
@@ -745,16 +758,19 @@ def get_capacities(networks, network_ids, years, year_of=None, max_usage=None):
                 all_data[(network_id, year)] = zero_groups
                 continue
             caps = (
-                n.statistics.optimal_capacity(
-                    bus_carrier=["AC", "low voltage"], **kwargs
+                _filter_region(
+                    n.statistics.optimal_capacity(
+                        bus_carrier=["AC", "low voltage"], **kwargs
+                    ),
+                    region,
+                    exclude,
                 )
-                .filter(like="DE")
                 .groupby("carrier")
                 .sum()
                 .drop(["AC", "DC", "electricity distribution grid"], errors="ignore")
             )
 
-            if max_usage:
+            if max_usage and not exclude:
                 ct = "DE"
                 buses = n.buses.index[(n.buses.index.str[:2] == ct)].drop("DE", errors="ignore")
                 balance = (
@@ -1022,7 +1038,7 @@ def plot_energy_system_cost_comparison(
     return fig, ax
 
 
-def make_capacity_tables(networks, network_ids, output_dir, kwargs):
+def make_capacity_tables(networks, network_ids, output_dir, kwargs, region="DE", exclude=False):
     """Save capacity_table_{bus_carrier}.png for a set of network_ids.
 
     Split out of the main comparison body so it can also be run, with a
@@ -1048,7 +1064,9 @@ def make_capacity_tables(networks, network_ids, output_dir, kwargs):
             n = networks.get(network_id)
             if n is None:
                 continue
-            stats = n.statistics.optimal_capacity(bus_carrier=bc, **kwargs).filter(like="DE")
+            stats = _filter_region(
+                n.statistics.optimal_capacity(bus_carrier=bc, **kwargs), region, exclude
+            )
             if stats.empty:
                 capa[network_id] = pd.Series(dtype=float)
             else:
@@ -1068,13 +1086,15 @@ def make_capacity_tables(networks, network_ids, output_dir, kwargs):
                 )
 
 
-def make_generation_consumption_tables(networks, network_ids, output_dir, kwargs_gc, region="DE"):
+def make_generation_consumption_tables(
+    networks, network_ids, output_dir, kwargs_gc, region="DE", exclude=False
+):
     """Save generation/consumption/heat/re-fuel tables for a set of
     network_ids (see make_capacity_tables docstring for why this is split
     out of the main comparison body)."""
     for carrier_name, config in CARRIER_GROUPS.items():
         gen_df, con_df = get_generation_consumption(
-            networks, network_ids, carrier_name, config, region, kwargs_gc
+            networks, network_ids, carrier_name, config, region, kwargs_gc, exclude
         )
 
         if not gen_df.empty and gen_df.gt(config["threshold"]).any().any():
@@ -1099,8 +1119,9 @@ def make_generation_consumption_tables(networks, network_ids, output_dir, kwargs
             if n is None:
                 continue
             heat_gen[network_id] = (
-                n.statistics.supply(bus_carrier=[bc], **kwargs_gc)
-                .filter(like=region)
+                _filter_region(
+                    n.statistics.supply(bus_carrier=[bc], **kwargs_gc), region, exclude
+                )
                 .groupby(["carrier"])
                 .sum()
                 .div(1e6)
@@ -1119,13 +1140,13 @@ def make_generation_consumption_tables(networks, network_ids, output_dir, kwargs
             )
 
     re_oil_config = {"bus_carrier": ["renewable oil"], "drop_stores": False, "drop_carriers": [], "threshold": 1.0}
-    re_oil_gen_df, _ = get_generation_consumption(networks, network_ids, "renewable_oil", re_oil_config, region, kwargs_gc)
+    re_oil_gen_df, _ = get_generation_consumption(networks, network_ids, "renewable_oil", re_oil_config, region, kwargs_gc, exclude)
     if not re_oil_gen_df.empty and re_oil_gen_df.gt(1.0).any().any():
         df = round(re_oil_gen_df[re_oil_gen_df.gt(1.0).any(axis=1)], 2)
         df_to_png(df.rename(columns=scenario_label), os.path.join(output_dir, "re_oil_generation.png"))
 
     re_gas_config = {"bus_carrier": ["renewable gas"], "drop_stores": False, "drop_carriers": [], "threshold": 1.0}
-    re_gas_gen_df, _ = get_generation_consumption(networks, network_ids, "renewable_gas", re_gas_config, region, kwargs_gc)
+    re_gas_gen_df, _ = get_generation_consumption(networks, network_ids, "renewable_gas", re_gas_config, region, kwargs_gc, exclude)
     if not re_gas_gen_df.empty and re_gas_gen_df.gt(1.0).any().any():
         df = round(re_gas_gen_df[re_gas_gen_df.gt(1.0).any(axis=1)], 2)
         df_to_png(df.rename(columns=scenario_label), os.path.join(output_dir, "re_gas_generation.png"))
@@ -1503,28 +1524,42 @@ if __name__ == "__main__":
     fig.savefig(output_dir / "capacity_comparison.png", dpi=300, bbox_inches="tight")
 
     # REGIONAL CAPACITY-DIFF MAPS (LT only) - each of the topology-*
-    # variants against the unconstrained "optimal" network, plus each
-    # stochastic (topology-stochastic__{gs}) variant against its own
-    # deterministic counterpart (topology-{gs}), for every capa_groups /
-    # storage_energy_capa_groups category (see utils.py).
+    # variants against the unconstrained "optimal" network, plus the
+    # stochastic plan against each deterministic grid scenario (topology-{gs}),
+    # for every capa_groups / storage_energy_capa_groups category (see
+    # utils.py). The stochastic scenario slices (topology-stochastic__{gs})
+    # share one first-stage plan, so they are collapsed to a single
+    # representative labelled "SP" rather than one near-identical map per
+    # grid scenario.
     if variant == "LT":
         logger.info("Plotting regional capacity-diff maps...")
         onshore_regions = gpd.read_file(snakemake.input.regions_onshore[0]).set_index("name")
 
+        stoch_slices = [nid for nid in network_ids if nid.startswith("topology-stochastic__")]
+        sp_rep = next(
+            (nid for nid in stoch_slices if nid.endswith(f"__{year}_exogen")),
+            stoch_slices[0] if stoch_slices else None,
+        )
+        non_stoch_ids = [nid for nid in network_ids if nid not in stoch_slices]
+        det_ids = [
+            "topology-" + nid.removeprefix("topology-stochastic__") for nid in stoch_slices
+        ]
+        det_ids = [d for d in dict.fromkeys(det_ids) if d in network_ids]
+
         diff_pairs = []
         if "optimal" in network_ids:
-            diff_pairs += [(nid, "optimal") for nid in network_ids if nid != "optimal"]
-        for nid in network_ids:
-            if nid.startswith("topology-stochastic__"):
-                det_id = "topology-" + nid.removeprefix("topology-stochastic__")
-                if det_id in network_ids:
-                    diff_pairs.append((nid, det_id))
+            diff_pairs += [(nid, "optimal") for nid in non_stoch_ids if nid != "optimal"]
+            if sp_rep is not None:
+                diff_pairs.append((sp_rep, "optimal"))
+        if sp_rep is not None:
+            diff_pairs += [(sp_rep, det) for det in det_ids]
 
         for nid_a, nid_b in diff_pairs:
             n_a, n_b = networks.get(nid_a), networks.get(nid_b)
             if n_a is None or n_b is None:
                 continue
-            label_a, label_b = scenario_label(nid_a), scenario_label(nid_b)
+            label_a = "SP" if nid_a == sp_rep else scenario_label(nid_a)
+            label_b = scenario_label(nid_b)
 
             power_a = power_capacity_by_bus_carrier(n_a, region)
             power_b = power_capacity_by_bus_carrier(n_b, region)
@@ -1547,16 +1582,20 @@ if __name__ == "__main__":
 
             for group_name, tech_dict in storage_energy_capa_groups.items():
                 group_slug = group_name.lower().replace(" + ", "_").replace(" ", "_")
+                # H2 Store is large, so report it in TWh (energy_a/b are GWh).
+                unit, scale = ("TWh", 1e3) if group_name == "H2 Store" else ("GWh", 1.0)
+                per_a = {k: v / scale for k, v in group_capacity_by_tech(n_a, tech_dict, energy_a).items()}
+                per_b = {k: v / scale for k, v in group_capacity_by_tech(n_b, tech_dict, energy_b).items()}
                 plot_group_capacity_diff_maps(
-                    group_capacity_by_tech(n_a, tech_dict, energy_a),
-                    group_capacity_by_tech(n_b, tech_dict, energy_b),
+                    per_a,
+                    per_b,
                     group_name,
                     onshore_regions,
                     output_dir / f"capacity_diff_map_{group_slug}_{label_a}_vs_{label_b}.png",
                     label_a,
                     label_b,
                     region=region,
-                    unit="GWh",
+                    unit=unit,
                 )
 
     ### GENERATION & CONSUMPTION ###
@@ -1745,6 +1784,28 @@ if __name__ == "__main__":
     ### CURTAILMENT ###
     logger.info("Plotting curtailment...")
     plot_curtailment(networks, network_ids, tech_colors, output_dir)
+
+    ### OUTSIDE-DE ANALYSIS ###
+    # Rest-of-Europe aggregate (everything whose bus is not DE, EU-shared
+    # commodity buses included): capacity comparison, capacity tables and
+    # generation/consumption tables. No maps or prices (per request).
+    logger.info("Plotting outside-DE analysis")
+    outside_dir = output_dir / "outside_de_analysis"
+    outside_dir.mkdir(parents=True, exist_ok=True)
+
+    outside_capacity_data = get_capacities(
+        networks, all_network_ids, capacity_years, year_of=nid_to_year, region=region, exclude=True
+    )
+    fig = plot_capacity_comparison(
+        outside_capacity_data, all_network_ids, capacity_years, tech_colors
+    )
+    fig.savefig(outside_dir / "capacity_comparison.png", dpi=300, bbox_inches="tight")
+    plt.close(fig)
+
+    make_capacity_tables(networks, network_ids, outside_dir, kwargs, region=region, exclude=True)
+    make_generation_consumption_tables(
+        networks, network_ids, outside_dir, kwargs_gc, region=region, exclude=True
+    )
 
     ### PATHWAY-YEAR TABLES ###
     # Earlier myopic-pathway years (e.g. 2025 relative to a 2030 target)

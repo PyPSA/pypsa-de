@@ -578,19 +578,47 @@ c1_groups_name = [
     "H2 OCGT",
 ]
 
+def _fmt_table_cell(v):
+    """Magnitude-based rounding for table cells: no decimals >= 100, one
+    decimal >= 10, two below. Non-numeric values pass through unchanged.
+    """
+    try:
+        x = float(v)
+    except (TypeError, ValueError):
+        return str(v)
+    if pd.isna(x):
+        return ""
+    a = abs(x)
+    if a >= 100:
+        return f"{x:.0f}"
+    if a >= 10:
+        return f"{x:.1f}"
+    return f"{x:.2f}"
+
+
 def df_to_png(df, filename="table.png"):
 
     if df.empty:
         return
 
-    fig, ax = plt.subplots(figsize=(10, 0.5 + 0.25*len(df)))
+    # ST scenario labels read "<portfolio>@<grid>"; break them onto three
+    # lines ("EXOG25 / @ / EXOG35") so the (many) columns stay legible.
+    col_labels = [str(c).replace("@", "\n@\n") for c in df.columns]
+    cell_text = [[_fmt_table_cell(v) for v in row] for row in df.values]
+
+    width = max(10, 1.1 * len(df.columns) + 2)
+    fig, ax = plt.subplots(figsize=(width, 1.0 + 0.25 * len(df)))
     ax.axis('off')
-    tbl = ax.table(cellText=df.values,
-                   colLabels=df.columns,
+    tbl = ax.table(cellText=cell_text,
+                   colLabels=col_labels,
                    rowLabels=df.index,
                    loc='center')
     tbl.auto_set_font_size(False)
     tbl.set_fontsize(10)
+    # Taller header row so the wrapped multi-line "@" labels fit.
+    for (r, _c), cell in tbl.get_celld().items():
+        if r == 0:
+            cell.set_height(cell.get_height() * 3)
     fig.savefig(filename, bbox_inches='tight')
     plt.close()
 

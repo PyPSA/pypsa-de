@@ -363,14 +363,17 @@ def plot_storage_map(
         capas.index = network.buses.location.loc[capas.index].values
         capas = capas.groupby(level=0).sum()
 
-        df[tech] = capas.reindex(df.index).fillna(0) / 1e3  # GWh
+        # `stores_capa` already arrives in GWh (converted at the call site);
+        # H2 Store is large, so report it in TWh.
+        unit, scale = ("TWh", 1e3) if tech == "H2 Store" else ("GWh", 1.0)
+        df[tech] = capas.reindex(df.index).fillna(0) / scale
         total_capacity = df[tech].sum()
 
         vmin, vmax = df[tech].min(), df[tech].max()
 
         # Background
         _add_basemap(ax, display_projection)
-        ax.set_title(f"{tech}\nTotal: {total_capacity:.1f} GWh", fontsize=10, pad=15)
+        ax.set_title(f"{tech}\nTotal: {total_capacity:.1f} {unit}", fontsize=10, pad=15)
 
         # Plot
         df_plot_crs = df.to_crs(display_projection.proj4_init)
@@ -404,7 +407,7 @@ def plot_storage_map(
         sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=vmin, vmax=vmax if vmax > 0 else 1))
         sm.set_array([])
         cbar = plt.colorbar(sm, ax=ax, shrink=0.6, pad=0.02, orientation="horizontal")
-        cbar.set_label("Energy Capacity (GWh)", fontsize=9)
+        cbar.set_label(f"Energy Capacity ({unit})", fontsize=9)
 
     # Hide unused subplots
     for idx in range(n_plots, len(axes)):
@@ -454,6 +457,7 @@ def plot_group_capacity_maps(
         .filter(like=region)
         .groupby(["bus", "carrier"])
         .sum()
+        .abs()  # electricity-consuming links (electrolysis, chargers, P2H) are signed negative; show magnitudes
         .div(1e3)  # GW
     )
 
@@ -535,7 +539,14 @@ def power_capacity_by_bus_carrier(network, region="DE", bus_carrier=("AC", "low 
     """(bus, carrier)-indexed optimal power capacity (GW) - the same data
     plot_group_capacity_maps plots, factored out so diff maps (see
     group_capacity_by_tech/plot_group_capacity_diff_maps below) can compute
-    it for two networks and subtract."""
+    it for two networks and subtract.
+
+    Taken as magnitude (`abs`): `optimal_capacity` signs a port by its flow
+    direction, so electricity-consuming links (electrolysis, BEV chargers,
+    power-to-heat) come back negative at the AC/low-voltage bus. The diff
+    maps compare installed capacity, so a larger charger must read as more
+    capacity, not a more-negative number.
+    """
     return (
         network.statistics.optimal_capacity(
             bus_carrier=list(bus_carrier),
@@ -545,6 +556,7 @@ def power_capacity_by_bus_carrier(network, region="DE", bus_carrier=("AC", "low 
         .filter(like=region)
         .groupby(["bus", "carrier"])
         .sum()
+        .abs()
         .div(1e3)  # GW
     )
 

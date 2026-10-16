@@ -620,6 +620,9 @@ rule evaluate_grid_portfolio:
         ),
         co2_totals_name=resources("co2_totals.csv"),
         energy_totals=resources("energy_totals.csv"),
+        # Same freeze_trade import caps as the LT solve of this grid_scenario, so
+        # the re-dispatch faces the identical trade constraints (empty when off).
+        freeze_trade_refs=_freeze_trade_ref_networks,
     output:
         network=RESULTS
         + "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_portfolio-{portfolio}_on-{grid_scenario}_st.nc",
@@ -648,6 +651,7 @@ rule evaluate_grid_portfolio:
         ),
         custom_extra_functionality=input_custom_extra_functionality,
         energy_year=config_provider("energy", "energy_totals_year"),
+        freeze_trade=config_provider("stochastic_grid_scenarios", "freeze_trade", default=False),
     message:
         "Evaluating portfolio '{wildcards.portfolio}' capacities dispatched on grid topology '{wildcards.grid_scenario}'"
     script:
