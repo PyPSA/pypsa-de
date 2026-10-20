@@ -32,10 +32,14 @@ scenarios[0] only).
 """
 
 import logging
+import os
+import sys
 
 import pandas as pd
 import pypsa
 from pypsa.descriptors import nominal_attrs
+
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__) + "/../.."))
 
 from scripts._helpers import configure_logging, mock_snakemake
 
@@ -354,11 +358,12 @@ if __name__ == "__main__":
     if "snakemake" not in globals():
         snakemake = mock_snakemake(
             "build_grid_topology",
-            clusters=27,
+            clusters="adm",
             opts="",
             sector_opts="none",
             planning_horizons="2035",
             grid_scenario="2025_exogen",
+            run="KN2045_Bal_v5_abroad_capa_freeze",
         )
 
     configure_logging(snakemake)
@@ -383,6 +388,11 @@ if __name__ == "__main__":
     if freeze_source:
         logger.info(f"Freezing foreign non-grid capacities to {freeze_source}")
         freeze_outside_de_capacities(n, pypsa.Network(freeze_source))
+    else:
+        logger.info(
+            "freeze_outside_de_capacities: off (no freeze_source input) - "
+            "foreign non-grid capacities left extendable"
+        )
 
     build_grid_topology(n, grid_scenario, scenarios_cfg, clusters)
 

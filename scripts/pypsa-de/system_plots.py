@@ -535,6 +535,261 @@ def plot_group_capacity_maps(
     plt.close(fig)
 
 
+def plot_load_map(
+    network,
+    onshore_regions,
+    output_path,
+    region="DE",
+    bus_carrier=("AC", "low voltage"),
+    extent=None,
+    dpi=300,
+    cmap="viridis",
+):
+    """Map annual electricity demand (TWh) by region: the exogenous Load
+    components on the region's electricity (AC / low voltage) buses, summed over
+    the year. The load is fixed input, identical across grid-topology scenarios,
+    so it is plotted once per comparison directory as a companion to the
+    capacity maps (same DE region scope).
+    """
+    if extent is None:
+        extent = [5.5, 15.5, 47, 56]
+
+    aspect_ratio = (extent[1] - extent[0]) / (extent[3] - extent[2])
+    display_projection = ccrs.EqualEarth()
+
+    lc = network.loads.bus.map(network.buses.carrier)
+    loads = network.loads[lc.isin(bus_carrier) & network.loads.bus.str.contains(region)]
+    energy = (
+        network.loads_t.p[loads.index]
+        .multiply(network.snapshot_weightings.generators, axis=0)
+        .sum()
+    )
+    by_bus = energy.groupby(loads.bus).sum()
+    by_bus.index = network.buses.location.loc[by_bus.index].values
+    by_region = by_bus.groupby(level=0).sum().div(1e6)  # TWh
+
+    df = onshore_regions.copy()
+    df = df[df.index.str.contains(region)]
+    df["load"] = by_region.reindex(df.index).fillna(0)
+    total = df["load"].sum()
+    vmin, vmax = df["load"].min(), df["load"].max()
+
+    fig, ax = plt.subplots(
+        subplot_kw={"projection": display_projection}, figsize=(5, 6)
+    )
+    _add_basemap(ax, display_projection)
+    ax.set_title(f"Electricity demand\nTotal: {total:.1f} TWh", fontsize=11, pad=15)
+
+    df_plot = df.to_crs(display_projection.proj4_init)
+    df_plot.plot(
+        column="load", ax=ax, linewidth=0.05, edgecolor="grey",
+        legend=False, vmin=vmin, vmax=vmax if vmax > 0 else 1, cmap=cmap,
+    )
+
+    centroids = df_plot.geometry.centroid
+    for name, value in df["load"].items():
+        if value > 0.05:
+            pt = centroids.loc[name]
+            ax.text(
+                pt.x, pt.y, f"{value:.1f}",
+                transform=display_projection, ha="center", va="center",
+                fontsize=6, color="black",
+                path_effects=[pe.withStroke(linewidth=1.5, foreground="white")],
+            )
+
+    ax.set_extent(extent, ccrs.PlateCarree())
+    ax.set_aspect(aspect_ratio)
+
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=vmin, vmax=vmax if vmax > 0 else 1))
+    sm.set_array([])
+    cbar = plt.colorbar(sm, ax=ax, shrink=0.6, pad=0.02, orientation="horizontal")
+    cbar.set_label("Electricity demand (TWh)", fontsize=9)
+
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=dpi, bbox_inches="tight")
+    plt.close(fig)
+
+
+def plot_renewable_cf_maps(
+    network,
+    onshore_regions,
+    output_path,
+    region="DE",
+    carriers=("solar", "solar-hsat", "solar rooftop", "onwind", "offwind-ac", "offwind-dc"),
+    extent=None,
+    dpi=300,
+    cmap="viridis",
+):
+    """Map the time-averaged availability capacity factor (mean `p_max_pu`) by
+    region for each renewable carrier, one panel per carrier. This is resource
+    input, identical across grid-topology scenarios, so plotted once per
+    comparison directory (companion to the load map). Each panel has its own
+    colour scale (CFs differ widely, e.g. rooftop PV vs offshore wind); regions
+    with no generator of that carrier (e.g. inland offshore) are left blank.
+    """
+    if extent is None:
+        extent = [5.5, 15.5, 47, 56]
+
+    aspect_ratio = (extent[1] - extent[0]) / (extent[3] - extent[2])
+    display_projection = ccrs.EqualEarth()
+    w = network.snapshot_weightings.generators
+
+    per_carrier = {}
+    for carrier in carriers:
+        gens = network.generators[
+            (network.generators.carrier == carrier)
+            & network.generators.bus.str.contains(region)
+        ]
+        cols = gens.index.intersection(network.generators_t.p_max_pu.columns)
+        if len(cols) == 0:
+            continue
+        mean_pu = network.generators_t.p_max_pu[cols].multiply(w, axis=0).sum() / w.sum()
+        loc = network.buses.location[gens.loc[cols, "bus"]].values
+        per_carrier[carrier] = pd.Series(mean_pu.values, index=loc).groupby(level=0).mean()
+
+    if not per_carrier:
+        logger.info(f"Skipping renewable CF maps ({region}): no generators")
+        return
+
+    n_plots = len(per_carrier)
+    n_cols = min(3, n_plots)
+    n_rows = (n_plots + n_cols - 1) // n_cols
+    fig, axes = plt.subplots(
+        n_rows, n_cols,
+        subplot_kw={"projection": display_projection},
+        figsize=(3.5 * n_cols, 5 * n_rows),
+    )
+    axes = np.atleast_1d(axes).flatten()
+
+    for i, carrier in enumerate(per_carrier):
+        ax = axes[i]
+        df = onshore_regions.copy()
+        df = df[df.index.str.contains(region)]
+        df["cf"] = per_carrier[carrier].reindex(df.index)  # NaN where no generator
+        vmin, vmax = df["cf"].min(), df["cf"].max()
+
+        _add_basemap(ax, display_projection)
+        ax.set_title(f"{carrier}\nmean CF: {df['cf'].mean():.2f}", fontsize=10, pad=15)
+
+        df_plot = df.to_crs(display_projection.proj4_init)
+        df_plot.plot(
+            column="cf", ax=ax, linewidth=0.05, edgecolor="grey",
+            legend=False, vmin=vmin, vmax=vmax, cmap=cmap,
+            missing_kwds={"color": "#f0f0f0"},
+        )
+
+        centroids = df_plot.geometry.centroid
+        for name, value in df["cf"].items():
+            if pd.notna(value):
+                pt = centroids.loc[name]
+                ax.text(
+                    pt.x, pt.y, f"{value:.2f}",
+                    transform=display_projection, ha="center", va="center",
+                    fontsize=6, color="black",
+                    path_effects=[pe.withStroke(linewidth=1.5, foreground="white")],
+                )
+
+        ax.set_extent(extent, ccrs.PlateCarree())
+        ax.set_aspect(aspect_ratio)
+
+        sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=vmin, vmax=vmax))
+        sm.set_array([])
+        cbar = plt.colorbar(sm, ax=ax, shrink=0.6, pad=0.02, orientation="horizontal")
+        cbar.set_label("Capacity factor", fontsize=9)
+
+    for idx in range(n_plots, len(axes)):
+        axes[idx].set_visible(False)
+
+    fig.suptitle(f"Renewable capacity factors - {region}", fontsize=14, y=0.99)
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=dpi, bbox_inches="tight")
+    plt.close(fig)
+
+
+def plot_load_shedding_map(
+    network,
+    onshore_regions,
+    output_path,
+    label,
+    region="DE",
+    bus_carrier=("AC", "low voltage"),
+    min_twh=0.5,
+    extent=None,
+    dpi=300,
+    cmap="Reds",
+):
+    """Map load-shedding energy (TWh) by region: the annual generation of
+    carrier-``load`` generators on the given bus carriers (unserved demand).
+
+    Drawn only when total shedding in `region` exceeds `min_twh`; the total shed
+    [TWh] is returned either way. Load shedding is enabled only for the ST
+    portfolio evaluations, so LT topology networks shed nothing and are skipped.
+    """
+    g = network.generators[
+        (network.generators.carrier == "load")
+        & network.generators.bus.map(network.buses.carrier).isin(bus_carrier)
+        & network.generators.bus.str.contains(region)
+    ]
+    cols = g.index.intersection(network.generators_t.p.columns)
+    if len(cols) == 0:
+        return 0.0
+
+    w = network.snapshot_weightings.generators
+    energy = network.generators_t.p[cols].multiply(w, axis=0).sum()  # MWh
+    by_bus = energy.groupby(g.loc[cols, "bus"]).sum()
+    by_bus.index = network.buses.location.loc[by_bus.index].values
+    by_region = by_bus.groupby(level=0).sum().div(1e6)  # TWh
+    total = float(by_region.sum())
+    if total <= min_twh:
+        return total
+
+    if extent is None:
+        extent = [5.5, 15.5, 47, 56]
+    aspect_ratio = (extent[1] - extent[0]) / (extent[3] - extent[2])
+    display_projection = ccrs.EqualEarth()
+
+    df = onshore_regions.copy()
+    df = df[df.index.str.contains(region)]
+    df["ls"] = by_region.reindex(df.index).fillna(0)
+    vmax = df["ls"].max()
+
+    fig, ax = plt.subplots(
+        subplot_kw={"projection": display_projection}, figsize=(5, 6)
+    )
+    _add_basemap(ax, display_projection)
+    ax.set_title(f"{label}\nTotal: {total:.1f} TWh", fontsize=11, pad=15)
+
+    df_plot = df.to_crs(display_projection.proj4_init)
+    df_plot.plot(
+        column="ls", ax=ax, linewidth=0.05, edgecolor="grey",
+        legend=False, vmin=0, vmax=vmax if vmax > 0 else 1, cmap=cmap,
+    )
+
+    centroids = df_plot.geometry.centroid
+    for name, value in df["ls"].items():
+        if value > 0.05:
+            pt = centroids.loc[name]
+            ax.text(
+                pt.x, pt.y, f"{value:.1f}",
+                transform=display_projection, ha="center", va="center",
+                fontsize=6, color="black",
+                path_effects=[pe.withStroke(linewidth=1.5, foreground="white")],
+            )
+
+    ax.set_extent(extent, ccrs.PlateCarree())
+    ax.set_aspect(aspect_ratio)
+
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=0, vmax=vmax if vmax > 0 else 1))
+    sm.set_array([])
+    cbar = plt.colorbar(sm, ax=ax, shrink=0.6, pad=0.02, orientation="horizontal")
+    cbar.set_label("Load shedding (TWh)", fontsize=9)
+
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=dpi, bbox_inches="tight")
+    plt.close(fig)
+    return total
+
+
 def power_capacity_by_bus_carrier(network, region="DE", bus_carrier=("AC", "low voltage")):
     """(bus, carrier)-indexed optimal power capacity (GW) - the same data
     plot_group_capacity_maps plots, factored out so diff maps (see

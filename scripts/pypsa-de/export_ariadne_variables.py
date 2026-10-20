@@ -4634,12 +4634,17 @@ def get_policy(n, investment_year):
     return var
 
 
-def get_tsc(n, country, region=None):
+def get_tsc(n, country, region=None, detail=False):
     """Capex/opex per carrier for `country`, with inter-country transmission
     split 50/50 between the two adjacent countries.
 
     `region` (default: `country`) only controls the intra-region line/link
     renaming so sub-region assets are attributed to the region.
+
+    With `detail=True`, returns ``(tsc_sum, tsc)`` where `tsc_sum` is the
+    per-carrier frame and `tsc` is the underlying per-asset frame (index=name,
+    columns carrier/component/capex/opex) - needed by callers that map assets to
+    sectors/buses (see plot_grid_scenario_comparison.make_system_cost_tables).
     """
     if region is None:
         region = country
@@ -4717,14 +4722,12 @@ def get_tsc(n, country, region=None):
         inplace=True,
     )
 
-    tsc = (
-        tsc.filter(like=country, axis=0)
-        .drop("component", axis=1)
-        .groupby("carrier")
-        .sum()
-    )
+    tsc = tsc.filter(like=country, axis=0)
+    tsc_sum = tsc.drop("component", axis=1).groupby("carrier").sum()
 
-    return tsc
+    if detail:
+        return tsc_sum, tsc
+    return tsc_sum
 
 
 def get_trade_cost(n, region, carriers):

@@ -219,35 +219,3 @@ KN2045_NFhoch:
       2040: 0.34
       2045: 0.39
       2050: 0.43
-
-KN2045_Bal_v5_abroad_capa_freeze:
-# Freeze non-DE non-grid capacities to the solved 2035_exogen topology
-  stochastic_grid_scenarios:
-    freeze_outside_de_capacities: 2035_exogen
-
-KN2045_Bal_v5_abroad_trade_freeze:
-# Cap DE gross imports per carrier at the solved 2035_exogen level (1.0x)
-  stochastic_grid_scenarios:
-    freeze_trade:
-      AC: 2035_exogen
-      DC: 2035_exogen
-      H2: 2035_exogen
-      gas: 2035_exogen
-      "renewable gas": 2035_exogen
-      "renewable oil": 2035_exogen
-      methanol: 2035_exogen
-      oil: 2035_exogen
-
-KN2045_Bal_v5_abroad_capa+trade_freeze:
-# Both: freeze non-DE capacities and cap DE gross imports at 2035_exogen
-  stochastic_grid_scenarios:
-    freeze_outside_de_capacities: 2035_exogen
-    freeze_trade:
-      AC: 2035_exogen
-      DC: 2035_exogen
-      H2: 2035_exogen
-      gas: 2035_exogen
-      "renewable gas": 2035_exogen
-      "renewable oil": 2035_exogen
-      methanol: 2035_exogen
-      oil: 2035_exogen

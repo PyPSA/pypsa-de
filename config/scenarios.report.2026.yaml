@@ -78,40 +78,40 @@ KN2045_Elec_v5:
   pypsa-de:
     reference_scenario: KN2045_Elec_v5
 
-    solving:
-      constraints:
-        limits_production_max:
-          Link:
-            H2 Electrolysis:
-              DE:
-                2035: 95
-                2040: 145
-                2045: 200
-                2050: 200
-        limits_volume_max:
-          # constrain electricity import in TWh
-          electricity_import:
+  solving:
+    constraints:
+      limits_production_max:
+        Link:
+          H2 Electrolysis:
             DE:
-              2045: 150
-              2050: 150
-          h2_derivate_import:
-            DE:
-              2030: 15
-              2035: 70
-              2040: 130
+              2035: 95
+              2040: 145
               2045: 200
               2050: 200
-          h2_import:
-            DE:
-              2030: 10
-              2035: 90
-              2040: 170
-              2045: 250
-              2050: 250
-    industry:
-      steam_biomass_fraction: 0.4
-      steam_hydrogen_fraction: 0.1
-      steam_electricity_fraction: 0.5
+      limits_volume_max:
+        # constrain electricity import in TWh
+        electricity_import:
+          DE:
+            2045: 150
+            2050: 150
+        h2_derivate_import:
+          DE:
+            2030: 15
+            2035: 70
+            2040: 130
+            2045: 200
+            2050: 200
+        h2_import:
+          DE:
+            2030: 10
+            2035: 90
+            2040: 170
+            2045: 250
+            2050: 250
+  industry:
+    steam_biomass_fraction: 0.4
+    steam_hydrogen_fraction: 0.1
+    steam_electricity_fraction: 0.5
 
 
 
@@ -235,3 +235,145 @@ KN2045_H2_v5:
     steam_biomass_fraction: 0.4
     steam_hydrogen_fraction: 0.5
     steam_electricity_fraction: 0.1
+
+# Grid-uncertainty freeze variants: each is the base scenario above plus
+# stochastic_grid_scenarios.freeze_outside_de_capacities = 2035_exogen (freeze
+# non-DE non-grid capacities to the solved 2035_exogen topology). The base
+# reference/constraints are duplicated here because scenario overrides are
+# independent top-level keys - keep each freeze variant in sync with its base.
+KN2045_Bal_v5_abroad_capa_freeze:
+  pypsa-de:
+    reference_scenario: KN2045_Bal_v5
+  stochastic_grid_scenarios:
+    freeze_outside_de_capacities: 2035_exogen
+
+KN2045_Elec_v5_abroad_capa_freeze:
+  pypsa-de:
+    reference_scenario: KN2045_Elec_v5
+  solving:
+    constraints:
+      limits_production_max:
+        Link:
+          H2 Electrolysis:
+            DE:
+              2035: 95
+              2040: 145
+              2045: 200
+              2050: 200
+      limits_volume_max:
+        # constrain electricity import in TWh
+        electricity_import:
+          DE:
+            2045: 150
+            2050: 150
+        h2_derivate_import:
+          DE:
+            2030: 15
+            2035: 70
+            2040: 130
+            2045: 200
+            2050: 200
+        h2_import:
+          DE:
+            2030: 10
+            2035: 90
+            2040: 170
+            2045: 250
+            2050: 250
+  industry:
+    steam_biomass_fraction: 0.4
+    steam_hydrogen_fraction: 0.1
+    steam_electricity_fraction: 0.5
+  stochastic_grid_scenarios:
+    freeze_outside_de_capacities: 2035_exogen
+
+KN2045_H2_v5_abroad_capa_freeze:
+  pypsa-de:
+    reference_scenario: KN2045_H2_v5
+  solving:
+    constraints:
+      limits_capacity_min:
+        Link:
+          H2 Electrolysis:
+            DE:
+              2035: 8
+              2040: 20
+              2045: 50
+      limits_volume_max:
+        # constrain electricity import in TWh
+        electricity_import:
+          DE:
+            2030: 35
+            2035: 50
+            2040: 70
+            2045: 100 # scenario guidelines
+            2050: 100
+        # constrain hydrogen import in TWh
+        h2_import:
+          DE:
+            2030: 45 # scenario guidelines
+            2035: 155
+            2040: 265
+            2045: 400 # scenario guidelines
+            2050: 400
+        # import of h2 derivatives in TWh
+        h2_derivate_import:
+          DE:
+            2035: 150
+            2040: 275
+            2045: 400 # scenario guidelines
+            2050: 400
+      limits_production_max:
+        Link:
+          H2 Electrolysis:
+            DE:
+              2020: 0
+              2025: 5
+              2030: 45 # scenario guidelines
+              2035: 160
+              2040: 275
+              2045: 400 # scenario guidelines
+              2050: 400
+      limits_production_min:
+        Link:
+          H2 Electrolysis:
+            DE:
+              2045: 200
+              2050: 200
+  industry:
+    steam_biomass_fraction: 0.4
+    steam_hydrogen_fraction: 0.5
+    steam_electricity_fraction: 0.1
+  stochastic_grid_scenarios:
+    freeze_outside_de_capacities: 2035_exogen
+
+KN2045_Bal_v5_abroad_trade_freeze:
+# KN2045_Bal_v5 with DE gross imports per carrier capped at the solved 2035_exogen level (1.0x)
+  pypsa-de:
+    reference_scenario: KN2045_Bal_v5
+  stochastic_grid_scenarios:
+    freeze_trade:
+      AC: 2035_exogen
+      DC: 2035_exogen
+      H2: 2035_exogen
+      gas: 2035_exogen
+      "renewable gas": 2035_exogen
+      "renewable oil": 2035_exogen
+      methanol: 2035_exogen
+      oil: 2035_exogen
+
+KN2045_Bal_v5_abroad_capa+trade_freeze:
+# KN2045_Bal_v5 with both: non-DE non-grid capacities frozen and DE gross imports capped at 2035_exogen
+  pypsa-de:
+    reference_scenario: KN2045_Bal_v5
+  stochastic_grid_scenarios:
+    freeze_outside_de_capacities: 2035_exogen
+    freeze_trade:
+      AC: 2035_exogen
+      DC: 2035_exogen
+      H2: 2035_exogen
+      gas: 2035_exogen
+      "renewable gas": 2035_exogen
+      "renewable oil": 2035_exogen
+      methanol: 2035_exogen
+      oil: 2035_exogen

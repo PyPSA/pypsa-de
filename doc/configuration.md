@@ -122,6 +122,25 @@ Configuration for top level `run` settings.
 {{ yaml_section("run") }}
 ```
 
+### Settings that cannot be set per scenario {#per_scenario_limits}
+
+A few settings are read **once, when Snakemake builds the workflow graph** -
+before any individual scenario run is resolved. The graph is shared across all
+runs, so these values always come from the base config: a per-scenario override
+(via `run.scenarios`) is accepted by the config but **silently ignored**. They
+are tagged `# !!! cannot be set per scenario atm` in the config files:
+
+- [`scenario.planning_horizons`](#scenario) - defines the (myopic) planning-year chain
+- `stochastic_grid_scenarios.run_mode` - selects which grid-analysis targets are built
+- `stochastic_grid_scenarios.planning_horizons` - the grid-analysis target year(s)
+- `stochastic_grid_scenarios.solve_endogenous_optimal` - whether the `optimal` reference is built
+- `stochastic_grid_scenarios.scenarios` - the *set* of grid-scenario names (their
+  probabilities and CSV paths may still be overridden per scenario)
+
+All other settings can be overridden per scenario. In rule code, read any
+scenario-overridable value with `config_provider`, never a plain `config[...]`
+read evaluated at parse time.
+
 
 ## `foresight` {#foresight_cf}
 

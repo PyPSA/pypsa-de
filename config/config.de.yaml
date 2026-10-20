@@ -4,15 +4,21 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20261016-KN2045_Bal_v5-NUTS2-365h-2025EXO-2030EXO-2035EXO-10-50-40
+  prefix: 20261019-KN2045_Bal_v5-NUTS2-365h-2025EXO-2030EXO-2035EXO-10-50-40
   name:
-  - KN2045_Bal_v5  # KN2045_Mix
+  - KN2045_Bal_v5
   - KN2045_Bal_v5_abroad_capa_freeze
-  # - KN2045_Bal_v5_abroad_trade_freeze
-  # - KN2045_Bal_v5_abroad_capa+trade_freeze
+  - KN2045_Bal_v5_abroad_trade_freeze
+  - KN2045_Bal_v5_abroad_capa+trade_freeze
+  - KN2045_Elec_plus_v5
+  - KN2045_H2_v5
+  - KN2045_H2_v5_abroad_capa_freeze
+  - KN2045_Elec_v5
+  - KN2045_Elec_v5_abroad_capa_freeze
+  - CurrentPolicies
   scenarios:
     enable: true
-    manual_file: config/scenarios.manual.yaml
+    manual_file: config/scenarios.report.2026.yaml
     file: config/scenarios.automated.yaml
   shared_resources:
     policy: false #stops recalculating
@@ -72,7 +78,7 @@ scenario:
   - ''
   sector_opts:
   - none
-  planning_horizons: [2025, 2030, 2035]
+  planning_horizons: [2025, 2030, 2035] # !!! cannot be set per scenario atm (see doc/configuration.md#per_scenario_limits)
 
 existing_capacities:
   grouping_years_power: [1900, 1950, 1955, 1960, 1965, 1970, 1975, 1980, 1985, 1990, 1995, 2000, 2005, 2010, 2015, 2020, 2025]
@@ -782,7 +788,7 @@ data:
 
 stochastic_grid_scenarios:
   enable: true
-  run_mode: full # full | lt_only (LT topologies incl. stochastic, no ST/metrics) | lt_deterministic (deterministic+eev only, no stochastic solve, fastest) | opt_only (only the endogenous optimal network at the target year; forces solve_endogenous_optimal true)
+  run_mode: full # !!! cannot be set per scenario atm (see doc/configuration.md#per_scenario_limits); full | lt_only (LT topologies incl. stochastic, no ST/metrics) | lt_deterministic (deterministic+eev only, no stochastic solve, fastest) | opt_only (only the endogenous optimal network at the target year; forces solve_endogenous_optimal true)
   # Pathway selection = scenario.planning_horizons above (foresight: myopic):
   #   [2035]              -> optimise the target year directly (standalone, via
   #                          add_existing_baseyear; "as it is now")
@@ -790,12 +796,12 @@ stochastic_grid_scenarios:
   #                          off the solved prior year (2030)
   # Either way the grid analysis targets only the final year. Set planning_horizons
   # here only to override that target with an explicit subset.
-  planning_horizons: [2035] # grid-analysis target year; empty = max(scenario.planning_horizons) (the final/target year), or set an explicit subset to override
+  planning_horizons: [2035] # !!! cannot be set per scenario atm (see doc/configuration.md#per_scenario_limits); grid-analysis target year; empty = max(scenario.planning_horizons) (the final/target year), or set an explicit subset to override
   outside_de_grid: 2035_exogen # transmission grid outside DE: "<year>_exogen" (committed by <year>, non-extendable) or "endogenous" (freely extendable)
   freeze_outside_de_capacities: false # freeze foreign (non-DE) NON-grid capacities (generation/storage/conversion, gas+H2 pipelines, distribution - NOT the AC lines / DC links outside_de_grid controls) to a solved reference, non-extendable: false (off) | "optimal" (the plain solved network) | "<grid_scenario>" (that solved deterministic topology variant, e.g. "2035_exogen"); always at the analysis year. Applied to every variant except the source itself, so the stochastic solve waits for that deterministic/optimal solve.
   freeze_trade: false # cap DE gross imports per carrier at a reference level times a margin; false (off) or a {carrier: "<ref><±margin>"} mapping. carriers: AC, DC, H2, gas, "renewable gas", "renewable oil", methanol, oil. ref: "optimal" or a grid_scenario (solved, at the analysis year). margin: "<ref>" (1.0x), "<ref>+10"/"<ref>-10" (1.10x/0.90x), "1.1<ref>" (scenario refs must use the +/-pct form). Each grid solve gets the cap; a carrier whose ref is this variant is skipped, so the stochastic solve waits for the referenced solve. Example:
   #   freeze_trade: {AC: optimal, DC: optimal, H2: "optimal+10", gas: "optimal-10"}
-  solve_endogenous_optimal: true # also build the endogenous all-free reference network (no grid override); opt-in, not part of the WS/SP/EEV/EVPI/ECIU comparison
+  solve_endogenous_optimal: true # !!! cannot be set per scenario atm (see doc/configuration.md#per_scenario_limits); also build the endogenous all-free reference network (no grid override); opt-in, not part of the WS/SP/EEV/EVPI/ECIU comparison
   stochastic_solve_resources: # resource overrides for the "stochastic" grid-topology solve only (its scenario-dimension LP is much larger and scales super-linearly in the number of scenarios); each empty = fall back to the general solving.mem_mb / solving.runtime / solver_threads, which every other variant always uses
     mem_mb: 70000 # cl/h/s: mem_mb/runtime -> 27/3/2: 100000/3h; 27/3/3: 100000/6h; 49/3/2: 300000/?h; 49/3/3: 450000/16h;
     runtime: 12h # e.g. 12h
@@ -814,6 +820,7 @@ stochastic_grid_scenarios:
   # both qualifiers optional and order-free (e.g. 2030_exogen, 2030_exogen_AC,
   # 2030_exogen_DC_NS). Probabilities must sum to 1 across all scenarios.
   scope: de_and_interconnectors
+  # !!! the SET of scenario names cannot be set per scenario atm (see doc/configuration.md#per_scenario_limits); their probabilities / CSV paths below ARE per-run
   scenarios:
     2025_exogen:
       probability: 0.1

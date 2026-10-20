@@ -8,19 +8,23 @@ already-solved topology and dispatch-only evaluation networks (no re-solving
 here):
 
 - WS  (wait-and-see): expected cost if the grid outcome were known before
-  investing = sum_s probability_s * total_cost(solved topology-s)
+  investing = sum_s probability_s * cost_matrix[s, s], the matrix diagonal -
+  portfolio s (the plan optimised for grid s) evaluated on grid s
 - SP  (stochastic solution): the stochastic portfolio re-dispatched on each real
   grid (cost matrix "stochastic" row = capex + correct-physics expected opex),
-  NOT total_cost(topology-stochastic): the native scenario-dimension objective
+  NOT the native scenario-dimension objective of topology-stochastic, which
   prices dispatch with phantom-cycle physics (per-scenario line reactance is not
-  honoured), so it is not comparable to the deterministic WS/EEV below
+  honoured) and is not comparable to the deterministic WS/EEV
 - EEV (expected-value planner): capex(topology-eev) + expected opex of
   dispatching the eev portfolio under each real topology
 - EVPI = SP - WS   (value of perfect information about the grid)
 - ECIU = EEV - SP  (value of stochastic planning over naive EV planning)
 
-`total_cost(n) = n.objective + n.objective_constant`, not `n.objective` alone
-(see `compute_metrics`'s docstring for why this matters).
+WS, SP and EEV all read from the one objective-basis cost matrix - portfolio
+capex (new investment, counted once) plus dispatch opex (`n.objective` of the
+re-dispatch). They therefore share a basis and EVPI/ECIU are differences on equal
+footing. The sunk baseline capex (`objective_constant`) is excluded from every
+term alike, so it cannot leak into EVPI/ECIU.
 
 The same five metrics are also computed for Germany only (`*_de` outputs). A
 whole-network objective is not decomposable per country, so the DE cost reuses
@@ -29,6 +33,17 @@ opex of DE-located assets, cross-border transmission split 50/50) plus the net
 trade cost (imports minus exports valued at domestic marginal prices). To stay
 comparable with the network-wide metrics - which treat the grid as exogenous and
 omit its capex - DE transmission capex is likewise excluded (`de_total_cost`).
+
+Two caveats when comparing these numbers to other outputs:
+- Basis: the network-wide WS/SP/EEV use the objective-basis cost matrix
+  (portfolio capex + dispatch opex, sunk `objective_constant` excluded). The `*_de` metrics and the
+  `total_energy_system_cost_by_scenario.png` plot use the statistics basis
+  (`capex + opex` of all assets, incl. already-built capacity). The two can
+  differ substantially, so a network-wide metric is NOT a DE metric scaled up.
+- Scope: the `*_de` metrics are Germany only; the network-wide metrics cover the
+  whole modelled system. The DE share and its complement reconstruct the
+  whole-network statistics total (DE + outside-DE); the country-by-country
+  build-up is shown in notebooks/system_cost_decomposition.ipynb.
 """
 
 import logging
@@ -120,6 +135,44 @@ def portfolio_capex(n: pypsa.Network) -> float:
     return total
 
 
+def foreign_portfolio_capex(n: pypsa.Network, region: str = REGION) -> float:
+    """Capex of the originally-extendable, non-grid capacity located outside `region`.
+
+    This is the set `freeze_outside_de_capacities` fixes to a source network
+    (generators/storage/stores and non-DC links with a foreign bus). For the
+    freeze source it is its own optimised foreign buildout; added to every other
+    (frozen) portfolio's cost-matrix row it accounts for that same buildout -
+    which the freeze turned non-extendable, so `portfolio_capex` silently drops
+    it - making the objective-basis matrix comparable across rows. Sunk/brownfield
+    foreign capacity (non-extendable in the source too) and the exogenous grid
+    (Lines/Transformers, DC Links) stay excluded, exactly as in `portfolio_capex`.
+    """
+    if n.has_scenarios:
+        n = get_one_scenario(n)
+    country = n.buses.country
+    foreign = set(country[(country != "") & (country != region)].unique())
+    total = 0.0
+    for component, attr in nominal_attrs.items():
+        if component in ("Line", "Transformer"):
+            continue
+        static = n.components[component].static
+        opt_attr = f"{attr}_opt"
+        if static.empty or not {"capital_cost", opt_attr, f"{attr}_extendable"}.issubset(static.columns):
+            continue
+        if {"bus0", "bus1"}.issubset(static.columns):
+            c0, c1 = static.bus0.map(country), static.bus1.map(country)
+            mask = ~c0.eq(region) & ~c1.eq(region) & (c0.isin(foreign) | c1.isin(foreign))
+            if component == "Link":
+                mask &= static.carrier != "DC"
+        elif "bus" in static.columns:
+            mask = static.bus.map(country).isin(foreign)
+        else:
+            continue
+        sel = static[mask & static[f"{attr}_extendable"]]
+        total += (sel["capital_cost"] * sel[opt_attr]).sum()
+    return total
+
+
 def de_trade_cost(n: pypsa.Network, region: str = REGION) -> float:
     """Net DE trade cost (imports minus exports at domestic prices); positive = net import cost."""
     return float(sum(get_trade_cost(n, region, c) for c in TRADE_CARRIER_GROUPS))
@@ -138,6 +191,34 @@ def de_total_cost(n: pypsa.Network, region: str = REGION) -> float:
     return tsc.values.sum() - grid_capex + de_trade_cost(n, region)
 
 
+def de_total_cost_with_grid(n: pypsa.Network, region: str = REGION) -> float:
+    """Like `de_total_cost` but KEEPING the DE transmission-grid capex, so each
+    realized topology carries the cost of its own grid buildout."""
+    return get_tsc(n, region).values.sum() + de_trade_cost(n, region)
+
+
+def total_cost_stats(n: pypsa.Network) -> float:
+    """Whole-network system cost on the statistics basis: capex + opex of ALL
+    assets, incl. already-built capacity and the grid. Differs from the objective
+    basis used by the cost matrix, which omits the sunk-capacity baseline
+    (`objective_constant`) and the exogenous grid capex."""
+    return n.statistics.capex().sum() + n.statistics.opex().sum()
+
+
+def outside_de_non_trade_cost(n: pypsa.Network, region: str = REGION) -> float:
+    """Capex+opex of everything outside `region`: the whole-network statistics
+    total minus the DE share (`get_tsc`). This is the exact complement, so
+    ``get_tsc(region) + outside_de_non_trade_cost == total_cost_stats``. It covers
+    every other country plus the shared EU-level primary-energy buses that
+    `get_tsc` attributes to no country. Non-trade (trade nets out internally).
+
+    The country-by-country build-up of this same quantity, and that it sums to
+    the whole-network total, is demonstrated in
+    notebooks/system_cost_decomposition.ipynb.
+    """
+    return total_cost_stats(n) - get_tsc(n, region).values.sum()
+
+
 def build_capacities_table(
     topologies: dict[str, pypsa.Network], cap_func=capacities_by_carrier
 ) -> pd.DataFrame:
@@ -151,17 +232,98 @@ def build_cost_matrix(
     evaluations: dict[tuple[str, str], pypsa.Network],
     grid_scenario_names: list[str],
     probabilities: dict[str, float],
+    extra_capex: dict[str, float] | None = None,
 ) -> pd.DataFrame:
-    """Rows = portfolios, columns = realized topologies (+ expected), cell = capex + opex."""
+    """Rows = portfolios, columns = realized topologies (+ expected), cell = capex + opex.
+
+    `extra_capex` adds a per-portfolio capex offset (the frozen foreign buildout
+    under `freeze_outside_de_capacities`, see `foreign_portfolio_capex`); empty
+    when no freeze applies.
+    """
+    extra_capex = extra_capex or {}
     rows = {}
     for portfolio, n_portfolio in topologies.items():
-        capex = portfolio_capex(n_portfolio)
+        capex = portfolio_capex(n_portfolio) + extra_capex.get(portfolio, 0.0)
         row = {}
         for grid_scenario in grid_scenario_names:
             n_eval = evaluations[(portfolio, grid_scenario)]
             opex = n_eval.objective
             row[grid_scenario] = capex + opex
         rows[portfolio] = row
+    cost_matrix = pd.DataFrame(rows).T
+    cost_matrix["expected"] = sum(
+        probabilities[s] * cost_matrix[s] for s in grid_scenario_names
+    )
+    return cost_matrix
+
+
+# Wait-and-see optimality tolerance (relative). The property is exact in theory,
+# so any deviation is solver-gap noise (observed <~0.1%); the margin stays well
+# below gross accounting errors such as a freeze source whose foreign capex is
+# counted while every other portfolio's is dropped (see portfolio_capex).
+WAIT_AND_SEE_RTOL = 1e-2
+
+
+def assert_wait_and_see_optimality(
+    cost_matrix: pd.DataFrame,
+    grid_scenario_names: list[str],
+    rtol: float = WAIT_AND_SEE_RTOL,
+) -> None:
+    """Assert the objective-basis cost matrix obeys wait-and-see optimality.
+
+    Each grid scenario's own portfolio must be the cheapest cell in its realized
+    grid column (no other portfolio beats the one optimised for that grid), and
+    the stochastic portfolio must be the cheapest cell in the `expected` column.
+    Only `build_cost_matrix`'s objective-basis matrix satisfies this exactly; the
+    statistics-basis (`cost_matrix_total`/`_outside_de`) and DE matrices use a
+    different cost definition and are deliberately not checked.
+
+    Raises
+    ------
+    AssertionError
+        If any named portfolio exceeds its column minimum by more than `rtol`.
+    """
+    checks = [(s, s) for s in grid_scenario_names]
+    if "stochastic" in cost_matrix.index:
+        checks.append(("stochastic", "expected"))
+    violations = []
+    for portfolio, column in checks:
+        col = cost_matrix[column]
+        best = col.min()
+        cost = col[portfolio]
+        if cost > best * (1 + rtol):
+            cheapest = col.idxmin()
+            violations.append(
+                f"column '{column}': expected '{portfolio}' cheapest, but "
+                f"'{cheapest}' is cheaper ({best / 1e9:.3f} < {cost / 1e9:.3f} bn "
+                f"EUR, {portfolio} is {cost / best - 1:.2%} above the minimum)"
+            )
+    assert not violations, (
+        "Wait-and-see optimality violated in the objective-basis cost matrix - a "
+        "portfolio is beaten on the grid it was optimised for (or the stochastic "
+        "plan is not expected-cheapest). This signals an inconsistent cost basis "
+        "across rows, e.g. freeze_outside_de_capacities dropping frozen foreign "
+        "capex from portfolio_capex for every portfolio except the freeze source. "
+        "Details:\n  " + "\n  ".join(violations)
+    )
+
+
+def build_eval_cost_matrix(
+    evaluations: dict[tuple[str, str], pypsa.Network],
+    grid_scenario_names: list[str],
+    portfolios: list[str],
+    probabilities: dict[str, float],
+    cost_fn,
+) -> pd.DataFrame:
+    """Cost matrix (rows = portfolios, columns = realized grids + `expected`)
+    where each cell is `cost_fn(n)` of the portfolio re-dispatched on a realized
+    grid (the `_st` evaluation network, i.e. the ST realization of that grid)."""
+    rows = {
+        portfolio: {
+            s: cost_fn(evaluations[(portfolio, s)]) for s in grid_scenario_names
+        }
+        for portfolio in portfolios
+    }
     cost_matrix = pd.DataFrame(rows).T
     cost_matrix["expected"] = sum(
         probabilities[s] * cost_matrix[s] for s in grid_scenario_names
@@ -177,59 +339,30 @@ def build_cost_matrix_de(
     region: str = REGION,
 ) -> pd.DataFrame:
     """DE cost matrix: each cell is `de_total_cost` of the portfolio re-dispatched on a realized grid."""
-    rows = {}
-    for portfolio in portfolios:
-        rows[portfolio] = {
-            s: de_total_cost(evaluations[(portfolio, s)], region)
-            for s in grid_scenario_names
-        }
-    cost_matrix = pd.DataFrame(rows).T
-    cost_matrix["expected"] = sum(
-        probabilities[s] * cost_matrix[s] for s in grid_scenario_names
+    return build_eval_cost_matrix(
+        evaluations,
+        grid_scenario_names,
+        portfolios,
+        probabilities,
+        lambda n: de_total_cost(n, region),
     )
-    return cost_matrix
-
-
-def total_cost(n: pypsa.Network) -> float:
-    """True total system cost of a solved network: `n.objective + n.objective_constant`,
-    not `n.objective` alone.
-
-    Per PyPSA's own convention (`pypsa.Network.objective`'s docstring), `n.objective` is
-    only the LP's *variable* part - `objective_constant` corrects for capital cost charged
-    on the *full* `s_nom_opt`/`p_nom_opt` of extendable transmission-like assets whose
-    optimization is bounded below by an already-installed baseline (`s_nom_min`/
-    `p_nom_min`), so as not to double-charge that sunk baseline portion inside the
-    objective PyPSA actually optimizes. `objective` alone therefore *omits* that baseline's
-    annuitized cost - it isn't "excluded exogenous grid cost" the way `portfolio_capex()`
-    deliberately excludes fixed (non-extendable) grid Lines/DC-Links; PyPSA's LP builder
-    already never reads `capital_cost` for non-extendable components at all (true sunk
-    cost, zero contribution either way), so that exclusion needs no special handling here.
-
-    Confirmed empirically against a solved run: `objective_constant` was ~9.36bn EUR,
-    identical across all four portfolios (so it isn't tracking each portfolio's own,
-    genuinely different, fixed-grid capex) - and omitting it from SP alone very nearly
-    reproduced the entire previously-reported ECIU, i.e. the "value of stochastic planning"
-    metric was almost entirely this omitted baseline-capex term, not a real cost difference.
-    """
-    return n.objective + n.objective_constant
 
 
 def compute_metrics(
     cost_matrix: pd.DataFrame,
-    topologies: dict[str, pypsa.Network],
     grid_scenario_names: list[str],
     probabilities: dict[str, float],
-    total_cost_fn=total_cost,
 ) -> pd.Series:
-    ws = sum(
-        probabilities[s] * total_cost_fn(topologies[s]) for s in grid_scenario_names
-    )
-    # SP from the cost matrix (stochastic portfolio re-dispatched on each real grid,
-    # correct physics), on the same basis as EEV - not total_cost(topologies[
-    # "stochastic"]), whose native scenario-dimension objective prices dispatch with
-    # phantom-cycle physics and can sit above EEV. The stochastic *plan* is still
-    # sized by that degraded solve, so a residual ECIU < 0 is a genuine signal (the
-    # plan underperforms the naive one), not a measurement artefact.
+    # All three levels read from the one objective-basis cost matrix, so EVPI/ECIU
+    # are equal-basis differences. WS (wait-and-see, grid known before investing):
+    # each scenario gets its own optimal plan, i.e. the diagonal cost_matrix[s, s]
+    # (portfolio s on grid s). SP: the stochastic portfolio re-dispatched with
+    # correct physics (the "stochastic" row's expected column) - not the native
+    # scenario-dimension objective, whose phantom-cycle physics can sit above EEV;
+    # the stochastic *plan* is still sized by that degraded solve, so a residual
+    # ECIU < 0 is a genuine signal (plan underperforms the naive one), not an
+    # artefact. EEV: the expected-value planner's "eev" row.
+    ws = sum(probabilities[s] * cost_matrix.loc[s, s] for s in grid_scenario_names)
     sp = cost_matrix.loc["stochastic", "expected"]
     eev = cost_matrix.loc["eev", "expected"]
     evpi = sp - ws
@@ -372,23 +505,60 @@ if __name__ == "__main__":
     title = f"Stochastic grid {snakemake.wildcards.planning_horizons}"
     portfolios = list(topologies)
 
+    # Under freeze_outside_de_capacities=<grid_scenario>, that source portfolio is
+    # the only one left with its foreign non-grid capacity extendable; every other
+    # portfolio has it frozen non-extendable, so portfolio_capex drops it from their
+    # rows (but keeps it for the source). Add the source's foreign buildout back to
+    # every frozen row so the objective-basis matrix is comparable across rows. The
+    # statistics-basis (cost_matrix_total/_outside_de) and DE matrices count frozen
+    # capacity via n.statistics already, so they need no offset.
+    freeze_source = snakemake.params.freeze_outside_de_capacities
+    extra_capex = {}
+    if freeze_source and freeze_source in topologies:
+        foreign_capex = foreign_portfolio_capex(topologies[freeze_source])
+        extra_capex = {p: foreign_capex for p in topologies if p != freeze_source}
+        logger.info(
+            f"freeze_outside_de_capacities={freeze_source}: adding its foreign "
+            f"non-grid capex ({foreign_capex / 1e9:.3f} bn EUR) to every frozen "
+            "portfolio's objective-basis cost-matrix row."
+        )
+
     # Network-wide
     capacities = build_capacities_table(topologies)
     capacities.to_csv(snakemake.output.capacities)
     plot_capacities(capacities, snakemake.output.capacities_png, title)
 
     cost_matrix = build_cost_matrix(
-        topologies, evaluations, grid_scenario_names, probabilities
+        topologies, evaluations, grid_scenario_names, probabilities, extra_capex
     )
     cost_matrix.to_csv(snakemake.output.cost_matrix)
     plot_cost_matrix(cost_matrix, snakemake.output.cost_matrix_png, title)
+    assert_wait_and_see_optimality(cost_matrix, grid_scenario_names)
 
-    metrics = compute_metrics(
-        cost_matrix, topologies, grid_scenario_names, probabilities
-    )
+    metrics = compute_metrics(cost_matrix, grid_scenario_names, probabilities)
     metrics.to_csv(snakemake.output.metrics)
     plot_metrics(metrics, snakemake.output.metrics_png, title)
     logger.info(f"Stochastic-grid metrics (network):\n{metrics}")
+
+    # Whole-network total cost on the statistics basis (incl. existing-capacity
+    # capex and the grid), complementing the objective-basis matrix above.
+    cost_matrix_total = build_eval_cost_matrix(
+        evaluations, grid_scenario_names, portfolios, probabilities, total_cost_stats
+    )
+    cost_matrix_total.to_csv(snakemake.output.cost_matrix_total)
+    plot_cost_matrix(
+        cost_matrix_total, snakemake.output.cost_matrix_total_png, f"{title} (total incl. existing capex)"
+    )
+
+    # Outside-DE, on the same per-country get_tsc accounting as the DE cost.
+    cost_matrix_outside_de = build_eval_cost_matrix(
+        evaluations, grid_scenario_names, portfolios, probabilities,
+        outside_de_non_trade_cost,
+    )
+    cost_matrix_outside_de.to_csv(snakemake.output.cost_matrix_outside_de)
+    plot_cost_matrix(
+        cost_matrix_outside_de, snakemake.output.cost_matrix_outside_de_png, f"{title} (outside DE)"
+    )
 
     # Germany only
     capacities_de = build_capacities_table(topologies, de_capacities_by_carrier)
@@ -401,9 +571,19 @@ if __name__ == "__main__":
     cost_matrix_de.to_csv(snakemake.output.cost_matrix_de)
     plot_cost_matrix(cost_matrix_de, snakemake.output.cost_matrix_de_png, f"{title} (DE)")
 
-    metrics_de = compute_metrics(
-        cost_matrix_de, topologies, grid_scenario_names, probabilities, de_total_cost
-    )
+    metrics_de = compute_metrics(cost_matrix_de, grid_scenario_names, probabilities)
     metrics_de.to_csv(snakemake.output.metrics_de)
     plot_metrics(metrics_de, snakemake.output.metrics_de_png, f"{title} (DE)")
     logger.info(f"Stochastic-grid metrics (DE):\n{metrics_de}")
+
+    # DE cost INCLUDING the realized topology's own grid capex (de_total_cost
+    # excludes it). Uses the ST evaluation networks, i.e. each column's grid is
+    # that scenario's realized single-grid topology.
+    cost_matrix_de_grid = build_eval_cost_matrix(
+        evaluations, grid_scenario_names, portfolios, probabilities,
+        de_total_cost_with_grid,
+    )
+    cost_matrix_de_grid.to_csv(snakemake.output.cost_matrix_de_grid)
+    plot_cost_matrix(
+        cost_matrix_de_grid, snakemake.output.cost_matrix_de_grid_png, f"{title} (DE incl. grid)"
+    )

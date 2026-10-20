@@ -291,7 +291,7 @@ def _grid_scenario_csv_map(wildcards):
         if wildcards.grid_scenario in GRID_SCENARIO_NAMES
         else GRID_SCENARIO_NAMES
     )
-    cfg = config["stochastic_grid_scenarios"]["scenarios"]
+    cfg = config_provider("stochastic_grid_scenarios", "scenarios", default={})(wildcards)
     result = {}
     for name in names:
         entry = {}
@@ -317,13 +317,16 @@ def _freeze_source_network(wildcards):
     unfrozen so it defines the foreign capacities). "optimal" -> the plain solved
     network; a scenario name -> that solved "topology-<scenario>" variant; both at
     the instance's own analysis year."""
-    if not _FREEZE_SOURCE or wildcards.grid_scenario == _FREEZE_SOURCE:
+    freeze_source = config_provider(
+        "stochastic_grid_scenarios", "freeze_outside_de_capacities", default=False
+    )(wildcards)
+    if not freeze_source or wildcards.grid_scenario == freeze_source:
         return []
     base = (
         RESULTS
         + f"networks/base_s_{wildcards.clusters}_{wildcards.opts}_{wildcards.sector_opts}_{wildcards.planning_horizons}"
     )
-    return base + (".nc" if _FREEZE_SOURCE == "optimal" else f"_topology-{_FREEZE_SOURCE}.nc")
+    return base + (".nc" if freeze_source == "optimal" else f"_topology-{freeze_source}.nc")
 
 
 def _freeze_trade_ref_networks(wildcards):
@@ -331,7 +334,10 @@ def _freeze_trade_ref_networks(wildcards):
     (freeze_trade). Empty when off; a carrier whose reference is this very variant
     is dropped (self-reference). "optimal" -> the plain solved network, a scenario
     -> its solved topology variant; both at the instance's analysis year."""
-    if not _FREEZE_TRADE:
+    freeze_trade = config_provider(
+        "stochastic_grid_scenarios", "freeze_trade", default=False
+    )(wildcards)
+    if not freeze_trade:
         return []
     base = (
         RESULTS
@@ -339,7 +345,7 @@ def _freeze_trade_ref_networks(wildcards):
     )
     refs = {
         _freeze_trade_ref(spec)
-        for spec in _FREEZE_TRADE.values()
+        for spec in freeze_trade.values()
         if _freeze_trade_ref(spec) != wildcards.grid_scenario
     }
     return [base + (".nc" if r == "optimal" else f"_topology-{r}.nc") for r in sorted(refs)]
@@ -412,7 +418,7 @@ def stochastic_grid_solving(wildcards):
     """
     import copy
 
-    solving = copy.deepcopy(config["solving"])
+    solving = copy.deepcopy(config_provider("solving", default={})(wildcards))
     solving["options"]["transmission_losses"] = 0
     if wildcards.grid_scenario == "stochastic":
         # `assign_all_duals` is forced off for the scenario-dimension solve
@@ -422,7 +428,10 @@ def stochastic_grid_solving(wildcards):
         # this solve alone - free-form, so new solver settings need no rule
         # change (add them under `stochastic_grid_scenarios: stochastic_solving`).
         solving["options"]["assign_all_duals"] = False
-        _deep_update(solving, _sgs.get("stochastic_solving") or {})
+        stochastic_solving = config_provider(
+            "stochastic_grid_scenarios", "stochastic_solving", default={}
+        )(wildcards)
+        _deep_update(solving, copy.deepcopy(stochastic_solving) or {})
     return solving
 
 
@@ -517,6 +526,18 @@ rule build_grid_topology:
         scripts("pypsa-de/build_grid_topology.py")
 
 
+def _stochastic_solve_resource(wildcards, key):
+    """Per-run `stochastic_solve_resources: <key>` override, else None. Only the
+    "stochastic" variant uses it; every other variant falls back to the caller's
+    general resource."""
+    if wildcards.grid_scenario != "stochastic":
+        return None
+    res = config_provider(
+        "stochastic_grid_scenarios", "stochastic_solve_resources", default={}
+    )(wildcards)
+    return (res or {}).get(key)
+
+
 def grid_topology_solve_mem_mb(wildcards):
     """Solver memory for solve_grid_topology_network.
 
@@ -526,8 +547,8 @@ def grid_topology_solve_mem_mb(wildcards):
     `stochastic_grid_scenarios: stochastic_solve_resources: mem_mb`; unset (or any
     other variant) falls back to the general `solving: mem_mb`.
     """
-    override = (_sgs.get("stochastic_solve_resources") or {}).get("mem_mb")
-    if wildcards.grid_scenario == "stochastic" and override is not None:
+    override = _stochastic_solve_resource(wildcards, "mem_mb")
+    if override is not None:
         return override
     return config_provider("solving", "mem_mb")(wildcards)
 
@@ -538,8 +559,8 @@ def grid_topology_solve_runtime(wildcards):
     `stochastic_grid_scenarios: stochastic_solve_resources: runtime`, otherwise the
     general `solving: runtime` applies (as it does for every other variant).
     """
-    override = (_sgs.get("stochastic_solve_resources") or {}).get("runtime")
-    if wildcards.grid_scenario == "stochastic" and override is not None:
+    override = _stochastic_solve_resource(wildcards, "runtime")
+    if override is not None:
         return override
     return config_provider("solving", "runtime", default="6h")(wildcards)
 
@@ -549,8 +570,8 @@ def grid_topology_solve_threads(wildcards):
     grid_topology_solve_mem_mb: the "stochastic" variant may set
     `stochastic_grid_scenarios: stochastic_solve_resources: threads`, otherwise
     the general `solver_threads` applies (as for every other variant)."""
-    override = (_sgs.get("stochastic_solve_resources") or {}).get("threads")
-    if wildcards.grid_scenario == "stochastic" and override is not None:
+    override = _stochastic_solve_resource(wildcards, "threads")
+    if override is not None:
         return override
     return solver_threads(wildcards)
 
@@ -888,24 +909,36 @@ rule compute_stochastic_metrics:
         + "scenario_comparison/stochastic_metrics/capacities_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.csv",
         cost_matrix=RESULTS
         + "scenario_comparison/stochastic_metrics/cost_matrix_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.csv",
+        cost_matrix_total=RESULTS
+        + "scenario_comparison/stochastic_metrics/cost_matrix_total_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.csv",
+        cost_matrix_outside_de=RESULTS
+        + "scenario_comparison/stochastic_metrics/cost_matrix_outside_de_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.csv",
         metrics=RESULTS
         + "scenario_comparison/stochastic_metrics/metrics_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.csv",
         capacities_de=RESULTS
         + "scenario_comparison/stochastic_metrics/capacities_de_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.csv",
         cost_matrix_de=RESULTS
         + "scenario_comparison/stochastic_metrics/cost_matrix_de_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.csv",
+        cost_matrix_de_grid=RESULTS
+        + "scenario_comparison/stochastic_metrics/cost_matrix_de_grid_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.csv",
         metrics_de=RESULTS
         + "scenario_comparison/stochastic_metrics/metrics_de_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.csv",
         capacities_png=RESULTS
         + "scenario_comparison/stochastic_metrics/capacities_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.png",
         cost_matrix_png=RESULTS
         + "scenario_comparison/stochastic_metrics/cost_matrix_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.png",
+        cost_matrix_total_png=RESULTS
+        + "scenario_comparison/stochastic_metrics/cost_matrix_total_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.png",
+        cost_matrix_outside_de_png=RESULTS
+        + "scenario_comparison/stochastic_metrics/cost_matrix_outside_de_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.png",
         metrics_png=RESULTS
         + "scenario_comparison/stochastic_metrics/metrics_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.png",
         capacities_de_png=RESULTS
         + "scenario_comparison/stochastic_metrics/capacities_de_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.png",
         cost_matrix_de_png=RESULTS
         + "scenario_comparison/stochastic_metrics/cost_matrix_de_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.png",
+        cost_matrix_de_grid_png=RESULTS
+        + "scenario_comparison/stochastic_metrics/cost_matrix_de_grid_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.png",
         metrics_de_png=RESULTS
         + "scenario_comparison/stochastic_metrics/metrics_de_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.png",
     log:
@@ -914,11 +947,14 @@ rule compute_stochastic_metrics:
         ),
     threads: 1
     resources:
-        mem_mb=80000,
+        mem_mb=120000,
     params:
         grid_scenario_names=GRID_SCENARIO_NAMES,
         grid_scenario_values=GRID_SCENARIO_VALUES,
         scenarios=config_provider("stochastic_grid_scenarios", "scenarios"),
+        freeze_outside_de_capacities=config_provider(
+            "stochastic_grid_scenarios", "freeze_outside_de_capacities", default=False
+        ),
     message:
         "Computing WS/SP/EEV/EVPI/ECIU stochastic-grid metrics for {wildcards.clusters} clusters, {wildcards.planning_horizons} planning horizon"
     script:

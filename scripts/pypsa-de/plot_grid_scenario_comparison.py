@@ -15,6 +15,7 @@ the same plot functions are driven by `networks[network_id]` /
 aggregate_by_keywords etc. unchanged.
 """
 
+import itertools
 import logging
 import os
 import sys
@@ -46,6 +47,9 @@ from utils import (
 from system_plots import (
     group_capacity_by_tech,
     plot_group_capacity_diff_maps,
+    plot_load_map,
+    plot_load_shedding_map,
+    plot_renewable_cf_maps,
     power_capacity_by_bus_carrier,
     storage_energy_capacity_by_bus_carrier,
 )
@@ -57,11 +61,12 @@ logger = logging.getLogger(__name__)
 plt.switch_backend("Agg")
 
 
-def _load_get_export_import():
-    """Import get_export_import from export_ariadne_variables.py.
+def _load_export_ariadne_variables():
+    """Import export_ariadne_variables.py, which lives in the same (hyphenated)
+    `pypsa-de` directory and so can't be reached via a normal dotted import.
 
-    That module lives in the same (hyphenated) `pypsa-de` directory, so it
-    can't be reached via a normal dotted import.
+    The cost accounting (get_tsc / get_trade_cost / get_export_import) is reused
+    from there verbatim so this plot and the Ariadne export stay identical.
     """
     import importlib.util
 
@@ -69,10 +74,13 @@ def _load_get_export_import():
     spec = importlib.util.spec_from_file_location("export_ariadne_variables", path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    return module.get_export_import
+    return module
 
 
-get_export_import = _load_get_export_import()
+_eav = _load_export_ariadne_variables()
+get_export_import = _eav.get_export_import
+get_trade_cost = _eav.get_trade_cost
+get_tsc = _eav.get_tsc
 
 
 BUS_CARRIER_TO_SECTOR = {
@@ -305,89 +313,6 @@ def plot_marginal_prices(networks, network_ids, carriers, plot_dir, tag, ylim=(-
 
     plt.close(fig)
     plt.close(fig2)
-
-
-def get_tsc(n, country, region="DE"):
-    pypsa.options.set_option("params.statistics.drop_zero", False)
-    capex = n.statistics.capex(
-        groupby=pypsa.statistics.groupers["name", "carrier"], nice_names=False
-    )
-    opex = n.statistics.opex(
-        groupby=pypsa.statistics.groupers["name", "carrier"], nice_names=False
-    )
-
-    inter_country_lines = n.lines.bus0.map(n.buses.country) != n.lines.bus1.map(n.buses.country)
-    inter_country_links = n.links.bus0.map(n.buses.country) != n.links.bus1.map(n.buses.country)
-
-    transmission_carriers = get_transmission_carriers(n).get_level_values("carrier")
-    transmission_lines = n.lines.carrier.isin(transmission_carriers) & n.lines.active
-    transmission_links = n.links.carrier.isin(transmission_carriers) & n.links.active
-
-    country_transmission_lines = (
-        (n.lines.bus0.str.contains(country)) & ~(n.lines.bus1.str.contains(country))
-    ) | (~(n.lines.bus0.str.contains(country)) & (n.lines.bus1.str.contains(country)))
-    country_transmission_links = (
-        (n.links.bus0.str.contains(country)) & ~(n.links.bus1.str.contains(country))
-    ) | (~(n.links.bus0.str.contains(country)) & (n.links.bus1.str.contains(country)))
-
-    inter_country_transmission_lines = (
-        inter_country_lines & transmission_lines & country_transmission_lines
-    )
-    inter_country_transmission_links = (
-        inter_country_links & transmission_links & country_transmission_links
-    )
-    inter_country_transmission_lines_i = inter_country_transmission_lines[
-        inter_country_transmission_lines
-    ].index
-    inter_country_transmission_links_i = inter_country_transmission_links[
-        inter_country_transmission_links
-    ].index
-    inter_country_transmission_i = inter_country_transmission_lines_i.union(
-        inter_country_transmission_links_i
-    )
-
-    tsc = pd.concat([capex, opex], axis=1, keys=["capex", "opex"])
-    tsc = tsc.reset_index().set_index("name")
-    tsc.loc[inter_country_transmission_i, ["capex", "opex"]] = (
-        tsc.loc[inter_country_transmission_i, ["capex", "opex"]] / 2
-    )
-    tsc.rename(
-        index={index: index + " " + country for index in inter_country_transmission_i},
-        inplace=True,
-    )
-
-    to_rename_links = n.links[
-        (n.links.bus0.str.contains(region))
-        & (n.links.bus1.str.contains(region))
-        & ~(n.links.index.str.contains(region))
-    ].index
-    to_rename_lines = n.lines[
-        (n.lines.bus0.str.contains(region))
-        & (n.lines.bus1.str.contains(region))
-        & ~(n.lines.index.str.contains(region))
-    ].index
-    tsc.rename(index={index: index + " " + region for index in to_rename_links}, inplace=True)
-    tsc.rename(index={index: index + " " + region for index in to_rename_lines}, inplace=True)
-
-    tsc = tsc.filter(like=country, axis=0)
-
-    tsc_sum = (
-        tsc.filter(like=country, axis=0)
-        .drop("component", axis=1)
-        .groupby("carrier")
-        .sum()
-    )
-
-    return tsc_sum, tsc
-
-
-def get_trade_cost(n, region, carriers):
-    """
-    Positive values mean cost for the domestic energy system (imports > exports)
-    Negative values mean revenue for the domestic energy system (exports > imports)
-    """
-    export_revenue, import_cost = get_export_import(n, region, carriers, unit="EUR")
-    return import_cost - export_revenue
 
 
 def get_component_bus(row, n):
@@ -1180,7 +1105,7 @@ def make_system_cost_tables(networks, network_ids, output_dir, region="DE"):
             )
             / 1e9
         )
-        tsc_sum, tsc = get_tsc(n, region)
+        tsc_sum, tsc = get_tsc(n, region, detail=True)
 
         var["Total Energy System Cost|EU"] = (
             n.statistics.capex().sum() + n.statistics.opex().sum()
@@ -1426,6 +1351,24 @@ if __name__ == "__main__":
         )
         variables[network_id] = _df.droplevel("Unit")[nid_to_year[network_id]]
 
+    # CO2 price comparison table (Ariadne Price|Carbon variables, EUR2020/t CO2)
+    # across scenarios - exported for both the LT and ST comparison folders.
+    carbon_labels = {
+        "Price|Carbon": "CO2 price, total [EUR/t]",
+        "Price|Carbon|EU-wide Regulation All Sectors": "CO2 price, EU-wide [EUR/t]",
+        "Price|Carbon|National Climate Target": "CO2 price, DE national [EUR/t]",
+    }
+    co2_cols = [nid for nid in network_ids if nid in variables]
+    if co2_cols:
+        co2_prices = pd.DataFrame(
+            {nid: variables[nid].reindex(carbon_labels) for nid in co2_cols}
+        )
+        co2_prices.index = [carbon_labels[v] for v in co2_prices.index]
+        df_to_png(
+            co2_prices.round(1).rename(columns=scenario_label),
+            output_dir / f"co2_prices_{variant}.png",
+        )
+
     logger.info("Loading networks...")
     networks = {}
     for path, network_id in zip(snakemake.input.networks, all_network_ids):
@@ -1454,6 +1397,49 @@ if __name__ == "__main__":
         ["co2 sequestered"],
     ]
     region = "DE"
+
+    # Load per region (DE): exogenous electricity demand, identical across grid
+    # scenarios, so drawn once per comparison directory (companion to the
+    # capacity maps; same DE region scope). onshore_regions is reused by the
+    # LT capacity-diff maps below.
+    onshore_regions = gpd.read_file(snakemake.input.regions_onshore[0]).set_index("name")
+    if networks:
+        rep_network = next(iter(networks.values()))
+        plot_load_map(
+            rep_network,
+            onshore_regions,
+            output_dir / "load_map_electricity_DE.png",
+            region=region,
+        )
+        # Renewable resource (availability) capacity factors by region - also
+        # scenario-independent, so drawn once (companion to the load map).
+        plot_renewable_cf_maps(
+            rep_network,
+            onshore_regions,
+            output_dir / "capacity_factor_map_renewables_DE.png",
+            region=region,
+        )
+
+    # Spatial load shedding (DE) per scenario: a map wherever a scenario sheds
+    # more than 0.5 TWh of electricity or heat (carrier-'load' generation). Only
+    # the ST evaluations enable load shedding, so LT networks produce none.
+    ls_bus_carriers = {
+        "electricity": ("AC", "low voltage"),
+        "heat": ("rural heat", "urban central heat", "urban decentral heat"),
+    }
+    for network_id, n in networks.items():
+        for kind, bcs in ls_bus_carriers.items():
+            shed = plot_load_shedding_map(
+                n,
+                onshore_regions,
+                output_dir / f"load_shedding_map_{kind}_{network_id}.png",
+                f"{kind.capitalize()} load shedding - {scenario_label(network_id)}",
+                region=region,
+                bus_carrier=bcs,
+                min_twh=0.5,
+            )
+            if shed > 0.5:
+                logger.info(f"Load shedding ({kind}, {network_id}): {shed:.1f} TWh - map written")
 
     for bc in carrier_sets:
         try:
@@ -1533,7 +1519,6 @@ if __name__ == "__main__":
     # grid scenario.
     if variant == "LT":
         logger.info("Plotting regional capacity-diff maps...")
-        onshore_regions = gpd.read_file(snakemake.input.regions_onshore[0]).set_index("name")
 
         stoch_slices = [nid for nid in network_ids if nid.startswith("topology-stochastic__")]
         sp_rep = next(
@@ -1541,18 +1526,20 @@ if __name__ == "__main__":
             stoch_slices[0] if stoch_slices else None,
         )
         non_stoch_ids = [nid for nid in network_ids if nid not in stoch_slices]
-        det_ids = [
-            "topology-" + nid.removeprefix("topology-stochastic__") for nid in stoch_slices
-        ]
-        det_ids = [d for d in dict.fromkeys(det_ids) if d in network_ids]
+        # Deterministic grid-topology variants (exogen* + eev) vs the reference
+        # networks (endogenous "optimal"; any pathway-year refs stay references).
+        topo_ids = [nid for nid in non_stoch_ids if nid.startswith("topology-")]
+        ref_ids = [nid for nid in non_stoch_ids if nid not in topo_ids]
 
-        diff_pairs = []
-        if "optimal" in network_ids:
-            diff_pairs += [(nid, "optimal") for nid in non_stoch_ids if nid != "optimal"]
-            if sp_rep is not None:
-                diff_pairs.append((sp_rep, "optimal"))
+        # All topology-vs-topology diffs (e.g. 2035_exogen vs 2025_exogen, later
+        # minus earlier), each topology vs each reference, and - since the SP
+        # first-stage plan is identical across its grid slices - the single SP
+        # representative against every other variant.
+        diff_pairs = [(b, a) for a, b in itertools.combinations(topo_ids, 2)]
+        diff_pairs += [(t, r) for t in topo_ids for r in ref_ids]
+        diff_pairs += [(r, "optimal") for r in ref_ids if r != "optimal"]
         if sp_rep is not None:
-            diff_pairs += [(sp_rep, det) for det in det_ids]
+            diff_pairs += [(sp_rep, nid) for nid in topo_ids + ref_ids]
 
         for nid_a, nid_b in diff_pairs:
             n_a, n_b = networks.get(nid_a), networks.get(nid_b)
@@ -1762,6 +1749,7 @@ if __name__ == "__main__":
         sign_flip_vars=[],
         output_dir=output_dir,
         filename_prefix="trade_cost",
+        ylabel="billion EUR/a",
     )
 
     plot_vars = {
@@ -1779,6 +1767,7 @@ if __name__ == "__main__":
         sign_flip_vars=[],
         output_dir=output_dir,
         filename_prefix="trade_cost_efuels",
+        ylabel="billion EUR/a",
     )
 
     ### CURTAILMENT ###
