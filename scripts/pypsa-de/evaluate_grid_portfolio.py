@@ -21,6 +21,7 @@ import logging
 
 import pandas as pd
 import pypsa
+from linopy.constants import TerminationCondition
 from pypsa.descriptors import nominal_attrs
 
 from scripts._helpers import (
@@ -137,6 +138,72 @@ def check_load_shedding(n: pypsa.Network, threshold: float = 0.05) -> float:
     return fraction
 
 
+def check_co2_slack(n: pypsa.Network) -> dict:
+    """Assert the elastic CO2-cap slacks stayed within the configured tolerance.
+
+    The slacks added by :func:`scripts._helpers.add_co2_cap_constraint` are
+    zero at any feasible optimum (penalty > cap shadow price), so they only
+    stabilise the barrier without changing the solution. A slack above
+    `assert_threshold` of its cap therefore means the frozen portfolio could
+    not physically reach its CO2 target on this grid: the emissions are
+    distorted and the system cost is not a valid comparison, so fail loudly
+    rather than ship it. Returns the used slack per cap (empty when the
+    feature is off) for the caller to record in `n.meta`.
+    """
+    cfg = n.config["solving"]["options"].get("co2_cap_slack", {})
+    slacks = [v for v in n.model.variables if v.startswith("co2_slack-")]
+    used = {v: float(n.model[v].solution.sum()) for v in slacks}
+
+    breached = {}
+    for v, s in used.items():
+        budget = float(n.model[v].upper.max()) / cfg["max_overshoot"]
+        if s > cfg["assert_threshold"] * budget:
+            breached[v] = s
+    assert not breached, (
+        f"CO2 cap overshoot via elastic slack {breached}: the frozen "
+        "portfolio cannot meet its CO2 target on this grid; emissions are "
+        "distorted, so its system cost is not a valid comparison."
+    )
+    return used
+
+
+def solve_with_fallback(n: pypsa.Network, solve_kwargs: dict, fallback: list) -> tuple:
+    """Solve `n.model`, escalating solver options only if a solve stays non-optimal.
+
+    Tier 1 is the plain config in `solve_kwargs` - the same barrier (crossover
+    off, no BarHomogeneous) that the non-diagonal cells already solve cleanly.
+    With the CO2-cap slack active (see add_co2_cap_constraint) the near-infeasible
+    year-diagonal cells become ordinary full-dimensional problems, so this tier
+    should normally suffice. Each entry of `fallback` is a dict of extra
+    solver_options merged onto the base and retried, cheapest-first (e.g.
+    BarHomogeneous, then crossover): the cost of the robust knobs is paid only
+    for a cell that still stalls, never on the critical path of every solve.
+    Returns the final (status, condition).
+    """
+    base = solve_kwargs.get("solver_options", {})
+    attempts = [{}, *(fallback or [])]
+    for i, extra in enumerate(attempts):
+        kwargs = {**solve_kwargs, "solver_options": {**base, **extra}}
+        status, condition = n.optimize.solve_model(**kwargs)
+        if status == "ok" and condition == TerminationCondition.optimal:
+            if i:
+                logger.info(
+                    "ST dispatch solve reached optimality on fallback tier %d "
+                    "(extra solver_options %s)",
+                    i,
+                    extra,
+                )
+            return status, condition
+        logger.warning(
+            "ST dispatch solve attempt %d/%d ended '%s'/'%s'",
+            i + 1,
+            len(attempts),
+            status,
+            condition,
+        )
+    return status, condition
+
+
 def transplant_optimal_capacities(canvas: pypsa.Network, portfolio: pypsa.Network) -> None:
     """Copy `portfolio`'s optimized capacities onto `canvas`'s own extendable components.
 
@@ -179,6 +246,14 @@ if __name__ == "__main__":
     # same as when solve_network.py itself runs as __main__.
     solve_network.snakemake = snakemake
 
+    # evaluate_grid_portfolio_solving() enables the elastic CO2-cap slack on
+    # params.solving only; mirror it into the config that
+    # create_optimization_model attaches as n.config, which is where
+    # add_co2_cap_constraint and check_co2_slack read its settings.
+    snakemake.config["solving"]["options"]["co2_cap_slack"] = snakemake.params.solving[
+        "options"
+    ]["co2_cap_slack"]
+
     planning_horizons = snakemake.wildcards.get("planning_horizons", None)
 
     canvas = pypsa.Network(snakemake.input.canvas)
@@ -212,15 +287,24 @@ if __name__ == "__main__":
         solve_kwargs=solve_kwargs,
         planning_horizons=planning_horizons,
     )
-    status, condition = canvas.optimize.solve_model(**solve_kwargs)
-    if status != "ok":
-        raise RuntimeError(f"Dispatch-only solve failed: {status}, {condition}")
+    fallback = snakemake.params.solving.get("solve_fallback", [])
+    status, condition = solve_with_fallback(canvas, solve_kwargs, fallback)
+    if condition != TerminationCondition.optimal:
+        raise RuntimeError(
+            f"Dispatch-only solve did not reach optimality after {len(fallback) + 1} "
+            f"attempt(s): status '{status}', condition '{condition}'. A non-optimal "
+            "dispatch does not physically balance (it breaks the Ariadne "
+            "fuel-fraction export), so its cost is not a valid comparison; refusing "
+            "to write it."
+        )
 
     shed_fraction = check_load_shedding(canvas)
+    co2_slack_used = check_co2_slack(canvas)
 
     canvas.meta = dict(
         snakemake.config,
         wildcards=dict(snakemake.wildcards),
         load_shed_fraction=shed_fraction,
+        co2_slack_used=co2_slack_used,
     )
     canvas.export_to_netcdf(snakemake.output.network)

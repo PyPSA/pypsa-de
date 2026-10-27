@@ -4,7 +4,7 @@ import sys
 import pandas as pd
 from xarray import DataArray
 
-from scripts._helpers import component_names, scenario_slice
+from scripts._helpers import add_co2_cap_constraint, component_names, scenario_slice
 from scripts.prepare_sector_network import determine_emission_sectors
 
 logger = logging.getLogger(__name__)
@@ -670,10 +670,7 @@ def add_national_co2_budgets(n, snakemake, national_co2_budgets, investment_year
 
         cname = f"co2_limit-{ct}"
 
-        n.model.add_constraints(
-            lhs <= limit,
-            name=f"GlobalConstraint-{cname}",
-        )
+        add_co2_cap_constraint(n, cname, lhs, limit)
 
         if cname in component_names(n.global_constraints):
             logger.warning(

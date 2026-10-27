@@ -46,6 +46,7 @@ from pypsa.descriptors import get_activity_mask
 from scripts._benchmark import memory_logger
 from scripts._helpers import (
     PYPSA_V1,
+    add_co2_cap_constraint,
     component_names,
     configure_logging,
     get,
@@ -1285,7 +1286,7 @@ def add_co2_atmosphere_constraint(n, snapshots):
             lhs = n.model["Store-e"].sel(snapshot=last_i, name=stores.index)
             rhs = glc.constant
 
-            n.model.add_constraints(lhs <= rhs, name=f"GlobalConstraint-{name}")
+            add_co2_cap_constraint(n, name, lhs, rhs)
 
 
 def extra_functionality(

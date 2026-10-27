@@ -1239,3 +1239,51 @@ def _load_data_version(file: str | Path, validate: bool = True) -> pd.DataFrame:
         data_versions = VersionsSchema.validate(data_versions)
 
     return data_versions
+
+
+def add_co2_cap_constraint(n, cname, lhs, limit):
+    """Add a CO2 emission cap ``lhs <= limit``, optionally softened by a slack.
+
+    When ``solving.options.co2_cap_slack`` is enabled for ``cname`` the hard
+    constraint is replaced by the elastic ``lhs - s <= limit``, ``s >= 0``,
+    with ``penalty * s`` added to the objective. With the penalty above the
+    cap's shadow price the optimizer drives ``s`` to zero at any feasible
+    optimum, so the solution is bit-for-bit unchanged; the slack only gives
+    the barrier a full-dimensional interior on cells where the cap would
+    otherwise bind as a hard wall and stall the solve. A used slack means the
+    target was physically unreachable and is caught post-solve by
+    :func:`scripts.pypsa-de.evaluate_grid_portfolio.check_co2_slack`.
+
+    Parameters
+    ----------
+    n : pypsa.Network
+    cname : str
+        Global-constraint name (e.g. ``CO2Limit``, ``co2_limit-DE``).
+    lhs : linopy.LinearExpression
+        The emission expression; carries a ``scenario`` dim when
+        ``n.has_scenarios``.
+    limit : float
+        The cap right-hand side (tCO2).
+    """
+    cfg = n.config["solving"]["options"].get("co2_cap_slack", {})
+    if not (cfg.get("enable") and cname in cfg.get("constraints", [])):
+        n.model.add_constraints(lhs <= limit, name=f"GlobalConstraint-{cname}")
+        return
+
+    budget = abs(float(limit))
+    coords = [n.scenarios] if n.has_scenarios else None
+    s = n.model.add_variables(
+        lower=0,
+        upper=cfg["max_overshoot"] * budget,
+        coords=coords,
+        name=f"co2_slack-{cname}",
+    )
+    n.model.add_constraints(lhs - s <= limit, name=f"GlobalConstraint-{cname}")
+    n.model.objective = n.model.objective + cfg["penalty"] * s.sum()
+    logger.info(
+        "Softened CO2 cap %s with elastic slack (penalty %g EUR/tCO2, "
+        "max overshoot %g tCO2)",
+        cname,
+        cfg["penalty"],
+        cfg["max_overshoot"] * budget,
+    )

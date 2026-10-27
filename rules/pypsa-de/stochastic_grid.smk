@@ -450,12 +450,22 @@ def evaluate_grid_portfolio_solving(wildcards):
     solve_grid_topology_network too): letting the capacity-expansion solves
     lean on cheap load-shedding instead of building adequate capacity would
     quietly distort the very capacities this analysis is comparing.
+
+    Finally, any evaluation-only `solving` overrides from
+    `stochastic_grid_scenarios: evaluate_solving` are deep-merged in (e.g.
+    options.co2_cap_slack.enable, or the solve_fallback escalation ladder read
+    by evaluate_grid_portfolio.solve_with_fallback). Scoped here rather than in
+    the global solver_options so that tuning the ST re-dispatch solves does not
+    trigger reruns of the finished LT solves via the `params` rerun-trigger.
     """
     import copy
 
-    solving = stochastic_grid_solving(wildcards)
-    solving = copy.deepcopy(solving)
+    solving = copy.deepcopy(stochastic_grid_solving(wildcards))
     solving["options"]["load_shedding"]["enable"] = True
+    evaluate_solving = config_provider(
+        "stochastic_grid_scenarios", "evaluate_solving", default={}
+    )(wildcards)
+    _deep_update(solving, copy.deepcopy(evaluate_solving) or {})
     return solving
 
 
@@ -659,7 +669,7 @@ rule evaluate_grid_portfolio:
         )
     shadow:
         shadow_config
-    threads: 4
+    threads: solver_threads
     resources:
         mem_mb=config_provider("solving", "mem_mb"),
         runtime=config_provider("solving", "runtime", default="6h"),

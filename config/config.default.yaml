@@ -1186,6 +1186,12 @@ solving:
       default_cost: 100000
       all_carriers: false
       carriers: {}
+    co2_cap_slack: # penalized elastic slack on CO2 emission caps (see scripts/_helpers.add_co2_cap_constraint)
+      enable: false # default off; enabled only for the ST evaluate_grid_portfolio solves
+      penalty: 10000 # EUR/tCO2, must exceed the cap shadow price so slack stays zero when feasible
+      max_overshoot: 0.02 # upper bound on slack, as a fraction of each cap
+      assert_threshold: 0.005 # fail post-solve if any slack exceeds this fraction of its cap
+      constraints: [CO2Limit, co2_limit-DE] # caps to soften; NOT the sequestration potential
     curtailment_mode: false
     noisy_costs: true
     skip_iterations: true

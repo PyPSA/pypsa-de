@@ -4,18 +4,18 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20261019-KN2045_Bal_v5-NUTS2-365h-2025EXO-2030EXO-2035EXO-10-50-40
+  prefix: 20261026-NUTS2-365h-2025EXO-2030EXO-2035EXO-10-50-40-co2-slack-st-test
   name:
-  - KN2045_Bal_v5
+  # - KN2045_Bal_v5
   - KN2045_Bal_v5_abroad_capa_freeze
-  - KN2045_Bal_v5_abroad_trade_freeze
-  - KN2045_Bal_v5_abroad_capa+trade_freeze
-  - KN2045_Elec_plus_v5
-  - KN2045_H2_v5
-  - KN2045_H2_v5_abroad_capa_freeze
-  - KN2045_Elec_v5
-  - KN2045_Elec_v5_abroad_capa_freeze
-  - CurrentPolicies
+  # - KN2045_Bal_v5_abroad_trade_freeze
+  # - KN2045_Bal_v5_abroad_capa+trade_freeze
+  # - KN2045_Elec_plus_v5
+  # - KN2045_H2_v5
+  # - KN2045_H2_v5_abroad_capa_freeze
+  # - KN2045_Elec_v5
+  # - KN2045_Elec_v5_abroad_capa_freeze
+  # - CurrentPolicies
   scenarios:
     enable: true
     manual_file: config/scenarios.report.2026.yaml
@@ -416,8 +416,8 @@ industry:
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#solving
 solving:
-  runtime: 12h # cl/h: mem_mb/runtime -> 27/3: 50000/3h; 49/5: ?/?h; 49/3: ?/?h; 
-  mem_mb: 70000 #30000 is OK for 22 nodes, 365H; 140000 for 22 nodes 3H; 400000 for 44 nodes 3H
+  runtime: 12h # cl/h: mem_mb/runtime -> 27/3: 50000/3h; 49/5: ?/?h; 49/3: ?/?h; NUTS2/3: 100000/8
+  mem_mb: 70000 
   mem_logging_frequency: 5
   options:
     load_shedding:
@@ -803,22 +803,21 @@ stochastic_grid_scenarios:
   #   freeze_trade: {AC: optimal, DC: optimal, H2: "optimal+10", gas: "optimal-10"}
   solve_endogenous_optimal: true # !!! cannot be set per scenario atm (see doc/configuration.md#per_scenario_limits); also build the endogenous all-free reference network (no grid override); opt-in, not part of the WS/SP/EEV/EVPI/ECIU comparison
   stochastic_solve_resources: # resource overrides for the "stochastic" grid-topology solve only (its scenario-dimension LP is much larger and scales super-linearly in the number of scenarios); each empty = fall back to the general solving.mem_mb / solving.runtime / solver_threads, which every other variant always uses
-    mem_mb: 70000 # cl/h/s: mem_mb/runtime -> 27/3/2: 100000/3h; 27/3/3: 100000/6h; 49/3/2: 300000/?h; 49/3/3: 450000/16h;
+    mem_mb: 70000 # cl/h/s: mem_mb/runtime -> 27/3/2: 100000/3h; 27/3/3: 100000/6h; 49/3/2: 300000/?h; 49/3/3: 450000/16h; NUTS2/3/3 350000/20h
     runtime: 12h # e.g. 12h
     threads: 32 # snakemake cores reserved for the stochastic job (scheduler side)
   stochastic_solving: # partial `solving:` block deep-merged into solving for the "stochastic" solve only (gurobi); every other variant keeps solving.solver_options.gurobi-default
     solver_options:
       gurobi-default:
         threads: 32 # make gurobi actually use 32 threads on the stochastic solve (overrides the global gurobi-default threads here only)
-  # CSVs are auto-generated per run from the current topology by
-  # build_grid_scenario_csvs; set explicit `links:`/`lines:` paths on a scenario
-  # to override with a hand-made file. Scenario name is
-  #   <year>_<kind>[_<carrier>][_<direction>]
-  #   kind      exogen | optimal
-  #   carrier   AC | DC  - delay only that carrier (the other stays fully built)
-  #   direction NS | WE  - delay only north-south / west-east branches
-  # both qualifiers optional and order-free (e.g. 2030_exogen, 2030_exogen_AC,
-  # 2030_exogen_DC_NS). Probabilities must sum to 1 across all scenarios.
+  evaluate_solving: # partial `solving:` block deep-merged into solving for the ST evaluate_grid_portfolio re-dispatch solves only; scoped here so tuning them doesn't rerun the finished LT solves
+    # NB: runtime and mem_mb for ST runs is set via the global solving block
+    options:
+      co2_cap_slack:
+        enable: true # soften the CO2 emission caps with a penalized elastic slack (see solving.options.co2_cap_slack): stabilises the near-infeasible year-diagonal dispatch LPs without changing the optimum
+    solve_fallback: # re-solve only a cell that STILL ends non-optimal after the default (slack + plain barrier), escalating gurobi options cheapest-first; the costly knobs run for the rare straggler, never on the critical path (see evaluate_grid_portfolio.solve_with_fallback)
+      - {BarHomogeneous: 1} # robust barrier variant; modest per-iteration overhead
+      - {BarHomogeneous: 1, crossover: 1} # + crossover to recover a clean optimal vertex; expensive, last resort
   scope: de_and_interconnectors
   # !!! the SET of scenario names cannot be set per scenario atm (see doc/configuration.md#per_scenario_limits); their probabilities / CSV paths below ARE per-run
   scenarios:
