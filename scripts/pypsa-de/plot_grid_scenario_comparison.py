@@ -34,6 +34,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from utils import (
     aggregate_by_keywords,
     capa_groups,
+    capa_sum_groups,
     df_to_png,
     scenario_color,
     scenario_label,
@@ -45,13 +46,16 @@ from utils import (
 # Regional capacity-diff maps reuse system_plots.py's map-drawing machinery
 # (same directory, plain top-level import - see module docstring there).
 from system_plots import (
+    capacity_diff_table,
     group_capacity_by_tech,
+    plot_capacity_diff,
     plot_group_capacity_diff_maps,
     plot_load_map,
     plot_load_shedding_map,
     plot_renewable_cf_maps,
     power_capacity_by_bus_carrier,
     storage_energy_capacity_by_bus_carrier,
+    trade_matrix,
 )
 
 from scripts._helpers import configure_logging, mock_snakemake
@@ -1548,12 +1552,28 @@ if __name__ == "__main__":
             label_a = "SP" if nid_a == sp_rep else scenario_label(nid_a)
             label_b = scenario_label(nid_b)
 
+            # Capacity difference by carrier and country: bar chart at >= 1 GW
+            # (grid carriers excluded), plus a wider >= 0.5 GW table as PNG.
+            diff_excl = ["AC", "DC", "AC (interconnector)", "DC (interconnector)"]
+            diff_table = capacity_diff_table(n_a, n_b, threshold=1.0, exclude_carriers=diff_excl)
+            plot_capacity_diff(
+                diff_table,
+                output_dir / f"capacity_diff_bar_{label_a}_vs_{label_b}.png",
+                label_a=label_a,
+                label_b=label_b,
+                threshold=1.0,
+            )
+            df_to_png(
+                capacity_diff_table(n_a, n_b, threshold=0.5, exclude_carriers=diff_excl).round(1),
+                output_dir / f"capacity_diff_table_{label_a}_vs_{label_b}.png",
+            )
+
             power_a = power_capacity_by_bus_carrier(n_a, region)
             power_b = power_capacity_by_bus_carrier(n_b, region)
             energy_a = storage_energy_capacity_by_bus_carrier(n_a, region)
             energy_b = storage_energy_capacity_by_bus_carrier(n_b, region)
 
-            for group_name, tech_dict in capa_groups.items():
+            for group_name, tech_dict in {**capa_groups, **capa_sum_groups}.items():
                 group_slug = group_name.lower().replace(" + ", "_").replace(" ", "_")
                 plot_group_capacity_diff_maps(
                     group_capacity_by_tech(n_a, tech_dict, power_a),
@@ -1594,6 +1614,23 @@ if __name__ == "__main__":
     }
 
     make_generation_consumption_tables(networks, network_ids, output_dir, kwargs_gc, region)
+
+    ### CROSS-BORDER TRADE MATRICES ###
+    # Full exporter x importer matrix [TWh] per network, for electricity and
+    # H2 (both LT and ST variants), rendered as PNG tables.
+    logger.info("Writing cross-border trade matrices...")
+    trade_dir = output_dir / "trade_matrices"
+    trade_dir.mkdir(parents=True, exist_ok=True)
+    for network_id in network_ids:
+        n = networks.get(network_id)
+        if n is None:
+            continue
+        for kind in ("electricity", "H2"):
+            mat = trade_matrix(n, kind)
+            df_to_png(
+                mat.round(1),
+                trade_dir / f"trade_matrix_{kind}_{scenario_label(network_id)}.png",
+            )
 
     # STORAGE PLOTS
     heat_stores_carriers = [

@@ -532,6 +532,29 @@ capa_groups = {
     },
 }
 
+# Carrier-summed region maps, drawn alongside the per-carrier capacity maps
+# only (NOT the stacked bar chart, which would double-count): each label sums
+# several capa_groups entries, referenced here so the carrier lists stay
+# single-sourced. Fed to plot_group_capacity_maps / plot_group_capacity_diff_maps.
+_ws = capa_groups["Wind + Solar"]
+_bk = capa_groups["Backup"]
+capa_sum_groups = {
+    "Renewable totals": {
+        "Offshore wind (AC+DC)": _ws["Offshore wind AC"] + _ws["Offshore wind DC"],
+        "Solar (all)": _ws["Solar"] + _ws["Solar HSAT"] + _ws["Solar rooftop"],
+    },
+    "Backup totals": {
+        "OCGT (gas+H2)": _bk["OCGT"] + _bk["H2 OCGT"],
+        "CCGT (gas+H2)": _bk["CCGT"] + _bk["H2 CCGT"],
+        "OCGT+CCGT": _bk["OCGT"] + _bk["CCGT"] + _bk["H2 OCGT"] + _bk["H2 CCGT"],
+        "CHP (gas+H2)": _bk["Gas CHP"] + _bk["H2 CHP"],
+        "OCGT+CCGT+CHP": (
+            _bk["OCGT"] + _bk["CCGT"] + _bk["H2 OCGT"] + _bk["H2 CCGT"]
+            + _bk["Gas CHP"] + _bk["H2 CHP"]
+        ),
+    },
+}
+
 # Energy (not power) capacity - Stores' e_nom_opt plus PHS storage_units'
 # implied energy capacity (p_nom_opt * max_hours), grouped the same
 # {tech_label: [carriers]} way as capa_groups so it can share the same

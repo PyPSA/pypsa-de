@@ -35,6 +35,8 @@ import numpy as np
 import pandas as pd
 import pypsa
 from matplotlib import colormaps, colors
+from matplotlib.lines import Line2D
+from matplotlib.patches import Patch
 
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -43,6 +45,7 @@ from utils import (
     c1_groups,
     c1_groups_name,
     capa_groups,
+    capa_sum_groups,
     df_to_png,
     plot_grid_network,
     tech_colors,
@@ -278,6 +281,23 @@ def _add_basemap(ax, display_projection):
         ax.add_geometries(geoms, crs=display_projection, **style)
 
 
+def _finalize_map_grid(fig, wspace=None, hspace=None, headroom=0.9):
+    """Lay out a grid of map subplots and keep the suptitle clear of them.
+
+    `tight_layout` reserves no room for a figure suptitle, so on short
+    (few-row) figures it overlaps the first row's subplot titles. Reserve a
+    fixed `headroom` (inches) at the top instead of a height fraction, so the
+    clearance is the same whatever the row count.
+    """
+    fig.tight_layout()
+    kw = {"top": 1 - headroom / fig.get_figheight()}
+    if wspace is not None:
+        kw["wspace"] = wspace
+    if hspace is not None:
+        kw["hspace"] = hspace
+    fig.subplots_adjust(**kw)
+
+
 def plot_storage_map(
     network,
     technologies,
@@ -414,8 +434,7 @@ def plot_storage_map(
         axes[idx].set_visible(False)
 
     fig.suptitle(f"Energy Storage Capacity - {scenario_name}", fontsize=14, y=0.98)
-    plt.tight_layout()
-    plt.subplots_adjust(wspace=wspace, hspace=hspace)
+    _finalize_map_grid(fig, wspace, hspace)
     plt.savefig(output_path, dpi=dpi, bbox_inches="tight")
     plt.close(fig)
 
@@ -529,8 +548,7 @@ def plot_group_capacity_maps(
         axes[idx].set_visible(False)
 
     fig.suptitle(f"{group_name} Capacity - {scenario_name}", fontsize=14, y=0.98)
-    plt.tight_layout()
-    plt.subplots_adjust(wspace=wspace, hspace=hspace)
+    _finalize_map_grid(fig, wspace, hspace)
     plt.savefig(output_path, dpi=dpi, bbox_inches="tight")
     plt.close(fig)
 
@@ -701,7 +719,7 @@ def plot_renewable_cf_maps(
         axes[idx].set_visible(False)
 
     fig.suptitle(f"Renewable capacity factors - {region}", fontsize=14, y=0.99)
-    plt.tight_layout()
+    _finalize_map_grid(fig)
     plt.savefig(output_path, dpi=dpi, bbox_inches="tight")
     plt.close(fig)
 
@@ -965,13 +983,7 @@ def plot_group_capacity_diff_maps(
         axes[idx].set_visible(False)
 
     fig.suptitle(f"{group_name} Capacity Diff: {label_a} − {label_b}", fontsize=14, y=0.98)
-    plt.tight_layout()
-    # Explicit top margin (on top of tight_layout's own spacing) - every
-    # tech_label is now always plotted (see group_capacity_by_tech), so the
-    # grid's last row is often partially filled; tight_layout alone doesn't
-    # reserve room for the suptitle in that case and it overlaps the first
-    # row's subplot titles.
-    plt.subplots_adjust(top=0.88, wspace=wspace, hspace=hspace)
+    _finalize_map_grid(fig, wspace, hspace)
     plt.savefig(output_path, dpi=dpi, bbox_inches="tight")
     plt.close(fig)
 
@@ -1799,6 +1811,207 @@ def plot_electricity_capacity(
     plt.close(fig)
 
 
+# --------------------------------------------------------------------------- #
+# Capacity- and trade-difference views by carrier and country.
+# The capacity-diff bar chart complements the regional diff maps (one bar per
+# carrier, stacked by country); the trade matrix complements the DE-centric
+# cross-border plots (full exporter x importer matrix per traded commodity).
+# --------------------------------------------------------------------------- #
+
+# flag-inspired country colours, picked so neighbours stay distinguishable
+COUNTRY_COLORS = {
+    "DE": "#FFCE00", "FR": "#0055A4", "NL": "#FF7F00", "BE": "#2B2B2B",
+    "LU": "#00A1DE", "DK": "#C60C30", "NO": "salmon", "SE": "#1A237E",
+    "PL": "#B2DF8A", "CZ": "#808000", "AT": "#8C564B", "CH": "#D4A373",
+    "IT": "#009246", "ES": "#CAB2D6", "GB": "fuchsia", "EU": "darkviolet",
+    "other": "#BDBDBD",
+}
+HATCHED = {"DE": "///"}
+HATCH_COLOR = "#1a1a1a"
+
+# cross-border branch carriers per traded commodity (see trade_matrix)
+TRADE_MATRIX_CARRIERS = {
+    "H2": {"Link": r"H2 pipeline"},
+    "electricity": {"Line": None, "Link": r"^DC$"},
+}
+
+
+def _bus_country(n):
+    """Country code per bus, from `location` where set, else the bus name."""
+    names = n.buses.index.to_series()
+    loc = n.buses.get("location", names)
+    loc = loc.where(loc.fillna("") != "", names)
+    return loc.str[:2]
+
+
+def capacity_by_carrier_country(
+    n, components=("Generator", "Link", "StorageUnit", "Line")
+):
+    """Optimal capacity [MW] per (carrier, country).
+
+    One end on an EU bus is assigned to the non-EU end. A branch between two
+    countries whose buses share a carrier (lines, DC, pipelines) is tagged
+    ``"<carrier> (interconnector)"`` and counted in full for both countries; a
+    cross-country branch between different bus carriers is assigned to bus1.
+    """
+    EU, TAG = "EU", " (interconnector)"
+    country = _bus_country(n)
+    frames = []
+    for c in components:
+        df = n.components[c].static
+        if "active" in df.columns:
+            df = df[df.active.astype(bool)]
+        if df.empty:
+            continue
+        cap = df["s_nom_opt" if c in ("Line", "Transformer") else "p_nom_opt"]
+        if "bus0" not in df.columns:
+            frames.append(pd.DataFrame(
+                {"carrier": df.carrier, "country": df.bus.map(country), "cap": cap}
+            ))
+            continue
+        c0, c1 = df.bus0.map(country), df.bus1.map(country)
+        cross = (c0 != c1) & (c0 != EU) & (c1 != EU)
+        same = (pd.Series(True, index=df.index) if c in ("Line", "Transformer")
+                else df.bus0.map(n.buses.carrier).eq(df.bus1.map(n.buses.carrier)))
+        ic = cross & same
+        carrier = df.carrier.where(~ic, df.carrier + TAG)
+        frames.append(pd.DataFrame(
+            {"carrier": carrier, "country": c1.where(c1 != EU, c0), "cap": cap}
+        ))
+        frames.append(pd.DataFrame(
+            {"carrier": carrier[ic], "country": c0[ic], "cap": cap[ic]}
+        ))
+    long = pd.concat(frames)
+    return long.groupby(["carrier", "country"]).cap.sum()
+
+
+def capacity_diff_table(
+    n_a, n_b, threshold=1.0, exclude_carriers=("AC", "DC"),
+    components=("Generator", "Link", "StorageUnit", "Line"),
+):
+    """Capacity difference ``A - B`` [GW] as a carrier x country table.
+
+    Keeps entries with ``|diff| >= threshold`` GW, drops `exclude_carriers`,
+    orders carriers by total absolute change and countries with DE first.
+    Returns an empty frame if nothing clears the threshold.
+    """
+    cap_a = capacity_by_carrier_country(n_a, components)
+    cap_b = capacity_by_carrier_country(n_b, components)
+    diff = cap_a.sub(cap_b, fill_value=0).div(1e3)
+    diff = diff.drop(list(exclude_carriers), level="carrier", errors="ignore")
+    # drop unbounded carriers (e.g. co2 sequestered links carry inf p_nom_opt)
+    diff = diff[np.isfinite(diff) & (diff.abs() >= threshold)]
+    if diff.empty:
+        return pd.DataFrame()
+    table = diff.unstack("country").fillna(0)
+    table = table.loc[table.abs().sum(axis=1).sort_values(ascending=False).index]
+    table = table.loc[:, (table != 0).any()]
+    rank = table.abs().sum().sort_values(ascending=False).index.tolist()
+    cols = (["DE"] if "DE" in rank else []) + [c for c in rank if c != "DE"]
+    return table[cols]
+
+
+def plot_capacity_diff(
+    table, output_path, label_a="A", label_b="B", threshold=1.0,
+    figsize=(13, 9), bar_width=0.75, xpad=0.3, ypad=0.08,
+):
+    """Stacked bar chart of a `capacity_diff_table`: one bar per carrier stacked
+    by country (DE hatched), with the net change drawn as a dashed line.
+    """
+    if table.empty:
+        return
+    cols = list(table.columns)
+    fallback = plt.get_cmap("tab20")
+    carrier_colors = [COUNTRY_COLORS.get(c, fallback(i % 20)) for i, c in enumerate(cols)]
+
+    plt.rcParams["hatch.linewidth"] = 0.8
+    fig, ax = plt.subplots(figsize=figsize)
+    table.plot.bar(stacked=True, ax=ax, width=bar_width, color=carrier_colors,
+                   edgecolor="white", linewidth=0.6, legend=False)
+
+    for country, container in zip(cols, ax.containers):
+        if country in HATCHED:
+            for patch in container:
+                patch.set_hatch(HATCHED[country])
+                patch.set_edgecolor(HATCH_COLOR)
+                patch.set_linewidth(0)
+
+    net = table.sum(axis=1)
+    x = range(len(net))
+    ax.hlines(net.values, [i - bar_width / 2 for i in x],
+              [i + bar_width / 2 for i in x], colors="k", linewidth=1.2,
+              linestyles=(0, (4, 2)), zorder=5)
+
+    ax.set_xlim(-0.5 - xpad, len(table) - 0.5 + xpad)
+    pos = table.clip(lower=0).sum(axis=1).max()
+    neg = table.clip(upper=0).sum(axis=1).min()
+    span = (pos - neg) or 1.0
+    ax.set_ylim(min(neg, 0) - ypad * span, max(pos, 0) + ypad * span)
+
+    ax.axhline(0, color="k", lw=0.8)
+    ax.set_ylabel(f"Delta capacity [GW]\n({label_a} - {label_b})")
+    ax.set_title(f"Capacity difference by carrier and country (|Delta| >= {threshold} GW)")
+    ax.grid(axis="y", alpha=0.3)
+    ax.set_axisbelow(True)
+    for s in ("top", "right"):
+        ax.spines[s].set_visible(False)
+    plt.xticks(rotation=55, ha="right")
+
+    handles = [
+        Patch(facecolor=col, label=c, hatch=HATCHED.get(c, ""),
+              edgecolor=HATCH_COLOR if c in HATCHED else col, linewidth=0)
+        for c, col in zip(cols, carrier_colors)
+    ]
+    handles.append(Line2D([], [], color="k", linewidth=1.2,
+                          linestyle=(0, (4, 2)), label="net change"))
+    ax.legend(handles=handles, title="country", bbox_to_anchor=(1.01, 1),
+              loc="upper left", frameon=False, ncol=1 + len(handles) // 25)
+
+    plt.tight_layout()
+    fig.savefig(output_path, dpi=300, bbox_inches="tight")
+    plt.close(fig)
+
+
+def trade_matrix(n, kind="H2", net=True, unit=1e6):
+    """Annual cross-border trade between countries [TWh by default].
+
+    Row = exporter, column = importer; with ``net=True`` cell ``[i, j]`` is the
+    net flow i->j. The last column ``"net export"`` is > 0 for net exporters.
+    `kind` ("H2" or "electricity") selects the branch carriers via
+    `TRADE_MATRIX_CARRIERS`. Empty frame if no cross-border branches are found.
+    """
+    country = _bus_country(n)
+    w = n.snapshot_weightings.generators
+    frames = []
+    for c, pattern in TRADE_MATRIX_CARRIERS[kind].items():
+        df = n.components[c].static
+        if pattern is not None:
+            df = df[df.carrier.str.contains(pattern, regex=True)]
+        c0, c1 = df.bus0.map(country), df.bus1.map(country)
+        df = df[c0 != c1]
+        if df.empty:
+            continue
+        c0, c1 = c0[df.index], c1[df.index]
+        p0 = (n.lines_t if c == "Line" else n.links_t).p0.reindex(
+            columns=df.index, fill_value=0.0
+        )
+        fwd = p0.clip(lower=0).mul(w, axis=0).sum()
+        bwd = (-p0).clip(lower=0).mul(w, axis=0).sum()
+        frames += [pd.DataFrame({"from": c0, "to": c1, "e": fwd}),
+                   pd.DataFrame({"from": c1, "to": c0, "e": bwd})]
+    if not frames:
+        return pd.DataFrame()
+    flows = pd.concat(frames)
+    countries = sorted(set(flows["from"]) | set(flows["to"]))
+    gross = (flows.pivot_table(index="from", columns="to", values="e", aggfunc="sum")
+             .reindex(index=countries, columns=countries).fillna(0.0))
+    mat = (gross - gross.T) if net else gross
+    mat = mat.div(unit)
+    mat["net export"] = (gross.sum(axis=1) - gross.sum(axis=0)).div(unit)
+    mat.index.name, mat.columns.name = "exporter", "importer"
+    return mat
+
+
 if __name__ == "__main__":
     if "snakemake" not in globals():
         snakemake = mock_snakemake(
@@ -1926,8 +2139,8 @@ if __name__ == "__main__":
 
         # Capacity-by-region maps for the other capa_groups categories (Wind +
         # Solar / Backup / Storage Discharge / Demand-Side Flex) - beyond the
-        # storage-only maps above.
-        for group_name, tech_dict in capa_groups.items():
+        # storage-only maps above - plus the carrier-summed totals.
+        for group_name, tech_dict in {**capa_groups, **capa_sum_groups}.items():
             group_slug = group_name.lower().replace(" + ", "_").replace(" ", "_")
             plot_group_capacity_maps(
                 n,

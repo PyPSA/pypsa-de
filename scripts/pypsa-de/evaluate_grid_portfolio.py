@@ -154,6 +154,10 @@ def check_co2_slack(n: pypsa.Network) -> dict:
     slacks = [v for v in n.model.variables if v.startswith("co2_slack-")]
     used = {v: float(n.model[v].solution.sum()) for v in slacks}
 
+    nonzero = {v: s for v, s in used.items() if s > 0}
+    if nonzero:
+        logger.warning("CO2-cap slack used (within tolerance): %s", nonzero)
+
     breached = {}
     for v, s in used.items():
         budget = float(n.model[v].upper.max()) / cfg["max_overshoot"]

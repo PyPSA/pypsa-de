@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20261026-NUTS2-365h-2025EXO-2030EXO-2035EXO-10-50-40-co2-slack-st-test
+  prefix: 20261027-NUTS2-365h-2025EXO-2030EXO-2035EXO-10-50-40-new-plots
   name:
   # - KN2045_Bal_v5
   - KN2045_Bal_v5_abroad_capa_freeze
