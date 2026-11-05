@@ -53,6 +53,17 @@
   the base network are excluded in the release or dropped by the duplicate
   check; upgrades replace the existing branch.
 
+**Features (stochastic grid)**
+
+* `stochastic_grid_scenarios.freeze_outside_de_capacities` and `freeze_trade`
+  may reference a grid scenario that is not in
+  `stochastic_grid_scenarios.scenarios`, e.g. `2035_exogen` alongside the set
+  `2028/2031/2034_exogen`. Its topology variant is built and solved as an extra
+  reference only; it gets no probability, portfolio evaluation, metrics or
+  plots. Every reference is now checked per run: an invalid name fails at DAG
+  build with the run name. Before, a stale name after renaming the scenario set
+  surfaced as a `MissingInputException`.
+
 **Bugfixes (transmission projects)**
 
 * Lines replaced by an upgrade now stay in service until the upgrade is built.

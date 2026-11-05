@@ -73,10 +73,31 @@ rule report_transmission_projects:
 # links outside_de_grid controls. Applied to every topology variant except the
 # source scenario itself (left unfrozen to define the capacities) - so the
 # stochastic solve waits for that deterministic solve to finish.
+#
+# A reference (freeze source or freeze_trade reference) may also be a
+# "reference-only" grid scenario: a valid grid_scenario name that is NOT in
+# stochastic_grid_scenarios.scenarios. Its topology variant is built and solved
+# like any deterministic one, but it is not part of the stochastic set (no
+# probability, no portfolio evaluation, metrics or comparison plots).
+_GRID_REF_ONLY_PATTERN = r"\d{4}_(?:exogen|optimal)(?:_(?:AC|DC|NS|WE)){0,2}"
+
+
+def _is_grid_ref(ref):
+    """True if `ref` names a solvable reference network: 'optimal', a grid
+    scenario, or a reference-only grid scenario name."""
+    import re
+
+    return (
+        ref == "optimal"
+        or ref in GRID_SCENARIO_NAMES
+        or re.fullmatch(_GRID_REF_ONLY_PATTERN, str(ref)) is not None
+    )
+
+
 _FREEZE_SOURCE = _sgs.get("freeze_outside_de_capacities", False)
-assert (not _FREEZE_SOURCE) or _FREEZE_SOURCE == "optimal" or _FREEZE_SOURCE in GRID_SCENARIO_NAMES, (
+assert (not _FREEZE_SOURCE) or _is_grid_ref(_FREEZE_SOURCE), (
     "stochastic_grid_scenarios.freeze_outside_de_capacities must be false, "
-    f"'optimal', or a grid_scenario name {GRID_SCENARIO_NAMES}, got {_FREEZE_SOURCE!r}"
+    f"'optimal', or a grid_scenario name, got {_FREEZE_SOURCE!r}"
 )
 
 # Cap DE gross imports per carrier at a reference level scaled by a margin.
@@ -112,9 +133,9 @@ if _FREEZE_TRADE:
     )
     for _c, _spec in _FREEZE_TRADE.items():
         _r = _freeze_trade_ref(_spec)
-        assert _r == "optimal" or _r in GRID_SCENARIO_NAMES, (
+        assert _is_grid_ref(_r), (
             f"freeze_trade[{_c!r}]={_spec!r}: reference {_r!r} must be 'optimal' "
-            f"or a grid_scenario name {GRID_SCENARIO_NAMES}"
+            "or a grid_scenario name"
         )
 
 # Run scope - trade completeness for speed:
@@ -254,7 +275,7 @@ GRID_EXPORT_NETWORK_IDS = GRID_EXPORT_NETWORK_IDS_LT + GRID_EXPORT_NETWORK_IDS_S
 
 
 wildcard_constraints:
-    grid_scenario="|".join(GRID_SCENARIO_VALUES) if GRID_SCENARIO_VALUES else "(?!)",
+    grid_scenario="|".join(GRID_SCENARIO_VALUES + [_GRID_REF_ONLY_PATTERN]),
     portfolio="|".join(GRID_SCENARIO_VALUES) if GRID_SCENARIO_VALUES else "(?!)",
     network_id="|".join(GRID_EXPORT_NETWORK_IDS) if GRID_EXPORT_NETWORK_IDS else "(?!)",
 
@@ -338,9 +359,9 @@ def _grid_scenario_csv_map(wildcards):
     build_grid_topology instance needs. Explicit config paths win (manual
     override); otherwise the auto-generated per-run resources path is used."""
     names = (
-        [wildcards.grid_scenario]
-        if wildcards.grid_scenario in GRID_SCENARIO_NAMES
-        else GRID_SCENARIO_NAMES
+        GRID_SCENARIO_NAMES
+        if wildcards.grid_scenario in ("stochastic", "eev")
+        else [wildcards.grid_scenario]
     )
     cfg = config_provider("stochastic_grid_scenarios", "scenarios", default={})(wildcards)
     result = {}
@@ -361,6 +382,14 @@ def get_grid_scenario_csvs(wildcards):
     return [p for entry in _grid_scenario_csv_map(wildcards).values() for p in entry.values()]
 
 
+def _check_grid_ref(ref, key, wildcards):
+    """Fail fast if a per-run reference network name is not 'optimal' or a grid scenario."""
+    assert _is_grid_ref(ref), (
+        f"run {wildcards.run!r}: stochastic_grid_scenarios.{key} references {ref!r}, "
+        "must be 'optimal' or a grid_scenario name '<year>_<kind>[_<carrier>][_<direction>]'"
+    )
+
+
 def _freeze_source_network(wildcards):
     """Solved reference network whose foreign non-grid capacities are frozen into
     this build_grid_topology instance (see freeze_outside_de_capacities). Empty
@@ -371,7 +400,10 @@ def _freeze_source_network(wildcards):
     freeze_source = config_provider(
         "stochastic_grid_scenarios", "freeze_outside_de_capacities", default=False
     )(wildcards)
-    if not freeze_source or wildcards.grid_scenario == freeze_source:
+    if not freeze_source:
+        return []
+    _check_grid_ref(freeze_source, "freeze_outside_de_capacities", wildcards)
+    if wildcards.grid_scenario == freeze_source:
         return []
     base = (
         RESULTS
@@ -394,11 +426,10 @@ def _freeze_trade_ref_networks(wildcards):
         RESULTS
         + f"networks/base_s_{wildcards.clusters}_{wildcards.opts}_{wildcards.sector_opts}_{wildcards.planning_horizons}"
     )
-    refs = {
-        _freeze_trade_ref(spec)
-        for spec in freeze_trade.values()
-        if _freeze_trade_ref(spec) != wildcards.grid_scenario
-    }
+    refs = {_freeze_trade_ref(spec) for spec in freeze_trade.values()}
+    for r in refs:
+        _check_grid_ref(r, "freeze_trade", wildcards)
+    refs.discard(wildcards.grid_scenario)
     return [base + (".nc" if r == "optimal" else f"_topology-{r}.nc") for r in sorted(refs)]
 
 
