@@ -12,6 +12,57 @@
 
 _sgs = config.get("stochastic_grid_scenarios", {})
 GRID_SCENARIO_NAMES = list(_sgs.get("scenarios", {}).keys())
+_PROJECT_REPORT = RESULTS + "transmission_project_audit/{report_resolution}/{report_start}_until_{report_end}/"
+
+
+# Independent, opt-in physical-project audit. No optimization/clustering input.
+# Request any PDF or summary.json for an arbitrary start_until_end interval.
+rule report_transmission_projects_default:
+    input:
+        expand(
+            RESULTS + "transmission_project_audit/{report_resolution}/{interval}/summary.json",
+            run=config["run"]["name"],
+            report_resolution=["nuts2", "nuts3", "grid"],
+            interval=["2025_until_2030", "2030_until_2035"],
+        ),
+
+
+rule report_transmission_projects:
+    input:
+        base_network=resources("networks/base.nc"),
+        new_lines=resources("transmission_projects/new_lines.csv"),
+        new_links=resources("transmission_projects/new_links.csv"),
+        adjust_lines=resources("transmission_projects/adjust_lines.csv"),
+        adjust_links=resources("transmission_projects/adjust_links.csv"),
+        new_buses=resources("transmission_projects/new_buses.csv"),
+        regions=lambda w: rules.retrieve_eu_nuts_2021.output[
+            "shapes_level_3" if w.report_resolution == "nuts3" else "shapes_level_2"
+        ],
+        source_dirs=lambda w: [
+            "data/transmission_projects/" + name
+            for name, include in config_provider("transmission_projects", "include")(w).items()
+            if include
+        ],
+    output:
+        ac_internal=_PROJECT_REPORT + "AC_internal_{report_start}_until_{report_end}.pdf",
+        ac_interconnectors=_PROJECT_REPORT + "AC_interconnectors_{report_start}_until_{report_end}.pdf",
+        dc_internal=_PROJECT_REPORT + "DC_internal_{report_start}_until_{report_end}.pdf",
+        dc_interconnectors=_PROJECT_REPORT + "DC_interconnectors_{report_start}_until_{report_end}.pdf",
+        ledger=_PROJECT_REPORT + "project_ledger.csv",
+        corridors=_PROJECT_REPORT + "nuts2_corridors.csv",
+        sources=_PROJECT_REPORT + "source_audit.csv",
+        summary=_PROJECT_REPORT + "summary.json",
+    wildcard_constraints:
+        report_start=r"\d{4}",
+        report_end=r"\d{4}",
+        report_resolution="nuts2|nuts3|grid",
+    resources:
+        mem_mb=4000,
+    threads: 1
+    message:
+        "Auditing physical exogenous transmission projects: {wildcards.report_start} until {wildcards.report_end}"
+    script:
+        scripts("report_transmission_projects.py")
 
 # Freeze foreign (non-DE) non-grid capacities to a solved reference network so
 # the stochastic DE-grid comparison is not confounded by foreign capacity

@@ -735,7 +735,26 @@ must_run:
       # biogas: 0.6
 
 transmission_projects:
+  enable: true
+  include:
+    manual: false # original data (unclear)
+    nep: false # is NEP 2023 but incomplete (original data)
+    nep2023confirmed: true
+    nep2025draft: false
+    tyndp2020: false # original data
+    tyndp2022confirmed: true
+    tyndp2024draft: false
+    tyndp2026draft: false # release is planned for Dec 2026
+  skip: [] # skip nothing
+  status:
+  # - under_consideration
+  # - planned_not_yet_permitting
+  - confirmed
+  - in_permitting
+  - under_construction
+  - commissioned
   new_link_capacity: keep #keep or zero
+  overlap_decisions: data/transmission_projects/overlap_decisions.csv
 
 onshore_nep_force:
   cutin_year: 2020

@@ -547,6 +547,7 @@ rule build_transmission_projects:
         base_network=resources("networks/base.nc"),
         offshore_shapes=resources("offshore_shapes.geojson"),
         europe_shape=resources("europe_shape.geojson"),
+        line_types="data/transmission_projects/line_types.csv",
         transmission_projects=lambda w: [
             "data/transmission_projects/" + name
             for name, include in config_provider("transmission_projects", "include")(
@@ -560,6 +561,7 @@ rule build_transmission_projects:
         adjust_lines=resources("transmission_projects/adjust_lines.csv"),
         adjust_links=resources("transmission_projects/adjust_links.csv"),
         new_buses=resources("transmission_projects/new_buses.csv"),
+        line_types=resources("transmission_projects/line_types.csv"),
     log:
         logs("build_transmission_projects.log"),
     benchmark:
@@ -587,6 +589,7 @@ rule add_transmission_projects_and_dlr:
         ),
         transmission_projects=lambda w: (
             [
+                resources("transmission_projects/line_types.csv"),
                 resources("transmission_projects/new_buses.csv"),
                 resources("transmission_projects/new_lines.csv"),
                 resources("transmission_projects/new_links.csv"),

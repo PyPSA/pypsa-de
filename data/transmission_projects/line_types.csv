@@ -1,0 +1,3 @@
+name,f_nom,r_per_length,x_per_length,c_per_length,i_nom,mounting,cross_section,references
+High-current 4-bundle 380.0,50.0,0.018,0.243,14.9,3.6,ol,,"Median r/x/c of 30 German 380-kV lines rated 3550-3650 A, >5 km, in JAO Core Static Grid Model 6th release (scripts/derive_line_types.py); i_nom 3.6 kA per NEP 2025 P540 M1000 'Hochstrombeseilung (Stromtragfaehigkeit 3.600 A)' and NEP 2023 TTG-P25 M45"
+HTLS 2-bundle 220.0,50.0,0.048,0.302,12.4,2.36,ol,330.0,"r/x/c of HTLS tie-lines Flebour - Bauler in JAO Core Static Grid Model 6th release; conductor 2 x ACCC 330 mm2, 150 C (Creos NDP 2024-2034 p. 45); i_nom from 1,800 MVA for two circuits after HTLS (Luxembourg security-of-supply report 2020 p. 22)"

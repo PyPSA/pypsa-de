@@ -27,10 +27,15 @@ def attach_transmission_projects(
         df = pd.read_csv(path, index_col=0, dtype={"bus0": str, "bus1": str})
         if df.empty:
             continue
-        if "new_buses" in path.name:
+        if "line_types" in path.name:
+            n.add("LineType", df.index, **df)
+        elif "new_buses" in path.name:
             n.add("Bus", df.index, **df)
         elif "new_lines" in path.name:
-            n.add("Line", df.index, **df)
+            if "split_of" in df:
+                n.remove("Line", df.split_of.dropna().unique())
+            # project metadata would block line aggregation in clustering
+            n.add("Line", df.index, **df[df.columns.intersection(n.lines.columns)])
         elif "new_links" in path.name:
             n.add("Link", df.index, **df)
         elif "adjust_lines" in path.name:

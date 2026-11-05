@@ -55,3 +55,7 @@ class TransmissionProjectsConfig(BaseModel):
         "zero",
         description="Whether to set the new link capacity to the provided capacity or set it to zero.",
     )
+    overlap_decisions: str | None = Field(
+        None,
+        description="Optional CSV of reviewed decisions for upgrades of the same branch by several included plans (e.g. NEP and TYNDP). Without it, the first included plan is kept on a shared branch and the collision is logged.",
+    )

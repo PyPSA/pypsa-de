@@ -6,6 +6,108 @@
 <!-- Upcoming Release -->
 <!-- ================= -->
 
+**Features (transmission projects)**
+
+* Reviewed line types missing from the PyPSA catalogue are read from
+  `data/transmission_projects/line_types.csv` and registered before projects
+  are added: `High-current 4-bundle 380.0` (3.6 kA, "Hochstrombeseilung") and
+  `HTLS 2-bundle 220.0` (2.36 kA). Impedances follow the JAO Core Static Grid
+  Model, like the existing `HTLS 4-bundle 380.0`. [build_transmission_projects][]
+  writes them to `transmission_projects/line_types.csv`;
+  [add_transmission_projects_and_dlr][] adds them to the network. A name that
+  already exists in the catalogue raises an error.
+
+* [build_transmission_projects][] applies reviewed, network-dependent fields of
+  cleaned project releases (exogenous-grid-data): `explicit_connection` (named
+  cross-border buses and replaced branches), `parallel_circuits` (corridor
+  circuits before/after a parallel new build), `branch_scope_rules` (partial
+  circuit upgrades; action `exclude` drops a matched branch beyond the
+  project's end) and `junction0/1` (fixed transition points). Data cleaning,
+  e.g. dropping offshore projects, happens in the release, not here. Rows
+  without these fields behave as before.
+
+* `explicit_connection` may name `splits`: reviewed junctions where a base
+  branch passes a station without a bus. [build_transmission_projects][]
+  replaces the branch by consecutive pieces with unchanged rating (length
+  shared by the junction's position) and writes them to `new_lines.csv` with
+  `split_of`; [add_transmission_projects_and_dlr][] removes the split branch.
+  Splits apply regardless of project status, so all selections share one
+  topology.
+
+* An upgrade covers all parallel base branches of its corridor (OpenStreetMap
+  splits multi-circuit lines), distributing a given circuit count over them.
+  Several included plans upgrading the same branch are reconciled (first
+  included plan kept, reviewed decisions via the new optional
+  `transmission_projects: overlap_decisions` CSV); the audit is written to
+  `transmission_projects/overlap_audit.csv`.
+
+* The PDF maps of `report_transmission_projects` show a clickable source link
+  per project in a right-hand column (`p. 186 ↗` jumps to the PDF page given by
+  `source_pdf_page`, otherwise `source ↗`). An optional `--source-links` CSV
+  (`dataset, project_id, source_url, source_pdf_page`) supplies or corrects
+  links without editing the project data.
+
+* `config.de.yaml` includes `commissioned` projects in `transmission_projects:
+  status`. Cleaned releases keep projects commissioned after the source plan
+  (e.g. 2023-2026) with their actual commissioning year. New lines already in
+  the base network are excluded in the release or dropped by the duplicate
+  check; upgrades replace the existing branch.
+
+**Bugfixes (transmission projects)**
+
+* Dataset folders are selected by exact name. Before, a substring match could
+  read the `nep2023confirmed` folder for `nep`.
+
+* Equidistant parallel branches (one stored reversed) are matched to the first
+  branch name. Before, the choice depended on unrelated rows in the same file.
+
+* [build_transmission_projects][] stages several upgrades of one existing branch
+  (`<branch>_upgraded`, `<branch>_upgraded2`, ...) in build-year order instead of
+  failing with duplicate indexes. Same-year upgrades of one branch are kept once
+  (first in include order). Before, an upgrade in a second plan of a branch
+  already upgraded by a first plan was counted twice.
+
+* New projects are compared with previously added projects by their source
+  coordinates, not by the bus positions those projects were snapped to. Before,
+  identical projects from two plans (e.g. NEP and TYNDP) with endpoints far from
+  a network bus were added twice.
+
+* An upgrade that changes the voltage level no longer inherits the line type of
+  the existing branch (e.g. a 220 kV conductor type on a 380 kV upgrade), which
+  had understated the upgraded rating.
+
+* An upgrade that no single existing branch spans (a corridor split at
+  intermediate buses) now upgrades the shortest chain of existing branches of
+  one voltage level, if the chain is at most twice the straight distance
+  between its ends. Chained branches keep their own length. Before, such
+  upgrades (e.g. Vöhringen-Westtirol, TYNDP 689/NEP P74 M96) were dropped.
+
+* Upgrades that match no existing branch are now always logged. Before, the
+  warning was hidden whenever other upgrades matched in both directions.
+
+* `report_transmission_projects` books capacity changes at commissioning
+  events (`start < build_year <= end`); each upgrade retires its immediate
+  predecessor once. Before, a stage commissioned and superseded within one
+  interval, or a predecessor's lifetime end, could count a loss twice.
+  Undated projects keep a missing net change.
+
+* Split pieces keep all values of their parent line, including `dc` and
+  `i_nom`; project lines bring only the columns the network already has.
+  Before, a missing `dc` made [cluster_network][] fail.
+
+* [cluster_network][] groups lines by `build_year` and `lifetime`. Before,
+  lines retired by upgrades in different years (all with build year 1990)
+  were merged with a capacity-weighted lifetime, so their capacity left the
+  network up to several years too early or too late (up to 9 GW of German
+  cross-region capacity at a planning horizon).
+
+* With administrative clustering, [cluster_network][] places each cluster bus
+  at the pole of inaccessibility of the region assigned by the busmap. Before,
+  a second nearest-region join (largest polygon only, in degrees, across all
+  countries) could place a bus in a neighbouring region. Hamburg (DE60) then
+  shared the coordinates of DE93, the line between them had zero length and
+  zero reactance, and solving failed with `SVD did not converge`.
+
 ## PyPSA-Eur v2026.08.0 (19th August 2026)
 
 **Features**

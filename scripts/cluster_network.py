@@ -397,6 +397,8 @@ def clustering_for_n_clusters(
         aggregation_strategies = dict()
 
     line_strategies = dict(aggregation_strategies.get("lines", {}))
+    # lines retired by upgrades share build_year 1990; averaging would shift retirements
+    line_strategies |= dict(build_year="first", lifetime="first")
 
     bus_strategies = dict(aggregation_strategies.get("buses", {}))
     bus_strategies.setdefault("substation_lv", lambda x: bool(x.sum()))
@@ -407,7 +409,7 @@ def clustering_for_n_clusters(
         busmap,
         bus_strategies=bus_strategies,
         line_strategies=line_strategies,
-        custom_line_groupers=["build_year"],
+        custom_line_groupers=["build_year", "lifetime"],
     )
 
     return clustering
@@ -628,33 +630,10 @@ def update_bus_coordinates(
     admin_regions["x"] = admin_regions["poi"].x
     admin_regions["y"] = admin_regions["poi"].y
 
-    busmap_df = pd.DataFrame(busmap)
-
-    # Determine admin for each bus via spatial join of bus coordinates
-    # to the administrative polygons
-    buses_gdf = gpd.GeoDataFrame(
-        n.buses[["x", "y"]].copy(),
-        geometry=gpd.points_from_xy(n.buses["x"], n.buses["y"]),
-        crs=geo_crs,
-    )
-
-    # Find nearest admin region for each bus
-    admin_geo = admin_regions.copy()
-    admin_geo["admin_id"] = admin_geo.index
-    joined = gpd.sjoin_nearest(buses_gdf, admin_geo, how="left")
-    busmap_df["admin"] = joined["admin_id"].astype(str).reindex(busmap_df.index)
-
-    busmap_df = pd.merge(
-        busmap_df,
-        admin_regions[["x", "y"]],
-        left_on="admin",
-        right_index=True,
-        how="left",
-    )
-
-    # Update x, y coordinates of original network
-    n.buses["x"] = busmap_df["x"]
-    n.buses["y"] = busmap_df["y"]
+    # a second spatial join can disagree with the busmap near borders
+    xy = admin_regions.loc[busmap.values, ["x", "y"]].set_axis(busmap.index)
+    n.buses["x"] = xy["x"]
+    n.buses["y"] = xy["y"]
 
 
 if __name__ == "__main__":
