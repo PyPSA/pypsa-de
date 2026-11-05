@@ -1,0 +1,9 @@
+group,status,cancelled,advanced,censored,n,p_cancel,cum_cancel
+lines > 0 km,under_consideration,94,124,139,357,43.0,43.0
+lines > 0 km,confirmed,5,115,18,138,4.0,45.0
+lines > 0 km,in_permitting,5,99,65,169,5.0,48.0
+lines > 0 km,under_construction,0,67,53,120,0.0,48.0
+lines > 20 km,under_consideration,70,100,98,268,41.0,41.0
+lines > 20 km,confirmed,3,96,12,111,3.0,43.0
+lines > 20 km,in_permitting,1,78,54,133,1.0,44.0
+lines > 20 km,under_construction,0,43,44,87,0.0,44.0

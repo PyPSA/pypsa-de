@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20261027-NUTS2-365h-2025EXO-2030EXO-2035EXO-10-50-40-new-plots
+  prefix: 20261105-NUTS2-365h-2028EXO-2031EXO-2034EXO-10-70-20-grid-data-update-bug-fix
   name:
   # - KN2045_Bal_v5
   - KN2045_Bal_v5_abroad_capa_freeze
@@ -769,13 +769,6 @@ offshore_nep_force:
   delay_years: 2
 
 scale_capacity:
-  # Corrects the existing DE gas fleet that add_existing_baseyear installs (ppm
-  # under-represents it) to its real current output capacity. Year-independent:
-  # applied at the base year (min planning_horizons) of any run - myopic [2025, ...]
-  # fires at 2025 and freezes the fleet non-extendable (historical start), direct
-  # [2030]/[2035]/[2040] fires at that single year and leaves it extendable (gives
-  # today's fleet, lets the model optimise on top). Later myopic brownfield years
-  # are left to the pathway.
   DE:
     OCGT: 200  # at the moment there are way too little OCGT in ppm, this has to be fixed there. I am using this scaling function only to set extendable false
     CCGT: 10000
@@ -785,6 +778,9 @@ scale_capacity:
 data:
   ariadne_database:
     source: archive
+    version: latest
+  swiss_energy_balances:
+    source: archive 
     version: latest
   ariadne_database_internal:
     source: primary
@@ -818,7 +814,7 @@ stochastic_grid_scenarios:
   # here only to override that target with an explicit subset.
   planning_horizons: [2035] # !!! cannot be set per scenario atm (see doc/configuration.md#per_scenario_limits); grid-analysis target year; empty = max(scenario.planning_horizons) (the final/target year), or set an explicit subset to override
   outside_de_grid: 2035_exogen # transmission grid outside DE: "<year>_exogen" (committed by <year>, non-extendable) or "endogenous" (freely extendable)
-  freeze_outside_de_capacities: false # freeze foreign (non-DE) NON-grid capacities (generation/storage/conversion, gas+H2 pipelines, distribution - NOT the AC lines / DC links outside_de_grid controls) to a solved reference, non-extendable: false (off) | "optimal" (the plain solved network) | "<grid_scenario>" (that solved deterministic topology variant, e.g. "2035_exogen"); always at the analysis year. Applied to every variant except the source itself, so the stochastic solve waits for that deterministic/optimal solve.
+  freeze_outside_de_capacities: false # freeze foreign (non-DE) NON-grid capacities (generation/storage/conversion, gas+H2 pipelines, distribution - NOT the AC lines / DC links outside_de_grid controls) to a solved reference, non-extendable: false (off) | "optimal" (the plain solved network) | "<grid_scenario>" (that solved deterministic topology variant, e.g. "2035_exogen"; may be outside `scenarios`, then solved as an extra reference only); always at the analysis year. Applied to every variant except the source itself, so the stochastic solve waits for that deterministic/optimal solve.
   freeze_trade: false # cap DE gross imports per carrier at a reference level times a margin; false (off) or a {carrier: "<ref><±margin>"} mapping. carriers: AC, DC, H2, gas, "renewable gas", "renewable oil", methanol, oil. ref: "optimal" or a grid_scenario (solved, at the analysis year). margin: "<ref>" (1.0x), "<ref>+10"/"<ref>-10" (1.10x/0.90x), "1.1<ref>" (scenario refs must use the +/-pct form). Each grid solve gets the cap; a carrier whose ref is this variant is skipped, so the stochastic solve waits for the referenced solve. Example:
   #   freeze_trade: {AC: optimal, DC: optimal, H2: "optimal+10", gas: "optimal-10"}
   solve_endogenous_optimal: true # !!! cannot be set per scenario atm (see doc/configuration.md#per_scenario_limits); also build the endogenous all-free reference network (no grid override); opt-in, not part of the WS/SP/EEV/EVPI/ECIU comparison
@@ -841,12 +837,12 @@ stochastic_grid_scenarios:
   scope: de_and_interconnectors
   # !!! the SET of scenario names cannot be set per scenario atm (see doc/configuration.md#per_scenario_limits); their probabilities / CSV paths below ARE per-run
   scenarios:
-    2025_exogen:
+    2028_exogen:
       probability: 0.1
-    2030_exogen:
-      probability: 0.5
-    2035_exogen:
-      probability: 0.4
+    2031_exogen:
+      probability: 0.7
+    2034_exogen:
+      probability: 0.2
     # Examples - uncomment and re-balance probabilities to sum to 1:
     # 2030_exogen:            # delay every branch built after 2030
     #   probability: 0.33

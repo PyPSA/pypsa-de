@@ -1,0 +1,5 @@
+status,n,delayed_pct,unchanged_pct,earlier_pct,mean_delay,mean_if_delayed,n_lb,delayed_pct_lb,unchanged_pct_lb,earlier_pct_lb,mean_delay_lb,mean_if_delayed_lb
+under_consideration,17.0,71.0,0.0,29.0,2.4,4.2,205.0,59.0,30.0,11.0,3.5,6.6
+confirmed,26.0,85.0,4.0,12.0,2.7,3.7,133.0,70.0,10.0,20.0,3.4,5.8
+in_permitting,54.0,80.0,13.0,7.0,2.6,3.4,137.0,73.0,18.0,9.0,3.3,4.7
+under_construction,55.0,53.0,40.0,7.0,1.2,2.4,67.0,57.0,37.0,6.0,1.8,3.3
