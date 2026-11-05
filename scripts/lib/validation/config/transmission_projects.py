@@ -55,6 +55,10 @@ class TransmissionProjectsConfig(BaseModel):
         "zero",
         description="Whether to set the new link capacity to the provided capacity or set it to zero.",
     )
+    new_lines_in_base_until: int | None = Field(
+        None,
+        description="New lines (not upgrades) built by this year are assumed to be in the base network already and are skipped. Upgrades are always added; the line they replace retires in their build year.",
+    )
     overlap_decisions: str | None = Field(
         None,
         description="Optional CSV of reviewed decisions for upgrades of the same branch by several included plans (e.g. NEP and TYNDP). Without it, the first included plan is kept on a shared branch and the collision is logged.",

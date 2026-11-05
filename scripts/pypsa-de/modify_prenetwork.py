@@ -1381,16 +1381,25 @@ def force_connection_nep_offshore(n, current_year, costs):
             )
 
 
-def drop_duplicate_transmission_projects(n):
-    year = 2024
+def retire_replaced_lines(n, built_until):
+    """
+    Deactivate lines replaced by an upgrade built by ``built_until``.
 
-    logger.info(
-        f"Dropping transmission projects with build year <= {year}. They are likely already in the OSM base network."
-    )  # Maybe one 2024 line is missing in the OSM base network
+    build_transmission_projects gives a replaced line a dummy build year 1990
+    and a lifetime that ends in the build year of its upgrade. A single-period
+    solve ignores build year and lifetime, so the line is deactivated here.
 
-    to_drop = n.lines.query("0 < build_year <= @year").index
-
-    n.remove("Line", to_drop)
+    Parameters
+    ----------
+    n : pypsa.Network
+    built_until : float
+        Last build year of the projects active in this network: the planning
+        year if later projects are deactivated, else ``inf``.
+    """
+    end = n.lines.build_year + n.lines.lifetime
+    retired = n.lines.index[np.isfinite(end) & (end <= built_until)]
+    n.lines.loc[retired, "active"] = False
+    logger.info(f"Deactivated {len(retired)} line(s) replaced by upgrades built by {built_until}.")
 
 
 def scale_capacity(n, scaling):
@@ -1607,7 +1616,8 @@ if __name__ == "__main__":
 
     enforce_transmission_project_build_years(n, current_year)
 
-    drop_duplicate_transmission_projects(n)
+    early = snakemake.params.deactivate_early_transmission_expansion
+    retire_replaced_lines(n, current_year if current_year in early else np.inf)
 
     force_connection_nep_offshore(n, current_year, costs)
 

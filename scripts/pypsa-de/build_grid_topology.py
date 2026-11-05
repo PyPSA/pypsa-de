@@ -86,7 +86,9 @@ def _set_line_capacity(n, s_nom_new):
 
     A corridor delayed to ``s_nom=0`` is absent, so it is removed from the
     network - and thus from the Kirchhoff cycle - rather than left as a
-    phantom cycle that would distort flows on the rest of its loop.
+    phantom cycle that would distort flows on the rest of its loop. A corridor
+    with positive capacity is activated: a line the canvas retired (replaced by
+    a later upgrade) is back in service where the scenario still needs it.
 
     ``n`` must still hold the canvas (fully-built) values when called; only
     deterministic/eev single-scenario networks are passed here. The stochastic
@@ -109,6 +111,7 @@ def _set_line_capacity(n, s_nom_new):
     lines.loc[live, "num_parallel"] *= frac[live]
     lines.loc[live, "s_nom"] = s_nom_new[live]
     lines.loc[live, "s_nom_extendable"] = False
+    lines.loc[live, "active"] = True
     if len(dropped):
         n.remove("Line", list(dropped))
     logger.info(
@@ -203,6 +206,7 @@ def build_stochastic_topology(n, scenarios_cfg, clusters):
     probabilities = {name: cfg["probability"] for name, cfg in scenarios_cfg.items()}
     n.set_scenarios(probabilities)
 
+    needed = pd.Index([])
     for name, cfg in scenarios_cfg.items():
         for component, key in CSV_KEYS.items():
             path = cfg.get(key)
@@ -215,8 +219,14 @@ def build_stochastic_topology(n, scenarios_cfg, clusters):
             idx = pd.MultiIndex.from_product([[name], df.index])
             if component == "Line":
                 _scale_scenario_line_capacity(static, idx, df["s_nom"])
+                needed = needed.union(df.index[df["s_nom"] > 0])
             else:
                 _apply_overrides(static, df.set_axis(idx), component, path)
+
+    # a canvas-retired line is back in service in every slice if any scenario
+    # needs it; zero-capacity slices leave the KVL via add_scenario_kvl
+    lines = n.components["Line"].static
+    lines.loc[lines.index.get_level_values("name").isin(needed), "active"] = True
     return n
 
 
@@ -233,8 +243,9 @@ def apply_outside_de_grid(n, spec):
 
     ``spec`` is ``"endogenous"`` (foreign grid stays as prepared, i.e. freely
     optimisable) or ``"<year>_exogen"`` (foreign AC lines and DC links are
-    floored to the capacity committed by ``<year>``, i.e. ``build_year <= year``,
-    and made non-extendable; not-yet-committed foreign branches are dropped). Only
+    floored to the capacity in service in ``<year>``, i.e. ``build_year <= year
+    < build_year + lifetime``, and made non-extendable; foreign branches not in
+    service are dropped). Only
     foreign-foreign branches are touched - DE and interconnector branches are the
     uncertain grid set by the scenario override and are left to
     build_grid_topology. Must run on the plain network before set_scenarios.
@@ -255,14 +266,17 @@ def apply_outside_de_grid(n, spec):
         c0, c1 = static.bus0.map(country), static.bus1.map(country)
         return ~c0.eq("DE") & ~c1.eq("DE") & (c0.isin(foreign) | c1.isin(foreign))
 
+    def in_service(static):
+        return (static.build_year <= year) & (year < static.build_year + static.lifetime)
+
     lines = n.components["Line"].static
     fl = lines.index[foreign_mask(lines)]
-    s_nom_new = lines.loc[fl, "s_nom"].where(lines.loc[fl, "build_year"] <= year, 0.0)
+    s_nom_new = lines.loc[fl, "s_nom"].where(in_service(lines.loc[fl]), 0.0)
     _set_line_capacity(n, s_nom_new)
 
     links = n.components["Link"].static
     fk = links.index[foreign_mask(links) & (links.carrier == "DC")]
-    p_nom_new = links.loc[fk, "p_nom"].where(links.loc[fk, "build_year"] <= year, 0.0)
+    p_nom_new = links.loc[fk, "p_nom"].where(in_service(links.loc[fk]), 0.0)
     links.loc[fk, "p_nom"] = p_nom_new
     links.loc[fk, "p_nom_extendable"] = False
 
@@ -346,12 +360,26 @@ def freeze_outside_de_capacities(n, n_source):
 
 
 def build_grid_topology(n, grid_scenario, scenarios_cfg, clusters):
+    """
+    Build the topology variant, then remove lines still inactive.
+
+    Such lines are retired in the canvas and needed by no scenario, so they must
+    not enter a Kirchhoff cycle.
+    """
     if grid_scenario == "stochastic":
-        return build_stochastic_topology(n, scenarios_cfg, clusters)
+        build_stochastic_topology(n, scenarios_cfg, clusters)
     elif grid_scenario == "eev":
-        return build_eev_topology(n, scenarios_cfg, clusters)
+        build_eev_topology(n, scenarios_cfg, clusters)
     else:
-        return build_deterministic_topology(n, scenarios_cfg[grid_scenario], clusters)
+        build_deterministic_topology(n, scenarios_cfg[grid_scenario], clusters)
+
+    active = n.components["Line"].static.active
+    if isinstance(active.index, pd.MultiIndex):
+        active = active.groupby(level="name").any()
+    retired = active.index[~active]
+    n.remove("Line", retired)
+    logger.info("Removed %d retired line(s) no scenario needs.", len(retired))
+    return n
 
 
 if __name__ == "__main__":

@@ -55,6 +55,28 @@
 
 **Bugfixes (transmission projects)**
 
+* Lines replaced by an upgrade now stay in service until the upgrade is built.
+  Before, `modify_prenetwork` dropped every line with `0 < build_year <= 2024`
+  to skip projects already in the OSM base network. This also removed the
+  replaced lines, which carry the dummy build year 1990, and the 2023/24
+  upgrades. Every grid year then lacked the old lines of all later upgrades
+  (with NEP23 + TYNDP22 at NUTS2: about 80 GW AC in Germany in 2028, 37 GW in
+  2035). Now:
+  - [add_transmission_projects_and_dlr][] skips only new lines (no
+    `replaced_asset`) built by `transmission_projects: new_lines_in_base_until`;
+    upgrades are always added.
+  - `modify_prenetwork` deactivates a replaced line from the build year of its
+    upgrade (`build_year + lifetime`).
+  - The grid scenarios (`build_grid_scenario_csvs`, `outside_de_grid`) count a
+    line only while in service, `build_year <= year < build_year + lifetime`.
+    `build_grid_topology` reactivates a replaced line where a scenario still
+    needs it and removes it otherwise.
+  - Inactive lines and DC links keep `*_nom_opt = *_nom` in a solved network.
+    `export_ariadne_variables` (`Capacity|Electricity|Transmission|AC/DC`),
+    `plot_grid_scenario_comparison` (grid capacity tables) and `*_optimal`
+    grid scenarios now count active branches only. Before, they also counted
+    future projects deactivated in early pathway years.
+
 * Dataset folders are selected by exact name. Before, a substring match could
   read the `nep2023confirmed` folder for `nep`.
 

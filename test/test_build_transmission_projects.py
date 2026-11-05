@@ -48,3 +48,18 @@ def test_split_pieces_replace_their_base_branch(tmp_path):
         n, [tmp_path / "new_buses.csv", tmp_path / "new_lines.csv"]
     )
     assert sorted(n.lines.index) == ["base#0", "base#1", "new"]
+
+
+def test_new_lines_already_in_base_are_skipped_but_upgrades_kept(tmp_path):
+    (tmp_path / "new_lines.csv").write_text(
+        ",bus0,bus1,length,build_year,replaced_asset\n"
+        "built,a,b,1,2023,\n"
+        "upgrade,a,b,1,2023,base\n"
+        "future,a,b,1,2030,\n"
+    )
+    n = pypsa.Network()
+    n.add("Bus", ["a", "b"], v_nom=380.0)
+    attach_transmission_projects(
+        n, [tmp_path / "new_lines.csv"], new_lines_in_base_until=2024
+    )
+    assert sorted(n.lines.index) == ["future", "upgrade"]

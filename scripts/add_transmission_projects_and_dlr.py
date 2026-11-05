@@ -19,8 +19,23 @@ logger = logging.getLogger(__name__)
 
 
 def attach_transmission_projects(
-    n: pypsa.Network, transmission_projects: list[str]
+    n: pypsa.Network,
+    transmission_projects: list[str],
+    new_lines_in_base_until: int | None = None,
 ) -> None:
+    """
+    Add transmission projects to the network.
+
+    Parameters
+    ----------
+    n : pypsa.Network
+    transmission_projects : list[str]
+        Paths of the CSVs written by build_transmission_projects.
+    new_lines_in_base_until : int, optional
+        New lines (no ``replaced_asset``) built by this year are assumed to be in
+        the base network already and are skipped. Upgrades are always added: the
+        line they replace retires by its lifetime.
+    """
     logger.info("Adding transmission projects to network.")
     for path in transmission_projects:
         path = Path(path)
@@ -32,6 +47,11 @@ def attach_transmission_projects(
         elif "new_buses" in path.name:
             n.add("Bus", df.index, **df)
         elif "new_lines" in path.name:
+            if new_lines_in_base_until is not None:
+                built = df.build_year.between(1, new_lines_in_base_until)
+                in_base = df.index[built & df.replaced_asset.isna()]
+                logger.info(f"Skipping {len(in_base)} new line(s) assumed in base network.")
+                df = df.drop(in_base)
             if "split_of" in df:
                 n.remove("Line", df.split_of.dropna().unique())
             # project metadata would block line aggregation in clustering
@@ -87,7 +107,11 @@ if __name__ == "__main__":
     n = pypsa.Network(snakemake.input.network)
 
     if params["transmission_projects"]["enable"]:
-        attach_transmission_projects(n, snakemake.input.transmission_projects)
+        attach_transmission_projects(
+            n,
+            snakemake.input.transmission_projects,
+            params["transmission_projects"].get("new_lines_in_base_until"),
+        )
 
     if params["dlr"]["activate"]:
         rating = xr.open_dataarray(snakemake.input.dlr).to_pandas().transpose()

@@ -1252,7 +1252,8 @@ def grid_capacity_volume(n, tol=1e-3):
     single-scenario network.
 
     Scope = DE internal (both ends DE) + DE interconnectors (one end DE).
-    Active = optimised capacity > ``tol``. Volume = capacity * line length.
+    Active = ``active`` flag set and optimised capacity > ``tol``. Volume =
+    capacity * line length.
     Returns a (asset, scope) frame with AC/DC subtotals ("Sum") and a grand
     total ("TOTAL", "de_and_interconnectors").
     """
@@ -1261,7 +1262,7 @@ def grid_capacity_volume(n, tol=1e-3):
     def part(df, cap_col):
         c0, c1 = df.bus0.map(country), df.bus1.map(country)
         both, one = (c0 == "DE") & (c1 == "DE"), (c0 == "DE") ^ (c1 == "DE")
-        act = df[cap_col] > tol
+        act = df.active & (df[cap_col] > tol)
         rows = {}
         for scope, m in [("DE internal", both & act), ("DE interconnector", one & act)]:
             cap, length = df.loc[m, cap_col], df.loc[m, "length"]

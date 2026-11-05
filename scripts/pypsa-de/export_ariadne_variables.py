@@ -5121,12 +5121,15 @@ def get_grid_capacity(n, region, year):
     ## Transmission Grid
     # TODO add offwind (requires changes in modify_prenetwork!)
 
+    # inactive branches (future projects, lines replaced by upgrades) keep
+    # *_nom_opt = *_nom and must not count as capacity
     dc_links = n.links[
         (n.links.carrier == "DC")
         & (n.links.bus0 + n.links.bus1).str.contains(region)
         & ~n.links.reversed
+        & n.links.active
     ]
-    ac_lines = n.lines[(n.lines.bus0 + n.lines.bus1).str.contains(region)]
+    ac_lines = n.lines[(n.lines.bus0 + n.lines.bus1).str.contains(region) & n.lines.active]
 
     # Count length of internationl links only half
     dc_links.loc[

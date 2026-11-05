@@ -206,3 +206,47 @@ def test_stochastic_scales_impedance_per_scenario(tmp_path):
     assert n.lines.xs("L1", level="name")["s_nom"].to_dict() == pytest.approx(
         {"a": 100.0, "b": 0.0}
     )
+
+
+def _add_retired(n, name, s_nom=100.0, **kw):
+    """A line replaced by an upgrade and therefore inactive in the canvas."""
+    kw = {"bus0": "A", "bus1": "B", "type": "t", "carrier": "AC", "length": 100.0, **kw}
+    n.add("Line", name, num_parallel=1.0, s_nom=s_nom, build_year=1990, lifetime=40, active=False, **kw)
+
+
+def test_deterministic_revives_retired_line_and_drops_unused(tmp_path):
+    n = _canvas()
+    _add_retired(n, "R")
+    _add_retired(n, "Q")
+    cfg = _write_csvs(tmp_path, {"R": 100.0}, {"K1": 500.0})
+
+    bgt.build_grid_topology(n, "a", {"a": cfg}, clusters="x")
+
+    assert n.lines.at["R", "active"]
+    assert "Q" not in n.lines.index
+
+
+def test_stochastic_revives_retired_line_if_any_scenario_needs_it(tmp_path):
+    scenarios = {}
+    for sub, r in {"a": 100.0, "b": 0.0}.items():
+        cfg = _write_csvs(tmp_path / sub, {"R": r}, {"K1": 500.0})
+        scenarios[sub] = {"probability": 0.5, **cfg}
+    n = _canvas()
+    _add_retired(n, "R")
+    _add_retired(n, "Q")
+
+    bgt.build_grid_topology(n, "stochastic", scenarios, clusters="x")
+
+    assert n.lines.xs("R", level="name")["active"].all()
+    assert "Q" not in n.lines.index.unique("name")
+
+
+@pytest.mark.parametrize("spec, alive", [("2030_exogen", True), ("2035_exogen", False)])
+def test_outside_de_grid_keeps_replaced_line_until_its_upgrade(spec, alive):
+    n = _canvas_with_countries()
+    n.add(
+        "Line", "fr_rep", bus0="FR1", bus1="FR2", type="t", length=100.0, carrier="AC",
+        num_parallel=1.0, s_nom=100.0, build_year=1990, lifetime=45, active=False,
+    )
+    bgt.apply_outside_de_grid(n, spec)
+    assert ("fr_rep" in n.lines.index and n.lines.at["fr_rep", "active"]) == alive

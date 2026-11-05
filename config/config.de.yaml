@@ -754,6 +754,7 @@ transmission_projects:
   - under_construction
   - commissioned
   new_link_capacity: keep #keep or zero
+  new_lines_in_base_until: 2024 # new lines (not upgrades) built by this year are assumed to be in the OSM base network and skipped
   overlap_decisions: data/transmission_projects/overlap_decisions.csv
 
 onshore_nep_force:

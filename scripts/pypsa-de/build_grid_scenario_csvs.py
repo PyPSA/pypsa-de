@@ -82,19 +82,22 @@ def branch_table(n, component, horizon, gate_lines=False):
     """
     One row per branch: effective capacity, build_year, endpoint countries.
 
-    Capacity is the solved value if the network is solved (any ``*_nom_opt >
-    0``), else the nominal value. For an unsolved network, not-yet-due branches
-    (``build_year > horizon``) are floored to 0 - always for DC Links, and for
-    AC Lines only when ``gate_lines`` is set (matching grid_topology.ipynb).
+    Capacity is the solved value of active branches if the network is solved
+    (any ``*_nom_opt > 0``; inactive ones keep ``*_nom_opt = *_nom``), else the
+    nominal value. For an unsolved network, branches not in
+    service at ``horizon`` are floored to 0 - not yet built (``build_year >
+    horizon``) or replaced by an upgrade (``build_year + lifetime <= horizon``) -
+    always for DC Links, and for AC Lines only when ``gate_lines`` is set
+    (matching grid_topology.ipynb).
     """
     nom = NOM_ATTR[component]
     df = _branches(n, component)
     opt = df[f"{nom}_opt"]
     if (opt > 0).any():
-        capacity = opt
+        capacity = opt.where(df.active, 0.0)
     elif component == "Link" or gate_lines:
-        not_yet_due = df.build_year > horizon
-        capacity = df[nom].where(~not_yet_due, 0.0)
+        in_service = (df.build_year <= horizon) & (horizon < df.build_year + df.lifetime)
+        capacity = df[nom].where(in_service, 0.0)
     else:
         capacity = df[nom]
     return pd.DataFrame(
@@ -177,7 +180,8 @@ def scenario_table(source, canvas, component, year, kind, scope, carrier=None, d
     )
     undelayed = table.index[~delay]
     if len(undelayed):
-        canvas_nom = _branches(canvas, component)[nom].reindex(undelayed)
+        branches = _branches(canvas, component)
+        canvas_nom = branches[nom].where(branches.active, 0.0).reindex(undelayed)
         table.loc[undelayed, "capacity_mw"] = canvas_nom.to_numpy()
 
     out = table[["capacity_mw"]].rename(columns={"capacity_mw": nom})
