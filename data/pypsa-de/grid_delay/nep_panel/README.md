@@ -9,8 +9,9 @@ Definitions: `nep_panel/docs/data.md`. Analysis: `nep_panel/reports/2026-11-04_p
 | `lines.csv` | nep_panel `build.py` | one row per line: outcome, commissioning date and precision |
 | `delay_table.csv`, `cancellation.csv` | nep_panel `analysis.py` | Tables 1 and 2, used by the explorer's self-check |
 | `delay_pmf.csv` | `notebooks/nep_panel_delay_explorer.ipynb` | delay distribution per status: status, delay (years, `inf` = beyond all observed), probability |
+| `delay_pmf_boot.csv` | same | bootstrap estimates of the delay distribution: status, rep, delay, probability |
 | `cancel_rate.csv` | same | probability of cancellation before commissioning per status, with counts |
-| `delay_correlation.csv` | same | delay correlation: level (period, project), rho, 90 % interval (lo, hi), groups |
+| `delay_correlation.csv` | same | delay correlation: level (period), rho, 90 % interval (lo, hi), groups |
 
-`notebooks/build_probabilities_from_nep_panel.ipynb` reads the last three. `data/pypsa-de/` is allowlisted in `.gitignore`,
+`notebooks/build_probabilities_from_nep_panel.ipynb` reads the last four. `data/pypsa-de/` is allowlisted in `.gitignore`,
 so these files can be versioned.
