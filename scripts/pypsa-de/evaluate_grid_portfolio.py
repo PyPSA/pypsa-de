@@ -19,6 +19,7 @@ canvas network before calling it.
 import copy
 import logging
 
+import numpy as np
 import pandas as pd
 import pypsa
 from linopy.constants import TerminationCondition
@@ -171,7 +172,19 @@ def check_co2_slack(n: pypsa.Network) -> dict:
     return used
 
 
-def solve_with_fallback(n: pypsa.Network, solve_kwargs: dict, fallback: list) -> tuple:
+def relative_gap(n: pypsa.Network) -> float:
+    """Relative primal-dual gap of the last gurobi solve (`ObjVal` vs `ObjBound`).
+
+    Barrier without crossover can report 'optimal' while the unscaled gap is
+    orders of magnitude above `BarConvTol`, which inflates the ST cost.
+    """
+    sm = n.model.solver_model
+    return abs(sm.ObjVal - sm.ObjBound) / abs(sm.ObjVal)
+
+
+def solve_with_fallback(
+    n: pypsa.Network, solve_kwargs: dict, fallback: list, max_rel_gap: float
+) -> tuple:
     """Solve `n.model`, escalating solver options only if a solve stays non-optimal.
 
     Tier 1 is the plain config in `solve_kwargs` - the same barrier (crossover
@@ -182,14 +195,17 @@ def solve_with_fallback(n: pypsa.Network, solve_kwargs: dict, fallback: list) ->
     solver_options merged onto the base and retried, cheapest-first (e.g.
     BarHomogeneous, then crossover): the cost of the robust knobs is paid only
     for a cell that still stalls, never on the critical path of every solve.
-    Returns the final (status, condition).
+    An 'optimal' solve whose `relative_gap` exceeds `max_rel_gap` also
+    escalates. Returns the final (status, condition, gap).
     """
     base = solve_kwargs.get("solver_options", {})
     attempts = [{}, *(fallback or [])]
     for i, extra in enumerate(attempts):
         kwargs = {**solve_kwargs, "solver_options": {**base, **extra}}
         status, condition = n.optimize.solve_model(**kwargs)
-        if status == "ok" and condition == TerminationCondition.optimal:
+        optimal = status == "ok" and condition == TerminationCondition.optimal
+        gap = relative_gap(n) if optimal else np.inf
+        if gap <= max_rel_gap:
             if i:
                 logger.info(
                     "ST dispatch solve reached optimality on fallback tier %d "
@@ -197,15 +213,16 @@ def solve_with_fallback(n: pypsa.Network, solve_kwargs: dict, fallback: list) ->
                     i,
                     extra,
                 )
-            return status, condition
+            return status, condition, gap
         logger.warning(
-            "ST dispatch solve attempt %d/%d ended '%s'/'%s'",
+            "ST dispatch solve attempt %d/%d ended '%s'/'%s' with relative gap %.2e",
             i + 1,
             len(attempts),
             status,
             condition,
+            gap,
         )
-    return status, condition
+    return status, condition, gap
 
 
 def transplant_optimal_capacities(canvas: pypsa.Network, portfolio: pypsa.Network) -> None:
@@ -267,6 +284,7 @@ if __name__ == "__main__":
     canvas.optimize.fix_optimal_capacities()
 
     solve_opts = with_load_shedding_carriers(snakemake.params.solving["options"], canvas)
+    np.random.seed(solve_opts.get("seed", 123))  # noisy_costs, as in solve_network
     prepare_network(
         canvas,
         solve_opts=solve_opts,
@@ -292,14 +310,17 @@ if __name__ == "__main__":
         planning_horizons=planning_horizons,
     )
     fallback = snakemake.params.solving.get("solve_fallback", [])
-    status, condition = solve_with_fallback(canvas, solve_kwargs, fallback)
-    if condition != TerminationCondition.optimal:
+    max_rel_gap = snakemake.params.solving["options"]["max_rel_gap"]
+    status, condition, gap = solve_with_fallback(
+        canvas, solve_kwargs, fallback, max_rel_gap
+    )
+    if gap > max_rel_gap:
         raise RuntimeError(
-            f"Dispatch-only solve did not reach optimality after {len(fallback) + 1} "
-            f"attempt(s): status '{status}', condition '{condition}'. A non-optimal "
-            "dispatch does not physically balance (it breaks the Ariadne "
-            "fuel-fraction export), so its cost is not a valid comparison; refusing "
-            "to write it."
+            f"Dispatch-only solve did not converge after {len(fallback) + 1} "
+            f"attempt(s): status '{status}', condition '{condition}', relative gap "
+            f"{gap:.2e} > {max_rel_gap:.0e}. A non-converged dispatch misprices the "
+            "portfolio (and a non-optimal one breaks the Ariadne fuel-fraction "
+            "export), so its cost is not a valid comparison; refusing to write it."
         )
 
     shed_fraction = check_load_shedding(canvas)
@@ -310,5 +331,6 @@ if __name__ == "__main__":
         wildcards=dict(snakemake.wildcards),
         load_shed_fraction=shed_fraction,
         co2_slack_used=co2_slack_used,
+        relative_gap=gap,
     )
     canvas.export_to_netcdf(snakemake.output.network)

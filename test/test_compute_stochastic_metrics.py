@@ -13,6 +13,7 @@ for every portfolio except the freeze source) must raise.
 
 import importlib.util
 import sys
+from types import SimpleNamespace
 
 import pandas as pd
 import pypsa
@@ -39,12 +40,12 @@ def _matrix(rows: dict[str, list[float]]) -> pd.DataFrame:
 def _valid_matrix() -> pd.DataFrame:
     """
     Each diagonal cell is the column min; stochastic is min of `expected`.
-    The 2030 diagonal is beaten by stochastic by 0.03% - within tolerance.
+    The 2030 diagonal is beaten by stochastic by 0.005% - within tolerance.
     """
     return _matrix(
         {
             "2025_exogen": [100.0, 130.0, 140.0, 115.0],
-            "2030_exogen": [110.0, 100.03, 125.0, 118.0],  # stochastic beats by 0.03%
+            "2030_exogen": [110.0, 100.005, 125.0, 118.0],  # stochastic beats by 0.005%
             "2035_exogen": [120.0, 115.0, 100.0, 116.0],
             "eev": [135.0, 120.0, 118.0, 121.0],
             "stochastic": [101.0, 100.0, 101.0, 99.0],
@@ -79,10 +80,17 @@ def test_stochastic_not_expected_cheapest_raises():
         csm.assert_wait_and_see_optimality(m, GRID_SCENARIO_NAMES)
 
 
-def test_violation_within_tolerance_passes():
+@pytest.mark.parametrize("factor, ok", [(0.5, True), (2.0, False)])
+def test_violation_tolerance(factor, ok):
+    """eev beats the 2025 diagonal by `factor` x WAIT_AND_SEE_RTOL."""
     m = _valid_matrix()
-    m.loc["eev", "2025_exogen"] = m.loc["2025_exogen", "2025_exogen"] * (1 + 5e-3)
-    csm.assert_wait_and_see_optimality(m, GRID_SCENARIO_NAMES)
+    diag = m.loc["2025_exogen", "2025_exogen"]
+    m.loc["eev", "2025_exogen"] = diag / (1 + factor * csm.WAIT_AND_SEE_RTOL)
+    if ok:
+        csm.assert_wait_and_see_optimality(m, GRID_SCENARIO_NAMES)
+    else:
+        with pytest.raises(AssertionError, match="2025_exogen"):
+            csm.assert_wait_and_see_optimality(m, GRID_SCENARIO_NAMES)
 
 
 def test_compute_metrics_ws_uses_diagonal():
@@ -139,3 +147,45 @@ def test_extra_capex_restores_optimality():
     for p in ["2025_exogen", "2030_exogen", "eev", "stochastic"]:
         m.loc[p] += 138.0
     csm.assert_wait_and_see_optimality(m, GRID_SCENARIO_NAMES)
+
+
+def _lt_network(opex: float) -> pypsa.Network:
+    """LT network with portfolio capex 20 (2 MW x 10) and objective capex + opex."""
+    n = pypsa.Network()
+    n.add("Bus", "b")
+    n.add("Generator", "g", bus="b", p_nom_extendable=True, capital_cost=10.0)
+    n.generators.loc["g", "p_nom_opt"] = 2.0
+    n._objective = 20.0 + opex  # as stored by a solve; the property has no setter
+    return n
+
+
+def _lt_st_inputs(st_opex: dict[tuple[str, str], float]):
+    names = ["2025_exogen", "2030_exogen"]
+    probs = {"2025_exogen": 0.4, "2030_exogen": 0.6}
+    topologies = {s: _lt_network(100.0) for s in names}
+    topologies["stochastic"] = _lt_network(100.0)
+    evaluations = {
+        (p, s): SimpleNamespace(objective=st_opex.get((p, s), 100.0))
+        for p in topologies
+        for s in names
+    }
+    return topologies, evaluations, names, probs
+
+
+@pytest.mark.parametrize(
+    "st_opex, ok",
+    [
+        ({}, True),
+        ({("2025_exogen", "2030_exogen"): 150.0}, True),  # off-diagonal is free
+        ({("2030_exogen", "2030_exogen"): 100.005}, True),  # within rtol
+        ({("2030_exogen", "2030_exogen"): 101.0}, False),  # loose ST solve
+        ({("stochastic", "2025_exogen"): 102.5}, False),  # E[ST] 101 vs SP 100
+    ],
+)
+def test_lt_st_consistency(st_opex, ok):
+    args = _lt_st_inputs(st_opex)
+    if ok:
+        csm.assert_lt_st_consistency(*args)
+    else:
+        with pytest.raises(AssertionError, match="does not reproduce"):
+            csm.assert_lt_st_consistency(*args)

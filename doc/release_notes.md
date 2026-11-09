@@ -69,6 +69,24 @@
   build with the run name. Before, a stale name after renaming the scenario set
   surfaced as a `MissingInputException`.
 
+**Bugfixes (stochastic grid)**
+
+* ST portfolio re-dispatch solves now run with crossover and must reach a
+  relative primal-dual gap below
+  `stochastic_grid_scenarios.evaluate_solving.options.max_rel_gap` (default
+  `1e-5`, read from gurobi `ObjVal`/`ObjBound`), escalating through
+  `solve_fallback` before failing. Before, barrier without crossover reported
+  "optimal" at gaps up to 1%, so a portfolio on its own grid cost about
+  0.7 bn EUR more than its LT solve. That noise exceeded the differences between
+  portfolios and could make the stochastic plan look worse than a deterministic
+  one. The gap is stored in `n.meta["relative_gap"]`.
+* `evaluate_grid_portfolio` seeds `noisy_costs` like `solve_network`; ST
+  draws were unseeded and not reproducible.
+* `compute_stochastic_metrics` asserts that the ST re-dispatch reproduces the
+  LT dispatch cost (each portfolio on its own grid, and the expected ST cost of
+  the stochastic portfolio vs the native SP objective) within `1e-4`. The
+  wait-and-see optimality tolerance tightens from `1e-2` to `1e-4`.
+
 **Bugfixes (transmission projects)**
 
 * Lines replaced by an upgrade now stay in service until the upgrade is built.

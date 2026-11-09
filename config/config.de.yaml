@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20261105-NUTS2-365h-2028EXO-2031EXO-2034EXO-10-70-20-grid-data-update-bug-fix
+  prefix: 20261109-NUTS2-365h-2028EXO-2031EXO-2034EXO-10-70-20-tighter-tolerances
   name:
   # - KN2045_Bal_v5
   - KN2045_Bal_v5_abroad_capa_freeze
@@ -826,11 +826,16 @@ stochastic_grid_scenarios:
     solver_options:
       gurobi-default:
         threads: 32 # make gurobi actually use 32 threads on the stochastic solve (overrides the global gurobi-default threads here only)
+        BarConvTol: 1.0e-7 # at 1e-5 the solve stopped at a 9e-5 primal-dual gap (~19 M EUR), the size of the ECIU/EVPI being measured
   evaluate_solving: # partial `solving:` block deep-merged into solving for the ST evaluate_grid_portfolio re-dispatch solves only; scoped here so tuning them doesn't rerun the finished LT solves
     # NB: runtime and mem_mb for ST runs is set via the global solving block
     options:
       co2_cap_slack:
         enable: true # soften the CO2 emission caps with a penalized elastic slack (see solving.options.co2_cap_slack): stabilises the near-infeasible year-diagonal dispatch LPs without changing the optimum
+      max_rel_gap: 1.0e-5 # fail (after solve_fallback) if gurobi's relative primal-dual gap (ObjVal vs ObjBound) exceeds this; barrier without crossover reported "optimal" at gaps up to 1e-2
+    solver_options:
+      gurobi-default:
+        crossover: 1 # the small dispatch LPs stalled at 0.1-1% gap without crossover; crossover returns an exact vertex (gap ~0) and clean prices
     solve_fallback: # re-solve only a cell that STILL ends non-optimal after the default (slack + plain barrier), escalating gurobi options cheapest-first; the costly knobs run for the rare straggler, never on the critical path (see evaluate_grid_portfolio.solve_with_fallback)
       - {BarHomogeneous: 1} # robust barrier variant; modest per-iteration overhead
       - {BarHomogeneous: 1, crossover: 1} # + crossover to recover a clean optimal vertex; expensive, last resort

@@ -11,10 +11,9 @@ here):
   investing = sum_s probability_s * cost_matrix[s, s], the matrix diagonal -
   portfolio s (the plan optimised for grid s) evaluated on grid s
 - SP  (stochastic solution): the stochastic portfolio re-dispatched on each real
-  grid (cost matrix "stochastic" row = capex + correct-physics expected opex),
-  NOT the native scenario-dimension objective of topology-stochastic, which
-  prices dispatch with phantom-cycle physics (per-scenario line reactance is not
-  honoured) and is not comparable to the deterministic WS/EEV
+  grid (cost matrix "stochastic" row = capex + expected opex), so every row
+  shares one evaluation model; `assert_lt_st_consistency` checks that this
+  matches the native objective of topology-stochastic
 - EEV (expected-value planner): capex(topology-eev) + expected opex of
   dispatching the eev portfolio under each real topology
 - EVPI = SP - WS   (value of perfect information about the grid)
@@ -258,10 +257,9 @@ def build_cost_matrix(
 
 
 # Wait-and-see optimality tolerance (relative). The property is exact in theory,
-# so any deviation is solver-gap noise (observed <~0.1%); the margin stays well
-# below gross accounting errors such as a freeze source whose foreign capex is
-# counted while every other portfolio's is dropped (see portfolio_capex).
-WAIT_AND_SEE_RTOL = 1e-2
+# so any deviation is solver-gap noise: ST cells are solved with crossover, the
+# LT plans to ~1e-5 (deterministic) and ~1e-4 (stochastic) primal-dual gap.
+WAIT_AND_SEE_RTOL = 1e-4
 
 
 def assert_wait_and_see_optimality(
@@ -305,6 +303,58 @@ def assert_wait_and_see_optimality(
         "across rows, e.g. freeze_outside_de_capacities dropping frozen foreign "
         "capex from portfolio_capex for every portfolio except the freeze source. "
         "Details:\n  " + "\n  ".join(violations)
+    )
+
+
+# LT/ST consistency tolerance (relative to opex). Both solves share one dispatch
+# problem (ST adds load shedding and CO2 slack, which stay unused at the optimum),
+# so only solver gap and noisy_costs draws may separate them.
+LT_ST_RTOL = 1e-4
+
+
+def assert_lt_st_consistency(
+    topologies: dict[str, pypsa.Network],
+    evaluations: dict[tuple[str, str], pypsa.Network],
+    grid_scenario_names: list[str],
+    probabilities: dict[str, float],
+    rtol: float = LT_ST_RTOL,
+) -> None:
+    """Assert the ST re-dispatch reproduces the LT dispatch cost.
+
+    Re-dispatching a portfolio on the grid it was optimised for is the LT
+    problem with capacities fixed at the LT optimum (plus penalised load
+    shedding and CO2 slack that stay unused), so its objective must equal the
+    LT opex (`n.objective - portfolio_capex(n)`). For the stochastic portfolio
+    the probability-weighted ST opex must equal the native SP opex. A deviation
+    means a loosely converged solve or a modelling difference between LT and
+    ST; either makes the cost matrix incomparable across rows.
+
+    Raises
+    ------
+    AssertionError
+        If any LT/ST pair deviates by more than `rtol`.
+    """
+    pairs = {
+        s: (topologies[s], evaluations[(s, s)].objective) for s in grid_scenario_names
+    }
+    if "stochastic" in topologies:
+        st = sum(
+            probabilities[s] * evaluations[("stochastic", s)].objective
+            for s in grid_scenario_names
+        )
+        pairs["stochastic"] = (topologies["stochastic"], st)
+    violations = []
+    for portfolio, (n_lt, st) in pairs.items():
+        lt = n_lt.objective - portfolio_capex(n_lt)
+        if abs(st / lt - 1) > rtol:
+            violations.append(
+                f"{portfolio}: LT opex {lt / 1e9:.3f} vs ST opex {st / 1e9:.3f} bn "
+                f"EUR ({st / lt - 1:+.3%})"
+            )
+    assert not violations, (
+        "ST re-dispatch does not reproduce the LT dispatch cost on the LT grid; "
+        "check the ST solver gap and load shedding. Details:\n  "
+        + "\n  ".join(violations)
     )
 
 
@@ -356,12 +406,9 @@ def compute_metrics(
     # All three levels read from the one objective-basis cost matrix, so EVPI/ECIU
     # are equal-basis differences. WS (wait-and-see, grid known before investing):
     # each scenario gets its own optimal plan, i.e. the diagonal cost_matrix[s, s]
-    # (portfolio s on grid s). SP: the stochastic portfolio re-dispatched with
-    # correct physics (the "stochastic" row's expected column) - not the native
-    # scenario-dimension objective, whose phantom-cycle physics can sit above EEV;
-    # the stochastic *plan* is still sized by that degraded solve, so a residual
-    # ECIU < 0 is a genuine signal (plan underperforms the naive one), not an
-    # artefact. EEV: the expected-value planner's "eev" row.
+    # (portfolio s on grid s). SP: the stochastic portfolio re-dispatched on each
+    # grid (the "stochastic" row's expected column). EEV: the expected-value
+    # planner's "eev" row.
     ws = sum(probabilities[s] * cost_matrix.loc[s, s] for s in grid_scenario_names)
     sp = cost_matrix.loc["stochastic", "expected"]
     eev = cost_matrix.loc["eev", "expected"]
@@ -379,10 +426,10 @@ def compute_metrics(
         logger.warning(
             f"Negative stochastic metric(s), expected >= 0: {detail} "
             f"(WS={ws / 1e9:.3f}, SP={sp / 1e9:.3f}, EEV={eev / 1e9:.3f} bn EUR). "
-            "A negative ECIU means the stochastic plan underperforms the naive EEV "
-            "plan - expected when the phantom-cycle physics of the native scenario "
-            "solve dominate (see stochastic_grid_uncertainty.ipynb). For the DE-only "
-            "metrics a subset cost need not satisfy the network-wide relations."
+            "Network-wide this contradicts WS <= SP <= EEV and points to an "
+            "inconsistent evaluation (e.g. loosely converged solves). For the "
+            "DE-only metrics a subset cost need not satisfy the network-wide "
+            "relations."
         )
 
     return pd.Series(
@@ -533,6 +580,9 @@ if __name__ == "__main__":
     )
     cost_matrix.to_csv(snakemake.output.cost_matrix)
     plot_cost_matrix(cost_matrix, snakemake.output.cost_matrix_png, title)
+    assert_lt_st_consistency(
+        topologies, evaluations, grid_scenario_names, probabilities
+    )
     assert_wait_and_see_optimality(cost_matrix, grid_scenario_names)
 
     metrics = compute_metrics(cost_matrix, grid_scenario_names, probabilities)

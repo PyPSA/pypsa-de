@@ -86,38 +86,53 @@ def test_guard_raises_when_cap_unreachable():
 
 
 class _FakeNet:
-    """Records the solver_options of each solve and replays scripted results."""
+    """Records the solver_options of each solve and replays scripted
+    (status, condition, ObjBound) results against ObjVal = 100."""
 
     def __init__(self, results):
         self._results = iter(results)
         self.calls = []
         self.optimize = self
+        self.model = SimpleNamespace(solver_model=SimpleNamespace(ObjVal=100.0))
 
     def solve_model(self, **kwargs):
         self.calls.append(kwargs["solver_options"])
-        return next(self._results)
+        status, condition, bound = next(self._results)
+        self.model.solver_model.ObjBound = bound
+        return status, condition
 
 
 _KW = {"solver_name": "gurobi", "solver_options": {"threads": 16}}
 
 
+_GAP = 1e-5
+
+
 def test_fallback_stops_on_first_optimal():
-    n = _FakeNet([("ok", "optimal")])
-    status, condition = egp.solve_with_fallback(n, _KW, [{"BarHomogeneous": 1}])
-    assert (status, condition) == ("ok", "optimal")
+    n = _FakeNet([("ok", "optimal", 100.0)])
+    status, condition, gap = egp.solve_with_fallback(n, _KW, [{"BarHomogeneous": 1}], _GAP)
+    assert (status, condition, gap) == ("ok", "optimal", 0.0)
     assert n.calls == [{"threads": 16}]  # tier 1 only, no robust knobs paid
 
 
-def test_fallback_escalates_then_succeeds():
-    n = _FakeNet([("ok", "suboptimal"), ("ok", "optimal")])
-    status, condition = egp.solve_with_fallback(n, _KW, [{"BarHomogeneous": 1}])
-    assert (status, condition) == ("ok", "optimal")
+@pytest.mark.parametrize(
+    "first",
+    [("ok", "suboptimal", 100.0), ("ok", "optimal", 99.0)],  # non-optimal / 1% gap
+)
+def test_fallback_escalates_then_succeeds(first):
+    n = _FakeNet([first, ("ok", "optimal", 100.0)])
+    status, condition, gap = egp.solve_with_fallback(n, _KW, [{"BarHomogeneous": 1}], _GAP)
+    assert (condition, gap) == ("optimal", 0.0)
     assert n.calls == [{"threads": 16}, {"threads": 16, "BarHomogeneous": 1}]
 
 
-def test_fallback_exhausted_returns_last_nonoptimal():
+@pytest.mark.parametrize(
+    "result, expected_gap",
+    [(("ok", "suboptimal", 100.0), float("inf")), (("ok", "optimal", 99.0), 1e-2)],
+)
+def test_fallback_exhausted_returns_last_attempt(result, expected_gap):
     ladder = [{"BarHomogeneous": 1}, {"BarHomogeneous": 1, "crossover": 1}]
-    n = _FakeNet([("ok", "suboptimal")] * 3)
-    status, condition = egp.solve_with_fallback(n, _KW, ladder)
-    assert condition == "suboptimal"
+    n = _FakeNet([result] * 3)
+    status, condition, gap = egp.solve_with_fallback(n, _KW, ladder, _GAP)
+    assert gap == pytest.approx(expected_gap)
     assert len(n.calls) == 3  # tier 1 + two fallback tiers
