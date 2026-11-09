@@ -129,6 +129,46 @@ def split_base(base, added):
     return base, added.drop(pieces.index)
 
 
+def retirement_row(
+    asset, row, project, kind, nominal, buses, catalog, start, end, country
+):
+    """Ledger row of a branch that a project retires without successor (``retired_by``)."""
+    year = float(row.build_year) + float(row.lifetime)
+    event = start < year <= end
+    loss = active_capacity(row, nominal, np.nextafter(year, -np.inf)) if event else 0.0
+    hit = catalog.loc[catalog.project_id.eq(project)] if not catalog.empty else catalog
+    c0, c1 = buses.loc[[str(row.bus0), str(row.bus1)], "country"].fillna("").astype(str)
+    category = ("AC" if kind == "lines" else "DC") + (
+        "_internal" if c0 == c1 == country else "_interconnectors"
+    )
+    return dict(
+        asset=asset,
+        project_id=project,
+        source_file=hit.source_file.iloc[0] if len(hit) == 1 else "",
+        project_action=f"retired_{kind}",
+        provenance="recorded",
+        replaced_asset=asset,
+        build_year=year,
+        project_status="",
+        tags="",
+        category=category,
+        in_scope=country in (c0, c1),
+        bus0=str(row.bus0),
+        bus1=str(row.bus1),
+        endpoint_order="unknown",
+        country0=c0,
+        country1=c1,
+        capacity_start=active_capacity(row, nominal, start),
+        capacity_end=active_capacity(row, nominal, end),
+        gross_added=0.0,
+        retired=loss,
+        net_added=-loss,
+        nominal_capacity=float(row[nominal]),
+        unit="MVA" if kind == "lines" else "MW",
+        length_km=row.get("length", np.nan),
+    )
+
+
 def build_ledger(n, directory, catalog, start, end, country="DE"):
     """Account for additions and retirement adjustments at physical branch level."""
     if end <= start:
@@ -239,6 +279,25 @@ def build_ledger(n, directory, catalog, start, end, country="DE"):
                     nominal_capacity=float(row[nominal]),
                     unit="MVA" if kind == "lines" else "MW",
                     length_km=row.get("length", np.nan),
+                )
+            )
+        for asset in adjusted.index[
+            adjusted.get(
+                "retired_by", pd.Series(index=adjusted.index, dtype=object)
+            ).notna()
+        ]:
+            rows.append(
+                retirement_row(
+                    asset,
+                    adjusted_base.loc[asset],
+                    adjusted.at[asset, "retired_by"],
+                    kind,
+                    nominal,
+                    buses,
+                    catalog,
+                    start,
+                    end,
+                    country,
                 )
             )
         # Standalone retirement adjustments must not silently disappear.
@@ -461,6 +520,46 @@ def visible_projects(ledger):
     return visible
 
 
+def volume(selected, changed):
+    """
+    Count measures that do not depend on the region size.
+
+    The displayed ``net_added`` sums every branch that crosses a region border, so an
+    upgrade chain crossing k borders counts k times and branches within a region not at all.
+
+    Parameters
+    ----------
+    selected : pandas.DataFrame
+        Shown ledger rows of one category.
+    changed : pandas.DataFrame
+        All changed in-scope ledger rows of the same category, shown or not.
+
+    Returns
+    -------
+    dict
+        ``net_added_once``: shown capacity with each project counted once, as the
+        length-weighted mean over its shown branches (MVA or MW).
+        ``shown_branches_per_project``: shown branches per shown project.
+        ``net_twkm`` and ``shown_net_twkm``: sum of net_added x length_km / 1e6 over all
+        changed or only shown branches (TVA km for lines, TW km for links).
+    """
+
+    def twkm(rows):
+        return float((rows.net_added * rows.length_km).sum()) / 1e6
+
+    projects = selected.groupby("project_id")
+    weighted = (
+        (selected.net_added * selected.length_km).groupby(selected.project_id).sum()
+    )
+    once = (weighted / projects.length_km.sum()).fillna(projects.net_added.mean())
+    return dict(
+        net_added_once=float(once.sum()),
+        shown_branches_per_project=len(selected) / len(once) if len(once) else 0.0,
+        net_twkm=twkm(changed),
+        shown_net_twkm=twkm(selected),
+    )
+
+
 def wrap_legend(text, width):
     """Wrap to the available page width in points, including long source URLs."""
     font = FontProperties(family="DejaVu Sans", size=7)
@@ -500,6 +599,7 @@ def draw_report(
     country,
     output,
     resolution="nuts2",
+    note="Before clustering; no endogenous expansion.",
 ):
     """Draw the map once, then paginate its project legend on A4 sheets."""
     from matplotlib.backends.backend_pdf import PdfPages
@@ -750,7 +850,7 @@ def draw_report(
                 y -= (entry.count("\n") + 2) * 7 * 1.25 / (297 / 25.4 * 72)
             footer.set_text(
                 "Within-region / within-model-bus projects omitted; retained in project_ledger.csv.\n"
-                f"Before clustering; no endogenous expansion. Page {page}/{len(chunks)}"
+                f"{note} Page {page}/{len(chunks)}"
             )
             pdf.savefig(fig)
         plt.close(fig)
@@ -848,6 +948,7 @@ def generate_report(
             ),
             "excluded_projects": len(excluded),
             "excluded_net_added": float(excluded.net_added.sum()),
+            **volume(selected, pd.concat([selected, excluded])),
         }
         if mapping is not None:
             summary[category]["net_by_model_mapping"] = {

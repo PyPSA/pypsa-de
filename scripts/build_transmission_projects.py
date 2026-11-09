@@ -21,7 +21,7 @@ Outputs
 
 - `transmission_projects/new_lines.csv`: New project lines to be added to the network. This includes new lines and upgraded lines, and the pieces of base branches split at reviewed junctions (`split_of` names the branch they replace).
 - `transmission_projects/new_links.csv`: New project links to be added to the network. This includes new links and upgraded links.
-- `transmission_projects/adjust_lines.csv`: For lines which are upgraded, the decommissioning year of the existing line is adjusted to the build year of the upgraded line.
+- `transmission_projects/adjust_lines.csv`: For lines which are upgraded, the decommissioning year of the existing line is adjusted to the build year of the upgraded line. Lines a project retires without successor carry the project in `retired_by`.
 - `transmission_projects/adjust_links.csv`: For links which are upgraded, the decommissioning year of the existing link is adjusted to the build year of the upgraded link.
 - `transmission_projects/new_buses.csv`: For some links, we have to add new buses (e.g. North Sea Wind Power Hub).
 - `transmission_projects/line_types.csv`: The reviewed line types, registered by [add_transmission_projects_and_dlr][] before the lines.
@@ -509,14 +509,18 @@ def check_reviewed_branch_scopes(line_map, projects):
 
     Every reviewed branch must still be matched. Branches with the action
     ``exclude`` lie outside the project, e.g. beyond its end substation.
+    Branches with the action ``retire`` are old lines the project removes
+    without successor, e.g. when the base already holds the new line beside it.
 
     Returns
     -------
-    pandas.Series
-        line_map without the excluded branches.
+    tuple of pandas.Series
+        line_map without the excluded and retired branches, and the retired
+        branches indexed by project.
     """
+    retired = pd.Series(dtype=object)
     if "branch_scope_rules" not in projects:
-        return line_map
+        return line_map, retired
     keep = pd.Series(True, index=range(len(line_map)))
     for ident, raw in projects["branch_scope_rules"].dropna().items():
         rules = json.loads(raw)
@@ -526,11 +530,26 @@ def check_reviewed_branch_scopes(line_map, projects):
             raise ValueError(
                 f"Reviewed branch scope no longer matches {ident}: {missing}"
             )
-        excluded = {
-            asset for asset, rule in rules.items() if rule["action"] == "exclude"
+        dropped = {
+            asset
+            for asset, rule in rules.items()
+            if rule["action"] in ("exclude", "retire")
         }
-        keep &= ~(own & line_map.isin(excluded).to_numpy())
-    return line_map[keep.to_numpy()]
+        keep &= ~(own & line_map.isin(dropped).to_numpy())
+        gone = [asset for asset, rule in rules.items() if rule["action"] == "retire"]
+        retired = pd.concat(
+            [retired, pd.Series(gone, index=[ident] * len(gone), dtype=object)]
+        )
+    return line_map[keep.to_numpy()], retired
+
+
+def retirements(retired, projects):
+    """Decommission branches that projects retire without successor in their build year."""
+    out = pd.DataFrame(index=pd.Index(retired.to_numpy(), dtype=object))
+    out["build_year"] = 1990
+    out["lifetime"] = projects.loc[retired.index, "build_year"].to_numpy() - 1990
+    out["retired_by"] = retired.index.to_numpy()
+    return out
 
 
 def expand_corridor_upgrades(line_map, candidates, projects):
@@ -1237,7 +1256,11 @@ def add_projects(
                 distance_upper_bound=0.30,
                 type="upgraded",
             )
-            line_map = check_reviewed_branch_scopes(line_map, lines)
+            line_map, retired = check_reviewed_branch_scopes(line_map, lines)
+            if not retired.empty:
+                adjust_lines_df = pd.concat(
+                    [adjust_lines_df, retirements(retired, lines)]
+                )
             line_map, inherit = expand_corridor_upgrades(
                 line_map, upgrade_candidates["Line"], lines
             )

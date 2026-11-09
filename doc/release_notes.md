@@ -41,6 +41,11 @@
   `transmission_projects: overlap_decisions` CSV); the audit is written to
   `transmission_projects/overlap_audit.csv`.
 
+* A reviewed `branch_scope_rules` entry with action `retire` removes a base
+  branch without successor in the project's build year (`adjust_lines.csv`,
+  column `retired_by`), e.g. an old line the base network holds beside its
+  already built replacement.
+
 * The PDF maps of `report_transmission_projects` show a clickable source link
   per project in a right-hand column (`p. 186 ↗` jumps to the PDF page given by
   `source_pdf_page`, otherwise `source ↗`). An optional `--source-links` CSV

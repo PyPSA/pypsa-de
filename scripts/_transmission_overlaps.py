@@ -139,6 +139,12 @@ def reconcile(branches, adjustments, decisions=None):
     result = branches.iloc[keep].copy()
     # Retirement was originally computed before plan reconciliation. Rebuild
     # it from retained rows so a suppressed earlier date cannot retire the base.
+    # Reviewed retirements without successor (retired_by) are kept as they are.
+    retired = (
+        adjustments[adjustments.retired_by.notna()]
+        if "retired_by" in adjustments
+        else None
+    )
     active = result[result.replaced_asset.notna()]
     if not active.empty:
         years = active.groupby("replaced_asset").build_year.min()
@@ -147,4 +153,8 @@ def reconcile(branches, adjustments, decisions=None):
         adjustments["lifetime"] = years - 1990
     else:
         adjustments = adjustments.iloc[:0].copy()
+    if retired is not None and not retired.empty:
+        adjustments = pd.concat(
+            [adjustments, retired.rename_axis(adjustments.index.name)]
+        )
     return result, adjustments, pd.DataFrame(events, columns=columns)

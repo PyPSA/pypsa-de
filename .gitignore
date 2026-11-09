@@ -28,6 +28,8 @@ gurobi.log
 # Allowlist a small subset under data/pypsa-de.
 # Important: parent directories must be un-ignored for negations to take effect.
 !/data/pypsa-de/
+!/data/transmission_projects/
+/data/transmission_projects/RELEASE.json
 /cutouts
 /tmp
 doc/_build
