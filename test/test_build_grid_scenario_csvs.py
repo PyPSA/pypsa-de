@@ -47,3 +47,22 @@ def test_branch_table_solved_network_ignores_inactive_lines():
     n.lines.loc["old", "active"] = False
     table = csvs.branch_table(n, "Line", 2035)
     assert table.capacity_mw.to_dict() == {"old": 0.0, "new": 200.0}
+
+
+@pytest.mark.parametrize(
+    "name, cutoff, ok",
+    [
+        ("2028_exogen", 2028, True),
+        ("2031_exogen_AC", 2028, True),
+        ("2028_exogen", None, True),  # direct run, no prior pathway year
+        ("2030_optimal", 2031, True),  # only exogen grids are floored
+        ("2028_exogen", 2030, False),  # would un-build 2029-2030 projects
+    ],
+)
+def test_check_pathway_cutoff(name, cutoff, ok):
+    year, kind, _, _ = csvs.parse_grid_scenario(name)
+    if ok:
+        csvs.check_pathway_cutoff(name, year, kind, cutoff)
+    else:
+        with pytest.raises(ValueError, match="exogenous_grid_cutoff_DE"):
+            csvs.check_pathway_cutoff(name, year, kind, cutoff)

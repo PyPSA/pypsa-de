@@ -1392,9 +1392,9 @@ def retire_replaced_lines(n, built_until):
     Parameters
     ----------
     n : pypsa.Network
-    built_until : float
-        Last build year of the projects active in this network: the planning
-        year if later projects are deactivated, else ``inf``.
+    built_until : float or pd.Series
+        Last build year of the projects active in this network, scalar or per
+        line: the cutoff if later projects are deactivated, else ``inf``.
     """
     end = n.lines.build_year + n.lines.lifetime
     retired = n.lines.index[np.isfinite(end) & (end <= built_until)]
@@ -1535,12 +1535,41 @@ def scale_industry_elec_to_2025(n, industrial_energy_demand_2025):
     )
 
 
-def deactivate_early_transmission_expansion(n, current_year):
-    logger.info(f"Deactivating transmission expansion for year {current_year}.")
+def transmission_cutoff(n, df, current_year, de_cutoff):
+    """
+    Build-year cutoff per branch: ``de_cutoff`` for branches touching DE, else ``current_year``.
+
+    Parameters
+    ----------
+    n : pypsa.Network
+    df : pd.DataFrame
+        Static branch table (``n.lines`` or ``n.links``).
+    current_year : int
+    de_cutoff : int
+        Last build year of exogenous projects in service at DE buses.
+
+    Returns
+    -------
+    pd.Series
+    """
+    country = n.buses.country
+    de = (df.bus0.map(country) == "DE") | (df.bus1.map(country) == "DE")
+    return pd.Series(current_year, index=df.index).where(~de, de_cutoff)
+
+
+def deactivate_early_transmission_expansion(n, current_year, de_cutoff):
+    logger.info(
+        f"Deactivating transmission expansion for year {current_year} "
+        f"(exogenous AC/DC projects at DE buses up to {de_cutoff})."
+    )
     # Assumption 1: The current base network captures all existing lines already -> no expansion in 2025
     # Assumption 2: All international transmission projects and all within Germany are in NEP or TYNDP
-    n.lines.loc[n.lines.build_year > current_year, "active"] = False
-    n.links.loc[n.links.build_year > current_year, "active"] = False
+    line_cutoff = transmission_cutoff(n, n.lines, current_year, de_cutoff)
+    link_cutoff = transmission_cutoff(n, n.links, current_year, de_cutoff).where(
+        n.links.carrier == "DC", current_year
+    )
+    n.lines.loc[n.lines.build_year > line_cutoff, "active"] = False
+    n.links.loc[n.links.build_year > link_cutoff, "active"] = False
     n.lines.s_nom_extendable = False
     n.links.loc[n.links.carrier == "DC", "p_nom_extendable"] = False
 
@@ -1617,7 +1646,21 @@ if __name__ == "__main__":
     enforce_transmission_project_build_years(n, current_year)
 
     early = snakemake.params.deactivate_early_transmission_expansion
-    retire_replaced_lines(n, current_year if current_year in early else np.inf)
+    de_cutoffs = snakemake.params.exogenous_grid_cutoff_DE
+    assert set(de_cutoffs) <= set(early), (
+        f"exogenous_grid_cutoff_DE years {sorted(de_cutoffs)} must be in "
+        f"deactivate_early_transmission_expansion {sorted(early)}"
+    )
+    de_cutoff = de_cutoffs.get(current_year, current_year)
+    assert de_cutoff <= current_year, (
+        f"exogenous_grid_cutoff_DE {de_cutoff} lies after planning year {current_year}"
+    )
+    retire_replaced_lines(
+        n,
+        transmission_cutoff(n, n.lines, current_year, de_cutoff)
+        if current_year in early
+        else np.inf,
+    )
 
     force_connection_nep_offshore(n, current_year, costs)
 
@@ -1654,6 +1697,6 @@ if __name__ == "__main__":
         )
 
     if current_year in snakemake.params.deactivate_early_transmission_expansion:
-        deactivate_early_transmission_expansion(n, current_year)
+        deactivate_early_transmission_expansion(n, current_year, de_cutoff)
 
     n.export_to_netcdf(snakemake.output.network)

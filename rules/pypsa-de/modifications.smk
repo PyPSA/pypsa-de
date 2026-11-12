@@ -269,6 +269,9 @@ rule modify_prenetwork:
         deactivate_early_transmission_expansion=config_provider(
             "pypsa-de", "deactivate_early_transmission_expansion"
         ),
+        exogenous_grid_cutoff_DE=config_provider(
+            "pypsa-de", "exogenous_grid_cutoff_DE", default={}
+        ),
     script:
         scripts("pypsa-de/modify_prenetwork.py")
 

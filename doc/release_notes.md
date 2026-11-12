@@ -86,6 +86,13 @@
   LT dispatch cost (each portfolio on its own grid, and the expected ST cost of
   the stochastic portfolio vs the native SP objective) within `1e-4`. The
   wait-and-see optimality tolerance tightens from `1e-2` to `1e-4`.
+* New `pypsa-de: exogenous_grid_cutoff_DE` (`{planning year: last build year}`,
+  set to `{2030: 2028}`) caps the exogenous AC lines and DC links at DE buses in
+  a myopic pathway year. Lines replaced by a delayed upgrade stay in service.
+  Before, the 2030 solve ran with every project due by 2030, and a `2028_exogen`
+  scenario in 2035 removed 23.5 GW on 12 DE corridors that were already in
+  service (NUTS2). `build_grid_scenario_csvs` now fails if an `*_exogen`
+  scenario predates the prior pathway year's DE cutoff.
 
 **Bugfixes (transmission projects)**
 

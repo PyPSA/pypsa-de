@@ -57,6 +57,8 @@ pypsa-de:
   deactivate_early_transmission_expansion:
   - 2025
   - 2030
+  exogenous_grid_cutoff_DE: # {planning year: last build year}
+    2030: 2028
   # Assume 1% of buildings renovated until 2030 (reduces their demand by 60%), then 2% per year until 2050
   reduce_space_heat_DE_factor:
     2020: 0.1

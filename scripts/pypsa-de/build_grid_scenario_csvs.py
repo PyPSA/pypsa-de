@@ -74,6 +74,29 @@ def parse_grid_scenario(name):
     return year, kind, carrier, direction
 
 
+def check_pathway_cutoff(name, year, kind, cutoff):
+    """
+    Fail if an ``exogen`` grid is older than the DE grid the pathway already built.
+
+    The prior myopic year runs with exogenous DE projects up to ``cutoff``; an
+    older scenario grid would remove branches that were already in service.
+
+    Parameters
+    ----------
+    name : str
+    year : int
+    kind : str
+    cutoff : int or None
+        DE build-year cutoff of the prior pathway year, ``None`` for a direct run.
+    """
+    if kind == "exogen" and cutoff is not None and year < cutoff:
+        raise ValueError(
+            f"grid_scenario {name!r} predates the exogenous DE grid of the prior "
+            f"pathway year (projects up to {cutoff}); lower "
+            f"pypsa-de.exogenous_grid_cutoff_DE to {year} or drop the scenario."
+        )
+
+
 def _branches(n, component):
     return n.lines if component == "Line" else n.links.query("carrier == 'DC'")
 
@@ -205,6 +228,12 @@ if __name__ == "__main__":
     scope = snakemake.params.scope
     year, kind, carrier, direction = parse_grid_scenario(
         snakemake.wildcards.grid_scenario
+    )
+    check_pathway_cutoff(
+        snakemake.wildcards.grid_scenario,
+        year,
+        kind,
+        snakemake.params.pathway_grid_cutoff,
     )
 
     canvas = pypsa.Network(snakemake.input.canvas)

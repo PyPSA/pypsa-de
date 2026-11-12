@@ -551,6 +551,20 @@ def evaluate_grid_portfolio_solving(wildcards):
     return solving
 
 
+def _pathway_grid_cutoff(wildcards):
+    """DE build-year cutoff of the exogenous grid in the myopic year before the
+    target (see modify_prenetwork.transmission_cutoff); None for a direct run."""
+    target = int(wildcards.planning_horizons)
+    horizons = config_provider("scenario", "planning_horizons")(wildcards)
+    prior = [y for y in horizons if y < target]
+    if not prior:
+        return None
+    cutoffs = config_provider("pypsa-de", "exogenous_grid_cutoff_DE", default={})(
+        wildcards
+    )
+    return cutoffs.get(max(prior), max(prior))
+
+
 rule build_grid_scenario_csvs:
     input:
         unpack(_grid_scenario_csv_source_networks),
@@ -572,6 +586,7 @@ rule build_grid_scenario_csvs:
         scope=config_provider(
             "stochastic_grid_scenarios", "scope", default="de_and_interconnectors"
         ),
+        pathway_grid_cutoff=_pathway_grid_cutoff,
     message:
         "Generating grid-scenario CSVs for '{wildcards.grid_scenario}' at {wildcards.clusters} clusters, {wildcards.planning_horizons} planning horizon"
     script:
