@@ -47,12 +47,13 @@ LOAD_SHEDDING_EXCLUDED_CARRIERS = {"process emissions"}
 def with_load_shedding_carriers(solve_opts: dict, n: pypsa.Network) -> dict:
     """`solve_opts` with `load_shedding.carriers` filled in from `n`'s own loads.
 
-    Carriers found on `n` fall back to `default_cost`, but any per-carrier
-    cost already set in config's `load_shedding.carriers` takes precedence -
-    a static carrier list would otherwise go stale if the sector
-    configuration changes what's connected to this network, so the carrier
-    *set* is derived fresh from `n` while letting config override individual
-    costs. `all_carriers` is forced off: left on (the config default),
+    With `all_carriers`, every carrier found on `n` sheds, at its configured
+    cost or else `default_cost` - a static carrier list would otherwise go
+    stale if the sector configuration changes what's connected to this
+    network. Without it, only the configured carriers found on `n` shed: a
+    fuel bus fed by a single frozen link sized to its peak demand can price
+    anywhere up to its shedding cost, and these degenerate duals stall the
+    barrier. `all_carriers` is forced off in the result: left on,
     `add_load_balance_components` (solve_network.py) adds shedding
     generators to every bus *not* in `carriers` too, which would silently
     reintroduce `LOAD_SHEDDING_EXCLUDED_CARRIERS`.
@@ -66,6 +67,8 @@ def with_load_shedding_carriers(solve_opts: dict, n: pypsa.Network) -> dict:
     load_bus_carriers -= LOAD_SHEDDING_EXCLUDED_CARRIERS
     default_cost = load_shedding.get("default_cost", 1e5)
     configured_costs = load_shedding.get("carriers", {})
+    if not load_shedding.get("all_carriers"):
+        load_bus_carriers &= set(configured_costs)
     load_shedding["carriers"] = {
         carrier: configured_costs.get(carrier, default_cost) for carrier in load_bus_carriers
     }

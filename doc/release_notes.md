@@ -71,15 +71,22 @@
 
 **Bugfixes (stochastic grid)**
 
-* ST portfolio re-dispatch solves now run with crossover and must reach a
-  relative primal-dual gap below
+* ST portfolio re-dispatch solves must reach a relative primal-dual gap below
   `stochastic_grid_scenarios.evaluate_solving.options.max_rel_gap` (default
-  `1e-5`, read from gurobi `ObjVal`/`ObjBound`), escalating through
-  `solve_fallback` before failing. Before, barrier without crossover reported
-  "optimal" at gaps up to 1%, so a portfolio on its own grid cost about
-  0.7 bn EUR more than its LT solve. That noise exceeded the differences between
-  portfolios and could make the stochastic plan look worse than a deterministic
-  one. The gap is stored in `n.meta["relative_gap"]`.
+  `5e-5`, about 10 M EUR; read from gurobi `ObjVal`/`ObjBound`), escalating
+  through `solve_fallback` before failing. Before, barrier reported "optimal"
+  at gaps up to 1%, so a portfolio on its own grid cost about 0.7 bn EUR more
+  than its LT solve. That noise exceeded the differences between portfolios
+  and could make the stochastic plan look worse than a deterministic one. The
+  gap is stored in `n.meta["relative_gap"]`.
+* ST load shedding now covers only the carriers listed in
+  `solving.options.load_shedding.carriers` (now electricity only), via
+  `evaluate_solving.options.load_shedding.all_carriers: false`. Before, every
+  fuel bus got shedding at 1e5 EUR/MWh. Its single supply link, frozen at peak
+  demand, let the bus price sit anywhere up to that cost. These degenerate
+  duals stalled the barrier at 1-16% gap, and crossover did not finish on 3h
+  models within 16 h. The ST solves now run barrier without crossover at
+  `BarConvTol: 1e-7`.
 * `evaluate_grid_portfolio` seeds `noisy_costs` like `solve_network`; ST
   draws were unseeded and not reproducible.
 * `compute_stochastic_metrics` asserts that the ST re-dispatch reproduces the

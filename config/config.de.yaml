@@ -4,7 +4,7 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20261109-NUTS2-365h-2028EXO-2031EXO-2034EXO-10-70-20-tighter-tolerances
+  prefix: 20261112-NUTS2-365h-2028EXO-2031EXO-2034EXO-10-70-20-load-shedding-fixes
   name:
   # - KN2045_Bal_v5
   - KN2045_Bal_v5_abroad_capa_freeze
@@ -428,11 +428,6 @@ solving:
       carriers: # overrides the default cost for specific carriers
         AC: 4000
         low voltage: 4000
-        residential rural heat: 5000
-        services rural heat: 5000
-        residential urban decentral heat: 5000
-        services urban decentral heat: 5000
-        urban central heat: 5000
     transmission_losses: false
     custom_extra_functionality: "../scripts/pypsa-de/additional_functionality.py"
     assign_all_duals: true
@@ -834,13 +829,17 @@ stochastic_grid_scenarios:
     options:
       co2_cap_slack:
         enable: true # soften the CO2 emission caps with a penalized elastic slack (see solving.options.co2_cap_slack): stabilises the near-infeasible year-diagonal dispatch LPs without changing the optimum
-      max_rel_gap: 1.0e-5 # fail (after solve_fallback) if gurobi's relative primal-dual gap (ObjVal vs ObjBound) exceeds this; barrier without crossover reported "optimal" at gaps up to 1e-2
+      max_rel_gap: 5.0e-5 # fail (after solve_fallback) if gurobi's relative primal-dual gap (ObjVal vs ObjBound) exceeds this; 5e-5 of a ~200 bn EUR objective bounds the cost error at ~10 M EUR
+      load_shedding:
+        all_carriers: false 
+        carriers: 
+          low voltage: 4000
     solver_options:
       gurobi-default:
-        crossover: 1 # the small dispatch LPs stalled at 0.1-1% gap without crossover; crossover returns an exact vertex (gap ~0) and clean prices
-    solve_fallback: # re-solve only a cell that STILL ends non-optimal after the default (slack + plain barrier), escalating gurobi options cheapest-first; the costly knobs run for the rare straggler, never on the critical path (see evaluate_grid_portfolio.solve_with_fallback)
-      - {BarHomogeneous: 1} # robust barrier variant; modest per-iteration overhead
-      - {BarHomogeneous: 1, crossover: 1} # + crossover to recover a clean optimal vertex; expensive, last resort
+        BarConvTol: 1.0e-7 
+    solve_fallback: # re-solve only a cell that STILL ends non-optimal or above max_rel_gap
+      - {BarConvTol: 1.0e-8} # gurobi default; more barrier iterations
+      - {BarConvTol: 1.0e-8, crossover: 1} # exact vertex; slow on 3h models, last resort
   scope: de_and_interconnectors
   # !!! the SET of scenario names cannot be set per scenario atm (see doc/configuration.md#per_scenario_limits); their probabilities / CSV paths below ARE per-run
   scenarios:
