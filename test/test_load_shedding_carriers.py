@@ -49,9 +49,9 @@ def network():
     [
         (
             True,
-            {"low voltage": 4000, "urban central heat": 1e5, "coal for industry": 1e5},
+            {"low voltage": 4000, "urban central heat": 5000, "coal for industry": 1e5},
         ),
-        (False, {"low voltage": 4000}),
+        (False, {"low voltage": 4000, "urban central heat": 5000}),
     ],
 )
 def test_load_shedding_carriers(network, all_carriers, expected):
@@ -60,7 +60,7 @@ def test_load_shedding_carriers(network, all_carriers, expected):
             "enable": True,
             "default_cost": 1e5,
             "all_carriers": all_carriers,
-            "carriers": {"low voltage": 4000, "AC": 4000},
+            "carriers": {"low voltage": 4000, "AC": 4000, "urban central heat": 5000},
         }
     }
     shedding = egp.with_load_shedding_carriers(opts, network)["load_shedding"]

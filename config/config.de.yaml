@@ -831,15 +831,19 @@ stochastic_grid_scenarios:
         enable: true # soften the CO2 emission caps with a penalized elastic slack (see solving.options.co2_cap_slack): stabilises the near-infeasible year-diagonal dispatch LPs without changing the optimum
       max_rel_gap: 5.0e-5 # fail (after solve_fallback) if gurobi's relative primal-dual gap (ObjVal vs ObjBound) exceeds this; 5e-5 of a ~200 bn EUR objective bounds the cost error at ~10 M EUR
       load_shedding:
-        all_carriers: false 
-        carriers: 
+        all_carriers: false
+        carriers: # heat must shed at 3h: existing boilers are pinned to the load profile, so heat peaks beyond maxed-out resistive heaters have no other supply
           low voltage: 4000
+          rural heat: 5000
+          urban decentral heat: 5000
+          urban central heat: 5000
     solver_options:
       gurobi-default:
-        BarConvTol: 1.0e-7 
-    solve_fallback: # re-solve only a cell that STILL ends non-optimal or above max_rel_gap
-      - {BarConvTol: 1.0e-8} # gurobi default; more barrier iterations
-      - {BarConvTol: 1.0e-8, crossover: 1} # exact vertex; slow on 3h models, last resort
+        BarConvTol: 1.0e-7
+        BarIterLimit: 2000 # gurobi default 1000 cut off diagonal 3h cells still converging (gap ~1e-4, halving every ~50 iterations)
+    solve_fallback: [] # extra solver_options to retry a cell that ends non-optimal or above max_rel_gap; empty = fail fast (retrying a stalled barrier repeated it exactly)
+    # solve_fallback: # example: each entry is one retry, its keys override solver_options
+    #   - {BarConvTol: 1.0e-4}
   scope: de_and_interconnectors
   # !!! the SET of scenario names cannot be set per scenario atm (see doc/configuration.md#per_scenario_limits); their probabilities / CSV paths below ARE per-run
   scenarios:
