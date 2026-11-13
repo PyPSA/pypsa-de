@@ -69,6 +69,11 @@
   build with the run name. Before, a stale name after renaming the scenario set
   surfaced as a `MissingInputException`.
 
+* The LT grid capacity/volume tables (`grid_capacity_volume_stochastic` and
+  `grid_capacity_volume_variants` in `scenario_comparison/LT/...`) are also
+  written as CSV next to the PNG. They now count each DC link once; before,
+  its `-reversed` twin doubled DC capacity, volume and count.
+
 **Bugfixes (stochastic grid)**
 
 * ST portfolio re-dispatch solves must reach a relative primal-dual gap below
@@ -102,6 +107,14 @@
   scenario predates the prior pathway year's DE cutoff.
 
 **Bugfixes (transmission projects)**
+
+* AC line projects due after the planning year are now deactivated in every
+  myopic year, not only in the years listed in
+  `deactivate_early_transmission_expansion`. Lines they replace stay in service
+  until the upgrade is built. Before, a 2035 solve held every NEP/TYNDP line up
+  to 2045 at its full `s_nom` (NUTS2: 24 lines, 126 GW; +86 GW AC inside DE vs
+  the 2035 grid), while DC links were already gated by build year. Endogenous
+  expansion on top of the 2035 grid is unchanged (`modify_prenetwork`).
 
 * Lines replaced by an upgrade now stay in service until the upgrade is built.
   Before, `modify_prenetwork` dropped every line with `0 < build_year <= 2024`

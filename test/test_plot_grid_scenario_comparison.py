@@ -31,3 +31,15 @@ def test_grid_capacity_volume_ignores_inactive_branches():
 
     assert out.loc[("AC line", "DE internal"), "capacity_GW"] == pytest.approx(0.2)
     assert out.loc[("DC link", "DE internal"), "capacity_GW"] == pytest.approx(0.4)
+
+
+def test_grid_capacity_volume_counts_dc_reversed_twin_once():
+    n = pypsa.Network()
+    n.add("Bus", ["a", "b"], country="DE")
+    n.add("Link", ["dc", "dc-reversed"], bus0=["a", "b"], bus1=["b", "a"],
+          carrier="DC", length=10.0, p_nom_opt=400.0)
+
+    out = pgsc.grid_capacity_volume(n)
+
+    assert out.loc[("DC link", "DE internal"), "capacity_GW"] == pytest.approx(0.4)
+    assert out.loc[("DC link", "DE internal"), "n"] == 1

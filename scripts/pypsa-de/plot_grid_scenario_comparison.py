@@ -1253,7 +1253,7 @@ def grid_capacity_volume(n, tol=1e-3):
 
     Scope = DE internal (both ends DE) + DE interconnectors (one end DE).
     Active = ``active`` flag set and optimised capacity > ``tol``. Volume =
-    capacity * line length.
+    capacity * line length. DC ``-reversed`` twins are skipped (counted once).
     Returns a (asset, scope) frame with AC/DC subtotals ("Sum") and a grand
     total ("TOTAL", "de_and_interconnectors").
     """
@@ -1271,7 +1271,8 @@ def grid_capacity_volume(n, tol=1e-3):
         return pd.DataFrame(rows).T
 
     ac = part(n.lines, "s_nom_opt")
-    dc = part(n.links[n.links.carrier == "DC"], "p_nom_opt")
+    dc_b = (n.links.carrier == "DC") & ~n.links.index.str.contains("reverse")
+    dc = part(n.links[dc_b], "p_nom_opt")
     out = pd.concat({"AC line": ac, "DC link": dc}, names=["asset", "scope"])
     out.loc[("AC line", "Sum"), :] = ac.sum()
     out.loc[("DC link", "Sum"), :] = dc.sum()
@@ -1281,7 +1282,7 @@ def grid_capacity_volume(n, tol=1e-3):
 
 
 def make_grid_volume_tables(networks, network_ids, output_dir):
-    """Two capacity/volume PNG tables for the LT grid-scenario comparison.
+    """Two capacity/volume tables (PNG + CSV) for the LT grid-scenario comparison.
 
     - ``grid_capacity_volume_stochastic.png``: the stochastic solve's
       per-scenario (per-year) slices (``topology-stochastic__*``), full
@@ -1299,16 +1300,17 @@ def make_grid_volume_tables(networks, network_ids, output_dir):
              for nid in network_ids
              if not nid.startswith("topology-stochastic__") and networks.get(nid) is not None}
 
-    def stack(net_map):
+    def save(net_map, name):
         frames = {label: grid_capacity_volume(n) for label, n in net_map.items()}
         df = pd.concat(frames, names=["variant", "asset", "scope"]).round(3)
+        df.to_csv(f"{output_dir}/{name}.csv")
         df.index = [" | ".join(map(str, ix)) for ix in df.index]  # flatten for df_to_png
-        return df
+        df_to_png(df, f"{output_dir}/{name}.png")
 
     if stoch:
-        df_to_png(stack(stoch), f"{output_dir}/grid_capacity_volume_stochastic.png")
+        save(stoch, "grid_capacity_volume_stochastic")
     if other:
-        df_to_png(stack(other), f"{output_dir}/grid_capacity_volume_variants.png")
+        save(other, "grid_capacity_volume_variants")
 
 
 if __name__ == "__main__":
