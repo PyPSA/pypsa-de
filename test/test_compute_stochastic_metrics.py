@@ -189,3 +189,21 @@ def test_lt_st_consistency(st_opex, ok):
     else:
         with pytest.raises(AssertionError, match="does not reproduce"):
             csm.assert_lt_st_consistency(*args)
+
+
+@pytest.mark.parametrize(
+    "lt_meta, lt_expected",
+    [
+        ({"relative_gap": 2e-4}, "LT solve <= 2.0e-04 (<= 40.0 M EUR)"),
+        ({}, "LT solve not recorded"),
+    ],
+)
+def test_solver_gap_note_reports_largest_gap(lt_meta, lt_expected):
+    topologies = {"a": SimpleNamespace(objective=2e11, meta=lt_meta)}
+    evaluations = {
+        ("a", "a"): SimpleNamespace(objective=2e11, meta={"relative_gap": 1e-5}),
+        ("a", "b"): SimpleNamespace(objective=1e11, meta={"relative_gap": 3e-5}),
+    }
+    note = csm.solver_gap_note(topologies, evaluations)
+    assert lt_expected in note
+    assert "ST cell <= 3.0e-05 (<= 3.0 M EUR)" in note

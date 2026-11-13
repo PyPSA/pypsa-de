@@ -1399,6 +1399,16 @@ def check_objective_value(n: pypsa.Network, solving: dict) -> None:
             )
 
 
+def relative_gap(n: pypsa.Network) -> float:
+    """Relative primal-dual gap of the last gurobi solve (`ObjVal` vs `ObjBound`).
+
+    Barrier without crossover can report 'optimal' while the unscaled gap is
+    orders of magnitude above `BarConvTol`, which inflates the cost.
+    """
+    sm = n.model.solver_model
+    return abs(sm.ObjVal - sm.ObjBound) / abs(sm.ObjVal)
+
+
 def collect_kwargs(
     config: dict,
     solving: dict,
@@ -1684,6 +1694,8 @@ if __name__ == "__main__":
         raise RuntimeError("Solving status 'warning'. Discarding solution.")
 
     n.meta = dict(snakemake.config, **dict(wildcards=dict(snakemake.wildcards)))
+    if not rolling_horizon and snakemake.params.solving["solver"]["name"] == "gurobi":
+        n.meta["relative_gap"] = relative_gap(n)
     n.export_to_netcdf(snakemake.output.network)
 
     if snakemake.output.get("model"):

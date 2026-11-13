@@ -100,6 +100,10 @@
   matched. `solve_fallback` is now empty: retrying a stalled barrier repeated
   it exactly. `BarIterLimit` rises to 2000: the default 1000 cut off two
   diagonal cells that were still converging.
+* The cost-matrix and metrics PNGs of `compute_stochastic_metrics` carry a
+  footnote with the largest solver gap of the LT solves and of the ST cells,
+  relative and in M EUR (from `n.meta["relative_gap"]`). `solve_network` now
+  stores this gap for gurobi solves too; older LT networks show "not recorded".
 * `evaluate_grid_portfolio` seeds `noisy_costs` like `solve_network`; ST
   draws were unseeded and not reproducible.
 * `compute_stochastic_metrics` asserts that the ST re-dispatch reproduces the

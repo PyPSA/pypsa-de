@@ -33,7 +33,12 @@ from scripts._helpers import (
     update_config_from_wildcards,
 )
 from scripts import solve_network
-from scripts.solve_network import collect_kwargs, create_optimization_model, prepare_network
+from scripts.solve_network import (
+    collect_kwargs,
+    create_optimization_model,
+    prepare_network,
+    relative_gap,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -173,16 +178,6 @@ def check_co2_slack(n: pypsa.Network) -> dict:
         "distorted, so its system cost is not a valid comparison."
     )
     return used
-
-
-def relative_gap(n: pypsa.Network) -> float:
-    """Relative primal-dual gap of the last gurobi solve (`ObjVal` vs `ObjBound`).
-
-    Barrier without crossover can report 'optimal' while the unscaled gap is
-    orders of magnitude above `BarConvTol`, which inflates the ST cost.
-    """
-    sm = n.model.solver_model
-    return abs(sm.ObjVal - sm.ObjBound) / abs(sm.ObjVal)
 
 
 def solve_with_fallback(

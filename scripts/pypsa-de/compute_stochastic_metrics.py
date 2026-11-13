@@ -438,7 +438,30 @@ def compute_metrics(
     )
 
 
-def plot_metrics(metrics: pd.Series, path: str, title: str) -> None:
+def max_gap(networks: dict) -> str:
+    """Largest relative solver gap among `networks` and its size in M EUR."""
+    if any("relative_gap" not in n.meta for n in networks.values()):
+        return "not recorded"
+    rel = pd.Series({k: n.meta["relative_gap"] for k, n in networks.items()})
+    obj = pd.Series({k: abs(n.objective) for k, n in networks.items()})
+    return f"<= {rel.max():.1e} (<= {(rel * obj).max() / 1e6:.1f} M EUR)"
+
+
+def solver_gap_note(
+    topologies: dict[str, pypsa.Network],
+    evaluations: dict[tuple[str, str], pypsa.Network],
+) -> str:
+    """
+    Footnote with the largest LT and ST solver gap, relative and in M EUR.
+
+    Each solve stores its relative primal-dual gap in `n.meta["relative_gap"]`
+    (see solve_network and evaluate_grid_portfolio). LT networks solved before
+    this was added have none and show "not recorded".
+    """
+    return f"Solver gap per LT solve {max_gap(topologies)}; per ST cell {max_gap(evaluations)}"
+
+
+def plot_metrics(metrics: pd.Series, path: str, title: str, note: str) -> None:
     """Expected system cost (WS/SP/EEV) and information/stochastic value (EVPI/ECIU)."""
     m = metrics / 1e9
     fig, axd = plt.subplot_mosaic(
@@ -463,11 +486,12 @@ def plot_metrics(metrics: pd.Series, path: str, title: str) -> None:
     axd["deltas"].set_ylabel("value [bn EUR]")
     axd["deltas"].set_title("Value of information")
     fig.suptitle(title)
+    fig.supxlabel(note, fontsize=7)
     fig.savefig(path, dpi=150)
     plt.close(fig)
 
 
-def plot_cost_matrix(cost_matrix: pd.DataFrame, path: str, title: str) -> None:
+def plot_cost_matrix(cost_matrix: pd.DataFrame, path: str, title: str, note: str) -> None:
     """Heatmap of total cost [bn EUR]: rows = portfolios, columns = realized grid."""
     data = cost_matrix / 1e9
     fig, ax = plt.subplots(
@@ -490,6 +514,7 @@ def plot_cost_matrix(cost_matrix: pd.DataFrame, path: str, title: str) -> None:
             )
     fig.colorbar(im, ax=ax, label="total cost [bn EUR]")
     ax.set_title(title)
+    fig.supxlabel(note, fontsize=7)
     fig.savefig(path, dpi=150)
     plt.close(fig)
 
@@ -550,6 +575,7 @@ if __name__ == "__main__":
             evaluations[(portfolio, grid_scenario)] = pypsa.Network(path)
 
     title = f"Stochastic grid {snakemake.wildcards.planning_horizons}"
+    note = solver_gap_note(topologies, evaluations)
     portfolios = list(topologies)
 
     # Under freeze_outside_de_capacities=<grid_scenario>, that source portfolio is
@@ -579,7 +605,7 @@ if __name__ == "__main__":
         topologies, evaluations, grid_scenario_names, probabilities, extra_capex
     )
     cost_matrix.to_csv(snakemake.output.cost_matrix)
-    plot_cost_matrix(cost_matrix, snakemake.output.cost_matrix_png, title)
+    plot_cost_matrix(cost_matrix, snakemake.output.cost_matrix_png, title, note)
     assert_lt_st_consistency(
         topologies, evaluations, grid_scenario_names, probabilities
     )
@@ -587,7 +613,7 @@ if __name__ == "__main__":
 
     metrics = compute_metrics(cost_matrix, grid_scenario_names, probabilities)
     metrics.to_csv(snakemake.output.metrics)
-    plot_metrics(metrics, snakemake.output.metrics_png, title)
+    plot_metrics(metrics, snakemake.output.metrics_png, title, note)
     logger.info(f"Stochastic-grid metrics (network):\n{metrics}")
 
     # Whole-network total cost on the statistics basis (incl. existing-capacity
@@ -597,7 +623,7 @@ if __name__ == "__main__":
     )
     cost_matrix_total.to_csv(snakemake.output.cost_matrix_total)
     plot_cost_matrix(
-        cost_matrix_total, snakemake.output.cost_matrix_total_png, f"{title} (total incl. existing capex)"
+        cost_matrix_total, snakemake.output.cost_matrix_total_png, f"{title} (total incl. existing capex)", note
     )
 
     # Outside-DE, on the same per-country get_tsc accounting as the DE cost.
@@ -607,7 +633,7 @@ if __name__ == "__main__":
     )
     cost_matrix_outside_de.to_csv(snakemake.output.cost_matrix_outside_de)
     plot_cost_matrix(
-        cost_matrix_outside_de, snakemake.output.cost_matrix_outside_de_png, f"{title} (outside DE)"
+        cost_matrix_outside_de, snakemake.output.cost_matrix_outside_de_png, f"{title} (outside DE)", note
     )
 
     # Germany only
@@ -619,11 +645,11 @@ if __name__ == "__main__":
         evaluations, grid_scenario_names, portfolios, probabilities
     )
     cost_matrix_de.to_csv(snakemake.output.cost_matrix_de)
-    plot_cost_matrix(cost_matrix_de, snakemake.output.cost_matrix_de_png, f"{title} (DE)")
+    plot_cost_matrix(cost_matrix_de, snakemake.output.cost_matrix_de_png, f"{title} (DE)", note)
 
     metrics_de = compute_metrics(cost_matrix_de, grid_scenario_names, probabilities)
     metrics_de.to_csv(snakemake.output.metrics_de)
-    plot_metrics(metrics_de, snakemake.output.metrics_de_png, f"{title} (DE)")
+    plot_metrics(metrics_de, snakemake.output.metrics_de_png, f"{title} (DE)", note)
     logger.info(f"Stochastic-grid metrics (DE):\n{metrics_de}")
 
     # DE cost INCLUDING the realized topology's own grid capex (de_total_cost
@@ -635,5 +661,5 @@ if __name__ == "__main__":
     )
     cost_matrix_de_grid.to_csv(snakemake.output.cost_matrix_de_grid)
     plot_cost_matrix(
-        cost_matrix_de_grid, snakemake.output.cost_matrix_de_grid_png, f"{title} (DE incl. grid)"
+        cost_matrix_de_grid, snakemake.output.cost_matrix_de_grid_png, f"{title} (DE incl. grid)", note
     )
