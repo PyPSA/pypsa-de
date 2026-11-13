@@ -80,3 +80,19 @@ def test_replaced_line_follows_de_cutoff(de_cutoff, retired):
     n = _cutoff_network()
     mp.retire_replaced_lines(n, mp.transmission_cutoff(n, n.lines, 2030, de_cutoff))
     assert (not n.lines.at["old_2029", "active"]) == retired
+
+
+@pytest.mark.parametrize(
+    "de_cutoff, inactive",
+    [
+        (2030, ["de_2031", "defr_2031", "fr_2031"]),
+        (2028, ["de_2029", "de_2031", "defr_2029", "defr_2031", "fr_2031"]),
+    ],
+)
+def test_deactivate_future_lines(de_cutoff, inactive):
+    """Lines due after the cutoff are out of service; links and extendability stay."""
+    n = _cutoff_network()
+    n.lines["s_nom_extendable"] = True
+    mp.deactivate_future_lines(n, mp.transmission_cutoff(n, n.lines, 2030, de_cutoff))
+    assert sorted(n.lines.index[~n.lines.active]) == inactive
+    assert n.links.active.all() and n.lines.s_nom_extendable.all()

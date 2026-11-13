@@ -1394,12 +1394,32 @@ def retire_replaced_lines(n, built_until):
     n : pypsa.Network
     built_until : float or pd.Series
         Last build year of the projects active in this network, scalar or per
-        line: the cutoff if later projects are deactivated, else ``inf``.
+        line (see :func:`transmission_cutoff`).
     """
     end = n.lines.build_year + n.lines.lifetime
     retired = n.lines.index[np.isfinite(end) & (end <= built_until)]
     n.lines.loc[retired, "active"] = False
     logger.info(f"Deactivated {len(retired)} line(s) replaced by upgrades built by {built_until}.")
+
+
+def deactivate_future_lines(n, built_until):
+    """
+    Deactivate AC line projects due after ``built_until``.
+
+    A single-period solve ignores build year, so a later project would
+    otherwise be in service (and, under a volume limit, floored at its
+    ``s_nom``). Endogenous expansion of active lines is left untouched.
+
+    Parameters
+    ----------
+    n : pypsa.Network
+    built_until : float or pd.Series
+        Last build year of the projects active in this network, scalar or per
+        line (see :func:`transmission_cutoff`).
+    """
+    future = n.lines.index[n.lines.build_year > built_until]
+    n.lines.loc[future, "active"] = False
+    logger.info(f"Deactivated {len(future)} line project(s) due after {built_until}.")
 
 
 def scale_capacity(n, scaling):
@@ -1564,11 +1584,10 @@ def deactivate_early_transmission_expansion(n, current_year, de_cutoff):
     )
     # Assumption 1: The current base network captures all existing lines already -> no expansion in 2025
     # Assumption 2: All international transmission projects and all within Germany are in NEP or TYNDP
-    line_cutoff = transmission_cutoff(n, n.lines, current_year, de_cutoff)
+    deactivate_future_lines(n, transmission_cutoff(n, n.lines, current_year, de_cutoff))
     link_cutoff = transmission_cutoff(n, n.links, current_year, de_cutoff).where(
         n.links.carrier == "DC", current_year
     )
-    n.lines.loc[n.lines.build_year > line_cutoff, "active"] = False
     n.links.loc[n.links.build_year > link_cutoff, "active"] = False
     n.lines.s_nom_extendable = False
     n.links.loc[n.links.carrier == "DC", "p_nom_extendable"] = False
@@ -1655,12 +1674,9 @@ if __name__ == "__main__":
     assert de_cutoff <= current_year, (
         f"exogenous_grid_cutoff_DE {de_cutoff} lies after planning year {current_year}"
     )
-    retire_replaced_lines(
-        n,
-        transmission_cutoff(n, n.lines, current_year, de_cutoff)
-        if current_year in early
-        else np.inf,
-    )
+    line_cutoff = transmission_cutoff(n, n.lines, current_year, de_cutoff)
+    retire_replaced_lines(n, line_cutoff)
+    deactivate_future_lines(n, line_cutoff)
 
     force_connection_nep_offshore(n, current_year, costs)
 
