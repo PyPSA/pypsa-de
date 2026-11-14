@@ -1409,6 +1409,63 @@ def relative_gap(n: pypsa.Network) -> float:
     return abs(sm.ObjVal - sm.ObjBound) / abs(sm.ObjVal)
 
 
+def detach_inactive_lines(
+    n: pypsa.Network,
+) -> tuple[pd.DataFrame, dict[str, pd.DataFrame]]:
+    """
+    Remove inactive AC lines so that they stay out of the Kirchhoff cycles.
+
+    PyPSA builds the cycle basis from all lines and only drops the flows of
+    inactive ones. A cycle through an inactive line therefore remains as a
+    phantom constraint on the other lines of that cycle.
+
+    Parameters
+    ----------
+    n : pypsa.Network
+
+    Returns
+    -------
+    static : pd.DataFrame
+        Static data of the removed lines.
+    dynamic : dict[str, pd.DataFrame]
+        Time-varying input data of the removed lines.
+    """
+    static = n.lines[~n.lines.active]
+    dynamic = {
+        k: df[df.columns.intersection(static.index)] for k, df in n.lines_t.items()
+    }
+    n.remove("Line", static.index)
+    logger.info(f"Detached {len(static)} inactive line(s) for the solve.")
+    return static, dynamic
+
+
+def reattach_lines(
+    n: pypsa.Network, static: pd.DataFrame, dynamic: dict[str, pd.DataFrame]
+) -> None:
+    """
+    Re-add the lines removed by `detach_inactive_lines` after the solve.
+
+    They get ``s_nom_opt = s_nom`` and zero outputs (flows, duals), so the
+    exported network keeps every line for brownfield and grid-scenario readers.
+
+    Parameters
+    ----------
+    n : pypsa.Network
+    static : pd.DataFrame
+    dynamic : dict[str, pd.DataFrame]
+        As returned by `detach_inactive_lines`.
+    """
+    if static.empty:
+        return
+    kept = n.lines.index
+    n.add("Line", static.index, **static.assign(s_nom_opt=static.s_nom))
+    for k, df in n.lines_t.items():
+        if not dynamic.get(k, pd.DataFrame()).empty:
+            n.lines_t[k] = pd.concat([df, dynamic[k]], axis=1)
+        elif len(df.columns) and kept.isin(df.columns).all():
+            n.lines_t[k] = df.reindex(columns=n.lines.index, fill_value=0.0)
+
+
 def collect_kwargs(
     config: dict,
     solving: dict,
@@ -1595,6 +1652,7 @@ if __name__ == "__main__":
         limit_max_growth=snakemake.params.get("sector", {}).get("limit_max_growth"),
         rolling_horizon=cf_solving["rolling_horizon"],
     )
+    inactive_lines = detach_inactive_lines(n)
 
     # Determine solve mode
     rolling_horizon = cf_solving.get("rolling_horizon", False)
@@ -1696,6 +1754,7 @@ if __name__ == "__main__":
     n.meta = dict(snakemake.config, **dict(wildcards=dict(snakemake.wildcards)))
     if not rolling_horizon and snakemake.params.solving["solver"]["name"] == "gurobi":
         n.meta["relative_gap"] = relative_gap(n)
+    reattach_lines(n, *inactive_lines)
     n.export_to_netcdf(snakemake.output.network)
 
     if snakemake.output.get("model"):

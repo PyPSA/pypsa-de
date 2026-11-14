@@ -150,6 +150,17 @@
     grid scenarios now count active branches only. Before, they also counted
     future projects deactivated in early pathway years.
 
+* `solve_network` removes inactive AC lines for the solve and re-adds them
+  before export, with `s_nom_opt = s_nom` and zero flows. PyPSA builds the
+  Kirchhoff cycles from all lines and only drops the flows of inactive ones,
+  so every cycle through a replaced or future line stayed as a phantom
+  constraint on the rest of its loop. The endogenous `optimal` network was hit;
+  the grid topologies already removed such lines. In the NUTS2 2035 test run,
+  67 replaced lines added 67 phantom cycles, and `optimal` cost about 13.5 bn
+  EUR more than every grid topology. Extendable inactive lines were also saved
+  with `s_nom_opt = 0`, which would have entered the next myopic year as
+  zero-capacity lines.
+
 * Dataset folders are selected by exact name. Before, a substring match could
   read the `nep2023confirmed` folder for `nep`.
 
