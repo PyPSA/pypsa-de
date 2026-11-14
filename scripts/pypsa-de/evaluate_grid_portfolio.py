@@ -38,6 +38,7 @@ from scripts.solve_network import (
     create_optimization_model,
     prepare_network,
     relative_gap,
+    violations,
 )
 
 logger = logging.getLogger(__name__)
@@ -194,7 +195,10 @@ def solve_with_fallback(
     BarHomogeneous, then crossover): the cost of the robust knobs is paid only
     for a cell that still stalls, never on the critical path of every solve.
     An 'optimal' solve whose `relative_gap` exceeds `max_rel_gap` also
-    escalates. Returns the final (status, condition, gap).
+    escalates. An 'optimal' solve without a gurobi bound (NaN gap) is
+    accepted with a warning: gurobi's own termination criteria hold, and the
+    barrier log of such solves showed gaps of 1e-7 to 6e-7.
+    Returns the final (status, condition, gap).
     """
     base = solve_kwargs.get("solver_options", {})
     attempts = [{}, *(fallback or [])]
@@ -203,6 +207,13 @@ def solve_with_fallback(
         status, condition = n.optimize.solve_model(**kwargs)
         optimal = status == "ok" and condition == TerminationCondition.optimal
         gap = relative_gap(n) if optimal else np.inf
+        if np.isnan(gap):
+            logger.warning(
+                "ST dispatch solve is optimal but gurobi reports no ObjBound; "
+                "accepting it without a gap check (DualVio %.1e)",
+                n.model.solver_model.DualVio,
+            )
+            return status, condition, gap
         if gap <= max_rel_gap:
             if i:
                 logger.info(
@@ -330,5 +341,6 @@ if __name__ == "__main__":
         load_shed_fraction=shed_fraction,
         co2_slack_used=co2_slack_used,
         relative_gap=gap,
+        **violations(canvas),
     )
     canvas.export_to_netcdf(snakemake.output.network)

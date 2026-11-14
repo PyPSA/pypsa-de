@@ -829,7 +829,7 @@ stochastic_grid_scenarios:
     options:
       co2_cap_slack:
         enable: true # soften the CO2 emission caps with a penalized elastic slack (see solving.options.co2_cap_slack): stabilises the near-infeasible year-diagonal dispatch LPs without changing the optimum
-      max_rel_gap: 5.0e-5 # fail (after solve_fallback) if gurobi's relative primal-dual gap (ObjVal vs ObjBound) exceeds this; 5e-5 of a ~200 bn EUR objective bounds the cost error at ~10 M EUR
+      max_rel_gap: 5.0e-5 # fail (after solve_fallback) if gurobi's relative primal-dual gap (ObjVal vs ObjBound) exceeds this (an optimal solve without ObjBound is accepted with a warning); 5e-5 of a ~200 bn EUR objective bounds the cost error at ~10 M EUR
       load_shedding:
         all_carriers: false
         carriers: # heat must shed at 3h: existing boilers are pinned to the load profile, so heat peaks beyond maxed-out resistive heaters have no other supply

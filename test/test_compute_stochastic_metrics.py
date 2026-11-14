@@ -15,6 +15,7 @@ import importlib.util
 import sys
 from types import SimpleNamespace
 
+import numpy as np
 import pandas as pd
 import pypsa
 import pytest
@@ -207,3 +208,12 @@ def test_solver_gap_note_reports_largest_gap(lt_meta, lt_expected):
     note = csm.solver_gap_note(topologies, evaluations)
     assert lt_expected in note
     assert "ST cell <= 3.0e-05 (<= 3.0 M EUR)" in note
+
+
+def test_solver_gap_note_counts_missing_bounds():
+    evaluations = {
+        ("a", "a"): SimpleNamespace(objective=2e11, meta={"relative_gap": 1e-5}),
+        ("a", "b"): SimpleNamespace(objective=1e11, meta={"relative_gap": np.nan}),
+    }
+    note = csm.solver_gap_note({}, evaluations)
+    assert "ST cell <= 1.0e-05 (<= 2.0 M EUR), no bound for 1" in note

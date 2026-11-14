@@ -439,12 +439,14 @@ def compute_metrics(
 
 
 def max_gap(networks: dict) -> str:
-    """Largest relative solver gap among `networks` and its size in M EUR."""
+    """Largest relative solver gap in `networks`, in M EUR, and count without bound."""
     if any("relative_gap" not in n.meta for n in networks.values()):
         return "not recorded"
     rel = pd.Series({k: n.meta["relative_gap"] for k, n in networks.items()})
     obj = pd.Series({k: abs(n.objective) for k, n in networks.items()})
-    return f"<= {rel.max():.1e} (<= {(rel * obj).max() / 1e6:.1f} M EUR)"
+    note = f"<= {rel.max():.1e} (<= {(rel * obj).max() / 1e6:.1f} M EUR)"
+    missing = rel.isna().sum()
+    return f"{note}, no bound for {missing}" if missing else note
 
 
 def solver_gap_note(

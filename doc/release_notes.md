@@ -104,6 +104,12 @@
   footnote with the largest solver gap of the LT solves and of the ST cells,
   relative and in M EUR (from `n.meta["relative_gap"]`). `solve_network` now
   stores this gap for gurobi solves too; older LT networks show "not recorded".
+* An ST cell that ends optimal without a gurobi `ObjBound` is no longer
+  rejected with gap `inf`. Gurobi gave no bound for four 3h barrier solves
+  whose logged dual residual ended at 1.2e-7 to 4.2e-6, though their barrier
+  gap was 1e-7 to 6e-7. Such a cell is accepted with a warning; its gap is
+  stored as NaN and the footnote counts it ("no bound for N"). LT and ST
+  networks also store gurobi's `ConstrVio` and `DualVio` in `n.meta`.
 * `evaluate_grid_portfolio` seeds `noisy_costs` like `solve_network`; ST
   draws were unseeded and not reproducible.
 * `compute_stochastic_metrics` asserts that the ST re-dispatch reproduces the

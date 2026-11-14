@@ -1404,8 +1404,12 @@ def relative_gap(n: pypsa.Network) -> float:
 
     Barrier without crossover can report 'optimal' while the unscaled gap is
     orders of magnitude above `BarConvTol`, which inflates the cost.
+    NaN if gurobi reports no finite `ObjBound`; it did so for 3h ST barrier
+    solves whose logged dual residual ended at 1.2e-7 to 4.2e-6.
     """
     sm = n.model.solver_model
+    if not np.isfinite(sm.ObjBound):
+        return np.nan
     return abs(sm.ObjVal - sm.ObjBound) / abs(sm.ObjVal)
 
 
@@ -1464,6 +1468,12 @@ def reattach_lines(
             n.lines_t[k] = pd.concat([df, dynamic[k]], axis=1)
         elif len(df.columns) and kept.isin(df.columns).all():
             n.lines_t[k] = df.reindex(columns=n.lines.index, fill_value=0.0)
+
+
+def violations(n: pypsa.Network) -> dict[str, float]:
+    """Largest unscaled primal and dual violation of the last gurobi solve."""
+    sm = n.model.solver_model
+    return {"constr_vio": sm.ConstrVio, "dual_vio": sm.DualVio}
 
 
 def collect_kwargs(
@@ -1754,6 +1764,7 @@ if __name__ == "__main__":
     n.meta = dict(snakemake.config, **dict(wildcards=dict(snakemake.wildcards)))
     if not rolling_horizon and snakemake.params.solving["solver"]["name"] == "gurobi":
         n.meta["relative_gap"] = relative_gap(n)
+        n.meta.update(violations(n))
     reattach_lines(n, *inactive_lines)
     n.export_to_netcdf(snakemake.output.network)
 
