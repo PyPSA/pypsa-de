@@ -119,12 +119,14 @@
   bound from the LT shadow prices: `sum (price - shedding cost) * shed` plus
   `sum (CO2 price - penalty) * slack`. The check fails if ST is dearer than LT,
   or cheaper than this bound, beyond `1e-4` of the LT opex. Before, it demanded
-  equality. On the NUTS2 3h run, ST shed 11-37 GWh of electricity in hours where
+  equality. Slack below 1 t counts as unused (residue of barrier solves without
+  crossover). PyPSA stores no CO2 price for stochastic networks, so where their
+  ST uses more slack the bound is NaN and only the first condition is checked. On the NUTS2 3h run, ST shed 11-37 GWh of electricity in hours where
   the LT price reached 20,000-70,000 EUR/MWh, which made it 30-95 M EUR
   (0.02-0.05 %) cheaper; the bound was 57-819 M EUR. New outputs:
   `lt_st_consistency_*.csv` (LT and ST opex, difference in EUR and %, shed
   energy and cost, bound) and `shedding_*.csv` (shed energy, cost, snapshots,
-  peak and used CO2 slack per ST cell).
+  peak and used CO2 slack per ST cell; snapshots count only shedding above 1 MW).
 * The wait-and-see check of `compute_stochastic_metrics` now reports instead of
   failing when a planned portfolio is beaten in its cost-matrix column: a grid
   scenario's own portfolio on its grid, or the stochastic portfolio in

@@ -219,6 +219,23 @@ def test_lt_st_table_bounds_shedding_gain(shed_cost, delta, bound):
     csm.assert_lt_st_consistency(table)
 
 
+def test_shed_snapshots_ignore_solver_residue():
+    st = _st(20.0)  # sheds 2 MW in the second hour
+    st.generators_t.p.loc[0, "shed"] = 1e-6
+    assert csm.shedding_stats(st).shed_snapshots == 1
+
+
+@pytest.mark.parametrize("slack, unknown", [(1e-4, False), (5.0, True)])
+def test_co2_slack_without_lt_price(slack, unknown):
+    """Solver residue counts as unused; real slack without LT price gives NaN."""
+    st = _st(None)
+    st.meta = {
+        "co2_slack_used": {"co2_slack-CO2Limit": slack},
+        "solving": {"options": {"co2_cap_slack": {"penalty": 1e4}}},
+    }
+    assert np.isnan(csm.co2_slack_value(_lt(), st)) == unknown
+
+
 @pytest.mark.parametrize(
     "delta, bound, ok",
     [
@@ -226,6 +243,8 @@ def test_lt_st_table_bounds_shedding_gain(shed_cost, delta, bound):
         (0.5, 0.0, False),  # ST dearer than LT: loose solve
         (-20.005, 20.0, True),  # gain at the bound, within rtol
         (-21.0, 20.0, False),  # gain beyond what the relaxations can save
+        (-21.0, np.nan, True),  # unknown bound: only ST dearer than LT is checked
+        (0.5, np.nan, False),
     ],
 )
 def test_assert_lt_st_consistency(delta, bound, ok):

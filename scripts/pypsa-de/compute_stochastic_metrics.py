@@ -334,6 +334,11 @@ def assert_wait_and_see_optimality(
 
 # LT/ST consistency tolerance (relative to LT opex), absorbing solver-gap noise.
 LT_ST_RTOL = 1e-4
+# CO2-cap slack (t) below which it counts as unused: barrier solves without
+# crossover leave tiny positive residues on slack variables.
+CO2_SLACK_NOISE = 1.0
+# Shed power (MW) below which a snapshot counts as shedding-free, same reason.
+SHED_NOISE = 1.0
 
 
 def _scenario(df: pd.DataFrame, scenario: str | None, axis: int = 0) -> pd.DataFrame:
@@ -358,24 +363,27 @@ def shed_value(
 def co2_slack_value(n_lt: pypsa.Network, n_st: pypsa.Network) -> float:
     """Sum of (mu_k - penalty) * slack_k over the CO2 caps the ST solve overshot.
 
-    mu_k is the LT shadow price of cap k. Unused slacks contribute nothing, so
-    the LT price is only needed (and asserted) for a cap whose slack was used.
+    mu_k is the LT shadow price of cap k. Slacks up to `CO2_SLACK_NOISE` count
+    as unused and contribute nothing, so the LT price is only needed for a cap
+    whose slack was used. PyPSA stores no such price for stochastic networks;
+    the bound is then unknown (NaN).
     """
     used = {
         k.removeprefix("co2_slack-"): r
         for k, r in n_st.meta["co2_slack_used"].items()
-        if r > 0
+        if r > CO2_SLACK_NOISE
     }
     if not used:
         return 0.0
     penalty = n_st.meta["solving"]["options"]["co2_cap_slack"]["penalty"]
     mu = n_lt.global_constraints.mu
     missing = [k for k in used if k not in mu.index or pd.isna(mu[k])]
-    assert not missing, (
-        f"ST used CO2 slack on {missing}, but the LT network has no shadow price "
-        "for these caps (none is stored for stochastic networks), so the LT/ST "
-        "gain bound cannot be computed."
-    )
+    if missing:
+        logger.warning(
+            f"ST used CO2 slack on {missing}, but the LT network has no shadow "
+            "price for these caps, so the LT/ST gain bound is unknown (NaN)."
+        )
+        return float("nan")
     return sum((abs(mu[k]) - penalty) * r for k, r in used.items())
 
 
@@ -419,7 +427,7 @@ def shedding_stats(n: pypsa.Network) -> pd.Series:
         {
             "shed_GWh": energy.sum() / 1e3,
             "shed_cost": (energy * gens.marginal_cost).sum(),
-            "shed_snapshots": (total > 0).sum(),
+            "shed_snapshots": (total > SHED_NOISE).sum(),
             "shed_peak_GW": total.max() / 1e3,
             "co2_slack_t": sum(n.meta["co2_slack_used"].values()),
         }
@@ -478,7 +486,8 @@ def assert_lt_st_consistency(table: pd.DataFrame, rtol: float = LT_ST_RTOL) -> N
     ST relaxes LT, so it may be cheaper, but by no more than its relaxations
     can save (`gain_bound`). tol = `rtol` * LT opex covers solver gaps. ST
     dearer than LT points to a loose solve; a larger gain to a modelling or
-    accounting difference between LT and ST.
+    accounting difference between LT and ST. An unknown (NaN) bound checks
+    only the first inequality.
 
     Raises
     ------
