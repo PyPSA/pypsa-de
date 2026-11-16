@@ -1247,10 +1247,10 @@ def add_co2_cap_constraint(n, cname, lhs, limit):
     When ``solving.options.co2_cap_slack`` is enabled for ``cname`` the hard
     constraint is replaced by the elastic ``lhs - s <= limit``, ``s >= 0``,
     with ``penalty * s`` added to the objective. With the penalty above the
-    cap's shadow price the optimizer drives ``s`` to zero at any feasible
-    optimum, so the solution is bit-for-bit unchanged; the slack only gives
-    the barrier a full-dimensional interior on cells where the cap would
-    otherwise bind as a hard wall and stall the solve. A used slack means the
+    cap's shadow price the optimizer keeps ``s`` at zero whenever the cap
+    is reachable, so the optimum is unchanged; the slack gives the barrier a
+    full-dimensional interior where the cap would otherwise bind as a hard
+    wall and stall the solve. A used slack means the
     target was physically unreachable and is caught post-solve by
     :func:`scripts.pypsa-de.evaluate_grid_portfolio.check_co2_slack`.
 

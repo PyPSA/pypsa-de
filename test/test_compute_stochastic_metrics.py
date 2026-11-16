@@ -94,6 +94,17 @@ def test_violation_tolerance(factor, ok):
             csm.assert_wait_and_see_optimality(m, GRID_SCENARIO_NAMES)
 
 
+def test_small_beating_is_reported_not_raised(caplog):
+    """eev beats the 2025 diagonal by 0.5%: within the guard, but reported."""
+    m = _valid_matrix()
+    m.loc["eev", "2025_exogen"] = 100.0 / 1.005
+    csm.assert_wait_and_see_optimality(m, GRID_SCENARIO_NAMES)
+    row = csm.wait_and_see_table(m, GRID_SCENARIO_NAMES).loc["2025_exogen"]
+    assert (row.planned, row.cheapest) == ("2025_exogen", "eev")
+    assert row.excess_pct == pytest.approx(0.5)
+    assert "not cheapest" in caplog.text
+
+
 def test_compute_metrics_ws_uses_diagonal():
     """WS is the probability-weighted cost-matrix diagonal (each scenario's own
     portfolio on its own grid), SP/EEV the stochastic/eev `expected` cells."""
@@ -150,46 +161,83 @@ def test_extra_capex_restores_optimality():
     csm.assert_wait_and_see_optimality(m, GRID_SCENARIO_NAMES)
 
 
-def _lt_network(opex: float) -> pypsa.Network:
-    """LT network with portfolio capex 20 (2 MW x 10) and objective capex + opex."""
+def _network(base_extendable: bool) -> pypsa.Network:
+    """Load 1 MW then 3 MW; `base` (mc 1, capex 50) and a 10 MW `peak` (mc 30).
+
+    As LT plan `base` settles at 1 MW, so `peak` covers 2 MW at the 3 MW
+    hour and sets the price to 30 there.
+    """
     n = pypsa.Network()
+    n.set_snapshots(range(2))
     n.add("Bus", "b")
-    n.add("Generator", "g", bus="b", p_nom_extendable=True, capital_cost=10.0)
-    n.generators.loc["g", "p_nom_opt"] = 2.0
-    n._objective = 20.0 + opex  # as stored by a solve; the property has no setter
+    n.add("Load", "d", bus="b", p_set=[1.0, 3.0])
+    n.add("Generator", "base", bus="b", marginal_cost=1.0, capital_cost=50.0,
+          p_nom=1.0, p_nom_extendable=base_extendable)
+    n.add("Generator", "peak", bus="b", marginal_cost=30.0, p_nom=10.0)
     return n
 
 
-def _lt_st_inputs(st_opex: dict[tuple[str, str], float]):
-    names = ["2025_exogen", "2030_exogen"]
-    probs = {"2025_exogen": 0.4, "2030_exogen": 0.6}
-    topologies = {s: _lt_network(100.0) for s in names}
-    topologies["stochastic"] = _lt_network(100.0)
-    evaluations = {
-        (p, s): SimpleNamespace(objective=st_opex.get((p, s), 100.0))
-        for p in topologies
-        for s in names
-    }
-    return topologies, evaluations, names, probs
+def _lt(probabilities: dict[str, float] | None = None) -> pypsa.Network:
+    n = _network(base_extendable=True)
+    if probabilities:
+        n.set_scenarios(probabilities)
+    n.optimize(solver_name="highs", include_objective_constant=False)
+    n.model.solver_model = None  # as loaded from disk; get_one_scenario copies `n`
+    return n
+
+
+def _st(shed_cost: float | None) -> pypsa.Network:
+    """ST re-dispatch of the LT plan (`base` fixed at 1 MW), optionally with shedding."""
+    n = _network(base_extendable=False)
+    if shed_cost is not None:
+        n.add("Generator", "shed", bus="b", carrier="load", p_nom=10.0,
+              marginal_cost=shed_cost)
+    n.optimize(solver_name="highs", include_objective_constant=False)
+    n.meta = {"co2_slack_used": {}}
+    return n
 
 
 @pytest.mark.parametrize(
-    "st_opex, ok",
+    "shed_cost, delta, bound",
     [
-        ({}, True),
-        ({("2025_exogen", "2030_exogen"): 150.0}, True),  # off-diagonal is free
-        ({("2030_exogen", "2030_exogen"): 100.005}, True),  # within rtol
-        ({("2030_exogen", "2030_exogen"): 101.0}, False),  # loose ST solve
-        ({("stochastic", "2025_exogen"): 102.5}, False),  # E[ST] 101 vs SP 100
+        (None, 0.0, 0.0),  # no relaxation: LT and ST must match
+        (40.0, 0.0, 0.0),  # shedding dearer than the peak plant stays unused
+        (20.0, -20.0, 20.0),  # sheds 2 MW at 20 instead of 30: bound is tight
     ],
 )
-def test_lt_st_consistency(st_opex, ok):
-    args = _lt_st_inputs(st_opex)
+def test_lt_st_table_bounds_shedding_gain(shed_cost, delta, bound):
+    names = ["a", "b"]
+    probs = {"a": 0.4, "b": 0.6}
+    st = _st(shed_cost)
+    topologies = {"a": _lt(), "b": _lt(), "stochastic": _lt(probs)}
+    evaluations = {(p, s): st for p in topologies for s in names}
+
+    table = csm.lt_st_table(topologies, evaluations, names, probs)
+
+    assert table.delta.tolist() == pytest.approx([delta] * 3, abs=1e-6)
+    assert table.gain_bound.tolist() == pytest.approx([bound] * 3, abs=1e-6)
+    csm.assert_lt_st_consistency(table)
+
+
+@pytest.mark.parametrize(
+    "delta, bound, ok",
+    [
+        (0.005, 0.0, True),  # within rtol
+        (0.5, 0.0, False),  # ST dearer than LT: loose solve
+        (-20.005, 20.0, True),  # gain at the bound, within rtol
+        (-21.0, 20.0, False),  # gain beyond what the relaxations can save
+    ],
+)
+def test_assert_lt_st_consistency(delta, bound, ok):
+    table = pd.DataFrame(
+        {"lt_opex": [100.0], "delta": [delta], "delta_pct": [delta], "gain_bound": [bound]},
+        index=["a"],
+    )
     if ok:
-        csm.assert_lt_st_consistency(*args)
+        csm.assert_lt_st_consistency(table)
     else:
-        with pytest.raises(AssertionError, match="does not reproduce"):
-            csm.assert_lt_st_consistency(*args)
+        with pytest.raises(AssertionError, match="dearer than the LT dispatch"):
+            csm.assert_lt_st_consistency(table)
 
 
 @pytest.mark.parametrize(

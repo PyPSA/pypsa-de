@@ -112,10 +112,28 @@
   networks also store gurobi's `ConstrVio` and `DualVio` in `n.meta`.
 * `evaluate_grid_portfolio` seeds `noisy_costs` like `solve_network`; ST
   draws were unseeded and not reproducible.
-* `compute_stochastic_metrics` asserts that the ST re-dispatch reproduces the
-  LT dispatch cost (each portfolio on its own grid, and the expected ST cost of
-  the stochastic portfolio vs the native SP objective) within `1e-4`. The
-  wait-and-see optimality tolerance tightens from `1e-2` to `1e-4`.
+* `compute_stochastic_metrics` compares the ST re-dispatch with the LT dispatch
+  cost: each portfolio on its own grid, and the expected ST cost of the
+  stochastic portfolio vs the native SP objective. ST may be cheaper, since its
+  load shedding and CO2 slack relax the LT problem, but by no more than an upper
+  bound from the LT shadow prices: `sum (price - shedding cost) * shed` plus
+  `sum (CO2 price - penalty) * slack`. The check fails if ST is dearer than LT,
+  or cheaper than this bound, beyond `1e-4` of the LT opex. Before, it demanded
+  equality. On the NUTS2 3h run, ST shed 11-37 GWh of electricity in hours where
+  the LT price reached 20,000-70,000 EUR/MWh, which made it 30-95 M EUR
+  (0.02-0.05 %) cheaper; the bound was 57-819 M EUR. New outputs:
+  `lt_st_consistency_*.csv` (LT and ST opex, difference in EUR and %, shed
+  energy and cost, bound) and `shedding_*.csv` (shed energy, cost, snapshots,
+  peak and used CO2 slack per ST cell).
+* The wait-and-see check of `compute_stochastic_metrics` now reports instead of
+  failing when a planned portfolio is beaten in its cost-matrix column: a grid
+  scenario's own portfolio on its grid, or the stochastic portfolio in
+  `expected`. Portfolios are planned without load shedding but evaluated with
+  it, so such a beating can be a result, not an error; no bound exists for it.
+  It logs a warning and writes `wait_and_see_*.csv` (planned and cheapest
+  portfolio, excess in EUR and %). Only beatings above `1e-2` still fail, to
+  catch cost-basis bugs such as the freeze-capex one. On the NUTS2 3h run, the
+  `2031_exogen` portfolio beats the stochastic one in `expected` by 0.03 %.
 * New `pypsa-de: exogenous_grid_cutoff_DE` (`{planning year: last build year}`,
   set to `{2030: 2028}`) caps the exogenous AC lines and DC links at DE buses in
   a myopic pathway year. Lines replaced by a delayed upgrade stay in service.

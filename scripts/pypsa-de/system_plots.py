@@ -740,8 +740,7 @@ def plot_load_shedding_map(
     carrier-``load`` generators on the given bus carriers (unserved demand).
 
     Drawn only when total shedding in `region` exceeds `min_twh`; the total shed
-    [TWh] is returned either way. Load shedding is enabled only for the ST
-    portfolio evaluations, so LT topology networks shed nothing and are skipped.
+    [TWh] is returned either way.
     """
     g = network.generators[
         (network.generators.carrier == "load")

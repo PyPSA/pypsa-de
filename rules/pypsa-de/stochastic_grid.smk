@@ -526,7 +526,9 @@ def evaluate_grid_portfolio_solving(wildcards):
     fixed capacities) - a real capacity-adequacy shortfall, not a bug.
     Load-shedding turns that into a large-but-finite cost instead of a hard
     solver failure, so one infeasible cell doesn't take down the whole
-    compute_stochastic_metrics comparison.
+    compute_stochastic_metrics comparison. On a feasible grid ST also sheds
+    wherever that is cheaper than serving the load, so it can undercut the
+    LT dispatch of the same portfolio (see compute_stochastic_metrics).
 
     Deliberately not added to `stochastic_grid_solving` (used by
     solve_grid_topology_network too): letting the capacity-expansion solves
@@ -1030,6 +1032,12 @@ rule compute_stochastic_metrics:
         + "scenario_comparison/stochastic_metrics/cost_matrix_de_grid_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.csv",
         metrics_de=RESULTS
         + "scenario_comparison/stochastic_metrics/metrics_de_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.csv",
+        shedding=RESULTS
+        + "scenario_comparison/stochastic_metrics/shedding_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.csv",
+        lt_st_consistency=RESULTS
+        + "scenario_comparison/stochastic_metrics/lt_st_consistency_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.csv",
+        wait_and_see=RESULTS
+        + "scenario_comparison/stochastic_metrics/wait_and_see_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.csv",
         capacities_png=RESULTS
         + "scenario_comparison/stochastic_metrics/capacities_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.png",
         cost_matrix_png=RESULTS

@@ -1531,8 +1531,8 @@ def get_primary_energy(n, region):
     # Load-shedding generators (carrier "load", present when
     # solving.options.load_shedding is enabled - e.g. the
     # evaluate_grid_portfolio networks of the stochastic-grid analysis) feed
-    # the electricity bus with an unpriced slack covering demand that
-    # generation + grid cannot meet. Not a real primary carrier, but it is
+    # the electricity bus with demand that generation + grid cannot meet, or
+    # only at more than the shedding cost. Not a real primary carrier, but it is
     # kept in the balance (as Primary Energy|Other) rather than dropped, so
     # the totals still close and the unserved energy stays visible.
     var["Primary Energy|Other"] = renewable_electricity.get("load", 0)
@@ -1771,7 +1771,7 @@ def get_secondary_energy(n, region, _industry_demand):
     var["Secondary Energy|Electricity|Transmission Losses"] = acl + dcl + distril
 
     # Load shedding on the electricity bus (carrier "load", see
-    # get_primary_energy) - an unpriced supply slack for unmet demand. Kept
+    # get_primary_energy) - supply for demand left unserved. Kept
     # in the balance as Secondary Energy|Electricity|Other rather than
     # dropped.
     var["Secondary Energy|Electricity|Other"] = electricity_supply.get("load", 0)

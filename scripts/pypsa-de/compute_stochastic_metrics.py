@@ -12,8 +12,9 @@ here):
   portfolio s (the plan optimised for grid s) evaluated on grid s
 - SP  (stochastic solution): the stochastic portfolio re-dispatched on each real
   grid (cost matrix "stochastic" row = capex + expected opex), so every row
-  shares one evaluation model; `assert_lt_st_consistency` checks that this
-  matches the native objective of topology-stochastic
+  shares one evaluation model; `assert_lt_st_consistency` checks it against the
+  native objective of topology-stochastic, allowing for what ST load shedding
+  and CO2 slack can save
 - EEV (expected-value planner): capex(topology-eev) + expected opex of
   dispatching the eev portfolio under each real topology
 - EVPI = SP - WS   (value of perfect information about the grid)
@@ -256,10 +257,35 @@ def build_cost_matrix(
     return cost_matrix
 
 
-# Wait-and-see optimality tolerance (relative). The property is exact in theory,
-# so any deviation is solver-gap noise: ST cells are solved with crossover, the
-# LT plans to ~1e-5 (deterministic) and ~1e-4 (stochastic) primal-dual gap.
-WAIT_AND_SEE_RTOL = 1e-4
+# Wait-and-see guard tolerance (relative). Portfolios are planned without load
+# shedding but evaluated with it (ST), so a planned portfolio may be beaten in its
+# column; no bound exists for that, as off-diagonal cells have no LT counterpart.
+# Beatings are reported; only gross ones (cost-basis bugs) fail.
+WAIT_AND_SEE_RTOL = 1e-2
+
+
+def wait_and_see_table(
+    cost_matrix: pd.DataFrame, grid_scenario_names: list[str]
+) -> pd.DataFrame:
+    """Per column: the portfolio planned to be cheapest, the actual cheapest one,
+    and the planned portfolio's excess over the column minimum (EUR and %).
+
+    The planned portfolio is the grid scenario's own one, and `stochastic` for
+    the `expected` column.
+    """
+    planned = {s: s for s in grid_scenario_names}
+    if "stochastic" in cost_matrix.index:
+        planned["expected"] = "stochastic"
+    rows = {}
+    for column, portfolio in planned.items():
+        col = cost_matrix[column]
+        rows[column] = {
+            "planned": portfolio,
+            "cheapest": col.idxmin(),
+            "excess": col[portfolio] - col.min(),
+            "excess_pct": 100 * (col[portfolio] / col.min() - 1),
+        }
+    return pd.DataFrame(rows).T
 
 
 def assert_wait_and_see_optimality(
@@ -267,35 +293,35 @@ def assert_wait_and_see_optimality(
     grid_scenario_names: list[str],
     rtol: float = WAIT_AND_SEE_RTOL,
 ) -> None:
-    """Assert the objective-basis cost matrix obeys wait-and-see optimality.
+    """Warn if a planned portfolio is beaten in its column, fail if grossly.
 
-    Each grid scenario's own portfolio must be the cheapest cell in its realized
-    grid column (no other portfolio beats the one optimised for that grid), and
-    the stochastic portfolio must be the cheapest cell in the `expected` column.
-    Only `build_cost_matrix`'s objective-basis matrix satisfies this exactly; the
+    Each grid scenario's own portfolio is planned to be the cheapest cell in its
+    realized grid column, and the stochastic portfolio in the `expected` column.
+    This holds exactly only if planning and evaluation share one problem. ST
+    evaluation adds load shedding, so it may legitimately fail by a small margin.
+    Only `build_cost_matrix`'s objective-basis matrix is checked; the
     statistics-basis (`cost_matrix_total`/`_outside_de`) and DE matrices use a
-    different cost definition and are deliberately not checked.
+    different cost definition.
 
     Raises
     ------
     AssertionError
-        If any named portfolio exceeds its column minimum by more than `rtol`.
+        If any planned portfolio exceeds its column minimum by more than `rtol`.
     """
-    checks = [(s, s) for s in grid_scenario_names]
-    if "stochastic" in cost_matrix.index:
-        checks.append(("stochastic", "expected"))
-    violations = []
-    for portfolio, column in checks:
-        col = cost_matrix[column]
-        best = col.min()
-        cost = col[portfolio]
-        if cost > best * (1 + rtol):
-            cheapest = col.idxmin()
-            violations.append(
-                f"column '{column}': expected '{portfolio}' cheapest, but "
-                f"'{cheapest}' is cheaper ({best / 1e9:.3f} < {cost / 1e9:.3f} bn "
-                f"EUR, {portfolio} is {cost / best - 1:.2%} above the minimum)"
-            )
+    table = wait_and_see_table(cost_matrix, grid_scenario_names)
+    beaten = table[table.planned != table.cheapest]
+    if not beaten.empty:
+        logger.warning(
+            "Planned portfolio not cheapest in its column (ST evaluation allows "
+            f"load shedding, LT planning does not):\n{beaten}"
+        )
+    gross = table[table.excess_pct > 100 * rtol]
+    violations = [
+        f"column '{column}': expected '{r.planned}' cheapest, but "
+        f"'{r.cheapest}' is cheaper ({r.planned} is {r.excess_pct:.2f}% above "
+        "the minimum)"
+        for column, r in gross.iterrows()
+    ]
     assert not violations, (
         "Wait-and-see optimality violated in the objective-basis cost matrix - a "
         "portfolio is beaten on the grid it was optimised for (or the stochastic "
@@ -306,54 +332,170 @@ def assert_wait_and_see_optimality(
     )
 
 
-# LT/ST consistency tolerance (relative to opex). Both solves share one dispatch
-# problem (ST adds load shedding and CO2 slack, which stay unused at the optimum),
-# so only solver gap and noisy_costs draws may separate them.
+# LT/ST consistency tolerance (relative to LT opex), absorbing solver-gap noise.
 LT_ST_RTOL = 1e-4
 
 
-def assert_lt_st_consistency(
+def _scenario(df: pd.DataFrame, scenario: str | None, axis: int = 0) -> pd.DataFrame:
+    """Slice `scenario` from a scenario-indexed frame; unchanged for `None`."""
+    return df if scenario is None else df.xs(scenario, axis=axis, level="scenario")
+
+
+def shed_value(
+    n: pypsa.Network, price: pd.DataFrame, scenario: str | None = None
+) -> float:
+    """Sum of w_t * (price[bus_g, t] - v_g) * p_g,t over the shedding generators of `n`.
+
+    Shedding generators carry carrier `load` (`add_load_balance_components`),
+    v_g is their marginal cost. Zero if `n` has none.
+    """
+    gens = _scenario(n.generators, scenario).query("carrier == 'load'")
+    p = _scenario(n.generators_t.p, scenario, axis=1)[gens.index]
+    excess = price[gens.bus].set_axis(gens.index, axis=1) - gens.marginal_cost
+    return (excess * p).mul(n.snapshot_weightings.objective, axis=0).sum().sum()
+
+
+def co2_slack_value(n_lt: pypsa.Network, n_st: pypsa.Network) -> float:
+    """Sum of (mu_k - penalty) * slack_k over the CO2 caps the ST solve overshot.
+
+    mu_k is the LT shadow price of cap k. Unused slacks contribute nothing, so
+    the LT price is only needed (and asserted) for a cap whose slack was used.
+    """
+    used = {
+        k.removeprefix("co2_slack-"): r
+        for k, r in n_st.meta["co2_slack_used"].items()
+        if r > 0
+    }
+    if not used:
+        return 0.0
+    penalty = n_st.meta["solving"]["options"]["co2_cap_slack"]["penalty"]
+    mu = n_lt.global_constraints.mu
+    missing = [k for k in used if k not in mu.index or pd.isna(mu[k])]
+    assert not missing, (
+        f"ST used CO2 slack on {missing}, but the LT network has no shadow price "
+        "for these caps (none is stored for stochastic networks), so the LT/ST "
+        "gain bound cannot be computed."
+    )
+    return sum((abs(mu[k]) - penalty) * r for k, r in used.items())
+
+
+def relaxation_gain_bound(
+    n_lt: pypsa.Network,
+    n_st: pypsa.Network,
+    scenario: str | None = None,
+    probability: float = 1.0,
+) -> float:
+    """Upper bound on LT opex minus ST opex from the ST relaxations.
+
+    ST re-dispatches the LT portfolio with extra relaxations: load shedding at
+    price v and CO2-cap slack at a penalty. Opex is convex in the load and the
+    cap, and the LT shadow price lam is a subgradient, so relaxing r units at
+    cost c saves at most (lam - c) * r. Summed over ST's relaxations minus
+    LT's own shedding:
+
+        LT - ST <= sum (lam - v_ST) s_ST - sum (lam - v_LT) s_LT
+                   + sum (mu - penalty) slack_ST
+
+    A relaxation a model lacks counts as zero, so without ST shedding or slack
+    the bound is zero and LT and ST must match. For a stochastic LT network,
+    `scenario` selects its slice; PyPSA stores that slice's price scaled by its
+    `probability`, so it is divided back out.
+    """
+    price = _scenario(n_lt.buses_t.marginal_price, scenario, axis=1) / probability
+    return (
+        shed_value(n_st, price)
+        - shed_value(n_lt, price, scenario)
+        + co2_slack_value(n_lt, n_st)
+    )
+
+
+def shedding_stats(n: pypsa.Network) -> pd.Series:
+    """Load shedding and used CO2-cap slack of one ST evaluation network."""
+    gens = n.generators.query("carrier == 'load'")
+    p = n.generators_t.p[gens.index]
+    energy = p.mul(n.snapshot_weightings.objective, axis=0).sum()
+    total = p.sum(axis=1)
+    return pd.Series(
+        {
+            "shed_GWh": energy.sum() / 1e3,
+            "shed_cost": (energy * gens.marginal_cost).sum(),
+            "shed_snapshots": (total > 0).sum(),
+            "shed_peak_GW": total.max() / 1e3,
+            "co2_slack_t": sum(n.meta["co2_slack_used"].values()),
+        }
+    )
+
+
+def shedding_table(evaluations: dict[tuple[str, str], pypsa.Network]) -> pd.DataFrame:
+    """`shedding_stats` per ST cell, rows indexed by (portfolio, grid)."""
+    table = pd.DataFrame({k: shedding_stats(n) for k, n in evaluations.items()}).T
+    return table.rename_axis(["portfolio", "grid"])
+
+
+def lt_st_table(
     topologies: dict[str, pypsa.Network],
     evaluations: dict[tuple[str, str], pypsa.Network],
     grid_scenario_names: list[str],
     probabilities: dict[str, float],
-    rtol: float = LT_ST_RTOL,
-) -> None:
-    """Assert the ST re-dispatch reproduces the LT dispatch cost.
+) -> pd.DataFrame:
+    """LT vs ST opex of each portfolio on its own grid, with the gain bound.
 
     Re-dispatching a portfolio on the grid it was optimised for is the LT
-    problem with capacities fixed at the LT optimum (plus penalised load
-    shedding and CO2 slack that stay unused), so its objective must equal the
-    LT opex (`n.objective - portfolio_capex(n)`). For the stochastic portfolio
-    the probability-weighted ST opex must equal the native SP opex. A deviation
-    means a loosely converged solve or a modelling difference between LT and
-    ST; either makes the cost matrix incomparable across rows.
+    problem with capacities fixed at the LT optimum, plus the ST relaxations.
+    For the stochastic portfolio the probability-weighted ST opex is compared
+    to the native SP opex. Costs in EUR; `delta` = ST - LT opex;
+    `gain_bound` = `relaxation_gain_bound`, weighted alike.
+    """
+    weights = {s: {s: 1.0} for s in grid_scenario_names}
+    if "stochastic" in topologies:
+        weights["stochastic"] = probabilities
+    rows = {}
+    for portfolio, w in weights.items():
+        n_lt = topologies[portfolio]
+        st = {s: evaluations[(portfolio, s)] for s in w}
+        scenario = {s: s if n_lt.has_scenarios else None for s in w}
+        lt_opex = n_lt.objective - portfolio_capex(n_lt)
+        st_opex = sum(w[s] * st[s].objective for s in w)
+        bound = sum(
+            w[s] * relaxation_gain_bound(n_lt, st[s], scenario[s], w[s]) for s in w
+        )
+        shed = sum(w[s] * shedding_stats(st[s]) for s in w)
+        rows[portfolio] = {
+            "lt_opex": lt_opex,
+            "st_opex": st_opex,
+            "delta": st_opex - lt_opex,
+            "delta_pct": 100 * (st_opex / lt_opex - 1),
+            "shed_GWh": shed["shed_GWh"],
+            "shed_cost": shed["shed_cost"],
+            "gain_bound": bound,
+        }
+    return pd.DataFrame(rows).T
+
+
+def assert_lt_st_consistency(table: pd.DataFrame, rtol: float = LT_ST_RTOL) -> None:
+    """Assert LT - tol <= ST opex and LT - ST <= gain_bound + tol.
+
+    ST relaxes LT, so it may be cheaper, but by no more than its relaxations
+    can save (`gain_bound`). tol = `rtol` * LT opex covers solver gaps. ST
+    dearer than LT points to a loose solve; a larger gain to a modelling or
+    accounting difference between LT and ST.
 
     Raises
     ------
     AssertionError
-        If any LT/ST pair deviates by more than `rtol`.
+        If any portfolio leaves the band.
     """
-    pairs = {
-        s: (topologies[s], evaluations[(s, s)].objective) for s in grid_scenario_names
-    }
-    if "stochastic" in topologies:
-        st = sum(
-            probabilities[s] * evaluations[("stochastic", s)].objective
-            for s in grid_scenario_names
-        )
-        pairs["stochastic"] = (topologies["stochastic"], st)
-    violations = []
-    for portfolio, (n_lt, st) in pairs.items():
-        lt = n_lt.objective - portfolio_capex(n_lt)
-        if abs(st / lt - 1) > rtol:
-            violations.append(
-                f"{portfolio}: LT opex {lt / 1e9:.3f} vs ST opex {st / 1e9:.3f} bn "
-                f"EUR ({st / lt - 1:+.3%})"
-            )
+    tol = rtol * table.lt_opex.abs()
+    dearer = table.delta > tol
+    beyond = -table.delta > table.gain_bound + tol
+    violations = [
+        f"{p}: ST - LT {r.delta / 1e6:+.1f} M EUR ({r.delta_pct:+.3f}%), "
+        f"gain bound {r.gain_bound / 1e6:.1f} M EUR"
+        for p, r in table[dearer | beyond].iterrows()
+    ]
     assert not violations, (
-        "ST re-dispatch does not reproduce the LT dispatch cost on the LT grid; "
-        "check the ST solver gap and load shedding. Details:\n  "
+        "ST re-dispatch is dearer than the LT dispatch on the LT grid, or cheaper "
+        "than its load shedding and CO2 slack can explain. Details:\n  "
         + "\n  ".join(violations)
     )
 
@@ -426,10 +568,10 @@ def compute_metrics(
         logger.warning(
             f"Negative stochastic metric(s), expected >= 0: {detail} "
             f"(WS={ws / 1e9:.3f}, SP={sp / 1e9:.3f}, EEV={eev / 1e9:.3f} bn EUR). "
-            "Network-wide this contradicts WS <= SP <= EEV and points to an "
-            "inconsistent evaluation (e.g. loosely converged solves). For the "
-            "DE-only metrics a subset cost need not satisfy the network-wide "
-            "relations."
+            "Network-wide this contradicts WS <= SP <= EEV, which holds exactly "
+            "only if planning and evaluation share one problem: ST load shedding "
+            "can break it, as can loosely converged solves. For the DE-only "
+            "metrics a subset cost need not satisfy the network-wide relations."
         )
 
     return pd.Series(
@@ -608,9 +750,18 @@ if __name__ == "__main__":
     )
     cost_matrix.to_csv(snakemake.output.cost_matrix)
     plot_cost_matrix(cost_matrix, snakemake.output.cost_matrix_png, title, note)
-    assert_lt_st_consistency(
-        topologies, evaluations, grid_scenario_names, probabilities
-    )
+
+    shedding = shedding_table(evaluations)
+    shedding.to_csv(snakemake.output.shedding)
+    logger.info(f"ST load shedding and CO2 slack per cell:\n{shedding}")
+    lt_st = lt_st_table(topologies, evaluations, grid_scenario_names, probabilities)
+    lt_st.to_csv(snakemake.output.lt_st_consistency)
+    in_meur = {c: lt_st[c] / 1e6 for c in ["lt_opex", "st_opex", "delta", "shed_cost", "gain_bound"]}
+    logger.info(f"LT vs ST opex on the LT grid (costs in M EUR):\n{lt_st.assign(**in_meur).round(3)}")
+    assert_lt_st_consistency(lt_st)
+    wait_and_see = wait_and_see_table(cost_matrix, grid_scenario_names)
+    wait_and_see.to_csv(snakemake.output.wait_and_see)
+    logger.info(f"Wait-and-see check per column:\n{wait_and_see}")
     assert_wait_and_see_optimality(cost_matrix, grid_scenario_names)
 
     metrics = compute_metrics(cost_matrix, grid_scenario_names, probabilities)

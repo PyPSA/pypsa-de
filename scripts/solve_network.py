@@ -1404,8 +1404,8 @@ def relative_gap(n: pypsa.Network) -> float:
 
     Barrier without crossover can report 'optimal' while the unscaled gap is
     orders of magnitude above `BarConvTol`, which inflates the cost.
-    NaN if gurobi reports no finite `ObjBound`; it did so for 3h ST barrier
-    solves whose logged dual residual ended at 1.2e-7 to 4.2e-6.
+    NaN if gurobi reports no finite `ObjBound`, as it can for barrier solves
+    without crossover.
     """
     sm = n.model.solver_model
     if not np.isfinite(sm.ObjBound):

@@ -87,8 +87,8 @@ def check_load_shedding(n: pypsa.Network, threshold: float = 0.05) -> float:
     """Log warnings if shed load exceeds `threshold` of served demand, both
     network-wide and broken down by bus carrier and by individual bus.
 
-    A little shedding at a single tight snapshot is expected numerical
-    slack; a meaningful share means this portfolio/topology combination
+    Shedding is used wherever it is cheaper than serving the load, so some
+    is expected; a meaningful share means this portfolio/topology combination
     couldn't actually meet demand there. The network-wide aggregate alone
     can hide this: a small carrier or a single grid-constrained node can be
     almost entirely unserved while staying under `threshold` of total
@@ -151,10 +151,10 @@ def check_load_shedding(n: pypsa.Network, threshold: float = 0.05) -> float:
 def check_co2_slack(n: pypsa.Network) -> dict:
     """Assert the elastic CO2-cap slacks stayed within the configured tolerance.
 
-    The slacks added by :func:`scripts._helpers.add_co2_cap_constraint` are
-    zero at any feasible optimum (penalty > cap shadow price), so they only
-    stabilise the barrier without changing the solution. A slack above
-    `assert_threshold` of its cap therefore means the frozen portfolio could
+    The slacks added by :func:`scripts._helpers.add_co2_cap_constraint` stay
+    zero while the cap is reachable and the penalty exceeds its shadow price.
+    A used slack changes the solution; one above `assert_threshold` of its
+    cap means the frozen portfolio could
     not physically reach its CO2 target on this grid: the emissions are
     distorted and the system cost is not a valid comparison, so fail loudly
     rather than ship it. Returns the used slack per cap (empty when the
@@ -186,18 +186,13 @@ def solve_with_fallback(
 ) -> tuple:
     """Solve `n.model`, escalating solver options only if a solve stays non-optimal.
 
-    Tier 1 is the plain config in `solve_kwargs` - the same barrier (crossover
-    off, no BarHomogeneous) that the non-diagonal cells already solve cleanly.
-    With the CO2-cap slack active (see add_co2_cap_constraint) the near-infeasible
-    year-diagonal cells become ordinary full-dimensional problems, so this tier
-    should normally suffice. Each entry of `fallback` is a dict of extra
+    Tier 1 is the plain config in `solve_kwargs`. Each entry of `fallback` is a dict of extra
     solver_options merged onto the base and retried, cheapest-first (e.g.
     BarHomogeneous, then crossover): the cost of the robust knobs is paid only
     for a cell that still stalls, never on the critical path of every solve.
     An 'optimal' solve whose `relative_gap` exceeds `max_rel_gap` also
     escalates. An 'optimal' solve without a gurobi bound (NaN gap) is
-    accepted with a warning: gurobi's own termination criteria hold, and the
-    barrier log of such solves showed gaps of 1e-7 to 6e-7.
+    accepted with a warning, relying on gurobi's own termination criteria.
     Returns the final (status, condition, gap).
     """
     base = solve_kwargs.get("solver_options", {})

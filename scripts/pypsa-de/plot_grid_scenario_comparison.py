@@ -1428,8 +1428,7 @@ if __name__ == "__main__":
         )
 
     # Spatial load shedding (DE) per scenario: a map wherever a scenario sheds
-    # more than 0.5 TWh of electricity or heat (carrier-'load' generation). Only
-    # the ST evaluations enable load shedding, so LT networks produce none.
+    # more than 0.5 TWh of electricity or heat (carrier-'load' generation).
     ls_bus_carriers = {
         "electricity": ("AC", "low voltage"),
         "heat": ("rural heat", "urban central heat", "urban decentral heat"),

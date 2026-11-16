@@ -823,16 +823,16 @@ stochastic_grid_scenarios:
     solver_options:
       gurobi-default:
         threads: 32 # make gurobi actually use 32 threads on the stochastic solve (overrides the global gurobi-default threads here only)
-        BarConvTol: 1.0e-7 # at 1e-5 the solve stopped at a 9e-5 primal-dual gap (~19 M EUR), the size of the ECIU/EVPI being measured
+        BarConvTol: 1.0e-7 # 1e-5 can stop at a primal-dual gap as large as the ECIU/EVPI being measured
   evaluate_solving: # partial `solving:` block deep-merged into solving for the ST evaluate_grid_portfolio re-dispatch solves only; scoped here so tuning them doesn't rerun the finished LT solves
     # NB: runtime and mem_mb for ST runs is set via the global solving block
     options:
       co2_cap_slack:
-        enable: true # soften the CO2 emission caps with a penalized elastic slack (see solving.options.co2_cap_slack): stabilises the near-infeasible year-diagonal dispatch LPs without changing the optimum
+        enable: true # soften the CO2 emission caps with a penalized elastic slack (see solving.options.co2_cap_slack): stabilises near-infeasible dispatch LPs; the optimum is unchanged while the cap is reachable and the penalty exceeds the CO2 price
       max_rel_gap: 5.0e-5 # fail (after solve_fallback) if gurobi's relative primal-dual gap (ObjVal vs ObjBound) exceeds this (an optimal solve without ObjBound is accepted with a warning); 5e-5 of a ~200 bn EUR objective bounds the cost error at ~10 M EUR
       load_shedding:
         all_carriers: false
-        carriers: # heat must shed at 3h: existing boilers are pinned to the load profile, so heat peaks beyond maxed-out resistive heaters have no other supply
+        carriers: # heat may need shedding at coarse time resolution: existing boilers are pinned to the load profile, so heat peaks beyond maxed-out resistive heaters can lack supply
           low voltage: 4000
           rural heat: 5000
           urban decentral heat: 5000
@@ -840,7 +840,7 @@ stochastic_grid_scenarios:
     solver_options:
       gurobi-default:
         BarConvTol: 1.0e-7
-        BarIterLimit: 2000 # gurobi default 1000 cut off diagonal 3h cells still converging (gap ~1e-4, halving every ~50 iterations)
+        BarIterLimit: 2000 # gurobi default 1000 can cut off solves that are still converging
     solve_fallback: [] # extra solver_options to retry a cell that ends non-optimal or above max_rel_gap; empty = fail fast (retrying a stalled barrier repeated it exactly)
     # solve_fallback: # example: each entry is one retry, its keys override solver_options
     #   - {BarConvTol: 1.0e-4}
