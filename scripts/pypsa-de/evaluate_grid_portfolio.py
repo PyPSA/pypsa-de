@@ -76,7 +76,8 @@ def with_load_shedding_carriers(solve_opts: dict, n: pypsa.Network) -> dict:
     if not load_shedding.get("all_carriers"):
         load_bus_carriers &= set(configured_costs)
     load_shedding["carriers"] = {
-        carrier: configured_costs.get(carrier, default_cost) for carrier in load_bus_carriers
+        carrier: configured_costs.get(carrier, default_cost)
+        for carrier in sorted(load_bus_carriers)
     }
     load_shedding["all_carriers"] = False
     solve_opts["load_shedding"] = load_shedding
@@ -193,6 +194,9 @@ def solve_with_fallback(
     An 'optimal' solve whose `relative_gap` exceeds `max_rel_gap` also
     escalates. An 'optimal' solve without a gurobi bound (NaN gap) is
     accepted with a warning, relying on gurobi's own termination criteria.
+    A 'suboptimal' solve (barrier stalled near the optimum) is accepted with a
+    warning if its gap is finite and within `max_rel_gap`: the gap bounds the
+    cost error, the only quantity the comparison uses.
     Returns the final (status, condition, gap).
     """
     base = solve_kwargs.get("solver_options", {})
@@ -200,16 +204,27 @@ def solve_with_fallback(
     for i, extra in enumerate(attempts):
         kwargs = {**solve_kwargs, "solver_options": {**base, **extra}}
         status, condition = n.optimize.solve_model(**kwargs)
-        optimal = status == "ok" and condition == TerminationCondition.optimal
-        gap = relative_gap(n) if optimal else np.inf
-        if np.isnan(gap):
+        solved = status == "ok" and condition in (
+            TerminationCondition.optimal,
+            TerminationCondition.suboptimal,
+        )
+        gap = relative_gap(n) if solved else np.inf
+        if np.isnan(gap) and condition == TerminationCondition.optimal:
             logger.warning(
                 "ST dispatch solve is optimal but gurobi reports no ObjBound; "
                 "accepting it without a gap check (DualVio %.1e)",
                 n.model.solver_model.DualVio,
             )
             return status, condition, gap
+        gap = np.inf if np.isnan(gap) else gap
         if gap <= max_rel_gap:
+            if condition == TerminationCondition.suboptimal:
+                logger.warning(
+                    "ST dispatch solve ended 'suboptimal' within the gap bound "
+                    "(relative gap %.2e <= %.0e); accepting it",
+                    gap,
+                    max_rel_gap,
+                )
             if i:
                 logger.info(
                     "ST dispatch solve reached optimality on fallback tier %d "

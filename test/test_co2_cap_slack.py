@@ -117,7 +117,7 @@ def test_fallback_stops_on_first_optimal():
 
 @pytest.mark.parametrize(
     "first",
-    [("ok", "suboptimal", 100.0), ("ok", "optimal", 99.0)],  # non-optimal / 1% gap
+    [("ok", "suboptimal", 99.0), ("ok", "optimal", 99.0)],  # 1% gap
 )
 def test_fallback_escalates_then_succeeds(first):
     n = _FakeNet([first, ("ok", "optimal", 100.0)])
@@ -128,7 +128,7 @@ def test_fallback_escalates_then_succeeds(first):
 
 @pytest.mark.parametrize(
     "result, expected_gap",
-    [(("ok", "suboptimal", 100.0), float("inf")), (("ok", "optimal", 99.0), 1e-2)],
+    [(("ok", "time_limit", 100.0), float("inf")), (("ok", "optimal", 99.0), 1e-2)],
 )
 def test_fallback_exhausted_returns_last_attempt(result, expected_gap):
     ladder = [{"BarHomogeneous": 1}, {"BarHomogeneous": 1, "crossover": 1}]

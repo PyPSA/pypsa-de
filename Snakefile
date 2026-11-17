@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 import copy
+import os
 from pathlib import Path
 import yaml
 import sys
@@ -12,6 +13,10 @@ from dotenv import load_dotenv
 from snakemake.utils import min_version, update_config
 
 load_dotenv()
+
+# Fixed string-hash seed for every job: set iteration order, and with it the LP
+# variable order, otherwise differs per process and so does the solver path.
+os.environ.setdefault("PYTHONHASHSEED", "0")
 
 min_version("8.11")
 

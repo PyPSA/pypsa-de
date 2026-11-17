@@ -65,4 +65,5 @@ def test_load_shedding_carriers(network, all_carriers, expected):
     }
     shedding = egp.with_load_shedding_carriers(opts, network)["load_shedding"]
     assert shedding["carriers"] == expected
+    assert list(shedding["carriers"]) == sorted(expected)
     assert shedding["all_carriers"] is False

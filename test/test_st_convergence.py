@@ -7,7 +7,8 @@ Tests the convergence check of the ST grid-dispatch solves
 (`solve_with_fallback`, scripts/pypsa-de/evaluate_grid_portfolio.py).
 
 Barrier without crossover can end 'optimal' while gurobi reports no finite
-`ObjBound`. Such a solve is accepted with a NaN gap.
+`ObjBound`. Such a solve is accepted with a NaN gap. A 'suboptimal' (stalled)
+barrier solve is accepted only with a finite gap within `max_rel_gap`.
 """
 
 import importlib.util
@@ -48,7 +49,10 @@ def _network(bound: float, dual_vio: float, condition: str) -> SimpleNamespace:
         (OBJ * (1 - 1e-6), 1e-8, "optimal", False),
         (OBJ * (1 - 1e-3), 1e-8, "optimal", True),
         (-np.inf, 4e-6, "optimal", False),
-        (OBJ, 1e-8, "suboptimal", True),
+        (OBJ * (1 - 1e-6), 1e-8, "suboptimal", False),
+        (OBJ * (1 - 1e-3), 1e-8, "suboptimal", True),
+        (-np.inf, 4e-6, "suboptimal", True),
+        (OBJ, 1e-8, "time_limit", True),
     ],
 )
 def test_solve_with_fallback_rejects_unconverged(bound, dual_vio, condition, rejected):

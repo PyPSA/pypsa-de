@@ -100,6 +100,18 @@
   matched. `solve_fallback` is now empty: retrying a stalled barrier repeated
   it exactly. `BarIterLimit` rises to 2000: the default 1000 cut off two
   diagonal cells that were still converging.
+* ST re-dispatch solves that end 'suboptimal' (barrier stalled next to the
+  optimum) are now accepted if their relative gap is finite and within
+  `max_rel_gap`, with a warning. Before, they failed regardless of the gap. On a
+  365h test cell the stall left a 3e-6 gap (about 0.5 M EUR) and a largest
+  violation of 6 MWh on a 277 TWh biomass budget; the export results matched an
+  optimal solve. Stalls hit about one in eight variable orderings of the same
+  model.
+* The workflow fixes `PYTHONHASHSEED=0` for all jobs (`Snakefile`), and the ST
+  load-shedding carriers are added in sorted order. Before, set iteration
+  order changed per process, so each run built the LP in a different variable
+  order and Gurobi took a different path; solver failures were not
+  reproducible. Set `PYTHONHASHSEED` in the environment to override.
 * The cost-matrix and metrics PNGs of `compute_stochastic_metrics` carry a
   footnote with the largest solver gap of the LT solves and of the ST cells,
   relative and in M EUR (from `n.meta["relative_gap"]`). `solve_network` now
