@@ -391,7 +391,7 @@ if __name__ == "__main__":
             sector_opts="none",
             planning_horizons="2035",
             grid_scenario="2025_exogen",
-            run="KN2045_Bal_v5_abroad_capa_freeze",
+            run="KN2045_Bal_v5",
         )
 
     configure_logging(snakemake)

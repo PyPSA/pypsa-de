@@ -4,17 +4,15 @@
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#run
 run:
-  prefix: 20261112-NUTS2-365h-2028EXO-2031EXO-2034EXO-10-70-20-load-shedding-fixes
+  prefix: 20261117-NUTS2-365h-2028EXO-2031EXO-2034EXO-10-70-20
   name:
-  # - KN2045_Bal_v5
-  - KN2045_Bal_v5_abroad_capa_freeze
-  # - KN2045_Bal_v5_abroad_trade_freeze
-  # - KN2045_Bal_v5_abroad_capa+trade_freeze
+  - KN2045_Bal_v5
+  # - KN2045_Bal_v5_no_abroad_capa_freeze
   # - KN2045_Elec_plus_v5
   # - KN2045_H2_v5
-  # - KN2045_H2_v5_abroad_capa_freeze
+  # - KN2045_H2_v5_no_abroad_capa_freeze
   # - KN2045_Elec_v5
-  # - KN2045_Elec_v5_abroad_capa_freeze
+  # - KN2045_Elec_v5_no_abroad_capa_freeze
   # - CurrentPolicies
   scenarios:
     enable: true
@@ -811,7 +809,7 @@ stochastic_grid_scenarios:
   # here only to override that target with an explicit subset.
   planning_horizons: [2035] # !!! cannot be set per scenario atm (see doc/configuration.md#per_scenario_limits); grid-analysis target year; empty = max(scenario.planning_horizons) (the final/target year), or set an explicit subset to override
   outside_de_grid: 2035_exogen # transmission grid outside DE: "<year>_exogen" (committed by <year>, non-extendable) or "endogenous" (freely extendable)
-  freeze_outside_de_capacities: false # freeze foreign (non-DE) NON-grid capacities (generation/storage/conversion, gas+H2 pipelines, distribution - NOT the AC lines / DC links outside_de_grid controls) to a solved reference, non-extendable: false (off) | "optimal" (the plain solved network) | "<grid_scenario>" (that solved deterministic topology variant, e.g. "2035_exogen"; may be outside `scenarios`, then solved as an extra reference only); always at the analysis year. Applied to every variant except the source itself, so the stochastic solve waits for that deterministic/optimal solve.
+  freeze_outside_de_capacities: 2035_exogen # freeze foreign (non-DE) NON-grid capacities (generation/storage/conversion, gas+H2 pipelines, distribution - NOT the AC lines / DC links outside_de_grid controls) to a solved reference, non-extendable: false (off) | "optimal" (the plain solved network) | "<grid_scenario>" (that solved deterministic topology variant, e.g. "2035_exogen"; may be outside `scenarios`, then solved as an extra reference only); always at the analysis year. Applied to every variant except the source itself, so the stochastic solve waits for that deterministic/optimal solve.
   freeze_trade: false # cap DE gross imports per carrier at a reference level times a margin; false (off) or a {carrier: "<ref><±margin>"} mapping. carriers: AC, DC, H2, gas, "renewable gas", "renewable oil", methanol, oil. ref: "optimal" or a grid_scenario (solved, at the analysis year). margin: "<ref>" (1.0x), "<ref>+10"/"<ref>-10" (1.10x/0.90x), "1.1<ref>" (scenario refs must use the +/-pct form). Each grid solve gets the cap; a carrier whose ref is this variant is skipped, so the stochastic solve waits for the referenced solve. Example:
   #   freeze_trade: {AC: optimal, DC: optimal, H2: "optimal+10", gas: "optimal-10"}
   solve_endogenous_optimal: true # !!! cannot be set per scenario atm (see doc/configuration.md#per_scenario_limits); also build the endogenous all-free reference network (no grid override); opt-in, not part of the WS/SP/EEV/EVPI/ECIU comparison

@@ -236,18 +236,19 @@ KN2045_H2_v5:
     steam_hydrogen_fraction: 0.5
     steam_electricity_fraction: 0.1
 
-# Grid-uncertainty freeze variants: each is the base scenario above plus
-# stochastic_grid_scenarios.freeze_outside_de_capacities = 2035_exogen (freeze
-# non-DE non-grid capacities to the solved 2035_exogen topology). The base
+# Grid-uncertainty variants without the capacity freeze: each is the base
+# scenario above with stochastic_grid_scenarios.freeze_outside_de_capacities =
+# false (non-DE non-grid capacities stay extendable; the default in
+# config.de.yaml freezes them to the solved 2035_exogen topology). The base
 # reference/constraints are duplicated here because scenario overrides are
-# independent top-level keys - keep each freeze variant in sync with its base.
-KN2045_Bal_v5_abroad_capa_freeze:
+# independent top-level keys - keep each variant in sync with its base.
+KN2045_Bal_v5_no_abroad_capa_freeze:
   pypsa-de:
     reference_scenario: KN2045_Bal_v5
   stochastic_grid_scenarios:
-    freeze_outside_de_capacities: 2035_exogen
+    freeze_outside_de_capacities: false
 
-KN2045_Elec_v5_abroad_capa_freeze:
+KN2045_Elec_v5_no_abroad_capa_freeze:
   pypsa-de:
     reference_scenario: KN2045_Elec_v5
   solving:
@@ -285,9 +286,9 @@ KN2045_Elec_v5_abroad_capa_freeze:
     steam_hydrogen_fraction: 0.1
     steam_electricity_fraction: 0.5
   stochastic_grid_scenarios:
-    freeze_outside_de_capacities: 2035_exogen
+    freeze_outside_de_capacities: false
 
-KN2045_H2_v5_abroad_capa_freeze:
+KN2045_H2_v5_no_abroad_capa_freeze:
   pypsa-de:
     reference_scenario: KN2045_H2_v5
   solving:
@@ -345,35 +346,4 @@ KN2045_H2_v5_abroad_capa_freeze:
     steam_hydrogen_fraction: 0.5
     steam_electricity_fraction: 0.1
   stochastic_grid_scenarios:
-    freeze_outside_de_capacities: 2035_exogen
-
-KN2045_Bal_v5_abroad_trade_freeze:
-# KN2045_Bal_v5 with DE gross imports per carrier capped at the solved 2035_exogen level (1.0x)
-  pypsa-de:
-    reference_scenario: KN2045_Bal_v5
-  stochastic_grid_scenarios:
-    freeze_trade:
-      AC: 2035_exogen
-      DC: 2035_exogen
-      H2: 2035_exogen
-      gas: 2035_exogen
-      "renewable gas": 2035_exogen
-      "renewable oil": 2035_exogen
-      methanol: 2035_exogen
-      oil: 2035_exogen
-
-KN2045_Bal_v5_abroad_capa+trade_freeze:
-# KN2045_Bal_v5 with both: non-DE non-grid capacities frozen and DE gross imports capped at 2035_exogen
-  pypsa-de:
-    reference_scenario: KN2045_Bal_v5
-  stochastic_grid_scenarios:
-    freeze_outside_de_capacities: 2035_exogen
-    freeze_trade:
-      AC: 2035_exogen
-      DC: 2035_exogen
-      H2: 2035_exogen
-      gas: 2035_exogen
-      "renewable gas": 2035_exogen
-      "renewable oil": 2035_exogen
-      methanol: 2035_exogen
-      oil: 2035_exogen
+    freeze_outside_de_capacities: false

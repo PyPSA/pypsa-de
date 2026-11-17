@@ -66,7 +66,7 @@ rule report_transmission_projects:
 
 # Freeze foreign (non-DE) non-grid capacities to a solved reference network so
 # the stochastic DE-grid comparison is not confounded by foreign capacity
-# re-optimisation. Value: False (off, default), "optimal" (the plain solved
+# re-optimisation. Value: False (off), "optimal" (the plain solved
 # network at the analysis year), or a grid_scenario name (that solved
 # deterministic topology variant, e.g. "2035_exogen"). Complementary to
 # outside_de_grid: it freezes everything outside DE EXCEPT the AC lines / DC

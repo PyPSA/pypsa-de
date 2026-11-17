@@ -60,6 +60,13 @@
 
 **Features (stochastic grid)**
 
+* `config.de.yaml` now freezes foreign capacities by default
+  (`stochastic_grid_scenarios.freeze_outside_de_capacities: 2035_exogen`) and
+  runs `KN2045_Bal_v5`. The `*_abroad_capa_freeze` scenarios are replaced by
+  `*_no_abroad_capa_freeze` (Bal, Elec, H2), which switch the freeze off. The
+  `KN2045_Bal_v5_abroad_trade_freeze` and `..._capa+trade_freeze` scenarios
+  are removed; `freeze_trade` itself is unchanged.
+
 * `stochastic_grid_scenarios.freeze_outside_de_capacities` and `freeze_trade`
   may reference a grid scenario that is not in
   `stochastic_grid_scenarios.scenarios`, e.g. `2035_exogen` alongside the set
