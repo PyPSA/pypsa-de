@@ -420,12 +420,6 @@ solving:
   mem_mb: 70000 
   mem_logging_frequency: 5
   options:
-    load_shedding:
-      enable: false
-      default_cost: 100000
-      carriers: # overrides the default cost for specific carriers
-        AC: 4000
-        low voltage: 4000
     transmission_losses: false
     custom_extra_functionality: "../scripts/pypsa-de/additional_functionality.py"
     assign_all_duals: true
@@ -822,13 +816,14 @@ stochastic_grid_scenarios:
       gurobi-default:
         threads: 32 # make gurobi actually use 32 threads on the stochastic solve (overrides the global gurobi-default threads here only)
         BarConvTol: 1.0e-7 # 1e-5 can stop at a primal-dual gap as large as the ECIU/EVPI being measured
+  load_shedding: st # st = only the ST re-dispatch solves shed load | lt_st = the LT grid-topology solves shed too, with the carriers/costs of evaluate_solving.options.load_shedding (LT capacity expansion may then shed instead of building peak capacity)
   evaluate_solving: # partial `solving:` block deep-merged into solving for the ST evaluate_grid_portfolio re-dispatch solves only; scoped here so tuning them doesn't rerun the finished LT solves
     # NB: runtime and mem_mb for ST runs is set via the global solving block
     options:
       co2_cap_slack:
         enable: true # soften the CO2 emission caps with a penalized elastic slack (see solving.options.co2_cap_slack): stabilises near-infeasible dispatch LPs; the optimum is unchanged while the cap is reachable and the penalty exceeds the CO2 price
       max_rel_gap: 5.0e-5 # fail (after solve_fallback) if gurobi's relative primal-dual gap (ObjVal vs ObjBound) exceeds this (an optimal solve without ObjBound is accepted with a warning); 5e-5 of a ~200 bn EUR objective bounds the cost error at ~10 M EUR
-      load_shedding:
+      load_shedding: # the only load-shedding settings: ST always, LT with load_shedding: lt_st; pathway solves never shed (config.default.yaml: enable false)
         all_carriers: false
         carriers: # heat may need shedding at coarse time resolution: existing boilers are pinned to the load profile, so heat peaks beyond maxed-out resistive heaters can lack supply
           low voltage: 4000

@@ -497,11 +497,33 @@ def stochastic_grid_solving(wildcards):
       changes the physics/optimum, so keeping it uniform across the comparison
       matters, and this analysis compares *differences* in cost across
       grid-topology scenarios rather than absolute system cost.
+
+    With `stochastic_grid_scenarios.load_shedding: lt_st` the LT solves also
+    get load shedding, with the carriers and costs of
+    `evaluate_solving.options.load_shedding` (the ST settings), so LT and ST
+    share one relaxation. Default `st`: only the ST solves shed (see
+    `evaluate_grid_portfolio_solving`).
     """
     import copy
 
     solving = copy.deepcopy(config_provider("solving", default={})(wildcards))
     solving["options"]["transmission_losses"] = 0
+    shedding = config_provider(
+        "stochastic_grid_scenarios", "load_shedding", default="st"
+    )(wildcards)
+    assert shedding in ("st", "lt_st"), (
+        "stochastic_grid_scenarios.load_shedding must be 'st' or 'lt_st', "
+        f"got {shedding!r}"
+    )
+    if shedding == "lt_st":
+        evaluate_options = config_provider(
+            "stochastic_grid_scenarios", "evaluate_solving", "options", default={}
+        )(wildcards)
+        _deep_update(
+            solving["options"]["load_shedding"],
+            copy.deepcopy(evaluate_options.get("load_shedding", {})),
+        )
+        solving["options"]["load_shedding"]["enable"] = True
     if wildcards.grid_scenario == "stochastic":
         # `assign_all_duals` is forced off for the scenario-dimension solve
         # only (it raises there); single-scenario variants keep the configured
@@ -530,10 +552,10 @@ def evaluate_grid_portfolio_solving(wildcards):
     wherever that is cheaper than serving the load, so it can undercut the
     LT dispatch of the same portfolio (see compute_stochastic_metrics).
 
-    Deliberately not added to `stochastic_grid_solving` (used by
-    solve_grid_topology_network too): letting the capacity-expansion solves
-    lean on cheap load-shedding instead of building adequate capacity would
-    quietly distort the very capacities this analysis is comparing.
+    The LT solves (solve_grid_topology_network) shed only with
+    `stochastic_grid_scenarios.load_shedding: lt_st`: their capacity expansion
+    may then shed instead of building peak capacity, which changes the
+    portfolios this analysis compares.
 
     Finally, any evaluation-only `solving` overrides from
     `stochastic_grid_scenarios: evaluate_solving` are deep-merged in (e.g.

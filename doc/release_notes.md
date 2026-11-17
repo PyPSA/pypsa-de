@@ -60,6 +60,18 @@
 
 **Features (stochastic grid)**
 
+* `stochastic_grid_scenarios.load_shedding: lt_st` also gives the LT
+  grid-topology solves load shedding, with the carriers and costs of
+  `evaluate_solving.options.load_shedding`, so LT and ST face the same
+  relaxation. Default `st` keeps shedding in the ST solves only. LT capacity
+  expansion may then shed instead of building peak capacity. All shedding
+  settings now live in `evaluate_solving.options.load_shedding`; the global
+  `solving.options.load_shedding` block is gone from `config.de.yaml`, and with
+  it AC shedding (before 4000 EUR/MWh, merged in from that block). Shedding now
+  covers low voltage and heat only.
+  `add_load_balance_components` now also works on stochastic networks: it
+  passed `(scenario, name)` bus labels, which `n.add` rejects there.
+
 * `config.de.yaml` now freezes foreign capacities by default
   (`stochastic_grid_scenarios.freeze_outside_de_capacities: 2035_exogen`) and
   runs `KN2045_Bal_v5`. The `*_abroad_capa_freeze` scenarios are replaced by

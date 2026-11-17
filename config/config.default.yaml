@@ -496,6 +496,7 @@ stochastic_grid_scenarios:
     mem_mb: # e.g. 420000
     runtime: # e.g. 12h
     threads: # e.g. 32
+  load_shedding: st # st = only the ST re-dispatch solves shed load | lt_st = the LT grid-topology solves shed too, with the carriers/costs of evaluate_solving.options.load_shedding
   stochastic_solving: {} # partial `solving:` block deep-merged into solving for the "stochastic" solve only (free-form; e.g. solver_options.<name>.* or options.*) - lets you give the stochastic run its own solver settings without any code change
   scenarios: {} # !!! the SET of names cannot be set per scenario atm (see doc/configuration.md#per_scenario_limits); name -> {probability, links (csv path, optional), lines (csv path, optional)} - probabilities / paths ARE per-run
 

@@ -476,8 +476,11 @@ def add_load_balance_components(n, config, sign=1):
         f"Add load {balance_comp} for {'all carriers' if config.get('all_carriers') else ', '.join(carriers)}."
     )
 
+    # plain bus names: on a stochastic network PyPSA broadcasts them to all scenarios
+    names = n.buses.index.get_level_values("name")
+
     for bus_carrier, price in carriers.items():
-        buses_i = n.buses[n.buses.carrier == bus_carrier].index
+        buses_i = names[n.buses.carrier == bus_carrier].unique()
         n.add(
             "Generator",
             buses_i,
@@ -490,7 +493,7 @@ def add_load_balance_components(n, config, sign=1):
         )
 
     if config.get("all_carriers", False):
-        buses_rest_i = n.buses[~n.buses.carrier.isin(carriers)].index
+        buses_rest_i = names[~n.buses.carrier.isin(carriers)].unique()
         n.add(
             "Generator",
             buses_rest_i,
