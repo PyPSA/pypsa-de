@@ -7,7 +7,7 @@ regions in Germany.
 
 Inputs:
     - resources/heating_technologies_nuts3.geojson: Path to the GeoJSON file containing heating technologies data for NUTS3 regions.
-    - resources/regions_onshore.geojson: Path to the GeoJSON file containing onshore regions data.
+    - resources/onshore_regions.geojson: Path to the GeoJSON file containing onshore regions data.
     - resources/district_heat_share.csv: Path to the CSV file containing district heating shares.
 
 Outputs:
@@ -17,7 +17,7 @@ Parameters
 ----------
     - sector.district_heating["potential"]: Maximum potential district heating share.
     - sector.district_heating["progress"]: Progress of district heating share over planning horizons.
-    - wildcards.planning_horizons: Planning horizon year.
+    - wildcards.horizon: Planning horizon year.
 """
 
 import logging
@@ -29,31 +29,30 @@ from scripts._helpers import (
     configure_logging,
     mock_snakemake,
     set_scenario_config,
-    update_config_from_wildcards,
 )
 
 logger = logging.getLogger(__name__)
 
 
-def cluster_egon(heat_techs, regions_onshore):
+def cluster_egon(heat_techs, onshore_regions):
     """
     Map NUTS3 regions of egon data to corresponding clusters according to
     maximum overlap.
 
     Inputs:
         - heat_techs (GeoDataFrame): GeoDataFrame containing heating technologies data for NUTS3 regions.
-        - regions_onshore (GeoDataFrame): GeoDataFrame containing onshore regions data of network clusters.
+        - onshore_regions (GeoDataFrame): GeoDataFrame containing onshore regions data of network clusters.
 
     Outputs:
         - GeoDataFrame: Updated GeoDataFrame with NUTS3 regions aggregated according to cluster structure.
     """
 
-    regions_onshore.set_index("name", inplace=True)
+    onshore_regions.set_index("name", inplace=True)
 
     # Map NUTS3 regions of egon data to corresponding clusters according to maximum overlap
 
     heat_techs["cluster"] = heat_techs.apply(
-        lambda x: regions_onshore.geometry.intersection(x.geometry).area.idxmax(),
+        lambda x: onshore_regions.geometry.intersection(x.geometry).area.idxmax(),
         axis=1,
     )
 
@@ -85,7 +84,7 @@ def update_district_heat_share(heat_techs_clustered, dh_shares):
     urban_fraction = dh_shares["urban fraction"]
     max_dh_share = snakemake.params.district_heating["potential"]
     progress = snakemake.params.district_heating["progress"][
-        int(snakemake.wildcards.planning_horizons)
+        int(snakemake.wildcards.horizon)
     ]
 
     diff = ((urban_fraction * max_dh_share) - nodal_dh_shares).clip(lower=0).dropna()
@@ -103,25 +102,19 @@ if __name__ == "__main__":
     if "snakemake" not in globals():
         snakemake = mock_snakemake(
             "modify_district_heat_share",
-            simpl="",
-            clusters=44,
-            opts="",
-            ll="vopt",
-            sector_opts="none",
-            planning_horizons="2020",
+            horizon="2020",
             run="KN2045_Mix",
         )
 
     configure_logging(snakemake)
     set_scenario_config(snakemake)
-    update_config_from_wildcards(snakemake.config, snakemake.wildcards)
     logger.info("Updating district heating shares with egon data")
 
     heat_techs = gpd.read_file(snakemake.input.heating_technologies_nuts3)
-    regions_onshore = gpd.read_file(snakemake.input.regions_onshore)
+    onshore_regions = gpd.read_file(snakemake.input.onshore_regions)
     dh_shares = pd.read_csv(snakemake.input.district_heat_share, index_col=0)
 
-    heat_techs_clustered = cluster_egon(heat_techs, regions_onshore)
+    heat_techs_clustered = cluster_egon(heat_techs, onshore_regions)
 
     dh_shares = update_district_heat_share(heat_techs_clustered, dh_shares)
 

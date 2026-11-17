@@ -19,7 +19,6 @@ from scripts._helpers import (
     configure_logging,
     mock_snakemake,
     set_scenario_config,
-    update_config_from_wildcards,
 )
 from scripts.cluster_gas_network import load_bus_regions, reindex_pipes
 
@@ -195,18 +194,11 @@ if __name__ == "__main__":
     if "snakemake" not in globals():
         snakemake = mock_snakemake(
             "cluster_wasserstoff_kernnetz",
-            simpl="",
-            clusters=27,
             run="KN2045_Mix",
-            opts="",
-            ll="vopt",
-            sector_opts="none",
-            planning_horizons="2020",
         )
 
     configure_logging(snakemake)
     set_scenario_config(snakemake)
-    update_config_from_wildcards(snakemake.config, snakemake.wildcards)
 
     fn = snakemake.input.cleaned_h2_network
     df = pd.read_csv(fn, index_col=0)
@@ -214,7 +206,7 @@ if __name__ == "__main__":
         df[col] = df[col].apply(wkt.loads)
 
     bus_regions = load_bus_regions(
-        snakemake.input.regions_onshore, snakemake.input.regions_offshore
+        snakemake.input.onshore_regions, snakemake.input.regions_offshore
     )
     logger.info(f"Clustering Wasserstoff Kernnetz for {list(bus_regions.index)}")
     kernnetz_cf = snakemake.params.kernnetz

@@ -25,7 +25,6 @@ from scripts._helpers import (
     configure_logging,
     mock_snakemake,
     set_scenario_config,
-    update_config_from_wildcards,
 )
 from scripts.make_summary import assign_locations
 from scripts.plot_power_network import load_projection
@@ -102,7 +101,7 @@ def plot_h2_map(n, regions):
     h2_kern = n.links[n.links.carrier == "H2 pipeline (Kernnetz)"]
 
     # safe index of pipes from current period
-    investment_year = snakemake.wildcards.planning_horizons
+    investment_year = snakemake.wildcards.horizon
     h2_kern_current = n.links[
         (n.links.carrier == "H2 pipeline (Kernnetz)")
         & (n.links.index.str.contains(investment_year))
@@ -346,18 +345,12 @@ if __name__ == "__main__":
     if "snakemake" not in globals():
         snakemake = mock_snakemake(
             "plot_hydrogen_network_incl_kernnetz",
-            simpl="",
-            clusters=22,
-            opts="",
-            ll="vopt",
-            sector_opts="None",
-            planning_horizons="2045",
+            horizon="2045",
             run="ExPol",
         )
 
     configure_logging(snakemake)
     set_scenario_config(snakemake)
-    update_config_from_wildcards(snakemake.config, snakemake.wildcards)
 
     n = pypsa.Network(snakemake.input.network)
 

@@ -26,7 +26,6 @@ from scripts._helpers import (
     configure_logging,
     mock_snakemake,
     set_scenario_config,
-    update_config_from_wildcards,
 )
 
 logger = logging.getLogger(__name__)
@@ -40,7 +39,6 @@ if __name__ == "__main__":
 
 configure_logging(snakemake)
 set_scenario_config(snakemake)
-update_config_from_wildcards(snakemake.config, snakemake.wildcards)
 
 logger.info("Retrieving and cleaning egon data")
 

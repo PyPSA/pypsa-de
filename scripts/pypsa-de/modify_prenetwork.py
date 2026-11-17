@@ -7,26 +7,21 @@ import pypsa
 from shapely.geometry import Point
 
 from scripts._helpers import (
-    configure_logging,
-    mock_snakemake,
     sanitize_custom_columns,
-    set_scenario_config,
-    update_config_from_wildcards,
 )
-from scripts.add_electricity import load_costs
 from scripts.prepare_sector_network import lossy_bidirectional_links
 
 logger = logging.getLogger(__name__)
 
 
-def first_technology_occurrence(n):
+def first_technology_occurrence(n, technology_occurrence, current_horizon):
     """
     Drop configured technologies before configured year.
     """
 
-    for c, carriers in snakemake.params.technology_occurrence.items():
+    for c, carriers in technology_occurrence.items():
         for carrier, first_year in carriers.items():
-            if int(snakemake.wildcards.planning_horizons) < first_year:
+            if current_horizon < first_year:
                 to_drop = n.df(c).query(f"carrier == '{carrier}'").index
                 if to_drop.empty:
                     continue
@@ -79,11 +74,10 @@ def remove_old_boiler_profiles(n):
         n.links_t[attr].drop(to_drop, axis=1, inplace=True)
 
 
-def new_boiler_ban(n):
-    year = int(snakemake.wildcards.planning_horizons)
+def new_boiler_ban(n, fossil_boiler_ban, year):
 
-    for ct in snakemake.params.fossil_boiler_ban:
-        ban_year = int(snakemake.params.fossil_boiler_ban[ct])
+    for ct in fossil_boiler_ban:
+        ban_year = int(fossil_boiler_ban[ct])
         if ban_year < year:
             logger.info(
                 f"For year {year} in {ct} implementing ban on new decentral oil & gas boilers from {ban_year}"
@@ -101,11 +95,10 @@ def new_boiler_ban(n):
             n.links.drop(links, inplace=True)
 
 
-def coal_generation_ban(n):
-    year = int(snakemake.wildcards.planning_horizons)
+def coal_generation_ban(n, coal_ban, year):
 
-    for ct in snakemake.params.coal_ban:
-        ban_year = int(snakemake.params.coal_ban[ct])
+    for ct in coal_ban:
+        ban_year = int(coal_ban[ct])
         if ban_year < year:
             logger.info(
                 f"For year {year} in {ct} implementing coal and lignite ban from {ban_year}"
@@ -118,11 +111,10 @@ def coal_generation_ban(n):
             n.links.drop(links, inplace=True)
 
 
-def nuclear_generation_ban(n):
-    year = int(snakemake.wildcards.planning_horizons)
+def nuclear_generation_ban(n, nuclear_ban, year):
 
-    for ct in snakemake.params.nuclear_ban:
-        ban_year = int(snakemake.params.nuclear_ban[ct])
+    for ct in nuclear_ban:
+        ban_year = int(nuclear_ban[ct])
         if ban_year < year:
             logger.info(
                 f"For year {year} in {ct} implementing nuclear ban from {ban_year}"
@@ -132,6 +124,50 @@ def nuclear_generation_ban(n):
             ]
             logger.info(f"Dropping {links}")
             n.links.drop(links, inplace=True)
+
+
+def restrict_nuclear_capacity_factor(n):
+    """
+    Restrict nuclear capacity factors to 0.9 for all nuclear generators in the network, because they run baseload and else exceed real annual generation
+    """
+    idx = n.links.query("carrier == 'nuclear'").index
+    n.links.loc[idx, "p_max_pu"] = 0.85
+
+
+def scale_DE_elec_load_to_AGEB(n):
+    idx = n.loads.query("bus.str.contains('DE') and carrier == 'electricity'").index
+    AGEB_2025 = 924144 / 3.6e3
+    DE_elec_load_2025 = (
+        n.loads_t.p_set[idx].mul(n.snapshot_weightings.generators, axis=0).sum().sum()
+        / 1e6
+    )
+    scaling_factor = AGEB_2025 / DE_elec_load_2025
+    n.loads_t.p_set[idx] *= scaling_factor
+
+
+def scale_DE_heat_load(n, DE_factor, EU_factor):
+    building_heat_carriers = [
+        "urban central heat",
+        "urban decentral heat",
+        "rural heat",
+        "residential urban decentral heat",
+        "services urban decentral heat",
+        "residential rural heat",
+        "services rural heat",
+    ]
+    heat_scale_factor = (1 - DE_factor) / (1 - EU_factor)
+    idx = n.loads.index[
+        n.loads["bus"].str.contains("DE")
+        & n.loads["carrier"].isin(building_heat_carriers)
+    ]
+    idx = n.loads_t.p_set.columns.intersection(idx)
+    logger.info(
+        f"Space heat demand before scaling: {n.loads_t.p_set[idx].mul(n.snapshot_weightings.generators.values, axis=0).sum().sum() / 1e6} TWh"
+    )
+    n.loads_t.p_set[idx] *= heat_scale_factor
+    logger.info(
+        f"Space heat demand after scaling: {n.loads_t.p_set[idx].mul(n.snapshot_weightings.generators.values, axis=0).sum().sum() / 1e6} TWh"
+    )
 
 
 def add_reversed_pipes(df):
@@ -183,14 +219,21 @@ def reduce_capacity(
     return targets
 
 
-def add_wasserstoff_kernnetz(n, wkn, costs):
+def add_wasserstoff_kernnetz(
+    n,
+    wkn,
+    costs,
+    planning_horizons,
+    H2_transmission_efficiency,
+    H2_retrofit,
+    current_horizon,
+):
     logger.info("adding wasserstoff kernnetz")
 
-    investment_year = int(snakemake.wildcards.planning_horizons)
+    investment_year = current_horizon
 
     # get previous planning horizon
-    planning_horizons = snakemake.params.planning_horizons
-    i = planning_horizons.index(int(snakemake.wildcards.planning_horizons))
+    i = planning_horizons.index(current_horizon)
     previous_investment_year = int(planning_horizons[i - 1]) if i != 0 else 2015  # noqa
 
     # use only pipes added since the previous investment period
@@ -263,8 +306,9 @@ def add_wasserstoff_kernnetz(n, wkn, costs):
         n.links.loc[names, "tags"] = tags.values.astype(str)
 
         # add reversed pipes and losses
-        losses = snakemake.params.H2_transmission_efficiency
-        lossy_bidirectional_links(n, "H2 pipeline (Kernnetz)", losses, subset=names)
+        lossy_bidirectional_links(
+            n, "H2 pipeline (Kernnetz)", H2_transmission_efficiency, subset=names
+        )
 
         # reduce the gas network capacity of retrofitted lines from kernnetz
         # which is build in the current period
@@ -281,7 +325,7 @@ def add_wasserstoff_kernnetz(n, wkn, costs):
 
     # reduce H2 retrofitting potential from gas network for all kernnetz
     # pipelines which are being build in total (more conservative approach)
-    if not wkn.empty and snakemake.params.H2_retrofit:
+    if not wkn.empty and H2_retrofit:
         retrofitted_b = (
             n.links.carrier == "H2 pipeline retrofitted"
         ) & n.links.index.str.contains(str(investment_year))
@@ -311,7 +355,17 @@ def add_wasserstoff_kernnetz(n, wkn, costs):
     # from 2030 onwards all pipes are extendable (except from the ones the model build up before and the kernnetz lines)
 
 
-def unravel_carbonaceous_fuels(n):
+def unravel_carbonaceous_fuels(
+    n,
+    costs,
+    industry,
+    efuel_export_ban,
+    inputs,
+    shipping_oil_efficiency,
+    shipping_methanol_efficiency,
+    shipping_methanol_share,
+    current_horizon,
+):
     """
     Unravel European carbonaceous buses and if necessary their loads to enable
     energy balances for import and export of carbonaceous fuels.
@@ -359,11 +413,8 @@ def unravel_carbonaceous_fuels(n):
         carrier="oil refining",
         p_nom=1e6,
         efficiency=1
-        - (
-            snakemake.config["industry"]["oil_refining_emissions"]
-            / costs.at["oil", "CO2 intensity"]
-        ),
-        efficiency2=snakemake.config["industry"]["oil_refining_emissions"],
+        - (industry["oil_refining_emissions"] / costs.at["oil", "CO2 intensity"]),
+        efficiency2=industry["oil_refining_emissions"],
     )
 
     ### renewable oil
@@ -409,7 +460,7 @@ def unravel_carbonaceous_fuels(n):
         marginal_cost=0.01,
     )
 
-    if snakemake.params.efuel_export_ban:
+    if efuel_export_ban:
         logger.info(
             "Efuel export ban: Setting p_max_pu to 0 for DE renewable oil -> EU oil"
         )
@@ -495,7 +546,7 @@ def unravel_carbonaceous_fuels(n):
         marginal_cost=0.01,
     )
 
-    if snakemake.params.efuel_export_ban:
+    if efuel_export_ban:
         logger.info(
             "Efuel export ban: Setting p_max_pu to 0 for DE methanol -> EU methanol"
         )
@@ -525,7 +576,7 @@ def unravel_carbonaceous_fuels(n):
             unit="MWh_LHV",
         )
         industrial_demand = (
-            pd.read_csv(snakemake.input.industrial_demand, index_col=0) * 1e6
+            pd.read_csv(inputs.industrial_demand, index_col=0) * 1e6
         )  # TWh/a to MWh/a
         DE_meoh = (
             industrial_demand["methanol"].filter(like="DE").sum() / 8760
@@ -555,7 +606,7 @@ def unravel_carbonaceous_fuels(n):
         # get German shipping demand for domestic and international navigation
         # TWh/a
         pop_weighted_energy_totals = pd.read_csv(
-            snakemake.input.pop_weighted_energy_totals, index_col=0
+            inputs.pop_weighted_energy_totals, index_col=0
         )
         # TWh/a
         domestic_navigation = (
@@ -565,7 +616,7 @@ def unravel_carbonaceous_fuels(n):
         )
         # TWh/a
         international_navigation = (
-            (pd.read_csv(snakemake.input.shipping_demand, index_col=0).squeeze(axis=1))
+            (pd.read_csv(inputs.shipping_demand, index_col=0).squeeze(axis=1))
             .filter(like="DE")
             .sum()
         )
@@ -573,19 +624,9 @@ def unravel_carbonaceous_fuels(n):
         p_set = all_navigation * 1e6 / 8760  # convert TWh/a to MW hourly resolution
 
         # transfer oil demand to methanol demand
-        efficiency = (
-            snakemake.params.shipping_oil_efficiency
-            / snakemake.params.shipping_methanol_efficiency
-        )
+        efficiency = shipping_oil_efficiency / shipping_methanol_efficiency
         # get share of shipping done with methanol
-        p_set = (
-            snakemake.params.shipping_methanol_share[
-                int(snakemake.wildcards.planning_horizons)
-            ]
-            * p_set
-            * efficiency
-        )
-
+        p_set = shipping_methanol_share[current_horizon] * p_set * efficiency
         n.add(
             "Load",
             "DE shipping methanol",
@@ -614,7 +655,7 @@ def unravel_carbonaceous_fuels(n):
         )
 
 
-def unravel_gasbus(n, costs):
+def unravel_gasbus(n, costs, industry, efuel_export_ban):
     """
     Unravel European gas bus to enable energy balances for import of gas
     products.
@@ -671,8 +712,8 @@ def unravel_gasbus(n, costs):
         bus2="co2 atmosphere",
         carrier="gas compressing",
         p_nom=1e6,
-        efficiency=1 - snakemake.config["industry"]["gas_compression_losses"],
-        efficiency2=snakemake.config["industry"]["gas_compression_losses"]
+        efficiency=1 - industry["gas_compression_losses"],
+        efficiency2=industry["gas_compression_losses"]
         * costs.at["gas", "CO2 intensity"],
     )
 
@@ -722,7 +763,7 @@ def unravel_gasbus(n, costs):
         marginal_cost=0.01,
     )
 
-    if snakemake.params.efuel_export_ban:
+    if efuel_export_ban:
         logger.info(
             "Efuel export ban: Setting p_max_pu to 0 for DE renewable gas -> EU gas"
         )
@@ -798,14 +839,13 @@ def transmission_costs_from_modified_cost_data(n, costs, transmission):
     n.links.loc[dc_b, "onight_cost"] = onight_cost
 
 
-def must_run(n, params):
+def must_run(n, params, planning_horizons, current_horizon):
     """
     Set p_min_pu for links to the specified value or reset to 0 if not specified.
     """
 
-    investment_year = int(snakemake.wildcards.planning_horizons)
-    planning_horizons = snakemake.params.planning_horizons
-    i = planning_horizons.index(int(snakemake.wildcards.planning_horizons))
+    investment_year = current_horizon
+    i = planning_horizons.index(current_horizon)
     previous_investment_year = int(planning_horizons[i - 1]) if i != 0 else np.nan
 
     # Get params for the current and previous years
@@ -843,7 +883,9 @@ def must_run(n, params):
             n.links.loc[links_i, "p_min_pu"] = p_min_pu
 
 
-def modify_mobility_demand(n, mobility_data_file):
+def modify_mobility_demand(
+    n, mobility_data_file, bev_charge_rate, bev_dsm_availability, bev_energy
+):
     """
     Change loads in Germany to use exogenous data for road demand.
 
@@ -888,20 +930,16 @@ def modify_mobility_demand(n, mobility_data_file):
         (n.links.carrier == "BEV charger") & (n.links.bus0.str.startswith("DE"))
     ]
 
-    scale_factor = (
-        number_of_EVs * snakemake.params.bev_charge_rate / BEV_chargers.p_nom.sum()
-    )
+    scale_factor = number_of_EVs * bev_charge_rate / BEV_chargers.p_nom.sum()
     logger.info(
-        f"Scaling BEV charger capacities in Germany by {scale_factor:.2f} to match the new number of EVs.\nPrevious total capacity: {BEV_chargers.p_nom.sum():.2f} MW, new total capacity: {number_of_EVs * snakemake.params.bev_charge_rate:.2f} MW."
+        f"Scaling BEV charger capacities in Germany by {scale_factor:.2f} to match the new number of EVs.\nPrevious total capacity: {BEV_chargers.p_nom.sum():.2f} MW, new total capacity: {number_of_EVs * bev_charge_rate:.2f} MW."
     )
     n.links.loc[BEV_chargers.index, "p_nom"] *= scale_factor
 
     V2G = n.links[(n.links.carrier == "V2G") & (n.links.bus0.str.startswith("DE"))]
 
     if not V2G.empty:
-        n.links.loc[V2G.index, "p_nom"] *= (
-            scale_factor * snakemake.params.bev_dsm_availability
-        )
+        n.links.loc[V2G.index, "p_nom"] *= scale_factor * bev_dsm_availability
 
     dsm = n.stores[
         (n.stores.carrier == "EV battery") & (n.stores.bus.str.startswith("DE"))
@@ -909,9 +947,7 @@ def modify_mobility_demand(n, mobility_data_file):
 
     if not dsm.empty:
         scale_factor = (
-            number_of_EVs
-            * snakemake.params.bev_energy
-            * snakemake.params.bev_dsm_availability
+            number_of_EVs * bev_energy * bev_dsm_availability
         ) / dsm.e_nom.sum()
         n.stores.loc[dsm.index, "e_nom"] *= scale_factor
 
@@ -1144,7 +1180,7 @@ def force_retrofit(n, params):
     n.links.drop(gas_plants, inplace=True)
 
 
-def enforce_transmission_project_build_years(n, current_year):
+def enforce_transmission_project_build_years(n, current_year, onshore_nep_force):
     # this step is necessary for any links w/
     # current year >= build_year > previous year
     # it undoes the p_nom_min = p_nom_opt from add_brownfield
@@ -1152,8 +1188,8 @@ def enforce_transmission_project_build_years(n, current_year):
         (n.links.carrier == "DC")
         & (n.links.p_nom > 0)
         & (n.links.p_nom_opt == 0)
-        & (n.links.build_year <= snakemake.params.onshore_nep_force["cutout_year"])
-        & (n.links.build_year >= snakemake.params.onshore_nep_force["cutin_year"])
+        & (n.links.build_year <= onshore_nep_force["cutout_year"])
+        & (n.links.build_year >= onshore_nep_force["cutin_year"])
     ]
 
     n.links.loc[dc_previously_deactivated, "p_nom_min"] = (
@@ -1170,26 +1206,35 @@ def enforce_transmission_project_build_years(n, current_year):
     n.links.loc[dc_future, "p_nom_max"] = 0.0
 
 
-def force_connection_nep_offshore(n, current_year, costs):
+def force_connection_nep_offshore(
+    n,
+    current_year,
+    costs,
+    renewable,
+    offshore_nep_force,
+    offshore_connection_points,
+    onshore_regions_file,
+    regions_offshore_file,
+):
     # WARNING this code adds a new generator for the offwind connection
     # at an onshore locations. These extra capacities are not accounted
     # for in the land use constraint
-    if not snakemake.config["renewable"]["offwind-dc"]["resource_classes"] == 1:
+    if not renewable["offwind-dc"]["resource_classes"] == 1:
         logger.warning(
             "Number of offshore wind resource classes are not equal to 0. Assigning all offshore wind from NEP to class 0."
         )
 
     # Load shapes and projects
-    offshore = pd.read_csv(snakemake.input.offshore_connection_points, index_col=0)
+    offshore = pd.read_csv(offshore_connection_points, index_col=0)
 
-    if int(snakemake.params.offshore_nep_force["delay_years"]) != 0:
+    if int(offshore_nep_force["delay_years"]) != 0:
         # Modify 'Inbetriebnahmejahr' by adding the delay years for rows where 'Inbetriebnahmejahr' > 2025
         offshore.loc[offshore["Inbetriebnahmejahr"] > 2025, "Inbetriebnahmejahr"] += (
-            int(snakemake.params.offshore_nep_force["delay_years"])
+            int(offshore_nep_force["delay_years"])
         )
         offshore.loc[offshore["Inbetriebnahmejahr"] <= 2025, "Inbetriebnahmejahr"] += 1
         logger.info(
-            f"Delaying NEP offshore connection points by {snakemake.params.offshore_nep_force['delay_years']} years."
+            f"Delaying NEP offshore connection points by {offshore_nep_force['delay_years']} years."
         )
         # This is a hack s.t. for CurPol and WorstCase the 2030 projects are delayed to the 2035 period, but the later projects are ignored
         offshore.loc[offshore["Inbetriebnahmejahr"] > 2031, "Inbetriebnahmejahr"] += 5
@@ -1203,11 +1248,11 @@ def force_connection_nep_offshore(n, current_year, costs):
         crs="EPSG:4326",
     )
 
-    regions_onshore = gpd.read_file(snakemake.input.regions_onshore).set_index("name")
-    regions_offshore = gpd.read_file(snakemake.input.regions_offshore).set_index("name")
+    onshore_regions = gpd.read_file(onshore_regions_file).set_index("name")
+    regions_offshore = gpd.read_file(regions_offshore_file).set_index("name")
 
     # find connection point nodes for each project
-    goffshore = gpd.sjoin(goffshore, regions_onshore, how="inner", predicate="within")
+    goffshore = gpd.sjoin(goffshore, onshore_regions, how="inner", predicate="within")
 
     # use for offshore profile of nodes connected in non-offshore nodes
     # point is chosen far out in EEZ duck
@@ -1246,8 +1291,8 @@ def force_connection_nep_offshore(n, current_year, costs):
     n.generators.loc[current_offwind, "p_nom_min"] = 0
     n.generators.loc[current_offwind, "p_nom"] = 0
 
-    if (current_year >= int(snakemake.params.offshore_nep_force["cutin_year"])) and (
-        current_year <= int(snakemake.params.offshore_nep_force["cutout_year"])
+    if (current_year >= int(offshore_nep_force["cutin_year"])) and (
+        current_year <= int(offshore_nep_force["cutout_year"])
     ):
         logger.info(f"Forcing in NEP offshore DC projects with capacity:\n {dc_power}")
 
@@ -1315,8 +1360,8 @@ def force_connection_nep_offshore(n, current_year, costs):
         ac_connection_totals.groupby(ac_projects.name).sum().div(ac_power)
     )
 
-    if (current_year >= int(snakemake.params.offshore_nep_force["cutin_year"])) and (
-        current_year <= int(snakemake.params.offshore_nep_force["cutout_year"])
+    if (current_year >= int(offshore_nep_force["cutin_year"])) and (
+        current_year <= int(offshore_nep_force["cutout_year"])
     ):
         logger.info(f"Forcing in NEP offshore AC projects with capacity:\n {ac_power}")
 
@@ -1349,7 +1394,7 @@ def drop_duplicate_transmission_projects(n):
     n.remove("Line", to_drop)
 
 
-def scale_capacity(n, scaling):
+def scale_capacity(n, scaling, current_horizon):
     """
     Scale the output capacity of energy system links based on predefined scaling limits.
 
@@ -1359,7 +1404,7 @@ def scale_capacity(n, scaling):
     - scaling: A dictionary with scaling limits structured as
                {year: {region: {carrier: limit}}}.
     """
-    investment_year = int(snakemake.wildcards.planning_horizons)
+    investment_year = current_horizon
     if investment_year in scaling.keys():
         for region in scaling[investment_year].keys():
             for carrier in scaling[investment_year][region].keys():
@@ -1405,6 +1450,9 @@ def scale_capacity(n, scaling):
                 n.links.loc[links_i_current, "p_nom_min"] = n.links.loc[
                     links_i_current, "p_nom"
                 ]
+                # !!! eventually remove this again
+                # Do not allow further extension of assets for which the capacity has been scaled
+                n.links.loc[links_i, "p_nom_extendable"] = False
 
 
 def limit_cross_border_flows_ac(n, s_max_pu):
@@ -1415,100 +1463,182 @@ def limit_cross_border_flows_ac(n, s_max_pu):
     n.lines.loc[cross_border_lines, "s_max_pu"] = s_max_pu
 
 
-if __name__ == "__main__":
-    if "snakemake" not in globals():
-        snakemake = mock_snakemake(
-            "modify_prenetwork",
-            simpl="",
-            clusters=27,
-            opts="",
-            ll="vopt",
-            sector_opts="none",
-            planning_horizons="2025",
-            run="KN2045_Mix",
+def scale_industry_elec_to_2025(n, industrial_energy_demand_2025):
+    """
+    Scale the electricity demand of industry in Germany to match the 2025 value from UBA.
+
+    This is necessary because the scaling of industry demand to UBA values is only applied to the total demand, but not to the individual carriers. This can lead to unrealistic electricity demand for industry in 2025 if the original PyPSA-DE network has a different split between electricity and other carriers than the UBA data.
+    """
+    ageb = 663868 / 3.6e-3
+
+    logger.info(
+        f"Scaling electricity demand of industry in Germany to respect 2025 AGEB value of {ageb} MWh."
+    )
+
+    model_demand_2025 = (
+        (pd.read_csv(industrial_energy_demand_2025, index_col=0) * 1e6)
+        .filter(like="DE", axis=0)
+        .sum()["electricity"]
+    )
+
+    delta = ageb - model_demand_2025
+
+    loads = n.loads.query(
+        "bus.str.startswith('DE') and carrier=='industry electricity'"
+    )
+
+    logger.info(
+        "Industry electricity demand in Germany before scaling: "
+        + str(loads.p_set.sum() * 8760)
+        + " MWh/a"
+    )
+    scaling_factor = 1 + (delta / (loads.p_set.sum() * 8760))
+    n.loads.loc[loads.index, "p_set"] *= scaling_factor
+    logger.info(
+        "Industry electricity demand in Germany after scaling: "
+        + str(n.loads.loc[loads.index, "p_set"].sum() * 8760)
+        + " MWh/a"
+    )
+
+
+def deactivate_early_transmission_expansion(n, current_year):
+    logger.info(f"Deactivating transmission expansion for year {current_year}.")
+    # Assumption 1: The current base network captures all existing lines already -> no expansion in 2025
+    # Assumption 2: All international transmission projects and all within Germany are in NEP or TYNDP
+    n.lines.loc[n.lines.build_year > current_year, "active"] = False
+    n.links.loc[n.links.build_year > current_year, "active"] = False
+    n.lines.s_nom_extendable = False
+    n.links.loc[n.links.carrier == "DC", "p_nom_extendable"] = False
+
+
+def main(n, inputs, params, costs, current_horizon: int) -> pypsa.Network:
+    if not params.pypsa_de_enabled:
+        logger.info(
+            "Skipping PyPSA-DE modifications for horizon %s because pypsa-de.enable is false.",
+            current_horizon,
+        )
+        return n
+    if not params.sector["enabled"]:
+        logger.warning(
+            "Skipping PyPSA-DE modifications for horizon %s because sector.enabled is false.",
+            current_horizon,
+        )
+        return n
+
+    logger.info("Applying PyPSA-DE modifications for horizon %s.", current_horizon)
+
+    if params.sector["transport"]:
+        modify_mobility_demand(
+            n,
+            inputs.modified_mobility_data,
+            params.bev_charge_rate,
+            params.bev_dsm_availability,
+            params.bev_energy,
+        )
+    else:
+        logger.info(
+            "Skipping exogenous mobility adjustment because transport is disabled."
         )
 
-    configure_logging(snakemake)
-    set_scenario_config(snakemake)
-    update_config_from_wildcards(snakemake.config, snakemake.wildcards)
-    logger.info("Adding PyPSA-DE specific functionality")
-
-    n = pypsa.Network(snakemake.input.network)
-
-    costs = load_costs(snakemake.input.costs)
-
-    modify_mobility_demand(n, snakemake.input.modified_mobility_data)
-
-    new_boiler_ban(n)
-
+    new_boiler_ban(n, params.fossil_boiler_ban, current_horizon)
     fix_new_boiler_profiles(n)
-
     remove_old_boiler_profiles(n)
+    coal_generation_ban(n, params.coal_ban, current_horizon)
+    nuclear_generation_ban(n, params.nuclear_ban, current_horizon)
+    restrict_nuclear_capacity_factor(n)
+    first_technology_occurrence(n, params.technology_occurrence, current_horizon)
 
-    coal_generation_ban(n)
+    unravel_carbonaceous_fuels(
+        n,
+        costs,
+        params.industry,
+        params.efuel_export_ban,
+        inputs,
+        params.shipping_oil_efficiency,
+        params.shipping_methanol_efficiency,
+        params.shipping_methanol_share,
+        current_horizon,
+    )
+    unravel_gasbus(n, costs, params.industry, params.efuel_export_ban)
 
-    nuclear_generation_ban(n)
+    if params.enable_kernnetz:
+        wkn = pd.read_csv(inputs.wkn, index_col=0)
+        add_wasserstoff_kernnetz(
+            n,
+            wkn,
+            costs,
+            params.planning_horizons,
+            params.H2_transmission_efficiency,
+            params.H2_retrofit,
+            current_horizon,
+        )
 
-    first_technology_occurrence(n)
-
-    unravel_carbonaceous_fuels(n)
-
-    unravel_gasbus(n, costs)
-
-    if snakemake.params.enable_kernnetz:
-        fn = snakemake.input.wkn
-        wkn = pd.read_csv(fn, index_col=0)
-        add_wasserstoff_kernnetz(n, wkn, costs)
-
-    # change to NEP21 costs
     transmission_costs_from_modified_cost_data(
         n,
         costs,
-        snakemake.params.transmission_costs,
+        params.transmission_costs,
     )
 
-    if snakemake.params.must_run is not None:
-        must_run(n, snakemake.params.must_run)
+    if params.must_run is not None:
+        must_run(n, params.must_run, params.planning_horizons, current_horizon)
 
-    if snakemake.params.H2_plants["enable"]:
-        if snakemake.params.H2_plants["start"] <= int(
-            snakemake.wildcards.planning_horizons
-        ):
-            add_hydrogen_turbines(n, snakemake.params.H2_plants)
-        if snakemake.params.H2_plants["force"] <= int(
-            snakemake.wildcards.planning_horizons
-        ):
-            force_retrofit(n, snakemake.params.H2_plants)
+    if params.H2_plants["enable"]:
+        if params.H2_plants["start"] <= current_horizon:
+            add_hydrogen_turbines(n, params.H2_plants)
+        if params.H2_plants["force"] <= current_horizon:
+            force_retrofit(n, params.H2_plants)
 
-    current_year = int(snakemake.wildcards.planning_horizons)
-
-    enforce_transmission_project_build_years(n, current_year)
-
+    enforce_transmission_project_build_years(
+        n, current_horizon, params.onshore_nep_force
+    )
     drop_duplicate_transmission_projects(n)
-
-    force_connection_nep_offshore(n, current_year, costs)
-
-    scale_capacity(n, snakemake.params.scale_capacity)
-
+    force_connection_nep_offshore(
+        n,
+        current_horizon,
+        costs,
+        params.renewable,
+        params.offshore_nep_force,
+        inputs.offshore_connection_points,
+        inputs.onshore_regions,
+        inputs.regions_offshore,
+    )
+    scale_capacity(n, params.scale_capacity, current_horizon)
     sanitize_custom_columns(n)
 
-    if current_year in snakemake.params.uba_for_industry:
-        if current_year not in [2025, 2030, 2035]:
-            logger.error(
-                "The UBA for industry data is only available for 2025, 2030 and 2035. Please check your config."
+    if params.sector["industry"]:
+        if current_horizon in params.uba_for_industry:
+            if current_horizon not in [2025, 2030, 2035]:
+                logger.error(
+                    "The UBA for industry data is only available for 2025, 2030 and 2035. Please check your config."
+                )
+            modify_industry_demand(
+                n,
+                current_horizon,
+                inputs.new_industrial_energy_demand,
+                inputs.industrial_production_per_country_tomorrow,
+                inputs.industry_sector_ratios,
+                scale_non_energy=params.scale_industry_non_energy,
             )
-        modify_industry_demand(
-            n,
-            current_year,
-            snakemake.input.new_industrial_energy_demand,
-            snakemake.input.industrial_production_per_country_tomorrow,
-            snakemake.input.industry_sector_ratios,
-            scale_non_energy=snakemake.params.scale_industry_non_energy,
+        scale_industry_elec_to_2025(n, inputs.industrial_demand_2025)
+    else:
+        logger.info(
+            "Skipping industry demand modifications because industry is disabled."
         )
+    scale_DE_elec_load_to_AGEB(n)
 
-    if current_year in snakemake.params.limit_cross_border_flows_ac:
+    scale_DE_heat_load(
+        n,
+        DE_factor=params.space_heat_DE_factor[current_horizon],
+        EU_factor=params.space_heat_EU_factor[current_horizon],
+    )
+
+    if current_horizon in params.limit_cross_border_flows_ac:
         limit_cross_border_flows_ac(
-            n, snakemake.params.limit_cross_border_flows_ac[current_year]
+            n, params.limit_cross_border_flows_ac[current_horizon]
         )
 
-    n.export_to_netcdf(snakemake.output.network)
+    if current_horizon in params.deactivate_early_transmission_expansion:
+        deactivate_early_transmission_expansion(n, current_horizon)
+
+    logger.info("Completed PyPSA-DE modifications for horizon %s.", current_horizon)
+    return n

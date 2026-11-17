@@ -12,7 +12,6 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".."))
 from scripts._helpers import (
     configure_logging,
     set_scenario_config,
-    update_config_from_wildcards,
 )
 from scripts.prepare_network import maybe_adjust_costs_and_potentials
 
@@ -482,7 +481,6 @@ def add_subnodes(
     time_dep_hp_cop: bool = False,
     limited_heat_sources: list[str] = None,
     heat_source_potentials: dict[str, str] = None,
-    output_path: str = None,
 ) -> None:
     """
     Add the largest district heating systems as subnodes to the network based on
@@ -523,8 +521,6 @@ def add_subnodes(
         List of heat sources with limited potential.
     heat_source_potentials : Dict[str, str]
         Dictionary mapping heat sources to paths with potential data.
-    output_path : str
-        Path to save the subnodes_head GeoDataFrame.
 
     Returns
     -------
@@ -535,9 +531,6 @@ def add_subnodes(
     subnodes_head = subnodes.sort_values(
         by="Wärmeeinspeisung in GWh/a", ascending=False
     ).head(head)
-
-    if output_path:
-        subnodes_head.to_file(output_path, driver="GeoJSON")
 
     subnodes_rest = subnodes[~subnodes.index.isin(subnodes_head.index)]
 
@@ -580,62 +573,6 @@ def add_subnodes(
     )
 
 
-def extend_heating_distribution(
-    existing_heating_distribution: pd.DataFrame, subnodes: gpd.GeoDataFrame
-) -> pd.DataFrame:
-    """
-    Extend heating distribution by subnodes mirroring the distribution of the
-    corresponding mother node.
-
-    Parameters
-    ----------
-    existing_heating_distribution : pd.DataFrame
-        DataFrame containing the existing heating distribution.
-    subnodes : gpd.GeoDataFrame
-        GeoDataFrame containing information about district heating subnodes.
-
-    Returns
-    -------
-    pd.DataFrame
-        Extended DataFrame with heating distribution for subnodes.
-    """
-    # Merge the existing heating distribution with subnodes on the cluster name
-    mother_nodes = (
-        existing_heating_distribution.loc[subnodes.cluster.unique()]
-        .unstack(-1)
-        .to_frame()
-    )
-    cities_within_cluster = subnodes.groupby("cluster")["Stadt"].apply(list)
-    mother_nodes["cities"] = mother_nodes.apply(
-        lambda i: cities_within_cluster[i.name[2]], axis=1
-    )
-    # Explode the list of cities
-    mother_nodes = mother_nodes.explode("cities")
-
-    # Reset index to temporarily flatten it
-    mother_nodes_reset = mother_nodes.reset_index()
-
-    # Append city name to the third level of the index
-    mother_nodes_reset["name"] = (
-        mother_nodes_reset["name"] + " " + mother_nodes_reset["cities"]
-    )
-
-    # Set the index back
-    mother_nodes = mother_nodes_reset.set_index(["heat name", "technology", "name"])
-
-    # Drop the temporary 'cities' column
-    mother_nodes.drop("cities", axis=1, inplace=True)
-
-    # Reformat to match the existing heating distribution
-    mother_nodes = mother_nodes.squeeze().unstack(-1).T
-
-    # Combine the exploded data with the existing heating distribution
-    existing_heating_distribution_extended = pd.concat(
-        [existing_heating_distribution, mother_nodes]
-    )
-    return existing_heating_distribution_extended
-
-
 if __name__ == "__main__":
     if "snakemake" not in globals():
         from scripts._helpers import mock_snakemake
@@ -645,18 +582,12 @@ if __name__ == "__main__":
 
         snakemake = mock_snakemake(
             "add_district_heating_subnodes",
-            simpl="",
-            clusters=27,
-            opts="",
-            ll="vopt",
-            sector_opts="none",
-            planning_horizons="2045",
+            horizon="2045",
             run="Baseline",
         )
 
     configure_logging(snakemake)
     set_scenario_config(snakemake)
-    update_config_from_wildcards(snakemake.config, snakemake.wildcards)
 
     logger.info("Adding SysGF-specific functionality")
 
@@ -672,7 +603,7 @@ if __name__ == "__main__":
         sheet_name="Fernwärmeatlas_öffentlich",
     )
     cities = gpd.read_file(snakemake.input.cities)
-    regions_onshore = gpd.read_file(snakemake.input.regions_onshore).set_index("name")
+    onshore_regions = gpd.read_file(snakemake.input.onshore_regions).set_index("name")
 
     subnodes = gpd.read_file(snakemake.input.subnodes)
 
@@ -702,27 +633,9 @@ if __name__ == "__main__":
         time_dep_hp_cop=snakemake.params.sector["time_dep_hp_cop"],
         limited_heat_sources=snakemake.params.district_heating["limited_heat_sources"],
         heat_source_potentials=heat_source_potentials,
-        output_path=snakemake.output.district_heating_subnodes,
     )
 
-    if snakemake.wildcards.planning_horizons == str(snakemake.params["baseyear"]):
-        existing_heating_distribution = pd.read_csv(
-            snakemake.input.existing_heating_distribution,
-            header=[0, 1],
-            index_col=0,
-        )
-        existing_heating_distribution_extended = extend_heating_distribution(
-            existing_heating_distribution, subnodes
-        )
-        existing_heating_distribution_extended.to_csv(
-            snakemake.output.existing_heating_distribution_extended
-        )
-    else:
-        # write empty file to output
-        with open(snakemake.output.existing_heating_distribution_extended, "w") as f:
-            pass
-
     maybe_adjust_costs_and_potentials(
-        n, snakemake.params["adjustments"], snakemake.wildcards.planning_horizons
+        n, snakemake.params["adjustments"], snakemake.wildcards.horizon
     )
     n.export_to_netcdf(snakemake.output.network)

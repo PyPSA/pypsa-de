@@ -3,7 +3,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
-from itertools import compress, islice
+from itertools import compress
 
 import cartopy
 import cartopy.crs as ccrs
@@ -20,11 +20,10 @@ from pypsa.plot import add_legend_circles, add_legend_lines, add_legend_patches
 
 from scripts._helpers import (
     configure_logging,
+    load_costs,
     mock_snakemake,
     set_scenario_config,
-    update_config_from_wildcards,
 )
-from scripts.add_electricity import load_costs
 from scripts.make_summary import assign_locations
 
 logger = logging.getLogger(__name__)
@@ -60,7 +59,7 @@ backup_techs = {
     "Gas": [
         "OCGT",
         "CCGT",
-        "biogas",
+        "biogas CHP",
         "urban central gas CHP",
         "urban central gas CHP CC",
     ],
@@ -230,6 +229,7 @@ carriers_in_german = {
     "urban central water tanks": "Zentrale städtische Wassertanks",
     "urban central solar thermal": "Zentrale städtische Solarthermie",
     "biogas": "Biogas",
+    "biogas CHP": "Biogas-KWK",
     "solid biomass": "Biomasse",
     "methanol": "Methanol",
     "home battery": "Hausbatterie",
@@ -298,9 +298,9 @@ carriers_in_german = {
     "rural gas boiler": "Ländlicher Gaskessel",
     "process emissions CC": "Prozessemissionen mit CO2-Abscheidung",
     "urban decentral water tanks charger": "Ladung dezentraler städtischer Wassertanks",
-    "biogas to gas CC": "Biogas zu Gas mit CO2-Abscheidung",
+    "biogas to gas CC": "Biogas zu Biomethan mit CO2-Abscheidung",
     "urban decentral resistive heater": "Dezentrale städtische Widerstandsheizer",
-    "biogas to gas": "Biogas zu Gas",
+    "biogas to gas": "Biogas zu Biomethan",
     "OCGT": "Gas (OCGT)",
     "urban central solid biomass CHP": "Biomasse-KWK",
     "urban central gas boiler": "Zentraler städtischer Gaskessel",
@@ -462,10 +462,14 @@ def plot_nodal_elec_balance(
         "H2 OCGT",
         "H2 CHP",
         "urban central H2 retrofit CHP",
+        "OCGT",
         "CCGT",
         "gas CHP",
+        "lignite",
+        "coal",
         "waste CHP CC",
         "urban central biomass CHP",
+        "biogas CHP",
         "hydro",
         "PHS",
         "battery discharger",
@@ -494,10 +498,14 @@ def plot_nodal_elec_balance(
         "H2 OCGT": "#ff0000",
         "H2 CHP": "#bf3737",
         "urban central H2 retrofit CHP": "#ff8282",
+        "OCGT": "#f9a602",
         "CCGT": "#edc566",
+        "lignite": "#4c4c4c",
+        "coal": "#8c8c8c",
         "gas CHP": "#e67c12",
         "waste CHP CC": "#a85522",
         "urban central biomass CHP": "#9d9042",
+        "biogas CHP": "#a3b55d",
         "hydro": "#5379ad",
         "PHS": "#6999db",
         "battery discharger": "#76e388",
@@ -1154,11 +1162,6 @@ def plot_price_duration_curve(
     y_lim_values=[-50, 300],
     language="english",
 ):
-    # only plot 2030 onwards
-    years = years[2:]
-    networks = dict(islice(networks.items(), 2, None))
-    year_colors = year_colors[2:]
-
     fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(8, 6))
 
     for i, n in enumerate(networks.values()):
@@ -1219,10 +1222,6 @@ def plot_price_duration_hist(
     regions=["DE"],
     x_lim_values=[-50, 300],
 ):
-    # only plot 2030 onwards
-    years = years[2:]
-    networks = dict(islice(networks.items(), 2, None))
-    year_colors = year_colors[2:]
     fig, axes = plt.subplots(ncols=1, nrows=len(years), figsize=(8, 3 * len(years)))
     axes = axes.flatten()
 
@@ -2776,17 +2775,11 @@ if __name__ == "__main__":
     if "snakemake" not in globals():
         snakemake = mock_snakemake(
             "plot_ariadne_report",
-            simpl="",
-            clusters=49,
-            opts="",
-            ll="vopt",
-            sector_opts="None",
             run="KN2045_Mix",
         )
 
     configure_logging(snakemake)
     set_scenario_config(snakemake)
-    update_config_from_wildcards(snakemake.config, snakemake.wildcards)
 
     ### Modify postnetworks (this might be moved to a separate script)
 
@@ -2830,7 +2823,7 @@ if __name__ == "__main__":
     # file_list.sort()
     # networks = [pypsa.Network(diry+"/"+fn) for fn in file_list]
     # modelyears = [fn[-7:-3] for fn in snakemake.input.networks]
-    # regions = gpd.read_file("path-to-file/regions_onshore_base_s_49.geojson").set_index("name")
+    # regions = gpd.read_file("path-to-file/onshore_regions_base_s_49.geojson").set_index("name")
 
     # ensure output directory exist
     for dir in snakemake.output[5:]:
@@ -3072,7 +3065,7 @@ if __name__ == "__main__":
     )
 
     # load regions
-    regions = gpd.read_file(snakemake.input.regions_onshore_clustered).set_index("name")
+    regions = gpd.read_file(snakemake.input.onshore_regions_clustered).set_index("name")
 
     for year in planning_horizons:
         plot_elec_prices_spatial(

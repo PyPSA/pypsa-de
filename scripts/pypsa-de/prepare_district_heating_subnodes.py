@@ -19,7 +19,6 @@ from rasterio.windows import Window
 from scripts._helpers import (
     configure_logging,
     set_scenario_config,
-    update_config_from_wildcards,
 )
 
 logger = logging.getLogger(__name__)
@@ -183,7 +182,7 @@ def process_eligible_points(
 def prepare_subnodes(
     subnodes: pd.DataFrame,
     cities: gpd.GeoDataFrame,
-    regions_onshore: gpd.GeoDataFrame,
+    onshore_regions: gpd.GeoDataFrame,
     lau: gpd.GeoDataFrame,
     heat_techs: gpd.GeoDataFrame,
 ) -> gpd.GeoDataFrame:
@@ -196,7 +195,7 @@ def prepare_subnodes(
         DataFrame containing information about district heating systems.
     cities : gpd.GeoDataFrame
         GeoDataFrame containing city coordinates with columns 'Stadt' and 'geometry'.
-    regions_onshore : gpd.GeoDataFrame
+    onshore_regions : gpd.GeoDataFrame
         GeoDataFrame containing onshore region geometries of clustered network.
     lau : gpd.GeoDataFrame
         GeoDataFrame containing LAU (Local Administrative Units) geometries and IDs.
@@ -233,7 +232,7 @@ def prepare_subnodes(
 
     # Assign cluster to subnodes according to onshore regions
     subnodes["cluster"] = subnodes.apply(
-        lambda x: regions_onshore.geometry.contains(x.point_coords).idxmax(), axis=1
+        lambda x: onshore_regions.geometry.contains(x.point_coords).idxmax(), axis=1
     )
 
     subnodes["name"] = subnodes["cluster"] + " " + subnodes["Stadt"]
@@ -243,7 +242,7 @@ def prepare_subnodes(
         ~subnodes.cluster.str.contains("DE")
     ].apply(
         lambda x: (
-            regions_onshore.filter(like="DE", axis=0)
+            onshore_regions.filter(like="DE", axis=0)
             .geometry.distance(x.point_coords)
             .idxmin()
         ),
@@ -520,8 +519,8 @@ def add_ptes_limit(
     return subnodes
 
 
-def extend_regions_onshore(
-    regions_onshore: gpd.GeoDataFrame,
+def extend_onshore_regions(
+    onshore_regions: gpd.GeoDataFrame,
     subnodes_all: gpd.GeoDataFrame,
     head: int = 40,
 ) -> dict[str, gpd.GeoDataFrame]:
@@ -531,7 +530,7 @@ def extend_regions_onshore(
 
     Parameters
     ----------
-    regions_onshore : geopandas.GeoDataFrame
+    onshore_regions : geopandas.GeoDataFrame
         GeoDataFrame containing the onshore regions.
     subnodes_all : pandas.DataFrame
         DataFrame containing preprocessed district heating systems of Fernwärmeatlas.
@@ -547,7 +546,7 @@ def extend_regions_onshore(
           with the district heating areas.
     """
 
-    # Extend regions_onshore to include the cities' lau regions
+    # Extend onshore_regions to include the cities' lau regions
     subnodes = (
         subnodes_all.sort_values(by="Wärmeeinspeisung in GWh/a", ascending=False)
         .head(head)[["name", "cluster", "lau_shape"]]
@@ -558,17 +557,17 @@ def extend_regions_onshore(
     subnodes = subnodes.to_crs("EPSG:4326")
 
     # Crop city regions from onshore regions
-    regions_onshore["geometry"] = regions_onshore.geometry.difference(
+    onshore_regions["geometry"] = onshore_regions.geometry.difference(
         subnodes.union_all()
     )
 
     # Rename lau_shape to geometry
     subnodes = subnodes.drop(columns=["cluster"])
 
-    # Concat regions_onshore and subnodal regions
-    regions_onshore_extended = pd.concat([regions_onshore, subnodes.set_index("name")])
+    # Concat onshore_regions and subnodal regions
+    onshore_regions_extended = pd.concat([onshore_regions, subnodes.set_index("name")])
 
-    # Restrict regions_onshore geometries to only consist of the remaining city areas
+    # Restrict onshore_regions geometries to only consist of the remaining city areas
     subnodes_rest = subnodes_all.loc[
         ~subnodes_all.Stadt.apply(lambda s: s in subnodes.name.str.cat())
     ]
@@ -576,18 +575,18 @@ def extend_regions_onshore(
     subnodes_rest_dissolved = (
         subnodes_rest.set_geometry("geometry").dissolve("cluster").to_crs("EPSG:4326")
     )
-    # regions_onshore_restricted should replace geometries of regions_onshore with the geometries of subnodes_rest
-    regions_onshore_restricted = regions_onshore_extended.copy()
-    regions_onshore_restricted.loc[subnodes_rest_dissolved.index, "geometry"] = (
+    # onshore_regions_restricted should replace geometries of onshore_regions with the geometries of subnodes_rest
+    onshore_regions_restricted = onshore_regions_extended.copy()
+    onshore_regions_restricted.loc[subnodes_rest_dissolved.index, "geometry"] = (
         subnodes_rest_dissolved["geometry"]
     )
-    regions_onshore_restricted.loc[subnodes.name, "geometry"] = (
+    onshore_regions_restricted.loc[subnodes.name, "geometry"] = (
         subnodes_all.loc[subnodes.index].set_index("name").geometry.to_crs("EPSG:4326")
     )
 
     return {
-        "extended": regions_onshore_extended,
-        "restricted": regions_onshore_restricted,
+        "extended": onshore_regions_extended,
+        "restricted": onshore_regions_restricted,
     }
 
 
@@ -604,18 +603,11 @@ if __name__ == "__main__":
 
         snakemake = mock_snakemake(
             "prepare_district_heating_subnodes",
-            simpl="",
-            clusters=27,
-            opts="",
-            ll="vopt",
-            sector_opts="none",
-            planning_horizons="2045",
             run="LowGroundWaterDepth",
         )
 
     configure_logging(snakemake)
     set_scenario_config(snakemake)
-    update_config_from_wildcards(snakemake.config, snakemake.wildcards)
     logger.info("Adding SysGF-specific functionality")
 
     heat_techs = gpd.read_file(snakemake.input.heating_technologies_nuts3).set_index(
@@ -631,10 +623,10 @@ if __name__ == "__main__":
         sheet_name="Fernwärmeatlas_öffentlich",
     )
     cities = gpd.read_file(snakemake.input.cities)
-    regions_onshore = gpd.read_file(snakemake.input.regions_onshore).set_index("name")
+    onshore_regions = gpd.read_file(snakemake.input.onshore_regions).set_index("name")
     # Assign onshore region to heat techs based on geometry
     heat_techs["cluster"] = heat_techs.apply(
-        lambda x: regions_onshore.geometry.contains(x.geometry).idxmax(),
+        lambda x: onshore_regions.geometry.contains(x.geometry).idxmax(),
         axis=1,
     )
     with zipfile.ZipFile(snakemake.input.census, "r") as z:
@@ -643,7 +635,7 @@ if __name__ == "__main__":
     subnodes = prepare_subnodes(
         fernwaermeatlas,
         cities,
-        regions_onshore,
+        onshore_regions,
         lau,
         heat_techs,
     )
@@ -687,16 +679,16 @@ if __name__ == "__main__":
 
     subnodes.to_file(snakemake.output.district_heating_subnodes, driver="GeoJSON")
 
-    regions_onshore_modified = extend_regions_onshore(
-        regions_onshore,
+    onshore_regions_modified = extend_onshore_regions(
+        onshore_regions,
         subnodes,
         head=snakemake.params.district_heating["subnodes"]["nlargest"],
     )
 
-    regions_onshore_modified["extended"].to_file(
-        snakemake.output.regions_onshore_extended, driver="GeoJSON"
+    onshore_regions_modified["extended"].to_file(
+        snakemake.output.onshore_regions_extended, driver="GeoJSON"
     )
 
-    regions_onshore_modified["restricted"].to_file(
-        snakemake.output.regions_onshore_restricted, driver="GeoJSON"
+    onshore_regions_modified["restricted"].to_file(
+        snakemake.output.onshore_regions_restricted, driver="GeoJSON"
     )

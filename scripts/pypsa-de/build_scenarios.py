@@ -106,7 +106,15 @@ def get_co2_budget(df, source):
         ## For Zielverfehlungsszenarien use UBA Projektionsbericht
         targets_co2 = pd.Series(
             index=[2020, 2025, 2030, 2035, 2040, 2045, 2050],
-            data=[813, 655, 455, 309, 210, 169, 157],
+            data=[
+                813,
+                640,  # to harmonize with KSG scenario, historical would be 649, # https://www.umweltbundesamt.de/daten/umweltzustand-trends/klima/treibhausgas-emissionen-in-deutschland
+                467,  # MWMS, Tabelle 10, https://www.umweltbundesamt.de/system/files/medien/11850/publikationen/projektionsbericht_2025.pdf
+                332,
+                235,
+                184,
+                164,
+            ],
         )
     else:
         raise ValueError("Invalid source for CO2 budget.")

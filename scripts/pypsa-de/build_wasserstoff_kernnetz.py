@@ -23,7 +23,6 @@ from scripts._helpers import (
     configure_logging,
     mock_snakemake,
     set_scenario_config,
-    update_config_from_wildcards,
 )
 from scripts.build_gas_network import diameter_to_capacity
 
@@ -432,9 +431,9 @@ def find_point_across_ring(point, ring, distance=1000):
     return Point(new_point_coords)
 
 
-def create_border_crossing(wkn, regions_onshore, regions_offshore):
+def create_border_crossing(wkn, onshore_regions, regions_offshore):
     # get shapes
-    regions = load_bus_regions(regions_onshore, regions_offshore)
+    regions = load_bus_regions(onshore_regions, regions_offshore)
 
     # extract DE border
     de = regions[regions.country.isin(["DE"])].union_all()
@@ -573,7 +572,6 @@ if __name__ == "__main__":
 
     configure_logging(snakemake)
     set_scenario_config(snakemake)
-    update_config_from_wildcards(snakemake.config, snakemake.wildcards)
 
     kernnetz_cf = snakemake.params.kernnetz
 
@@ -598,7 +596,7 @@ if __name__ == "__main__":
     if kernnetz_cf["border_crossing"]:
         wasserstoff_kernnetz = create_border_crossing(
             wasserstoff_kernnetz,
-            snakemake.input.regions_onshore,
+            snakemake.input.onshore_regions,
             snakemake.input.regions_offshore,
         )
 
