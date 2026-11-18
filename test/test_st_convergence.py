@@ -21,6 +21,8 @@ import pytest
 sys.path.insert(0, ".")
 sys.path.append("./scripts")
 
+from scripts._helpers import gap_verdict  # noqa: E402
+
 _spec = importlib.util.spec_from_file_location(
     "evaluate_grid_portfolio", "scripts/pypsa-de/evaluate_grid_portfolio.py"
 )
@@ -65,3 +67,24 @@ def test_missing_bound_gives_nan_gap():
     n = _network(-np.inf, 4e-6, "optimal")
     _, _, gap = egp.solve_with_fallback(n, {}, [], MAX_REL_GAP)
     assert np.isnan(gap)
+
+
+@pytest.mark.parametrize(
+    "gap, fail_rel_gap, verdict",
+    [
+        (1e-6, 5e-5, "ok"),
+        (1e-4, 5e-5, "fail"),  # strict default: standard = failure threshold
+        (1e-4, 1e-3, "rough"),
+        (1e-2, 1e-3, "fail"),
+        (1e-2, None, "rough"),  # None never fails a finite gap
+        (np.nan, 5e-5, "ok"),  # no solver bound: accepted as before
+        (np.inf, None, "fail"),  # no solution at all
+    ],
+)
+def test_gap_verdict(gap, fail_rel_gap, verdict):
+    assert gap_verdict(gap, MAX_REL_GAP, fail_rel_gap) == verdict
+
+
+def test_gap_verdict_rejects_fail_below_standard():
+    with pytest.raises(ValueError, match="fail_rel_gap"):
+        gap_verdict(1e-6, MAX_REL_GAP, 1e-6)

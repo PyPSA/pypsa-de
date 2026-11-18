@@ -27,6 +27,7 @@ from pypsa.descriptors import nominal_attrs
 
 from scripts._helpers import (
     configure_logging,
+    gap_verdict,
     mock_snakemake,
     scenario_slice,
     set_scenario_config,
@@ -299,6 +300,15 @@ if __name__ == "__main__":
     canvas = pypsa.Network(snakemake.input.canvas)
     portfolio = pypsa.Network(snakemake.input.portfolio)
 
+    gap_check = snakemake.params.gap_check
+    lt_gap = portfolio.meta.get("relative_gap", np.nan)
+    if gap_verdict(lt_gap, **gap_check["lt"]) == "fail":
+        raise RuntimeError(
+            f"LT solve of portfolio '{snakemake.wildcards.portfolio}' has relative "
+            f"gap {lt_gap:.2e} > gap_check.lt.fail_rel_gap "
+            f"{gap_check['lt']['fail_rel_gap']}; refusing to evaluate it."
+        )
+
     transplant_optimal_capacities(canvas, portfolio)
     canvas.optimize.fix_optimal_capacities()
 
@@ -329,17 +339,35 @@ if __name__ == "__main__":
         planning_horizons=planning_horizons,
     )
     fallback = snakemake.params.solving.get("solve_fallback", [])
-    max_rel_gap = snakemake.params.solving["options"]["max_rel_gap"]
+    st_check = gap_check["st"]
     status, condition, gap = solve_with_fallback(
-        canvas, solve_kwargs, fallback, max_rel_gap
+        canvas, solve_kwargs, fallback, st_check["max_rel_gap"]
     )
-    if gap > max_rel_gap:
+    verdict = gap_verdict(gap, **st_check)
+    if verdict == "fail":
+        rejected = snakemake.output.network.removesuffix(".nc") + "_rejected.nc"
+        canvas.meta = dict(
+            wildcards=dict(snakemake.wildcards),
+            status=status,
+            condition=str(condition),
+            relative_gap=gap,
+        )
+        canvas.export_to_netcdf(rejected)
+        logger.error("Wrote rejected ST network for inspection to %s", rejected)
         raise RuntimeError(
             f"Dispatch-only solve did not converge after {len(fallback) + 1} "
             f"attempt(s): status '{status}', condition '{condition}', relative gap "
-            f"{gap:.2e} > {max_rel_gap:.0e}. A non-converged dispatch misprices the "
-            "portfolio (and a non-optimal one breaks the Ariadne fuel-fraction "
-            "export), so its cost is not a valid comparison; refusing to write it."
+            f"{gap:.2e} > gap_check.st.fail_rel_gap {st_check['fail_rel_gap']}. "
+            "A non-converged dispatch misprices the portfolio (and a non-optimal "
+            "one breaks the Ariadne fuel-fraction export), so its cost is not a "
+            "valid comparison; refusing to write it."
+        )
+    if verdict == "rough":
+        logger.warning(
+            "Accepting ST solve as ROUGH: relative gap %.2e is above the standard "
+            "%.0e; results built on it are flagged",
+            gap,
+            st_check["max_rel_gap"],
         )
 
     shed_fraction = check_load_shedding(canvas)

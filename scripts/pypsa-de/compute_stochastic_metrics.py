@@ -54,6 +54,7 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import pypsa
 from pypsa.descriptors import nominal_attrs
@@ -63,7 +64,7 @@ sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
 from export_ariadne_variables import get_trade_cost, get_tsc
 
-from scripts._helpers import configure_logging, mock_snakemake
+from scripts._helpers import configure_logging, gap_verdict, mock_snakemake
 
 logger = logging.getLogger(__name__)
 
@@ -452,7 +453,8 @@ def lt_st_table(
     problem with capacities fixed at the LT optimum, plus the ST relaxations.
     For the stochastic portfolio the probability-weighted ST opex is compared
     to the native SP opex. Costs in EUR; `delta` = ST - LT opex;
-    `gain_bound` = `relaxation_gain_bound`, weighted alike.
+    `gain_bound` = `relaxation_gain_bound`, weighted alike; `gap_tol` = the
+    cost error the reported LT and (weighted) ST solver gaps allow.
     """
     weights = {s: {s: 1.0} for s in grid_scenario_names}
     if "stochastic" in topologies:
@@ -476,15 +478,42 @@ def lt_st_table(
             "shed_GWh": shed["shed_GWh"],
             "shed_cost": shed["shed_cost"],
             "gain_bound": bound,
+            "gap_tol": gap_eur(n_lt) + sum(w[s] * gap_eur(st[s]) for s in w),
         }
     return pd.DataFrame(rows).T
+
+
+def gap_eur(n: pypsa.Network) -> float:
+    """Cost error bound of the solve of `n` in EUR; 0 if no gap is recorded."""
+    return np.nan_to_num(n.meta.get("relative_gap", np.nan)) * abs(n.objective)
+
+
+def solver_gap_table(
+    topologies: dict[str, pypsa.Network],
+    evaluations: dict[tuple[str, str], pypsa.Network],
+    gap_check: dict,
+) -> pd.DataFrame:
+    """Relative gap and `gap_verdict` of every LT and ST solve.
+
+    Rows are indexed by (stage, portfolio, grid); LT rows have grid "".
+    A missing gap counts as NaN, i.e. 'ok'.
+    """
+    solves = {("LT", p, ""): n for p, n in topologies.items()}
+    solves |= {("ST", p, g): n for (p, g), n in evaluations.items()}
+    rows = {}
+    for (stage, p, g), n in solves.items():
+        gap = n.meta.get("relative_gap", np.nan)
+        verdict = gap_verdict(gap, **gap_check[stage.lower()])
+        rows[(stage, p, g)] = {"relative_gap": gap, "verdict": verdict}
+    return pd.DataFrame(rows).T.rename_axis(["stage", "portfolio", "grid"])
 
 
 def assert_lt_st_consistency(table: pd.DataFrame, rtol: float = LT_ST_RTOL) -> None:
     """Assert LT - tol <= ST opex and LT - ST <= gain_bound + tol.
 
     ST relaxes LT, so it may be cheaper, but by no more than its relaxations
-    can save (`gain_bound`). tol = `rtol` * LT opex covers solver gaps. ST
+    can save (`gain_bound`). tol = max(`rtol` * LT opex, `gap_tol`) covers
+    solver gaps, so loose (ROUGH) solves widen it. ST
     dearer than LT points to a loose solve; a larger gain to a modelling or
     accounting difference between LT and ST. An unknown (NaN) bound checks
     only the first inequality.
@@ -494,7 +523,7 @@ def assert_lt_st_consistency(table: pd.DataFrame, rtol: float = LT_ST_RTOL) -> N
     AssertionError
         If any portfolio leaves the band.
     """
-    tol = rtol * table.lt_opex.abs()
+    tol = np.maximum(rtol * table.lt_opex.abs(), table.gap_tol)
     dearer = table.delta > tol
     beyond = -table.delta > table.gain_bound + tol
     violations = [
@@ -729,6 +758,13 @@ if __name__ == "__main__":
 
     title = f"Stochastic grid {snakemake.wildcards.planning_horizons}"
     note = solver_gap_note(topologies, evaluations)
+    gaps = solver_gap_table(topologies, evaluations, snakemake.params.gap_check)
+    gaps.to_csv(snakemake.output.solver_gaps)
+    rough = gaps[gaps.verdict != "ok"]
+    if not rough.empty:
+        logger.warning(f"ROUGH results: solves above the gap standard:\n{rough}")
+        title = f"[ROUGH] {title}"
+        note = f"ROUGH: {len(rough)} of {len(gaps)} solves above the gap standard. {note}"
     portfolios = list(topologies)
 
     # Under freeze_outside_de_capacities=<grid_scenario>, that source portfolio is
@@ -771,7 +807,9 @@ if __name__ == "__main__":
     wait_and_see = wait_and_see_table(cost_matrix, grid_scenario_names)
     wait_and_see.to_csv(snakemake.output.wait_and_see)
     logger.info(f"Wait-and-see check per column:\n{wait_and_see}")
-    assert_wait_and_see_optimality(cost_matrix, grid_scenario_names)
+    # Two cells, each off by up to the largest gap.
+    rtol = max(WAIT_AND_SEE_RTOL, 2 * gaps.relative_gap.astype(float).max())
+    assert_wait_and_see_optimality(cost_matrix, grid_scenario_names, rtol)
 
     metrics = compute_metrics(cost_matrix, grid_scenario_names, probabilities)
     metrics.to_csv(snakemake.output.metrics)

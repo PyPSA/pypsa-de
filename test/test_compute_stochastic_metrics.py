@@ -237,19 +237,27 @@ def test_co2_slack_without_lt_price(slack, unknown):
 
 
 @pytest.mark.parametrize(
-    "delta, bound, ok",
+    "delta, bound, gap_tol, ok",
     [
-        (0.005, 0.0, True),  # within rtol
-        (0.5, 0.0, False),  # ST dearer than LT: loose solve
-        (-20.005, 20.0, True),  # gain at the bound, within rtol
-        (-21.0, 20.0, False),  # gain beyond what the relaxations can save
-        (-21.0, np.nan, True),  # unknown bound: only ST dearer than LT is checked
-        (0.5, np.nan, False),
+        (0.005, 0.0, 0.0, True),  # within rtol
+        (0.5, 0.0, 0.0, False),  # ST dearer than LT: loose solve
+        (0.5, 0.0, 1.0, True),  # ... but within the reported solver gaps
+        (-20.005, 20.0, 0.0, True),  # gain at the bound, within rtol
+        (-21.0, 20.0, 0.0, False),  # gain beyond what the relaxations can save
+        (-21.0, 20.0, 2.0, True),  # ... but within the reported solver gaps
+        (-21.0, np.nan, 0.0, True),  # unknown bound: only ST dearer than LT is checked
+        (0.5, np.nan, 0.0, False),
     ],
 )
-def test_assert_lt_st_consistency(delta, bound, ok):
+def test_assert_lt_st_consistency(delta, bound, gap_tol, ok):
     table = pd.DataFrame(
-        {"lt_opex": [100.0], "delta": [delta], "delta_pct": [delta], "gain_bound": [bound]},
+        {
+            "lt_opex": [100.0],
+            "delta": [delta],
+            "delta_pct": [delta],
+            "gain_bound": [bound],
+            "gap_tol": [gap_tol],
+        },
         index=["a"],
     )
     if ok:
@@ -284,3 +292,43 @@ def test_solver_gap_note_counts_missing_bounds():
     }
     note = csm.solver_gap_note({}, evaluations)
     assert "ST cell <= 1.0e-05 (<= 2.0 M EUR), no bound for 1" in note
+
+
+def test_lt_st_table_gap_tol_sums_reported_gaps():
+    names = ["a", "b"]
+    probs = {"a": 0.4, "b": 0.6}
+    st = _st(None)
+    st.meta["relative_gap"] = 1e-3
+    topologies = {"a": _lt(), "b": _lt(), "stochastic": _lt(probs)}
+    topologies["a"].meta = {"relative_gap": 1e-2}
+    evaluations = {(p, s): st for p in topologies for s in names}
+
+    table = csm.lt_st_table(topologies, evaluations, names, probs)
+
+    lt_gap = 1e-2 * abs(topologies["a"].objective)
+    assert table.gap_tol["a"] == pytest.approx(lt_gap + 1e-3 * abs(st.objective))
+    assert table.gap_tol["stochastic"] == pytest.approx(1e-3 * abs(st.objective))
+
+
+GAP_CHECK = {
+    "lt": {"max_rel_gap": 5e-5, "fail_rel_gap": None},
+    "st": {"max_rel_gap": 5e-5, "fail_rel_gap": 1e-3},
+}
+
+
+@pytest.mark.parametrize(
+    "lt_gap, st_gap, rough",
+    [
+        (1e-5, 1e-5, []),
+        (4e-4, 1e-5, [("LT", "a", "")]),
+        (np.nan, 2e-4, [("ST", "a", "b")]),
+    ],
+)
+def test_solver_gap_table_flags_rough_solves(lt_gap, st_gap, rough):
+    topologies = {"a": SimpleNamespace(meta={"relative_gap": lt_gap})}
+    evaluations = {
+        ("a", "a"): SimpleNamespace(meta={"relative_gap": 1e-5}),
+        ("a", "b"): SimpleNamespace(meta={"relative_gap": st_gap}),
+    }
+    table = csm.solver_gap_table(topologies, evaluations, GAP_CHECK)
+    assert table.index[table.verdict == "rough"].tolist() == rough

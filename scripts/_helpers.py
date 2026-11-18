@@ -200,6 +200,38 @@ def get_shadow(run):
     return None
 
 
+def gap_verdict(gap: float, max_rel_gap: float, fail_rel_gap: float | None) -> str:
+    """
+    Classify a relative primal-dual solver gap as 'ok', 'rough' or 'fail'.
+
+    Parameters
+    ----------
+    gap : float
+        Relative gap; NaN if the solver reported no bound, inf if no solution.
+    max_rel_gap : float
+        Quality standard: gaps up to it are 'ok'.
+    fail_rel_gap : float or None
+        Gaps above `max_rel_gap` up to it are 'rough', above it 'fail'. None
+        never fails a finite gap.
+
+    Returns
+    -------
+    str
+        'ok', 'rough' or 'fail'. NaN counts as 'ok', inf as 'fail'.
+    """
+    if fail_rel_gap is not None and fail_rel_gap < max_rel_gap:
+        raise ValueError(
+            f"fail_rel_gap {fail_rel_gap} must not be below max_rel_gap {max_rel_gap}"
+        )
+    if np.isinf(gap):
+        return "fail"
+    if np.isnan(gap) or gap <= max_rel_gap:
+        return "ok"
+    if fail_rel_gap is None or gap <= fail_rel_gap:
+        return "rough"
+    return "fail"
+
+
 def get_opt(opts, expr, flags=None):
     """
     Return the first option matching the regular expression.

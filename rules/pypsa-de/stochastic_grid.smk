@@ -797,6 +797,7 @@ rule evaluate_grid_portfolio:
     params:
         options=config_provider("solving", "options"),
         solving=evaluate_grid_portfolio_solving,
+        gap_check=config_provider("stochastic_grid_scenarios", "gap_check"),
         foresight=config_provider("foresight"),
         co2_sequestration_potential=config_provider(
             "sector", "co2_sequestration_potential", default=200
@@ -1060,6 +1061,8 @@ rule compute_stochastic_metrics:
         + "scenario_comparison/stochastic_metrics/lt_st_consistency_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.csv",
         wait_and_see=RESULTS
         + "scenario_comparison/stochastic_metrics/wait_and_see_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.csv",
+        solver_gaps=RESULTS
+        + "scenario_comparison/stochastic_metrics/solver_gaps_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.csv",
         capacities_png=RESULTS
         + "scenario_comparison/stochastic_metrics/capacities_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.png",
         cost_matrix_png=RESULTS
@@ -1092,6 +1095,7 @@ rule compute_stochastic_metrics:
         freeze_outside_de_capacities=config_provider(
             "stochastic_grid_scenarios", "freeze_outside_de_capacities", default=False
         ),
+        gap_check=config_provider("stochastic_grid_scenarios", "gap_check"),
     message:
         "Computing WS/SP/EEV/EVPI/ECIU stochastic-grid metrics for {wildcards.clusters} clusters, {wildcards.planning_horizons} planning horizon"
     script:

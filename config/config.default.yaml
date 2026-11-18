@@ -497,6 +497,13 @@ stochastic_grid_scenarios:
     runtime: # e.g. 12h
     threads: # e.g. 32
   load_shedding: st # st = only the ST re-dispatch solves shed load | lt_st = the LT grid-topology solves shed too, with the carriers/costs of evaluate_solving.options.load_shedding
+  gap_check: # relative primal-dual solver gap (gurobi ObjVal vs ObjBound) bounds the cost error: 5e-5 of a ~200 bn EUR objective is ~10 M EUR. Gap <= max_rel_gap: ok; up to fail_rel_gap: accepted, but all metrics built on it are flagged ROUGH (plot titles, footnote, solver_gaps CSV, log); above: fail. No bound (NaN) counts as ok. For quick looks, raise fail_rel_gap (e.g. 1.0e-3)
+    lt: # solve_grid_topology_network; checked when the ST evaluation reads the portfolio, so the LT solves themselves never rerun for it
+      max_rel_gap: 5.0e-5
+      fail_rel_gap: # empty = never fail, only flag (the stochastic LT solve reached ~4e-4 in past runs)
+    st: # evaluate_grid_portfolio; a failed cell writes its network to *_st_rejected.nc for inspection
+      max_rel_gap: 5.0e-5
+      fail_rel_gap: 5.0e-5
   stochastic_solving: {} # partial `solving:` block deep-merged into solving for the "stochastic" solve only (free-form; e.g. solver_options.<name>.* or options.*) - lets you give the stochastic run its own solver settings without any code change
   scenarios: {} # !!! the SET of names cannot be set per scenario atm (see doc/configuration.md#per_scenario_limits); name -> {probability, links (csv path, optional), lines (csv path, optional)} - probabilities / paths ARE per-run
 

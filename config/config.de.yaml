@@ -822,7 +822,6 @@ stochastic_grid_scenarios:
     options:
       co2_cap_slack:
         enable: true # soften the CO2 emission caps with a penalized elastic slack (see solving.options.co2_cap_slack): stabilises near-infeasible dispatch LPs; the optimum is unchanged while the cap is reachable and the penalty exceeds the CO2 price
-      max_rel_gap: 5.0e-5 # fail (after solve_fallback) if gurobi's relative primal-dual gap (ObjVal vs ObjBound) exceeds this (an optimal solve without ObjBound is accepted with a warning); 5e-5 of a ~200 bn EUR objective bounds the cost error at ~10 M EUR
       load_shedding: # the only load-shedding settings: ST always, LT with load_shedding: lt_st; pathway solves never shed (config.default.yaml: enable false)
         all_carriers: false
         carriers: # heat may need shedding at coarse time resolution: existing boilers are pinned to the load profile, so heat peaks beyond maxed-out resistive heaters can lack supply
@@ -834,7 +833,7 @@ stochastic_grid_scenarios:
       gurobi-default:
         BarConvTol: 1.0e-7
         BarIterLimit: 2000 # gurobi default 1000 can cut off solves that are still converging
-    solve_fallback: [] # extra solver_options to retry a cell that ends non-optimal or above max_rel_gap; empty = fail fast (retrying a stalled barrier repeated it exactly)
+    solve_fallback: [] # extra solver_options to retry a cell that ends non-optimal or above gap_check.st.max_rel_gap; empty = fail fast (retrying a stalled barrier repeated it exactly)
     # solve_fallback: # example: each entry is one retry, its keys override solver_options
     #   - {BarConvTol: 1.0e-4}
   scope: de_and_interconnectors

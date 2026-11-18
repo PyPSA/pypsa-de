@@ -126,6 +126,21 @@
   violation of 6 MWh on a 277 TWh biomass budget; the export results matched an
   optimal solve. Stalls hit about one in eight variable orderings of the same
   model.
+* Solver-gap thresholds moved to `stochastic_grid_scenarios.gap_check` (from
+  `evaluate_solving.options.max_rel_gap`), with one pair per stage, `lt` and
+  `st`. A gap up to `max_rel_gap` is ok. A gap up to `fail_rel_gap` is accepted,
+  but every metric built on it is flagged ROUGH: plot titles and footnotes, the
+  log, and the new `solver_gaps_*.csv`, which lists each LT and ST solve. A
+  larger gap fails. Raise `fail_rel_gap` (e.g. `1e-3`) for quick looks. Defaults
+  keep the ST check strict (`5e-5`). LT solves are only flagged by default; the
+  stochastic LT solve has reached about `4e-4` in past runs. The LT gap is checked
+  when the ST evaluation reads the portfolio, so LT solves never rerun for it.
+  The LT/ST consistency and wait-and-see checks widen their tolerance to the
+  cost error the reported gaps allow.
+* A failed ST re-dispatch solve now writes its network to `..._st_rejected.nc`
+  next to the regular output before the job fails. Its `meta` holds the solver
+  status, termination condition and relative gap. The file is not a workflow
+  output, so it never satisfies downstream rules.
 * The workflow fixes `PYTHONHASHSEED=0` for all jobs (`Snakefile`), and the ST
   load-shedding carriers are added in sorted order. Before, set iteration
   order changed per process, so each run built the LP in a different variable
