@@ -416,7 +416,7 @@ industry:
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#solving
 solving:
-  runtime: 12h # cl/h: mem_mb/runtime -> 27/3: 50000/3h; 49/5: ?/?h; 49/3: ?/?h; NUTS2/3: 100000/8
+  runtime: 12h # cl/h: mem_mb/runtime -> 27/3: 40000/3h; 49/5: 70000/7h; 49/3: 100000/13h; NUTS2/3: 90000/18h; NUTS2/6: 50000/6h; NUTS2/5: 60000/10h; NUTS2/4: 70000/13h
   mem_mb: 70000 
   mem_logging_frequency: 5
   options:
@@ -808,7 +808,7 @@ stochastic_grid_scenarios:
   #   freeze_trade: {AC: optimal, DC: optimal, H2: "optimal+10", gas: "optimal-10"}
   solve_endogenous_optimal: true # !!! cannot be set per scenario atm (see doc/configuration.md#per_scenario_limits); also build the endogenous all-free reference network (no grid override); opt-in, not part of the WS/SP/EEV/EVPI/ECIU comparison
   stochastic_solve_resources: # resource overrides for the "stochastic" grid-topology solve only (its scenario-dimension LP is much larger and scales super-linearly in the number of scenarios); each empty = fall back to the general solving.mem_mb / solving.runtime / solver_threads, which every other variant always uses
-    mem_mb: 70000 # cl/h/s: mem_mb/runtime -> 27/3/2: 100000/3h; 27/3/3: 100000/6h; 49/3/2: 300000/?h; 49/3/3: 450000/16h; NUTS2/3/3 350000/20h
+    mem_mb: 70000 # cl/h/s: mem_mb/runtime -> 27/3/2: 150000/4h; 27/3/3: 110000/7h; 49/3/2: 260000/16h; 49/3/3: 330000/15h; NUTS2/3/3: 390000/24h; NUTS2/6/5: 400000/14h; NUTS2/5/5: 470000/18h; NUTS2/4/5: 560000/24h; NUTS2/3/5: 720000/36h
     runtime: 12h # e.g. 12h
     threads: 32 # snakemake cores reserved for the stochastic job (scheduler side)
   stochastic_solving: # partial `solving:` block deep-merged into solving for the "stochastic" solve only (gurobi); every other variant keeps solving.solver_options.gurobi-default
