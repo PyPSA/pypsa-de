@@ -50,9 +50,11 @@ from scripts._helpers import (
     component_names,
     configure_logging,
     get,
+    rescale_global_constraints,
     scenario_index,
     scenario_slice,
     set_scenario_config,
+    unscale_global_constraint_duals,
     update_config_from_wildcards,
 )
 
@@ -1373,6 +1375,8 @@ def extra_functionality(
         custom_extra_functionality = getattr(module, module_name)
         custom_extra_functionality(n, snapshots, snakemake)  # pylint: disable=E0601
 
+    rescale_global_constraints(n)
+
 
 def check_objective_value(n: pypsa.Network, solving: dict) -> None:
     """
@@ -1743,6 +1747,7 @@ if __name__ == "__main__":
             )
 
     logger.info(f"Maximum memory usage: {mem.mem_usage}")
+    unscale_global_constraint_duals(n)
 
     # Check results
     if not rolling_horizon:

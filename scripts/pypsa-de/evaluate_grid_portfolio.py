@@ -31,6 +31,7 @@ from scripts._helpers import (
     mock_snakemake,
     scenario_slice,
     set_scenario_config,
+    unscale_global_constraint_duals,
     update_config_from_wildcards,
 )
 from scripts import solve_network
@@ -287,13 +288,14 @@ if __name__ == "__main__":
     # same as when solve_network.py itself runs as __main__.
     solve_network.snakemake = snakemake
 
-    # evaluate_grid_portfolio_solving() enables the elastic CO2-cap slack on
-    # params.solving only; mirror it into the config that
-    # create_optimization_model attaches as n.config, which is where
-    # add_co2_cap_constraint and check_co2_slack read its settings.
-    snakemake.config["solving"]["options"]["co2_cap_slack"] = snakemake.params.solving[
-        "options"
-    ]["co2_cap_slack"]
+    # evaluate_grid_portfolio_solving() sets the ST-only CO2-cap slack and
+    # constraint rescaling on params.solving only; mirror them into the config
+    # that create_optimization_model attaches as n.config, which is where the
+    # helpers in scripts/_helpers.py read their settings.
+    for key in ["co2_cap_slack", "rescale_global_constraints"]:
+        snakemake.config["solving"]["options"][key] = snakemake.params.solving[
+            "options"
+        ][key]
 
     planning_horizons = snakemake.wildcards.get("planning_horizons", None)
 
@@ -343,6 +345,7 @@ if __name__ == "__main__":
     status, condition, gap = solve_with_fallback(
         canvas, solve_kwargs, fallback, st_check["max_rel_gap"]
     )
+    unscale_global_constraint_duals(canvas)
     verdict = gap_verdict(gap, **st_check)
     if verdict == "fail":
         rejected = snakemake.output.network.removesuffix(".nc") + "_rejected.nc"

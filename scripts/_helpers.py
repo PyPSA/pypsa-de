@@ -1319,3 +1319,59 @@ def add_co2_cap_constraint(n, cname, lhs, limit):
         cfg["penalty"],
         cfg["max_overshoot"] * budget,
     )
+
+
+def _rescaled_constraints(n):
+    """Return (factor, names) of the global constraints to rescale; (1, []) if disabled."""
+    cfg = n.config["solving"]["options"].get("rescale_global_constraints", {})
+    if not cfg.get("enable"):
+        return 1, []
+    names = [
+        c for c in cfg["constraints"] if f"GlobalConstraint-{c}" in n.model.constraints
+    ]
+    return cfg["factor"], names
+
+
+def rescale_global_constraints(n):
+    """Divide coefficients and right-hand side of large global constraints by a factor.
+
+    Caps such as ``CO2Limit`` (~1e9 t) or the biomass limits (~1e8 MWh) have
+    right-hand sides so large that the solver's absolute feasibility tolerance
+    asks for more digits than double precision holds, which can stall the
+    barrier. In larger units (e.g. kt, GWh) the tolerance is looser by the
+    factor and still physically negligible. The feasible set and the
+    optimum are unchanged, but the shadow prices are scaled by the factor;
+    :func:`unscale_global_constraint_duals` must run after every solve.
+    Configured in ``solving.options.rescale_global_constraints``; names that
+    are not in the model are skipped.
+
+    Parameters
+    ----------
+    n : pypsa.Network
+        Network with a built ``n.model`` holding all custom constraints.
+
+    References
+    ----------
+    Gurobi Optimization, "Guidelines for Numerical Issues",
+    https://docs.gurobi.com/projects/optimizer/en/current/concepts/numericguide.html
+    """
+    factor, names = _rescaled_constraints(n)
+    for cname in names:
+        name = f"GlobalConstraint-{cname}"
+        c = n.model.constraints.data[name] = n.model.constraints[name].mutable()
+        c.update(coeffs=c.coeffs / factor, rhs=c.rhs / factor)
+    if names:
+        logger.info("Rescaled global constraints %s by 1/%g", names, factor)
+
+
+def unscale_global_constraint_duals(n):
+    """Undo the effect of :func:`rescale_global_constraints` on ``n.global_constraints.mu``.
+
+    Parameters
+    ----------
+    n : pypsa.Network
+        Solved network whose ``n.model`` was rescaled.
+    """
+    factor, names = _rescaled_constraints(n)
+    gc = n.global_constraints
+    gc.loc[gc.index.get_level_values(-1).isin(names), "mu"] /= factor

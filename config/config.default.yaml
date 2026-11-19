@@ -1200,6 +1200,10 @@ solving:
       max_overshoot: 0.02 # upper bound on slack, as a fraction of each cap
       assert_threshold: 0.005 # fail post-solve if any slack exceeds this fraction of its cap
       constraints: [CO2Limit, co2_limit-DE] # caps to soften; NOT the sequestration potential
+    rescale_global_constraints: # divide large global-constraint rows by a factor for solver numerics; shadow prices are scaled back (see scripts/_helpers.rescale_global_constraints)
+      enable: false
+      factor: 1000 # e.g. t -> kt, MWh -> GWh
+      constraints: [CO2Limit, co2_limit-DE, biomass limit, unsustainable biomass limit] # names not in the model are skipped
     curtailment_mode: false
     noisy_costs: true
     skip_iterations: true

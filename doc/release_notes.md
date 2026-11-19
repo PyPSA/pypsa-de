@@ -88,6 +88,20 @@
   build with the run name. Before, a stale name after renaming the scenario set
   surfaced as a `MissingInputException`.
 
+* New option `solving.options.rescale_global_constraints` (default off)
+  divides the rows of large global constraints (`CO2Limit`, `co2_limit-DE`,
+  `biomass limit`, `unsustainable biomass limit`; right-hand sides up to 1e9)
+  by `factor` (default 1000, i.e. t to kt and MWh to GWh) before the solve, and
+  divides their shadow prices in `n.global_constraints.mu` back afterwards. The
+  optimum is unchanged. Gurobi's absolute feasibility tolerance (~1e-6) asks
+  for more digits on a 1e9 row than double precision holds; in the larger unit
+  it is 1000 times looser, which is still physically negligible. On the 365h
+  ST test cell this removed the "large rhs" warning and the barrier stall on
+  the stalling seed; objective and shadow prices stayed within 5e-5 (the
+  spread between two unscaled optimal solves). Enable it for the ST solves
+  only with
+  `evaluate_solving.options.rescale_global_constraints.enable: true`.
+
 * The LT grid capacity/volume tables (`grid_capacity_volume_stochastic` and
   `grid_capacity_volume_variants` in `scenario_comparison/LT/...`) are also
   written as CSV next to the PNG. They now count each DC link once; before,
