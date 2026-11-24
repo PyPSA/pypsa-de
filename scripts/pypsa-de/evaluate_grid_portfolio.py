@@ -33,6 +33,7 @@ from scripts._helpers import (
     set_scenario_config,
     unscale_global_constraint_duals,
     update_config_from_wildcards,
+    write_st_failure_marker,
 )
 from scripts import solve_network
 from scripts.solve_network import (
@@ -357,6 +358,13 @@ if __name__ == "__main__":
         )
         canvas.export_to_netcdf(rejected)
         logger.error("Wrote rejected ST network for inspection to %s", rejected)
+        write_st_failure_marker(
+            snakemake.output.network,
+            status=status,
+            condition=str(condition),
+            relative_gap=gap,
+            solve_fallback=fallback,
+        )
         raise RuntimeError(
             f"Dispatch-only solve did not converge after {len(fallback) + 1} "
             f"attempt(s): status '{status}', condition '{condition}', relative gap "

@@ -10,6 +10,10 @@
 # not part of the default `rule all` - request `stochastic_grid_analysis` (or
 # any of its intermediate outputs) explicitly.
 
+import itertools
+
+from scripts._helpers import check_lt_st_relaxations, lt_replaces_st
+
 _sgs = config.get("stochastic_grid_scenarios", {})
 GRID_SCENARIO_NAMES = list(_sgs.get("scenarios", {}).keys())
 _PROJECT_REPORT = RESULTS + "transmission_project_audit/{report_resolution}/{report_start}_until_{report_end}/"
@@ -575,6 +579,68 @@ def evaluate_grid_portfolio_solving(wildcards):
     return solving
 
 
+def _cell_wildcards(wildcards, **values):
+    """Copy of `wildcards` with `values` set, to read the config of another rule's cell.
+
+    Built from `type(wildcards)`: the Wildcards class moved between snakemake
+    versions (snakemake.io in 9.16, snakemake.iocontainers in 9.27)."""
+    return type(wildcards)(fromdict={**dict(wildcards.items()), **values})
+
+
+def _lt_topology_path(wildcards, grid_scenario):
+    return (
+        RESULTS
+        + f"networks/base_s_{wildcards.clusters}_{wildcards.opts}_{wildcards.sector_opts}_{wildcards.planning_horizons}_topology-{grid_scenario}.nc"
+    )
+
+
+def _st_evaluation_path(wildcards, portfolio, grid_scenario):
+    return (
+        RESULTS
+        + f"networks/base_s_{wildcards.clusters}_{wildcards.opts}_{wildcards.sector_opts}_{wildcards.planning_horizons}_portfolio-{portfolio}_on-{grid_scenario}_st.nc"
+    )
+
+
+def lt_replaces_st_cell(wildcards, portfolio, grid_scenario):
+    """Whether the ST cell `portfolio` on `grid_scenario` reads its LT network.
+
+    Only with `stochastic_grid_scenarios.diagonal_lt_fallback.enable`, and only
+    for a diagonal cell (a grid scenario's portfolio on its own grid) whose ST
+    solve failed with every `solve_fallback` tier (see `lt_replaces_st`). This is
+    decided when the DAG is built, so a failed cell switches to its LT network
+    on the next snakemake invocation. Raises if LT and ST relax the dispatch
+    differently (see `check_lt_st_relaxations`).
+    """
+    cfg = config_provider(
+        "stochastic_grid_scenarios", "diagonal_lt_fallback", default={"enable": False}
+    )(wildcards)
+    diagonal = portfolio == grid_scenario and grid_scenario in GRID_SCENARIO_NAMES
+    if not (cfg["enable"] and diagonal):
+        return False
+    cell = _cell_wildcards(wildcards, portfolio=portfolio, grid_scenario=grid_scenario)
+    st_solving = evaluate_grid_portfolio_solving(cell)
+    check_lt_st_relaxations(
+        stochastic_grid_solving(cell)["options"],
+        st_solving["options"],
+        cfg["allow_load_shedding_mismatch"],
+        cfg["allow_co2_slack_mismatch"],
+    )
+    st_path = expand(_st_evaluation_path(cell, portfolio, grid_scenario), **dict(cell.items()))[0]
+    return lt_replaces_st(st_path, st_solving.get("solve_fallback", []))
+
+
+def _st_network_ids(wildcards):
+    """GRID_EXPORT_NETWORK_IDS_ST of one run, with each cell that reads its LT
+    network (see lt_replaces_st_cell) shown as that LT network, `topology-<grid>`."""
+    if not _GRID_INCLUDE_ST:
+        return []
+    return [
+        f"topology-{gs}" if lt_replaces_st_cell(wildcards, p, gs) else f"portfolio-{p}_on-{gs}_st"
+        for p in GRID_SCENARIO_VALUES
+        for gs in GRID_SCENARIO_NAMES
+    ]
+
+
 def _pathway_grid_cutoff(wildcards):
     """DE build-year cutoff of the exogenous grid in the myopic year before the
     target (see modify_prenetwork.transmission_cutoff); None for a direct run."""
@@ -962,7 +1028,7 @@ def _lt_network_ids(wildcards):
 
 
 def _comparison_network_ids(wildcards):
-    return _lt_network_ids(wildcards) if wildcards.variant == "LT" else GRID_EXPORT_NETWORK_IDS_ST
+    return _lt_network_ids(wildcards) if wildcards.variant == "LT" else _st_network_ids(wildcards)
 
 
 rule plot_grid_scenario_comparison:
@@ -998,7 +1064,7 @@ rule plot_grid_scenario_comparison:
         ),
     threads: 1
     resources:
-        mem_mb=50000,
+        mem_mb=80000,
         runtime=480,  
     params:
         network_ids=lambda w: _comparison_network_ids(w),
@@ -1013,19 +1079,49 @@ rule plot_grid_scenario_comparison:
 
 def get_topology_networks(wildcards):
     return {
-        f"topology_{grid_scenario}": RESULTS
-        + f"networks/base_s_{wildcards.clusters}_{wildcards.opts}_{wildcards.sector_opts}_{wildcards.planning_horizons}_topology-{grid_scenario}.nc"
+        f"topology_{grid_scenario}": _lt_topology_path(wildcards, grid_scenario)
         for grid_scenario in GRID_SCENARIO_VALUES
     }
 
 
 def get_evaluation_networks(wildcards):
     return {
-        f"eval_{portfolio}__{grid_scenario}": RESULTS
-        + f"networks/base_s_{wildcards.clusters}_{wildcards.opts}_{wildcards.sector_opts}_{wildcards.planning_horizons}_portfolio-{portfolio}_on-{grid_scenario}_st.nc"
+        f"eval_{portfolio}__{grid_scenario}": (
+            _lt_topology_path(wildcards, grid_scenario)
+            if lt_replaces_st_cell(wildcards, portfolio, grid_scenario)
+            else _st_evaluation_path(wildcards, portfolio, grid_scenario)
+        )
         for portfolio in GRID_SCENARIO_VALUES
         for grid_scenario in GRID_SCENARIO_NAMES
     }
+
+
+def _lt_cells(wildcards):
+    """[portfolio, grid] of each ST cell that reads its LT network."""
+    return [[gs, gs] for gs in GRID_SCENARIO_NAMES if lt_replaces_st_cell(wildcards, gs, gs)]
+
+
+def _grid_network_id_targets(template):
+    """Input function: `template` for every run and network id, without the ST
+    ids of cells that read their LT network (exported as `topology-<grid>`)."""
+    names = config["run"]["name"]
+    keys = dict(
+        run=names if isinstance(names, list) else [names],
+        clusters=config["scenario"]["clusters"],
+        opts=config["scenario"]["opts"],
+        sector_opts=config["scenario"]["sector_opts"],
+        planning_horizons=_GRID_HORIZONS,
+    )
+
+    def targets(wildcards):
+        files = []
+        for combo in itertools.product(*keys.values()):
+            w = _cell_wildcards(wildcards, **{k: str(v) for k, v in zip(keys, combo)})
+            solved_st = [nid for nid in _st_network_ids(w) if nid in GRID_EXPORT_NETWORK_IDS_ST]
+            files += expand(template, **dict(w.items()), network_id=GRID_EXPORT_NETWORK_IDS_LT + solved_st)
+        return files
+
+    return targets
 
 
 rule compute_stochastic_metrics:
@@ -1096,6 +1192,7 @@ rule compute_stochastic_metrics:
             "stochastic_grid_scenarios", "freeze_outside_de_capacities", default=False
         ),
         gap_check=config_provider("stochastic_grid_scenarios", "gap_check"),
+        lt_cells=_lt_cells,
     message:
         "Computing WS/SP/EEV/EVPI/ECIU stochastic-grid metrics for {wildcards.clusters} clusters, {wildcards.planning_horizons} planning horizon"
     script:
@@ -1143,15 +1240,9 @@ rule stochastic_grid_analysis:
         # Ariadne-variable export (LT topology + ST portfolio-evaluation
         # networks), one xlsx per network variant since they all share the
         # same `run`/scenario name.
-        expand(
+        _grid_network_id_targets(
             RESULTS
-            + "ariadne/exported_variables_full_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_{network_id}.xlsx",
-            run=config["run"]["name"],
-            clusters=config["scenario"]["clusters"],
-            opts=config["scenario"]["opts"],
-            sector_opts=config["scenario"]["sector_opts"],
-            planning_horizons=_GRID_HORIZONS,
-            network_id=GRID_EXPORT_NETWORK_IDS,
+            + "ariadne/exported_variables_full_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}_{network_id}.xlsx"
         ),
         # Scenario-comparison plots - LT + ST in "full", LT only in lt_*, none in
         # opt_only (nothing to compare a single "optimal" network against).
@@ -1167,15 +1258,9 @@ rule stochastic_grid_analysis:
         ),
         # Per-network-variant system plots (storage/capacity maps, energy
         # balances, capacity comparison) - one folder per network variant.
-        expand(
+        _grid_network_id_targets(
             RESULTS
-            + "system/plots/{network_id}/.system_plots_complete_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.flag",
-            run=config["run"]["name"],
-            clusters=config["scenario"]["clusters"],
-            opts=config["scenario"]["opts"],
-            sector_opts=config["scenario"]["sector_opts"],
-            planning_horizons=_GRID_HORIZONS,
-            network_id=GRID_EXPORT_NETWORK_IDS,
+            + "system/plots/{network_id}/.system_plots_complete_base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.flag"
         ),
     message:
         "Collected all stochastic-grid-scenario analysis outputs."

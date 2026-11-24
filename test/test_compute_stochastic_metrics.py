@@ -332,3 +332,36 @@ def test_solver_gap_table_flags_rough_solves(lt_gap, st_gap, rough):
     }
     table = csm.solver_gap_table(topologies, evaluations, GAP_CHECK)
     assert table.index[table.verdict == "rough"].tolist() == rough
+
+
+LT_CELL = ("a", "a")
+
+
+def test_cost_matrix_lt_cell_matches_st_cell():
+    """An LT network standing in for a diagonal ST cell counts opex only, not its capex twice."""
+    topologies = {"a": _lt()}
+    matrices = [
+        csm.build_cost_matrix(topologies, {LT_CELL: n}, ["a"], {"a": 1.0})
+        for n in (_st(None), _lt())
+    ]
+    pd.testing.assert_frame_equal(*matrices)
+
+
+def test_lt_cells_skip_lt_st_check_and_co2_slack():
+    names = ["a", "b"]
+    topologies = {"a": _lt(), "b": _lt()}
+    evaluations = {(p, s): _st(20.0) for p in topologies for s in names}
+    evaluations[LT_CELL] = _lt()
+
+    table = csm.lt_st_table(topologies, evaluations, names, {}, {LT_CELL})
+    shedding = csm.shedding_table(evaluations, {LT_CELL})
+
+    assert table.index.tolist() == ["b"]
+    assert np.isnan(shedding.loc[LT_CELL, "co2_slack_t"])
+    assert shedding.loc[("a", "b"), "co2_slack_t"] == 0
+
+
+def test_solver_gap_table_judges_lt_cell_by_lt_standard():
+    evaluations = {LT_CELL: SimpleNamespace(meta={"relative_gap": 2e-3})}
+    table = csm.solver_gap_table({}, evaluations, GAP_CHECK, {LT_CELL})
+    assert table.loc[("ST", "a", "a")].tolist() == [2e-3, "rough", "LT"]

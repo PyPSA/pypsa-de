@@ -60,6 +60,28 @@
 
 **Features (stochastic grid)**
 
+* `stochastic_grid_scenarios.diagonal_lt_fallback` (default off) lets a
+  diagonal ST cell (portfolio `g` on grid `g`) read the LT network
+  `topology-g` when its ST solve failed with every `solve_fallback` tier.
+  Diagonal cells failed most often: 12 of 16 failed cells in the 2040/2045 6h
+  runs. With capacities fixed at the LT optimum, the ST problem is the LT
+  problem, so the LT dispatch is already optimal. On three diagonal cells that
+  did converge, ST and LT opex agreed within 3e-5. The dispatch differed by
+  0.1-1 % in cost-neutral directions (pipeline flow direction, hydro and CO2
+  storage timing); an off-diagonal control differed by 3e-3. A failed ST solve
+  now leaves `*_st_failed.json` with its `solve_fallback` ladder. The next
+  snakemake call points the metrics and the ST comparison at `topology-g`.
+  It writes no `_st.nc` copy, so no network claims an ST solve that never
+  converged. The cell gets no `portfolio-g_on-g_st` export or plots. The
+  metrics skip its LT/ST consistency check, report it as `source: LT` in
+  `solver_gaps_*.csv` and name it in the plot footnote. A marker from another
+  ladder makes the cell solve again. The DAG build fails if LT and ST shed load
+  differently or configure `co2_cap_slack` differently, unless
+  `allow_load_shedding_mismatch` / `allow_co2_slack_mismatch` waive it. The
+  cost matrix now reads every cell's opex as `objective - portfolio_capex`
+  (`dispatch_opex`), which is unchanged for ST networks (no extendable
+  capacity).
+
 * `stochastic_grid_scenarios.load_shedding: lt_st` also gives the LT
   grid-topology solves load shedding, with the carriers and costs of
   `evaluate_solving.options.load_shedding`, so LT and ST face the same

@@ -5,6 +5,7 @@
 import atexit
 import contextlib
 import copy
+import json
 import logging
 import os
 import re
@@ -230,6 +231,94 @@ def gap_verdict(gap: float, max_rel_gap: float, fail_rel_gap: float | None) -> s
     if fail_rel_gap is None or gap <= fail_rel_gap:
         return "rough"
     return "fail"
+
+
+def st_failure_marker(st_network: str) -> str:
+    """Path of the JSON marker that a failed ST solve of `st_network` leaves."""
+    return st_network.removesuffix(".nc") + "_failed.json"
+
+
+def write_st_failure_marker(st_network: str, **info) -> None:
+    """Record a failed ST solve of `st_network`; `info` must hold `solve_fallback`."""
+    Path(st_failure_marker(st_network)).write_text(json.dumps(info, indent=2))
+
+
+def lt_replaces_st(st_network: str, solve_fallback: list) -> bool:
+    """
+    Whether the LT network replaces the diagonal ST cell `st_network`.
+
+    True only if the ST network is missing and its failure marker records the
+    current `solve_fallback` ladder, i.e. every configured tier was tried. A
+    marker from another ladder returns False, so the cell is solved again. A
+    job killed by the Slurm walltime leaves no marker and is solved again too.
+
+    Parameters
+    ----------
+    st_network : str
+        Path of the ST evaluation network.
+    solve_fallback : list
+        The current `solve_fallback` ladder of that cell.
+
+    Returns
+    -------
+    bool
+    """
+    marker = Path(st_failure_marker(st_network))
+    if Path(st_network).exists() or not marker.exists():
+        return False
+    return json.loads(marker.read_text())["solve_fallback"] == solve_fallback
+
+
+def check_lt_st_relaxations(
+    lt_options: dict,
+    st_options: dict,
+    allow_load_shedding_mismatch: bool,
+    allow_co2_slack_mismatch: bool,
+) -> None:
+    """
+    Raise if the LT and ST solves relax the dispatch differently.
+
+    The LT dispatch can stand in for a diagonal ST solve only if both solve the
+    same problem: the same load shedding and the same CO2-cap slack (or none).
+
+    Parameters
+    ----------
+    lt_options, st_options : dict
+        `solving.options` of the LT and the ST solve.
+    allow_load_shedding_mismatch, allow_co2_slack_mismatch : bool
+        Waive the respective check.
+
+    Raises
+    ------
+    ValueError
+        If a setting differs and its mismatch is not allowed.
+    """
+
+    def slack(options: dict) -> dict:
+        cfg = options["co2_cap_slack"]
+        return cfg if cfg["enable"] else {}
+
+    mismatches = []
+    if not allow_load_shedding_mismatch and (
+        lt_options["load_shedding"] != st_options["load_shedding"]
+    ):
+        mismatches.append(
+            f"load shedding (LT {lt_options['load_shedding']}, "
+            f"ST {st_options['load_shedding']}; set "
+            "stochastic_grid_scenarios.load_shedding: lt_st)"
+        )
+    if not allow_co2_slack_mismatch and slack(lt_options) != slack(st_options):
+        mismatches.append(
+            f"CO2-cap slack (LT {slack(lt_options)}, ST {slack(st_options)})"
+        )
+    if mismatches:
+        raise ValueError(
+            "diagonal_lt_fallback: the LT dispatch cannot replace a diagonal ST "
+            "solve, the two solves differ in " + " and ".join(mismatches) + ". "
+            "Align them, or waive the check with "
+            "diagonal_lt_fallback.allow_load_shedding_mismatch / "
+            "allow_co2_slack_mismatch."
+        )
 
 
 def get_opt(opts, expr, flags=None):

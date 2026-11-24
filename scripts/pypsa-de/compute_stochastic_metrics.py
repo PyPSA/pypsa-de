@@ -136,6 +136,17 @@ def portfolio_capex(n: pypsa.Network) -> float:
     return total
 
 
+def dispatch_opex(n: pypsa.Network) -> float:
+    """Dispatch opex of a solved network: its objective minus `portfolio_capex`.
+
+    An ST evaluation network has all capacities fixed, so this is its objective.
+    An LT network that stands in for a diagonal ST cell (see
+    `stochastic_grid_scenarios.diagonal_lt_fallback`) loses the portfolio capex
+    its objective includes.
+    """
+    return n.objective - portfolio_capex(n)
+
+
 def foreign_portfolio_capex(n: pypsa.Network, region: str = REGION) -> float:
     """Capex of the originally-extendable, non-grid capacity located outside `region`.
 
@@ -247,9 +258,7 @@ def build_cost_matrix(
         capex = portfolio_capex(n_portfolio) + extra_capex.get(portfolio, 0.0)
         row = {}
         for grid_scenario in grid_scenario_names:
-            n_eval = evaluations[(portfolio, grid_scenario)]
-            opex = n_eval.objective
-            row[grid_scenario] = capex + opex
+            row[grid_scenario] = capex + dispatch_opex(evaluations[(portfolio, grid_scenario)])
         rows[portfolio] = row
     cost_matrix = pd.DataFrame(rows).T
     cost_matrix["expected"] = sum(
@@ -418,8 +427,12 @@ def relaxation_gain_bound(
     )
 
 
-def shedding_stats(n: pypsa.Network) -> pd.Series:
-    """Load shedding and used CO2-cap slack of one ST evaluation network."""
+def shedding_stats(n: pypsa.Network, co2_slack: bool = True) -> pd.Series:
+    """Load shedding and used CO2-cap slack of one ST evaluation network.
+
+    `co2_slack=False` reports the slack as NaN, for an LT network standing in
+    for an ST cell: the LT solve records no slack use.
+    """
     gens = n.generators.query("carrier == 'load'")
     p = n.generators_t.p[gens.index]
     energy = p.mul(n.snapshot_weightings.objective, axis=0).sum()
@@ -430,14 +443,19 @@ def shedding_stats(n: pypsa.Network) -> pd.Series:
             "shed_cost": (energy * gens.marginal_cost).sum(),
             "shed_snapshots": (total > SHED_NOISE).sum(),
             "shed_peak_GW": total.max() / 1e3,
-            "co2_slack_t": sum(n.meta["co2_slack_used"].values()),
+            "co2_slack_t": sum(n.meta["co2_slack_used"].values()) if co2_slack else np.nan,
         }
     )
 
 
-def shedding_table(evaluations: dict[tuple[str, str], pypsa.Network]) -> pd.DataFrame:
-    """`shedding_stats` per ST cell, rows indexed by (portfolio, grid)."""
-    table = pd.DataFrame({k: shedding_stats(n) for k, n in evaluations.items()}).T
+def shedding_table(
+    evaluations: dict[tuple[str, str], pypsa.Network],
+    lt_cells: set[tuple[str, str]] = frozenset(),
+) -> pd.DataFrame:
+    """`shedding_stats` per ST cell, rows indexed by (portfolio, grid); `lt_cells` read LT networks."""
+    table = pd.DataFrame(
+        {k: shedding_stats(n, co2_slack=k not in lt_cells) for k, n in evaluations.items()}
+    ).T
     return table.rename_axis(["portfolio", "grid"])
 
 
@@ -446,6 +464,7 @@ def lt_st_table(
     evaluations: dict[tuple[str, str], pypsa.Network],
     grid_scenario_names: list[str],
     probabilities: dict[str, float],
+    lt_cells: set[tuple[str, str]] = frozenset(),
 ) -> pd.DataFrame:
     """LT vs ST opex of each portfolio on its own grid, with the gain bound.
 
@@ -454,17 +473,22 @@ def lt_st_table(
     For the stochastic portfolio the probability-weighted ST opex is compared
     to the native SP opex. Costs in EUR; `delta` = ST - LT opex;
     `gain_bound` = `relaxation_gain_bound`, weighted alike; `gap_tol` = the
-    cost error the reported LT and (weighted) ST solver gaps allow.
+    cost error the reported LT and (weighted) ST solver gaps allow. A portfolio
+    with a cell in `lt_cells` (an LT network standing in for a failed ST solve)
+    has no ST solve to compare and is left out.
     """
     weights = {s: {s: 1.0} for s in grid_scenario_names}
     if "stochastic" in topologies:
         weights["stochastic"] = probabilities
     rows = {}
     for portfolio, w in weights.items():
+        if any((portfolio, s) in lt_cells for s in w):
+            logger.info(f"LT/ST check skips '{portfolio}': its ST cell reads the LT network.")
+            continue
         n_lt = topologies[portfolio]
         st = {s: evaluations[(portfolio, s)] for s in w}
         scenario = {s: s if n_lt.has_scenarios else None for s in w}
-        lt_opex = n_lt.objective - portfolio_capex(n_lt)
+        lt_opex = dispatch_opex(n_lt)
         st_opex = sum(w[s] * st[s].objective for s in w)
         bound = sum(
             w[s] * relaxation_gain_bound(n_lt, st[s], scenario[s], w[s]) for s in w
@@ -492,19 +516,22 @@ def solver_gap_table(
     topologies: dict[str, pypsa.Network],
     evaluations: dict[tuple[str, str], pypsa.Network],
     gap_check: dict,
+    lt_cells: set[tuple[str, str]] = frozenset(),
 ) -> pd.DataFrame:
     """Relative gap and `gap_verdict` of every LT and ST solve.
 
     Rows are indexed by (stage, portfolio, grid); LT rows have grid "".
-    A missing gap counts as NaN, i.e. 'ok'.
+    Column `source` names the solve behind each row: "LT" for an ST cell in
+    `lt_cells`, judged by the LT standard. A missing gap counts as NaN, i.e. 'ok'.
     """
     solves = {("LT", p, ""): n for p, n in topologies.items()}
     solves |= {("ST", p, g): n for (p, g), n in evaluations.items()}
     rows = {}
     for (stage, p, g), n in solves.items():
+        source = "LT" if (p, g) in lt_cells else stage
         gap = n.meta.get("relative_gap", np.nan)
-        verdict = gap_verdict(gap, **gap_check[stage.lower()])
-        rows[(stage, p, g)] = {"relative_gap": gap, "verdict": verdict}
+        verdict = gap_verdict(gap, **gap_check[source.lower()])
+        rows[(stage, p, g)] = {"relative_gap": gap, "verdict": verdict, "source": source}
     return pd.DataFrame(rows).T.rename_axis(["stage", "portfolio", "grid"])
 
 
@@ -756,9 +783,13 @@ if __name__ == "__main__":
             portfolio, grid_scenario = key[len("eval_") :].split("__", 1)
             evaluations[(portfolio, grid_scenario)] = pypsa.Network(path)
 
+    lt_cells = {tuple(cell) for cell in snakemake.params.lt_cells}
     title = f"Stochastic grid {snakemake.wildcards.planning_horizons}"
     note = solver_gap_note(topologies, evaluations)
-    gaps = solver_gap_table(topologies, evaluations, snakemake.params.gap_check)
+    if lt_cells:
+        logger.warning(f"ST cells reading their LT network (failed ST solve): {sorted(lt_cells)}")
+        note = f"{len(lt_cells)} diagonal ST cell(s) use the LT dispatch. {note}"
+    gaps = solver_gap_table(topologies, evaluations, snakemake.params.gap_check, lt_cells)
     gaps.to_csv(snakemake.output.solver_gaps)
     rough = gaps[gaps.verdict != "ok"]
     if not rough.empty:
@@ -796,10 +827,10 @@ if __name__ == "__main__":
     cost_matrix.to_csv(snakemake.output.cost_matrix)
     plot_cost_matrix(cost_matrix, snakemake.output.cost_matrix_png, title, note)
 
-    shedding = shedding_table(evaluations)
+    shedding = shedding_table(evaluations, lt_cells)
     shedding.to_csv(snakemake.output.shedding)
     logger.info(f"ST load shedding and CO2 slack per cell:\n{shedding}")
-    lt_st = lt_st_table(topologies, evaluations, grid_scenario_names, probabilities)
+    lt_st = lt_st_table(topologies, evaluations, grid_scenario_names, probabilities, lt_cells)
     lt_st.to_csv(snakemake.output.lt_st_consistency)
     in_meur = {c: lt_st[c] / 1e6 for c in ["lt_opex", "st_opex", "delta", "shed_cost", "gain_bound"]}
     logger.info(f"LT vs ST opex on the LT grid (costs in M EUR):\n{lt_st.assign(**in_meur).round(3)}")

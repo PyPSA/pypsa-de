@@ -504,6 +504,10 @@ stochastic_grid_scenarios:
     st: # evaluate_grid_portfolio; a failed cell writes its network to *_st_rejected.nc for inspection
       max_rel_gap: 5.0e-5
       fail_rel_gap: 5.0e-5
+  diagonal_lt_fallback: # a diagonal ST cell (portfolio <g> on grid <g>) whose ST solve failed with every solve_fallback tier (it leaves *_st_failed.json) reads the LT network topology-<g> instead: same problem, same optimum. Decided at DAG build, so a failed cell switches on the next snakemake call. The metrics skip its LT/ST check, the ST comparison shows it as topology-<g>, and it gets no portfolio-<g>_on-<g>_st export or plots. A job killed by the Slurm walltime leaves no marker: keep the solver TimeLimit times the number of tiers below solving.runtime
+    enable: false
+    allow_load_shedding_mismatch: false # LT and ST must shed load alike (load_shedding: lt_st), else error at DAG build; true waives the check
+    allow_co2_slack_mismatch: false # LT and ST must configure co2_cap_slack alike, else error at DAG build; true waives the check
   stochastic_solving: {} # partial `solving:` block deep-merged into solving for the "stochastic" solve only (free-form; e.g. solver_options.<name>.* or options.*) - lets you give the stochastic run its own solver settings without any code change
   scenarios: {} # !!! the SET of names cannot be set per scenario atm (see doc/configuration.md#per_scenario_limits); name -> {probability, links (csv path, optional), lines (csv path, optional)} - probabilities / paths ARE per-run
 
