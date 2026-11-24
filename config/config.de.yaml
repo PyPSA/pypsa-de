@@ -817,11 +817,24 @@ stochastic_grid_scenarios:
         threads: 32 # make gurobi actually use 32 threads on the stochastic solve (overrides the global gurobi-default threads here only)
         BarConvTol: 1.0e-7 # 1e-5 can stop at a primal-dual gap as large as the ECIU/EVPI being measured
   load_shedding: st # st = only the ST re-dispatch solves shed load | lt_st = the LT grid-topology solves shed too, with the carriers/costs of evaluate_solving.options.load_shedding (LT capacity expansion may then shed instead of building peak capacity)
+  gap_check: # relative primal-dual solver gap (gurobi ObjVal vs ObjBound) bounds the cost error: 5e-5 of a ~200 bn EUR objective is ~10 M EUR. Gap <= max_rel_gap: ok; up to fail_rel_gap: accepted, but all metrics built on it are flagged ROUGH (plot titles, footnote, solver_gaps CSV, log); above: fail. No bound (NaN) counts as ok. For quick looks, raise fail_rel_gap (e.g. 1.0e-3)
+    lt: # solve_grid_topology_network; checked when the ST evaluation reads the portfolio, so the LT solves themselves never rerun for it
+      max_rel_gap: 5.0e-5
+      fail_rel_gap: # empty = never fail, only flag (the stochastic LT solve reached ~4e-4 in past runs)
+    st: # evaluate_grid_portfolio; a failed cell writes its network to *_st_rejected.nc for inspection
+      max_rel_gap: 5.0e-5
+      fail_rel_gap: 5.0e-5
+  diagonal_lt_fallback: # a diagonal ST cell (portfolio <g> on grid <g>) whose ST solve failed with every solve_fallback tier (it leaves *_st_failed.json) reads the LT network topology-<g> instead: same problem, same optimum. Decided at DAG build, so a failed cell switches on the next snakemake call. The metrics skip its LT/ST check, the ST comparison shows it as topology-<g>, and it gets no portfolio-<g>_on-<g>_st export or plots. A job killed by the Slurm walltime leaves no marker: keep the solver TimeLimit times the number of tiers below solving.runtime
+    enable: false
+    allow_load_shedding_mismatch: false # LT and ST must shed load alike (load_shedding: lt_st), else error at DAG build; true waives the check
+    allow_co2_slack_mismatch: false # LT and ST must configure co2_cap_slack alike, else error at DAG build; true waives the check
   evaluate_solving: # partial `solving:` block deep-merged into solving for the ST evaluate_grid_portfolio re-dispatch solves only; scoped here so tuning them doesn't rerun the finished LT solves
     # NB: runtime and mem_mb for ST runs is set via the global solving block
     options:
       co2_cap_slack:
         enable: true # soften the CO2 emission caps with a penalized elastic slack (see solving.options.co2_cap_slack): stabilises near-infeasible dispatch LPs; the optimum is unchanged while the cap is reachable and the penalty exceeds the CO2 price
+      rescale_global_constraints:
+        enable: true # divide the CO2/biomass cap rows by solving.options.rescale_global_constraints.factor (default 1000) so Gurobi's absolute tolerance fits their ~1e9 RHS; duals are scaled back
       load_shedding: # the only load-shedding settings: ST always, LT with load_shedding: lt_st; pathway solves never shed (config.default.yaml: enable false)
         all_carriers: false
         carriers: # heat may need shedding at coarse time resolution: existing boilers are pinned to the load profile, so heat peaks beyond maxed-out resistive heaters can lack supply
